@@ -30,8 +30,8 @@ pub struct ErrorData {
 impl ErrorData {
     pub(super) fn new(kind: ErrorKind, retryable: bool) -> Self {
         Self {
-            kind,
             hint: kind.hint().to_owned(),
+            kind,
             retryable,
             field_path: None,
             target: None,

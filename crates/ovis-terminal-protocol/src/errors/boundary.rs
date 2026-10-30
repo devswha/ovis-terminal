@@ -12,7 +12,7 @@ pub enum BoundaryError {
     #[error("input is not a JSON document")]
     ParseError {
         /// Machine-readable error context.
-        data: ErrorData,
+        data: Box<ErrorData>,
         /// Underlying parser diagnostic, excluded from the wire representation.
         #[source]
         source: serde_json::Error,
@@ -21,49 +21,49 @@ pub enum BoundaryError {
     #[error("request envelope violates JSON-RPC 2.0")]
     InvalidRequest {
         /// Machine-readable error context.
-        data: ErrorData,
+        data: Box<ErrorData>,
     },
     /// The requested method is not registered.
     #[error("no such JSON-RPC method")]
     MethodNotFound {
         /// Machine-readable error context.
-        data: ErrorData,
+        data: Box<ErrorData>,
     },
     /// The method parameters do not match its closed schema.
     #[error("method parameters violate the closed schema")]
     InvalidParams {
         /// Machine-readable error context.
-        data: ErrorData,
+        data: Box<ErrorData>,
     },
     /// The same request ID is already active on the connection.
     #[error("request id is already in flight on this connection")]
     DuplicateRequestId {
         /// Machine-readable error context.
-        data: ErrorData,
+        data: Box<ErrorData>,
     },
     /// The request is not active on this connection or already settled.
     #[error("request id is unknown or already settled")]
     UnknownOrSettledRequestId {
         /// Machine-readable error context.
-        data: ErrorData,
+        data: Box<ErrorData>,
     },
     /// The reply ID does not match the request being settled.
     #[error("response request id does not match settlement id")]
     ResponseIdMismatch {
         /// Machine-readable error context.
-        data: ErrorData,
+        data: Box<ErrorData>,
     },
     /// The incoming response has neither or both terminal branches.
     #[error("response envelope violates JSON-RPC 2.0")]
     InvalidResponse {
         /// Machine-readable error context.
-        data: ErrorData,
+        data: Box<ErrorData>,
     },
     /// A response JSON document could not be parsed.
     #[error("response is not a JSON document")]
     InvalidResponseJson {
         /// Machine-readable error context.
-        data: ErrorData,
+        data: Box<ErrorData>,
         /// Underlying parser diagnostic, excluded from the wire representation.
         #[source]
         source: serde_json::Error,
@@ -72,7 +72,7 @@ pub enum BoundaryError {
     #[error("operation failed")]
     Domain {
         /// Machine-readable error context.
-        data: ErrorData,
+        data: Box<ErrorData>,
     },
 }
 
@@ -81,7 +81,7 @@ impl BoundaryError {
     #[must_use]
     pub fn parse_error(source: serde_json::Error) -> Self {
         Self::ParseError {
-            data: ErrorData::new(ErrorKind::ParseError, false),
+            data: Box::new(ErrorData::new(ErrorKind::ParseError, false)),
             source,
         }
     }
@@ -90,7 +90,9 @@ impl BoundaryError {
     #[must_use]
     pub fn invalid_request(field_path: Option<&str>) -> Self {
         Self::InvalidRequest {
-            data: ErrorData::new(ErrorKind::InvalidRequest, false).with_field_path(field_path),
+            data: Box::new(
+                ErrorData::new(ErrorKind::InvalidRequest, false).with_field_path(field_path),
+            ),
         }
     }
 
@@ -98,7 +100,9 @@ impl BoundaryError {
     #[must_use]
     pub fn invalid_params(field_path: Option<&str>) -> Self {
         Self::InvalidParams {
-            data: ErrorData::new(ErrorKind::InvalidParams, false).with_field_path(field_path),
+            data: Box::new(
+                ErrorData::new(ErrorKind::InvalidParams, false).with_field_path(field_path),
+            ),
         }
     }
 
@@ -106,7 +110,9 @@ impl BoundaryError {
     #[must_use]
     pub fn method_not_found() -> Self {
         Self::MethodNotFound {
-            data: ErrorData::new(ErrorKind::MethodNotFound, false).with_field_path(Some("method")),
+            data: Box::new(
+                ErrorData::new(ErrorKind::MethodNotFound, false).with_field_path(Some("method")),
+            ),
         }
     }
 
@@ -114,7 +120,9 @@ impl BoundaryError {
     #[must_use]
     pub fn duplicate_request_id() -> Self {
         Self::DuplicateRequestId {
-            data: ErrorData::new(ErrorKind::DuplicateRequestId, false).with_field_path(Some("id")),
+            data: Box::new(
+                ErrorData::new(ErrorKind::DuplicateRequestId, false).with_field_path(Some("id")),
+            ),
         }
     }
 
@@ -122,8 +130,10 @@ impl BoundaryError {
     #[must_use]
     pub fn unknown_or_settled_request_id() -> Self {
         Self::UnknownOrSettledRequestId {
-            data: ErrorData::new(ErrorKind::UnknownOrSettledRequestId, false)
-                .with_field_path(Some("id")),
+            data: Box::new(
+                ErrorData::new(ErrorKind::UnknownOrSettledRequestId, false)
+                    .with_field_path(Some("id")),
+            ),
         }
     }
 
@@ -131,7 +141,9 @@ impl BoundaryError {
     #[must_use]
     pub fn response_id_mismatch() -> Self {
         Self::ResponseIdMismatch {
-            data: ErrorData::new(ErrorKind::ResponseIdMismatch, false).with_field_path(Some("id")),
+            data: Box::new(
+                ErrorData::new(ErrorKind::ResponseIdMismatch, false).with_field_path(Some("id")),
+            ),
         }
     }
 
@@ -139,7 +151,7 @@ impl BoundaryError {
     #[must_use]
     pub fn invalid_response() -> Self {
         Self::InvalidResponse {
-            data: ErrorData::new(ErrorKind::InvalidResponse, false),
+            data: Box::new(ErrorData::new(ErrorKind::InvalidResponse, false)),
         }
     }
 
@@ -147,7 +159,7 @@ impl BoundaryError {
     #[must_use]
     pub fn invalid_response_json(source: serde_json::Error) -> Self {
         Self::InvalidResponseJson {
-            data: ErrorData::new(ErrorKind::InvalidResponse, false),
+            data: Box::new(ErrorData::new(ErrorKind::InvalidResponse, false)),
             source,
         }
     }
@@ -156,7 +168,7 @@ impl BoundaryError {
     #[must_use]
     pub fn domain(kind: ErrorKind, retryable: bool) -> Self {
         Self::Domain {
-            data: ErrorData::new(kind, retryable),
+            data: Box::new(ErrorData::new(kind, retryable)),
         }
     }
 
@@ -176,25 +188,25 @@ impl BoundaryError {
 
     /// Returns the stable machine token clients branch on.
     #[must_use]
-    pub const fn kind(&self) -> &'static str {
+    pub fn kind(&self) -> &str {
         self.data().kind.token()
     }
 
     /// Returns the typed error category.
     #[must_use]
-    pub const fn error_kind(&self) -> ErrorKind {
-        self.data().kind
+    pub fn error_kind(&self) -> &ErrorKind {
+        &self.data().kind
     }
 
     /// Returns the recovery guidance for this failure.
     #[must_use]
-    pub const fn hint(&self) -> &'static str {
+    pub fn hint(&self) -> &'static str {
         self.data().kind.hint()
     }
 
     /// Returns the JSON-RPC code selected by the typed kind.
     #[must_use]
-    pub const fn json_rpc_code(&self) -> JsonRpcCode {
+    pub fn json_rpc_code(&self) -> JsonRpcCode {
         self.data().kind.json_rpc_code()
     }
 
@@ -206,7 +218,7 @@ impl BoundaryError {
 
     /// Returns the structured error data for a JSON-RPC failure object.
     #[must_use]
-    pub const fn data(&self) -> &ErrorData {
+    pub fn data(&self) -> &ErrorData {
         match self {
             Self::ParseError { data, .. }
             | Self::InvalidRequest { data }
@@ -221,7 +233,7 @@ impl BoundaryError {
         }
     }
 
-    const fn data_mut(&mut self) -> &mut ErrorData {
+    fn data_mut(&mut self) -> &mut ErrorData {
         match self {
             Self::ParseError { data, .. }
             | Self::InvalidRequest { data }

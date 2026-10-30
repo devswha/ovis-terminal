@@ -36,8 +36,11 @@ impl JsonRpcCode {
 }
 
 /// Stable machine-readable error classification.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+///
+/// The set is open: a kind this build does not know decodes as [`ErrorKind::Other`]
+/// with its token, and encodes back to the same token.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(from = "String", into = "String")]
 #[non_exhaustive]
 pub enum ErrorKind {
     /// Malformed JSON text.
@@ -62,12 +65,42 @@ pub enum ErrorKind {
     Unavailable,
     /// An unexpected protocol or service failure occurred.
     Internal,
+    /// A kind this build does not know, kept verbatim.
+    Other(String),
+}
+
+impl From<String> for ErrorKind {
+    fn from(token: String) -> Self {
+        match token.as_str() {
+            "parse_error" => Self::ParseError,
+            "invalid_request" => Self::InvalidRequest,
+            "method_not_found" => Self::MethodNotFound,
+            "invalid_params" => Self::InvalidParams,
+            "invalid_response" => Self::InvalidResponse,
+            "duplicate_request_id" => Self::DuplicateRequestId,
+            "unknown_or_settled_request_id" => Self::UnknownOrSettledRequestId,
+            "response_id_mismatch" => Self::ResponseIdMismatch,
+            "not_found" => Self::NotFound,
+            "unavailable" => Self::Unavailable,
+            "internal" => Self::Internal,
+            _ => Self::Other(token),
+        }
+    }
+}
+
+impl From<ErrorKind> for String {
+    fn from(kind: ErrorKind) -> Self {
+        match kind {
+            ErrorKind::Other(token) => token,
+            known => known.token().to_owned(),
+        }
+    }
 }
 
 impl ErrorKind {
     /// Returns the wire token clients branch on.
     #[must_use]
-    pub const fn token(self) -> &'static str {
+    pub fn token(&self) -> &str {
         match self {
             Self::ParseError => "parse_error",
             Self::InvalidRequest => "invalid_request",
@@ -80,12 +113,13 @@ impl ErrorKind {
             Self::NotFound => "not_found",
             Self::Unavailable => "unavailable",
             Self::Internal => "internal",
+            Self::Other(token) => token,
         }
     }
 
     /// Returns the recovery guidance published for this kind.
     #[must_use]
-    pub const fn hint(self) -> &'static str {
+    pub const fn hint(&self) -> &'static str {
         match self {
             Self::ParseError => "send one valid JSON record",
             Self::InvalidRequest => "send a JSON-RPC 2.0 request with a string id",
@@ -100,10 +134,11 @@ impl ErrorKind {
             Self::NotFound => "list the resource family to find a live id",
             Self::Unavailable => "retry after the reported condition clears",
             Self::Internal => "inspect the runtime log for the operation id",
+            Self::Other(_) => "consult schema.errors for this kind",
         }
     }
 
-    pub(super) const fn json_rpc_code(self) -> JsonRpcCode {
+    pub(super) const fn json_rpc_code(&self) -> JsonRpcCode {
         match self {
             Self::ParseError => JsonRpcCode::ParseError,
             Self::InvalidRequest
@@ -114,7 +149,7 @@ impl ErrorKind {
             Self::MethodNotFound => JsonRpcCode::MethodNotFound,
             Self::InvalidParams => JsonRpcCode::InvalidParams,
             Self::Internal => JsonRpcCode::InternalError,
-            Self::NotFound | Self::Unavailable => JsonRpcCode::ServerError,
+            Self::NotFound | Self::Unavailable | Self::Other(_) => JsonRpcCode::ServerError,
         }
     }
 }
