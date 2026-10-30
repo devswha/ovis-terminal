@@ -13,18 +13,46 @@ keywords.workspace = true
 categories.workspace = true
 publish.workspace = true
 
+# Native platform probe (plan todo 12): the fixture and the test live under
+# probes/; they are targets of this crate so the probe exercises the holder
+# protocol and `cargo test -p ovis-terminal-holder --test platform_probe` runs it.
+[[bin]]
+name = "ovis-terminal-probe-holder"
+path = "../../probes/fixtures/probe_holder.rs"
+test = false
+bench = false
+doc = false
+
+[[bin]]
+name = "ovis-terminal-probe-stall"
+path = "../../probes/fixtures/stall_writer.rs"
+test = false
+bench = false
+doc = false
+
+[[test]]
+name = "platform_probe"
+path = "../../probes/platform/tests/platform_probe.rs"
+
 [dependencies]
 ovis-terminal-protocol = { workspace = true }
+portable-pty = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
-portable-pty = { workspace = true }
 
 [dev-dependencies]
+ovis-terminal-bench = { workspace = true }
+ovis-terminal-probes = { workspace = true }
+ovis-terminal-vt = { workspace = true }
 proptest = { workspace = true }
+
+# cargo-machete scans only this directory; the probe targets above use these.
+[package.metadata.cargo-machete]
+ignored = ["portable-pty", "ovis-terminal-bench", "ovis-terminal-probes"]
 
 [lints]
 workspace = true

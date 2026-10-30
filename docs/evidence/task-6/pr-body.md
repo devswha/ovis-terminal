@@ -59,6 +59,18 @@ contract:
 - `HolderConfig` no longer carries a holder-wide wire environment; every launch
   is explicit.
 
+### Forced cross-lane edit after merging integration (todo 12)
+
+Todo 12's probe files construct holder messages directly. After merging
+`origin/integration`, only the new required fields were added at their
+construction sites: `probes/fixtures/probe_holder.rs`,
+`probes/platform/tests/{platform_probe,unix_happy,windows_smoke}.rs`. No probe
+behavior or assertion changed. The holder manifest is the union of both sides:
+integration's `portable-pty = "=0.9.0"`, probe targets and machete ignores, plus
+this lane's unix-only `libc`. `clippy.toml` is the union of both sides (identical
+lists). `Cargo.lock` = integration's lock re-locked; `cargo generate-lockfile
+--offline` reproduces it byte-for-byte and `cargo metadata --locked` exits 0.
+
 ### Out-of-scope edit (orchestrator-granted)
 
 `clippy.toml` `allowed-duplicate-crates` (adds `bitflags`, `syn`, `thiserror`
@@ -78,14 +90,14 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out
 exit: 0
 
 $ cargo nextest run -p ovis-terminal-holder --status-level all --final-status-level all --no-tests=fail
-Summary 32 tests run: 32 passed, 0 skipped
+Summary [   5.412s] 34 tests run: 34 passed, 0 skipped
 exit: 0
 
 $ cargo clippy -p ovis-terminal-holder --all-targets -- -D warnings
 exit: 0
 
 $ bash scripts/check.sh
-Summary 146 tests run: 146 passed, 1 skipped   (the skip is the pre-existing ignored store child-process fixture)
+Summary 153 tests run: 153 passed, 1 skipped   (the skip is the pre-existing ignored store child-process fixture)
 check.sh: all steps passed
 exit: 0
 ```
