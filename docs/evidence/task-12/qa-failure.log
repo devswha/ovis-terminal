@@ -1,0 +1,16 @@
+$ cargo test --locked -p ovis-terminal-holder --test platform_probe failure -- --exact --nocapture
+Linux x86_64
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running ../../probes/platform/tests/platform_probe.rs (target/debug/deps/platform_probe-7e180df713039bd3)
+
+running 1 test
+PROBE stall {"attempted":"1048576","accepted_before_kill":"8192","writer_blocked":true,"backend_kill_ended_program":false,"exit":{"code":1,"signal":"Killed"},"kill_to_exit":"1002196","writer":"still_blocked"}
+PROBE spawn_failed {"hint":"check the executable path and permissions before retrying","holder_kind":"unavailable","kind":"spawn_failed"}
+PROBE openpty_refused {"backend":"openpty refused: failed to openpty: Os { code: 24, kind: TooManyOpenFiles, message: \"Too many open files\" }","frame":{"kind":"unavailable","terminal_id":"probe-openpty","terminal_incarnation":"1"}}
+PROBE missing_cwd {"requested":"/nonexistent/ovis-probe-cwd","used":"/home/devswha"}
+PROBE broken_endpoint {"connect_to_removed":"entity not found","write_to_closed_peer":"broken pipe"}
+test failure ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 2.26s
+
+exit=0

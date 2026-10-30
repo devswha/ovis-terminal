@@ -1,0 +1,52 @@
+{
+  "scenario": "part-a/task-12",
+  "todo": 12,
+  "title": "Establish native platform probes and performance harnesses",
+  "closes": ["GAP-048", "GAP-049", "GAP-051"],
+  "delivers": ["IDEAL-027", "IDEAL-034", "IDEAL-051", "IDEAL-071", "IDEAL-093"],
+  "runner": "shell",
+  "note": "Foundational lane: the probes drive real pseudo-terminals through the pinned portable-pty backend and the holder protocol frame codec. Socket-level replay through the ovis-terminal binary waits for the conformance runner (plan todo 21) and the holder/attach lanes. Windows runs the smoke tier only.",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "argv": ["cargo", "test", "--locked", "-p", "ovis-terminal-holder", "--test", "platform_probe", "happy", "--", "--exact", "--nocapture"],
+          "expect": {
+            "exit": 0,
+            "stdout_line": "test happy ... ok",
+            "probe_records": {
+              "host": ["os", "arch", "byte_order"],
+              "process": ["pid", "start_token", "state"],
+              "holder_frames": ["spawned", "exit"],
+              "modes": { "set": { "paste": "bracketed", "buffer": "alternate" }, "reset": { "paste": "plain", "buffer": "primary" } },
+              "endpoint": ["max_path_bytes", "identity", "rebound_identity"],
+              "detach": { "interruptions": ["core_death", "logout"], "holder.after.start_token": "equals holder.before.start_token", "program.after.state": "live" },
+              "latency": { "terminals": 16, "input_bytes_per_second": "1048576", "verdict": "100000" },
+              "soak": { "terminals": 50, "programs_with_unchanged_tokens": 50 }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "argv": ["cargo", "test", "--locked", "-p", "ovis-terminal-holder", "--test", "platform_probe", "failure", "--", "--exact", "--nocapture"],
+          "expect": {
+            "exit": 0,
+            "stdout_line": "test failure ... ok",
+            "probe_records": {
+              "stall": { "backend_kill_ended_program": false, "exit.signal": "present" },
+              "spawn_failed": { "kind": "spawn_failed", "holder_kind": "unavailable" },
+              "openpty_refused": { "frame.kind": "unavailable" },
+              "missing_cwd": { "used": "differs from requested" },
+              "broken_endpoint": { "connect_to_removed": "entity not found", "write_to_closed_peer": "broken pipe or connection reset" }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
