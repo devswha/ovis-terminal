@@ -12,6 +12,11 @@ env:
 
 jobs:
   stress:
+    name: stress (${{ matrix.probe }})
+    strategy:
+      fail-fast: false
+      matrix:
+        probe: [happy, all]
     runs-on: macos-latest
     timeout-minutes: 120
     steps:
@@ -25,8 +30,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.99.1
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@nextest
-      - name: repeat happy 100 times (fail fast)
+      - name: repeat probe 100 times (fail fast)
         shell: bash
+        env:
+          PROBE: ${{ matrix.probe }}
         run: |
           set -euo pipefail
           {
@@ -35,7 +42,11 @@ jobs:
             git rev-parse HEAD
             for iteration in $(seq 1 100); do
               printf '\nITERATION %s/100\n' "$iteration"
-              cargo nextest run -p ovis-terminal-holder --test platform_probe happy --locked
+              if test "$PROBE" = happy; then
+                cargo nextest run -p ovis-terminal-holder --test platform_probe happy --locked
+              else
+                cargo nextest run -p ovis-terminal-holder --test platform_probe --locked
+              fi
               printf 'PASS %s/100\n' "$iteration"
             done
             printf 'RESULT 100/100\n'
@@ -50,6 +61,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: probe-stress-macos-${{ github.run_id }}
+          name: probe-stress-macos-${{ matrix.probe }}-${{ github.run_id }}
           path: probe-stress-macos.log
           if-no-files-found: error

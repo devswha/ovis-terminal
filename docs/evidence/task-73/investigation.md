@@ -34,3 +34,25 @@ assertion `left == right` failed
 - No holder edits, dependency edits, debugger hooks or temporary source changes.
 - LSP lookup was unavailable: `rust-analyzer` is not installed on the host.
   Compiler and Clippy verification will provide source diagnostics.
+
+## Scheduling seam and dispatch blocker
+
+At the user's direction, merged `origin/lane/t72-stall-probe-determinism` into
+this lane as `32f12df`. Its failure-probe tests are part of the reproduction
+environment, not task 73 implementation edits. The workflow runs both the
+requested single-`happy` loop and a whole-`platform_probe` loop, with independent
+fail-fast jobs and no serialization of tests.
+
+The initial pre-fix harness is `ea6f1122951d6544b37061f3c997c23433af92e3`.
+`bash scripts/check.sh` passed on Linux x86_64 before pushing it (191 tests
+passed, 1 skipped; exit 0). Dispatch failed before creating a run:
+
+```text
+$ gh workflow run probe-stress-macos.yml --ref lane/t73-macos-resize-probe --repo devswha/ovis-terminal
+HTTP 404: Not Found (https://api.github.com/repos/devswha/ovis-terminal/actions/workflows/probe-stress-macos.yml)
+exit 1
+```
+
+GitHub does not register this newly added manual-only workflow from a branch
+push. The default branch is `main`. Registration on that branch is outside
+this lane's authorized scope; the user has been notified.
