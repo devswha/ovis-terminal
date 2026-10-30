@@ -144,6 +144,8 @@ fn output_precedes_exit() {
         target,
         code: i32::try_from(exit.code).ok(),
         signal: None,
+        exit_unknown: None,
+        io_failure: None,
         final_offset: session.received().get(),
     });
     assert_eq!(through_holder_frame(&exited), exited);

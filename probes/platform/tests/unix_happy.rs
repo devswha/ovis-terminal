@@ -123,6 +123,8 @@ fn grid_resize_token_and_final_bytes() {
         target,
         code: Some(7),
         signal: None,
+        exit_unknown: None,
+        io_failure: None,
         final_offset,
     });
     assert_eq!(through_holder_frame(&spawned), spawned);

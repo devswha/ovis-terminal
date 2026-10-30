@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::io::{Exit, Forget, Input, InputWritten, Output, Resize, Signal, Tail, TailRequest};
 use super::lifecycle::{Hello, Spawn, SpawnFailed, Spawned, Welcome};
+use super::outcome::InputRejected;
 
 /// Stable message discriminator used by the holder frame codec.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -40,6 +41,8 @@ pub enum MessageKind {
     Drain,
     /// Core reports why its previous ownership connection ended.
     Goodbye,
+    /// Holder rejects an input request before queuing any of its bytes.
+    InputRejected,
 }
 
 impl MessageKind {
@@ -62,6 +65,7 @@ impl MessageKind {
             Self::Forget => 13,
             Self::Drain => 14,
             Self::Goodbye => 15,
+            Self::InputRejected => 16,
         }
     }
 
@@ -87,6 +91,7 @@ impl MessageKind {
             13 => Ok(Self::Forget),
             14 => Ok(Self::Drain),
             15 => Ok(Self::Goodbye),
+            16 => Ok(Self::InputRejected),
             other => Err(other),
         }
     }
@@ -163,6 +168,8 @@ pub enum Message {
     Drain(Drain),
     /// Core departure notice.
     Goodbye(Goodbye),
+    /// Input rejection.
+    InputRejected(InputRejected),
 }
 
 impl Message {
@@ -185,6 +192,7 @@ impl Message {
             Self::Forget(_) => MessageKind::Forget,
             Self::Drain(_) => MessageKind::Drain,
             Self::Goodbye(_) => MessageKind::Goodbye,
+            Self::InputRejected(_) => MessageKind::InputRejected,
         }
     }
 }

@@ -158,7 +158,8 @@ fn serve() -> Result<(), FixtureError> {
 #[cfg(unix)]
 fn openpty() -> Result<(), FixtureError> {
     use ovis_terminal_holder::protocol::{
-        Message, SpawnFailed, SpawnFailureKind, TerminalId, TerminalIncarnation, encode_message,
+        Message, SpawnFailed, SpawnFailureKind, SpawnFailureReason, TerminalId,
+        TerminalIncarnation, encode_message,
     };
     use portable_pty::native_pty_system;
 
@@ -170,6 +171,9 @@ fn openpty() -> Result<(), FixtureError> {
         terminal_id: TerminalId::new("probe-openpty".to_owned()),
         terminal_incarnation: TerminalIncarnation::new(1),
         kind: SpawnFailureKind::Unavailable,
+        reason: SpawnFailureReason::PtyUnavailable,
+        hint: "Close unused terminals or raise the PTY limit.".to_owned(),
+        os_error: None,
     }))?;
     let mut stdout = io::stdout().lock();
     stdout.write_all(&frame)?;
