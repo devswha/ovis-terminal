@@ -18,7 +18,7 @@ All workspace doctest targets passed (each currently has zero doctests).
 exit: 0
 
 ==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
-workspace-hygiene: 0 violation(s) in 60 file(s) checked
+workspace-hygiene: 0 violation(s) in 64 file(s) checked
 exit: 0
 
 ==> bash scripts/hygiene/manifests.sh
@@ -38,7 +38,7 @@ exit: 0
 $ GIT_MASTER=1 git diff --check
 exit: 0
 
-After the final protocol rustdoc edits:
+After the adversarial protocol fixes:
 $ cargo +nightly fmt --all -- --check
 exit: 0
 $ cargo clippy -p ovis-terminal-holder --all-targets -- -D warnings
@@ -46,4 +46,7 @@ Finished `dev` profile [unoptimized + debuginfo]
 exit: 0
 $ cargo test --doc -p ovis-terminal-holder
 Doc-tests ovis_terminal_holder: 0 passed; 0 failed
+exit: 0
+
+$ cargo nextest run -p ovis-terminal-holder --status-level all --final-status-level all --no-tests=fail
 exit: 0

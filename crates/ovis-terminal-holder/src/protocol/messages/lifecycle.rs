@@ -1,5 +1,7 @@
 //! Holder adoption and process lifecycle records.
 
+use serde::{Deserialize, Serialize};
+
 use super::io::Exit;
 use crate::protocol::{
     CoreBuildId, HolderBuildId, HolderInstanceId, ProcessIncarnation, ProcessStartToken,
@@ -7,7 +9,8 @@ use crate::protocol::{
 };
 
 /// Previous-core condition included in a hello.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum PreviousCoreState {
     /// The core intentionally saved state before handoff.
@@ -17,7 +20,8 @@ pub enum PreviousCoreState {
 }
 
 /// First message sent by a core during holder adoption.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 #[expect(
     clippy::exhaustive_structs,
     reason = "adding fields to a frozen v1 message requires a generation change"
@@ -32,7 +36,8 @@ pub struct Hello {
 }
 
 /// A terminal and process record currently owned by the holder.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 #[expect(
     clippy::exhaustive_structs,
     reason = "adding fields to a frozen v1 message requires a generation change"
@@ -49,15 +54,18 @@ pub struct HeldTerminal {
     /// OS token preventing a reused PID from being mistaken for the process.
     pub start_token: Option<ProcessStartToken>,
     /// Last contiguous raw output byte offset.
+    #[serde(with = "crate::protocol::decimal")]
     pub output_offset: u64,
     /// Highest input sequence known to have reached its write boundary.
+    #[serde(with = "crate::protocol::decimal")]
     pub input_sequence: u64,
     /// Final exit record, retained until the core acknowledges it.
     pub exit: Option<Exit>,
 }
 
 /// Holder response to a supported hello, including its adoption snapshot.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 #[expect(
     clippy::exhaustive_structs,
     reason = "adding fields to a frozen v1 message requires a generation change"
@@ -74,7 +82,8 @@ pub struct Welcome {
 }
 
 /// Request to spawn a process in a newly allocated terminal identity.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 #[expect(
     clippy::exhaustive_structs,
     reason = "adding fields to a frozen v1 message requires a generation change"
@@ -91,7 +100,8 @@ pub struct Spawn {
 }
 
 /// Successful spawn evidence.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 #[expect(
     clippy::exhaustive_structs,
     reason = "adding fields to a frozen v1 message requires a generation change"
@@ -110,7 +120,8 @@ pub struct Spawned {
 }
 
 /// Spawn failure without converting failure into a process record.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 #[expect(
     clippy::exhaustive_structs,
     reason = "adding fields to a frozen v1 message requires a generation change"
@@ -125,7 +136,8 @@ pub struct SpawnFailed {
 }
 
 /// Typed spawn failures understood by the core.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum SpawnFailureKind {
     /// Executable could not be started.

@@ -1,7 +1,8 @@
 //! Ownership-neutral generation negotiation and retained adoption records.
 
 use std::collections::BTreeMap;
-use std::fmt;
+
+use thiserror::Error;
 
 use super::{
     HOLDER_PROTOCOL_GENERATION, HeldTerminal, Hello, HolderBuildId, HolderInstanceId, TerminalId,
@@ -9,10 +10,11 @@ use super::{
 };
 
 /// Negotiation or adoption rejection.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Error, PartialEq)]
 #[non_exhaustive]
 pub enum AdoptionError {
     /// The peer's holder generation is not supported.
+    #[error("holder generation is unsupported")]
     UnsupportedGeneration {
         /// Generation the peer offered.
         offered: u16,
@@ -20,21 +22,25 @@ pub enum AdoptionError {
         supported: u16,
     },
     /// A terminal ID was reused for a different incarnation or process token.
+    #[error("holder target identity is stale")]
     StaleTarget {
         /// Stable terminal identity that conflicted.
         terminal_id: TerminalId,
     },
     /// A repeated report would move output, input, or exit evidence backwards.
+    #[error("holder evidence is stale")]
     StaleEvidence {
         /// Stable terminal identity with regressed evidence.
         terminal_id: TerminalId,
     },
     /// The referenced terminal has no retained exit record.
+    #[error("holder exit evidence is unavailable")]
     ExitNotRetained {
         /// Stable terminal identity whose exit record is unavailable.
         terminal_id: TerminalId,
     },
     /// Exit acknowledgement did not cover the final output offset.
+    #[error("holder output has not drained through the process exit")]
     ExitNotDrained {
         /// Stable terminal identity whose output remains unacknowledged.
         terminal_id: TerminalId,
@@ -42,48 +48,48 @@ pub enum AdoptionError {
         final_offset: u64,
     },
     /// Holder process, incarnation, or final-offset evidence is inconsistent.
+    #[error("holder evidence is inconsistent")]
     InvalidEvidence {
         /// Stable terminal identity carrying invalid evidence.
         terminal_id: TerminalId,
     },
 }
 
-impl fmt::Display for AdoptionError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl AdoptionError {
+    /// Returns the stable machine-readable error kind.
+    #[must_use]
+    pub const fn kind(&self) -> &'static str {
         match self {
-            Self::UnsupportedGeneration { offered, supported } => {
-                write!(
-                    formatter,
-                    "unsupported_generation: offered {offered}, supported {supported}"
-                )
+            Self::UnsupportedGeneration { .. } => "unsupported_generation",
+            Self::StaleTarget { .. } => "stale_target",
+            Self::StaleEvidence { .. } => "stale_evidence",
+            Self::ExitNotRetained { .. } => "exit_not_retained",
+            Self::ExitNotDrained { .. } => "exit_not_drained",
+            Self::InvalidEvidence { .. } => "invalid_evidence",
+        }
+    }
+
+    /// Returns a static recovery hint suitable for a client or operator.
+    #[must_use]
+    pub const fn hint(&self) -> &'static str {
+        match self {
+            Self::UnsupportedGeneration { .. } => {
+                "Upgrade or select a peer that supports the holder protocol generation."
             }
-            Self::StaleTarget { terminal_id } => {
-                write!(formatter, "stale_target: {}", terminal_id.as_str())
+            Self::StaleTarget { .. } => "Re-resolve the terminal and process incarnations.",
+            Self::StaleEvidence { .. } => "Re-adopt the latest holder evidence before retrying.",
+            Self::ExitNotRetained { .. } => {
+                "Re-adopt the holder and request its current terminal record."
             }
-            Self::StaleEvidence { terminal_id } => {
-                write!(formatter, "stale_evidence: {}", terminal_id.as_str())
+            Self::ExitNotDrained { .. } => {
+                "Read output through the final offset before acknowledging exit."
             }
-            Self::ExitNotRetained { terminal_id } => {
-                write!(formatter, "exit_not_retained: {}", terminal_id.as_str())
-            }
-            Self::ExitNotDrained {
-                terminal_id,
-                final_offset,
-            } => {
-                write!(
-                    formatter,
-                    "exit_not_drained: {} through {final_offset}",
-                    terminal_id.as_str()
-                )
-            }
-            Self::InvalidEvidence { terminal_id } => {
-                write!(formatter, "invalid_evidence: {}", terminal_id.as_str())
+            Self::InvalidEvidence { .. } => {
+                "Preserve the holder identity and sequence evidence from adoption."
             }
         }
     }
 }
-
-impl std::error::Error for AdoptionError {}
 
 /// Holder-owned terminal records, including exits awaiting core acknowledgement.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

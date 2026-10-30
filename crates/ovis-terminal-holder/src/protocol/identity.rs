@@ -1,7 +1,10 @@
 //! Identities carried by every holder lifecycle and data message.
 
+use serde::{Deserialize, Serialize};
+
 /// Build identity for a holder binary.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
 pub struct HolderBuildId(String);
 
 impl HolderBuildId {
@@ -19,7 +22,8 @@ impl HolderBuildId {
 }
 
 /// Build identity for the adopting core binary.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
 pub struct CoreBuildId(String);
 
 impl CoreBuildId {
@@ -37,7 +41,8 @@ impl CoreBuildId {
 }
 
 /// Random identity for one holder process lifetime.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
 pub struct HolderInstanceId(String);
 
 impl HolderInstanceId {
@@ -55,7 +60,8 @@ impl HolderInstanceId {
 }
 
 /// Stable terminal identity, never reused within a runtime lifetime.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
 pub struct TerminalId(String);
 
 impl TerminalId {
@@ -73,8 +79,9 @@ impl TerminalId {
 }
 
 /// Terminal incarnation, incremented whenever the terminal is recovered.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct TerminalIncarnation(u64);
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
+pub struct TerminalIncarnation(#[serde(with = "crate::protocol::decimal")] u64);
 
 impl TerminalIncarnation {
     /// Creates an incarnation number.
@@ -91,8 +98,9 @@ impl TerminalIncarnation {
 }
 
 /// Process incarnation, incremented for every process spawned in a terminal.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct ProcessIncarnation(u64);
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
+pub struct ProcessIncarnation(#[serde(with = "crate::protocol::decimal")] u64);
 
 impl ProcessIncarnation {
     /// Creates a process incarnation number.
@@ -109,7 +117,8 @@ impl ProcessIncarnation {
 }
 
 /// OS-provided token distinguishing a process from a reused PID.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
 pub struct ProcessStartToken(String);
 
 impl ProcessStartToken {

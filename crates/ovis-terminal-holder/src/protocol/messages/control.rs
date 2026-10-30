@@ -1,10 +1,13 @@
 //! Message discriminators and control-lifecycle messages.
 
+use serde::{Deserialize, Serialize};
+
 use super::io::{Exit, Forget, Input, InputWritten, Output, Resize, Signal, Tail, TailRequest};
 use super::lifecycle::{Hello, Spawn, SpawnFailed, Spawned, Welcome};
 
 /// Stable message discriminator used by the holder frame codec.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum MessageKind {
     /// Core begins adoption and presents the supported generation.
@@ -90,7 +93,8 @@ impl MessageKind {
 }
 
 /// Holder drain lifecycle request.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum Drain {
     /// Stop new spawns while continuing to serve owned terminals.
@@ -100,7 +104,8 @@ pub enum Drain {
 }
 
 /// Core departure reason sent before a planned handoff or shutdown.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum GoodbyeReason {
     /// The core has persisted recovery state for a successor.
@@ -110,7 +115,8 @@ pub enum GoodbyeReason {
 }
 
 /// Core-to-holder departure notice.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 #[expect(
     clippy::exhaustive_structs,
     reason = "adding fields to a frozen v1 message requires a generation change"
@@ -121,7 +127,8 @@ pub struct Goodbye {
 }
 
 /// Closed set of control messages exchanged by core and holder.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "kind", content = "data", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum Message {
     /// Adoption request.

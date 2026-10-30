@@ -4,12 +4,20 @@
 //! use these same messages. Holder placement is not a public v1 launch field.
 
 mod adoption;
+mod decimal;
 mod frame;
 mod identity;
 mod messages;
+mod optional_decimal;
+#[cfg(test)]
+mod property_message_examples;
+#[cfg(test)]
+mod property_tests;
 
 pub use adoption::{AdoptionError, AdoptionTable, HolderDescriptor, negotiate};
-pub use frame::{FrameError, FrameHeader, parse_header};
+pub use frame::{
+    FrameDecoder, FrameError, FrameHeader, decode_message, encode_message, parse_header,
+};
 pub use identity::{
     CoreBuildId, HolderBuildId, HolderInstanceId, ProcessIncarnation, ProcessStartToken,
     TerminalId, TerminalIncarnation,

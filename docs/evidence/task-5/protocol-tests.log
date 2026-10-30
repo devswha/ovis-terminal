@@ -5,29 +5,47 @@ Worktree: /home/devswha/workspace/ovis-terminal-wt/lane-t5
 $ cargo test -p ovis-terminal-holder --test protocol happy -- --exact --nocapture
 running 1 test
 test happy ... ok
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out
 exit: 0
 
 $ cargo test -p ovis-terminal-holder --test protocol failure -- --exact --nocapture
 running 1 test
 test failure ... ok
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out
 exit: 0
 
-$ cargo nextest run -p ovis-terminal-holder
+$ cargo test -p ovis-terminal-holder --lib -- --nocapture
+running 5 tests
+test protocol::property_tests::frame_errors_expose_stable_kinds_hints_and_sources ... ok
+test protocol::property_tests::rejected_header_does_not_leave_a_partial_decoder_frame ... ok
+test protocol::property_tests::arbitrary_fragment_widths_round_trip ... ok
+test protocol::property_tests::all_message_kinds_round_trip_at_every_two_fragment_boundary ... ok
+test protocol::property_tests::identity_fields_round_trip_as_canonical_decimal_strings ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+exit: 0
+
+$ cargo nextest run -p ovis-terminal-holder --status-level all --final-status-level all --no-tests=fail
 Finished `test` profile [unoptimized + debuginfo]
 exit: 0
 
 $ cargo clippy -p ovis-terminal-holder --all-targets -- -D warnings
-Checking ovis-terminal-holder v0.1.0
 Finished `dev` profile [unoptimized + debuginfo]
 exit: 0
 
-The happy assertion-bearing test verified adoption of the same terminal,
-terminal/process incarnations, PID and process start token, raw tail bytes and
-offset range, and replay of an exit with final offset 8 until the core
-acknowledges that offset. The failure assertion-bearing test verified
-unsupported generation 999 without changing retained state, stale incarnation
-rejection, malformed frame rejection, and rejection of payloads above 16 MiB.
-Separate assertions cover stable frame-header bytes and write-grant, fence,
-and acknowledgement epochs.
+The happy integration test adopts terminal `t-17`, preserving its process PID
+and start token, replays exit final offset 8, rejects acknowledgement at offset
+7, then clears the retained record at offset 8. A typed Tail fixture round-trips
+through the production encoder/decoder; this does not simulate a holder
+retrieving tail bytes.
+
+The failure integration test checks typed `unsupported_generation`,
+`stale_target`, `truncated_frame`, `malformed_frame`, and `frame_too_large`
+results. The adoption transition test covers fresh adopt, same-incarnation
+re-adopt, stale incarnation, and wrong generation.
+
+Property tests round-trip all 16 message variants at every two-part frame
+boundary, exercise arbitrary fragment widths across all variants, and verify
+identity u64 fields serialize as canonical decimal strings. The malformed
+header decoder test also verifies the rejected partial frame is cleared.
+Proptest uses an explicit source-relative regression file if it finds a
+counterexample.
