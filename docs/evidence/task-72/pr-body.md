@@ -14,7 +14,10 @@ Plan todo 72 (wave 4, follow-up to todo 12). Closes V-220; delivers IDEAL-108 (r
 ## Before
 - PR #10 CI (jobs 124337043222 and 124339775023, runs on 54f19c9 and 9b7d2f1): `the probe left a thread behind`, left `Some(1)` right `Some(0)`.
 - Reproduction [join-race-probe.rs](join-race-probe.rs), output [join-race-probe.out](join-race-probe.out) (rustc -O, Linux x86_64): idle, 200000 joins, `leftover_after_join=297` (max 49 yields until gone); four copies at once, 18011-18476 leftovers per 200000 (about 9%), max 87 yields.
-- Reverting the helper to a single read (zero deadline) and running the real probe 200 times, 8 at a time, did **not** fail even once ([stress-single-read-revert.log](stress-single-read-revert.log), 200/200 exit 0): one join per run is rare enough that the real probe did not trip here. The acceptance sentence "reverting fails the probe at least once" is therefore **not demonstrated on the real probe**; the standalone reproduction above is the evidence that the single read races.
+- Negative evidence through the REAL helper code path ([negative-evidence/](negative-evidence/)): `run.sh` extracts the helper region of `unix_failure.rs` verbatim (`helper_extract.rs`) and `harness.rs` (a throwaway program, not a test, not in the workspace) loops 100000 times: spawn a `probe-stall-report` thread, join it, then check. Four copies at once (Linux x86_64):
+  - single read (`thread_names` once, the old check): `leftover=8203, 8367, 8259, 8380` of 100000 each ([single-4way.log](negative-evidence/single-4way.log)).
+  - bounded wait (`await_threads_at_most` with `TEARDOWN_DEADLINE`): `leftover=0` in all four ([bounded-4way.log](negative-evidence/bounded-4way.log)).
+- The committed probe with the deadline reverted to `Duration::ZERO` (a single read), run 50 times 8 at a time, did **not** fail once (50/50 exit 0, [revert-committed-probe-50x.log](negative-evidence/revert-committed-probe-50x.log)): the real probe joins one thread per run, which is too rare to hit here. Recorded as observed; the harness above is the negative evidence.
 
 ## After (Linux x86_64, rustc/cargo 1.99.1)
 | Command | Exit | Result |
@@ -23,6 +26,7 @@ Plan todo 72 (wave 4, follow-up to todo 12). Closes V-220; delivers IDEAL-108 (r
 | CI `probe (macos-latest)` on 1e397d6 | pass | runs `platform_probe` including `failure` and both helper unit tests; the typed `Unavailable` path passes on macOS |
 | CI `test (macos-latest)` on 1e397d6 (two attempts) | **fail** | NOT caused by this change: `platform_probe happy` panics at `unix_happy.rs:45` (`left: Grid { columns: 80, rows: 24 } right: Grid { columns: 132, rows: 40 }`, the post-resize size read in the todo-12 happy probe). That file is outside this todo's write scope and is left unchanged; it needs its own follow-up. |
 | (superseded) first head 35418a5 macOS | the first head (35418a5) failed there with `left Ok(()) right Err(["t72-parked"])`; this head asserts the typed `Unavailable` instead. Not run locally (Linux host). |
+| `bash docs/evidence/task-72/negative-evidence/run.sh` | 0 | single read: 8.2-8.4k leftovers per 100000 under 4-way load; bounded wait: 0 (above) |
 | `bash scripts/check.sh` | 0 | all steps passed ([check.log](check.log)); includes both helper unit tests |
 
 DEFERRED VERIFICATION (runner lands in Todo 21): `cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-12 --isolated --case happy --evidence ...` exits 2 with `conformance: no scenarios are registered in this build` ([conformance-attempt.log](conformance-attempt.log)).
