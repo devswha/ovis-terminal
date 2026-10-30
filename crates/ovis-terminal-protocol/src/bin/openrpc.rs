@@ -6,14 +6,17 @@
 //! openrpc compat <released>  exit 1 if the generated document breaks <released>
 //! ```
 
-use std::fs;
-use std::io::{self, Write as _};
+use std::fs::{self, File};
+use std::io::{self, Read as _, Write as _};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use ovis_terminal_protocol::schema::{SchemaError, check_compatibility, render_openrpc};
 use serde_json::{Value, json};
 use thiserror::Error;
+
+/// Largest schema file the generator reads; the generated document is about 0.5 MiB.
+const MAX_SCHEMA_BYTES: u64 = 64 * 1024 * 1024;
 
 /// Failure of one generator command.
 #[derive(Debug, Error)]
@@ -26,6 +29,8 @@ enum CliError {
         #[source]
         source: io::Error,
     },
+    #[error("{path} exceeds the {limit}-byte schema file bound")]
+    TooLarge { path: PathBuf, limit: u64 },
     #[error("{path} differs from the generated document")]
     Stale { path: PathBuf },
     #[error(transparent)]
@@ -37,6 +42,7 @@ impl CliError {
         match self {
             Self::Usage => "usage",
             Self::Io { .. } => "io",
+            Self::TooLarge { .. } => "schema_file_too_large",
             Self::Stale { .. } => "schema_stale",
             Self::Schema(error) => error.kind(),
         }
@@ -46,6 +52,7 @@ impl CliError {
         match self {
             Self::Usage => "run with write, check or compat and one path",
             Self::Io { .. } => "check the path and its permissions",
+            Self::TooLarge { .. } => "pass the released OpenRPC document, not another file",
             Self::Stale { .. } => "run `openrpc write` and commit the result",
             Self::Schema(error) => error.hint(),
         }
@@ -54,7 +61,7 @@ impl CliError {
     const fn exit_code(&self) -> u8 {
         match self {
             Self::Usage => 2,
-            Self::Io { .. } | Self::Stale { .. } | Self::Schema(_) => 1,
+            Self::Io { .. } | Self::TooLarge { .. } | Self::Stale { .. } | Self::Schema(_) => 1,
         }
     }
 
@@ -64,17 +71,35 @@ impl CliError {
                 .iter()
                 .map(|change| json!({ "path": change.path, "rule": change.rule.token() }))
                 .collect(),
-            Self::Usage | Self::Io { .. } | Self::Stale { .. } | Self::Schema(_) => Vec::new(),
+            Self::Usage
+            | Self::Io { .. }
+            | Self::TooLarge { .. }
+            | Self::Stale { .. }
+            | Self::Schema(_) => Vec::new(),
         };
         json!({ "kind": self.kind(), "hint": self.hint(), "message": self.to_string(), "breaks": breaks })
     }
 }
 
+/// Reads at most [`MAX_SCHEMA_BYTES`] of `path`, refusing a larger file.
 fn read(path: &PathBuf) -> Result<String, CliError> {
-    fs::read_to_string(path).map_err(|source| CliError::Io {
+    let io_error = |source| CliError::Io {
         path: path.clone(),
         source,
-    })
+    };
+    let mut text = String::new();
+    File::open(path)
+        .map_err(io_error)?
+        .take(MAX_SCHEMA_BYTES.saturating_add(1))
+        .read_to_string(&mut text)
+        .map_err(io_error)?;
+    if u64::try_from(text.len()).map_or(true, |len| len > MAX_SCHEMA_BYTES) {
+        return Err(CliError::TooLarge {
+            path: path.clone(),
+            limit: MAX_SCHEMA_BYTES,
+        });
+    }
+    Ok(text)
 }
 
 fn run(command: &str, path: PathBuf) -> Result<Value, CliError> {

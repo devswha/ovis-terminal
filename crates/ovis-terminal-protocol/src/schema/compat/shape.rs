@@ -1,14 +1,13 @@
-//! Structural comparison of two JSON Schemas in input or output position.
-
-use std::collections::BTreeSet;
+//! Comparison state shared by the input and output walks, and their entry point.
 
 use serde_json::Value;
 
-use super::facts::{scalar_breaks, shape_of};
-use super::{Break, BreakRule};
+use super::facts::Alt;
+use super::{Break, BreakRule, input, output};
+use crate::schema::error::SchemaError;
 
-/// Deepest nesting compared; recursive types stop here instead of looping.
-const MAX_DEPTH: usize = 32;
+/// Deepest nesting of schemas and references compared before failing with a typed error.
+pub(super) const MAX_DEPTH: usize = 64;
 
 /// Whether a schema describes what clients send or what they receive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,8 +21,8 @@ pub(super) enum Position {
 /// The released and current documents with one schema from each.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct SchemaPair<'a> {
-    old_doc: &'a Value,
-    new_doc: &'a Value,
+    pub(super) old_doc: &'a Value,
+    pub(super) new_doc: &'a Value,
     pub(super) old_value: &'a Value,
     pub(super) new_value: &'a Value,
 }
@@ -47,24 +46,51 @@ impl<'a> SchemaPair<'a> {
     }
 }
 
+/// References already entered on the way to a schema, and its nesting depth.
+#[derive(Debug, Clone, Default)]
+pub(super) struct Trail {
+    pub(super) refs: Vec<String>,
+    pub(super) depth: usize,
+}
+
+impl Trail {
+    /// Counts one more level of nesting.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SchemaError::DepthExceeded`] beyond [`MAX_DEPTH`].
+    pub(super) fn deeper(&mut self, location: &str) -> Result<(), SchemaError> {
+        self.depth = self.depth.saturating_add(1);
+        if self.depth > MAX_DEPTH {
+            return Err(SchemaError::DepthExceeded {
+                location: location.to_owned(),
+            });
+        }
+        Ok(())
+    }
+}
+
 /// Where in a method, event or notification the comparison currently is.
 #[derive(Debug, Clone)]
-struct Site {
-    position: Position,
-    path: String,
-    depth: usize,
+pub(super) struct Site {
+    pub(super) position: Position,
+    pub(super) path: String,
+    pub(super) old: Trail,
+    pub(super) new: Trail,
 }
 
 impl Site {
-    fn child(&self, suffix: &str) -> Self {
+    /// The site of a member of the alternatives `old` and `new`.
+    pub(super) fn descend(&self, suffix: &str, (old, new): (&Alt<'_>, &Alt<'_>)) -> Self {
         Self {
             position: self.position,
             path: format!("{}{suffix}", self.path),
-            depth: self.depth.saturating_add(1),
+            old: old.trail.clone(),
+            new: new.trail.clone(),
         }
     }
 
-    fn report(&self, rule: BreakRule, out: &mut Vec<Break>) {
+    pub(super) fn report(&self, rule: BreakRule, out: &mut Vec<Break>) {
         out.push(Break {
             path: self.path.clone(),
             rule,
@@ -72,120 +98,25 @@ impl Site {
     }
 }
 
-fn names(value: Option<&Value>) -> BTreeSet<&str> {
-    value
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(Value::as_str)
-        .collect()
-}
-
-fn property_names(object: &Value) -> BTreeSet<&str> {
-    object
-        .get("properties")
-        .and_then(Value::as_object)
-        .into_iter()
-        .flatten()
-        .map(|(key, _)| key.as_str())
-        .collect()
-}
-
-fn compare_object(pair: SchemaPair<'_>, site: &Site, out: &mut Vec<Break>) {
-    let (old, new) = (pair.old_value, pair.new_value);
-    let (old_required, new_required) = (names(old.get("required")), names(new.get("required")));
-    let old_props = old
-        .get("properties")
-        .and_then(Value::as_object)
-        .into_iter()
-        .flatten();
-    for (key, old_schema) in old_props {
-        let child = site.child(&format!(".{key}"));
-        match (
-            new.get("properties").and_then(|props| props.get(key)),
-            site.position,
-        ) {
-            (None, Position::Input) => child.report(BreakRule::InputShapeRemoved, out),
-            (None, Position::Output) => child.report(BreakRule::OutputPropertyRemoved, out),
-            (Some(new_schema), _) => walk(pair.with(old_schema, new_schema), &child, out),
-        }
-        let dropped = old_required.contains(key.as_str()) && !new_required.contains(key.as_str());
-        if site.position == Position::Output && dropped {
-            child.report(BreakRule::OutputNoLongerRequired, out);
-        }
-    }
-    if site.position == Position::Input {
-        for key in new_required.difference(&old_required) {
-            site.child(&format!(".{key}"))
-                .report(BreakRule::InputPropertyNewlyRequired, out);
-        }
-        let closed =
-            |schema: &Value| schema.get("additionalProperties") == Some(&Value::Bool(false));
-        if closed(new) && !closed(old) {
-            site.report(BreakRule::InputClosed, out);
-        }
-    }
-}
-
-/// The current union member that continues `old`: same property names, else
-/// same required names, else the member at the same position of an equally long union.
-fn counterpart<'a>(old_members: &[&Value], index: usize, new: &[&'a Value]) -> Option<&'a Value> {
-    let old = old_members.get(index)?;
-    let by_properties = new
-        .iter()
-        .find(|candidate| property_names(candidate) == property_names(old));
-    let by_required = || {
-        new.iter()
-            .find(|candidate| names(candidate.get("required")) == names(old.get("required")))
-    };
-    let by_position = || {
-        (new.len() == old_members.len())
-            .then(|| new.get(index))
-            .flatten()
-    };
-    by_properties
-        .or_else(by_required)
-        .or_else(by_position)
-        .copied()
-}
-
-fn walk(pair: SchemaPair<'_>, site: &Site, out: &mut Vec<Break>) {
-    if site.depth > MAX_DEPTH {
-        return;
-    }
-    let old = shape_of(pair.old_doc, pair.old_value);
-    let new = shape_of(pair.new_doc, pair.new_value);
-    for rule in scalar_breaks(&old, &new, site.position) {
-        site.report(rule, out);
-    }
-    if let (Some(old_items), Some(new_items)) = (old.items, new.items) {
-        walk(pair.with(old_items, new_items), &site.child("[]"), out);
-    }
-    for (index, old_object) in old.objects.iter().enumerate() {
-        match (
-            counterpart(&old.objects, index, &new.objects),
-            site.position,
-        ) {
-            (Some(new_object), _) => {
-                compare_object(pair.with(old_object, new_object), &site.child(""), out);
-            }
-            (None, Position::Input) => site.report(BreakRule::InputShapeRemoved, out),
-            (None, Position::Output) => site.report(BreakRule::OutputVariantRemoved, out),
-        }
-    }
-}
-
 /// Lists the breaks between one released schema and its current form.
-pub(super) fn compare(pair: SchemaPair<'_>, position: Position, path: &str) -> Vec<Break> {
-    let mut out = Vec::new();
-    walk(
-        pair,
-        &Site {
-            position,
-            path: path.to_owned(),
-            depth: 0,
-        },
-        &mut out,
-    );
-    out
+///
+/// # Errors
+///
+/// Returns [`SchemaError::ReferenceCycle`], [`SchemaError::DepthExceeded`] or
+/// [`SchemaError::UnresolvedReference`] for a schema that cannot be walked safely.
+pub(super) fn compare(
+    pair: SchemaPair<'_>,
+    position: Position,
+    path: &str,
+) -> Result<Vec<Break>, SchemaError> {
+    let site = Site {
+        position,
+        path: path.to_owned(),
+        old: Trail::default(),
+        new: Trail::default(),
+    };
+    match position {
+        Position::Input => input::breaks(pair, &site),
+        Position::Output => output::breaks(pair, &site),
+    }
 }

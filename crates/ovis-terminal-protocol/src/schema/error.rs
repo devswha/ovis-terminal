@@ -50,6 +50,18 @@ pub enum SchemaError {
         /// Where the malformed entry or missing section is.
         location: String,
     },
+    /// A reference leads back to itself on one path.
+    #[error("reference {reference} leads back to itself")]
+    ReferenceCycle {
+        /// The reference entered twice.
+        reference: String,
+    },
+    /// A schema nests deeper than the comparison bound.
+    #[error("schema nesting exceeds the comparison bound at {location}")]
+    DepthExceeded {
+        /// Where the bound was exceeded.
+        location: String,
+    },
     /// The document could not be encoded or decoded as JSON.
     #[error("schema document is not valid JSON")]
     Json {
@@ -71,6 +83,8 @@ impl SchemaError {
             Self::UncataloguedMethod { .. } => "method_not_cataloged",
             Self::Malformed { .. } => "schema_malformed",
             Self::MalformedBaseline { .. } => "malformed_baseline",
+            Self::ReferenceCycle { .. } => "schema_reference_cycle",
+            Self::DepthExceeded { .. } => "schema_depth_exceeded",
             Self::Json { .. } => "schema_json",
         }
     }
@@ -86,6 +100,8 @@ impl SchemaError {
             Self::DuplicateName { .. } => "publish each method and event name once",
             Self::UnresolvedReference { .. } => "derive the referenced type's schema",
             Self::UncataloguedMethod { .. } => "add the method to its namespace catalog first",
+            Self::ReferenceCycle { .. } => "replace the cyclic reference with a finite definition",
+            Self::DepthExceeded { .. } => "flatten the schema below 64 nested levels",
             Self::MalformedBaseline { .. } => {
                 "regenerate or restore the released baseline; every entry needs a name and known keys"
             }

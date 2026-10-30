@@ -2,6 +2,8 @@
 
 mod entries;
 mod facts;
+mod input;
+mod output;
 mod rule;
 mod shape;
 
@@ -54,7 +56,7 @@ fn compare_params(
             member(old_param, "/schema", &path)?,
             member(new_param, "/schema", &path)?,
         );
-        out.extend(compare(schemas, Position::Input, &path));
+        out.extend(compare(schemas, Position::Input, &path)?);
     }
     for (name, _) in new.iter().filter(|(_, param)| is_required(param)) {
         if !old.iter().any(|(candidate, _)| candidate == name) {
@@ -87,7 +89,7 @@ fn compare_methods(
             member(old, "/result/schema", method)?,
             member(new, "/result/schema", method)?,
         );
-        out.extend(compare(results, Position::Output, &format!("{method} ->")));
+        out.extend(compare(results, Position::Output, &format!("{method} ->"))?);
     }
     Ok(())
 }
@@ -112,7 +114,7 @@ fn compare_signals(
             Some((_, new)) => {
                 let schemas =
                     pair.with(member(old, "/schema", name)?, member(new, "/schema", name)?);
-                out.extend(compare(schemas, Position::Output, &format!("{name} ->")));
+                out.extend(compare(schemas, Position::Output, &format!("{name} ->"))?);
             }
         }
     }

@@ -184,6 +184,29 @@
         },
         "stdout": ""
       }
+    },
+    {
+      "class": "malformed input",
+      "name": "self-referencing released baseline",
+      "argv": [
+        "cargo",
+        "run",
+        "--locked",
+        "--quiet",
+        "-p",
+        "ovis-terminal-protocol",
+        "--bin",
+        "openrpc",
+        "--",
+        "compat",
+        "schema/fixtures/cyclic-released.json"
+      ],
+      "expected": {
+        "exit": 1,
+        "stderr_json": {
+          "kind": "schema_reference_cycle"
+        }
+      }
     }
   ]
 }

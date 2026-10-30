@@ -1,55 +1,55 @@
-//! Facts one schema position states: types, values, bounds and object members.
+//! Alternatives of a schema and the facts each one states.
+//!
+//! A schema is flattened into the alternatives a value may match: `anyOf` and
+//! `oneOf` members (including nullable wrappers), one alternative per entry of a
+//! type array, and `allOf` parts merged into one conjunction. References are
+//! resolved along a [`Trail`] that rejects cycles and excessive depth.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::Value;
 
-use super::BreakRule;
-use super::shape::Position;
+use super::shape::Trail;
 use crate::schema::document::COMPONENTS_PREFIX;
+use crate::schema::error::SchemaError;
 use crate::schema::scalar::OPEN_ENUM_EXTENSION;
 
-/// Keywords whose larger value accepts more input.
-const UPPER_BOUNDS: [&str; 5] = [
-    "maximum",
-    "exclusiveMaximum",
-    "maxLength",
-    "maxItems",
-    "maxProperties",
-];
-/// Keywords whose smaller value accepts more input.
-const LOWER_BOUNDS: [&str; 5] = [
-    "minimum",
-    "exclusiveMinimum",
-    "minLength",
-    "minItems",
-    "minProperties",
-];
-
-/// Types, values, openness, bounds and object members of one schema.
-#[derive(Default)]
-pub(super) struct Shape<'a> {
-    types: BTreeSet<String>,
-    free_types: BTreeSet<String>,
-    values: BTreeSet<String>,
+/// One alternative: its conjunct schema parts, an optional single type, and its trail.
+#[derive(Debug, Clone)]
+pub(super) struct Alt<'a> {
+    parts: Vec<&'a Value>,
+    only: Option<String>,
     open: bool,
-    node: Option<&'a Value>,
-    pub(super) objects: Vec<&'a Value>,
-    pub(super) items: Option<&'a Value>,
+    pub(super) trail: Trail,
 }
 
 fn is_open(schema: &Value) -> bool {
     schema.get(OPEN_ENUM_EXTENSION).and_then(Value::as_bool) == Some(true)
 }
 
-fn resolve<'a>(document: &'a Value, schema: &'a Value) -> &'a Value {
-    let name = schema
-        .get("$ref")
-        .and_then(Value::as_str)
-        .and_then(|r| r.strip_prefix(COMPONENTS_PREFIX));
-    let definitions = document.pointer("/components/schemas");
-    name.and_then(|name| definitions?.get(name))
-        .map_or(schema, |definition| resolve(document, definition))
+/// Follows `$ref` chains, refusing a reference already entered on this path.
+fn resolve<'a>(
+    document: &'a Value,
+    schema: &'a Value,
+    trail: &mut Trail,
+) -> Result<&'a Value, SchemaError> {
+    let mut current = schema;
+    while let Some(reference) = current.get("$ref").and_then(Value::as_str) {
+        if trail.refs.iter().any(|entered| entered == reference) {
+            return Err(SchemaError::ReferenceCycle {
+                reference: reference.to_owned(),
+            });
+        }
+        trail.deeper(reference)?;
+        trail.refs.push(reference.to_owned());
+        let target = reference
+            .strip_prefix(COMPONENTS_PREFIX)
+            .and_then(|name| document.pointer("/components/schemas")?.get(name));
+        current = target.ok_or_else(|| SchemaError::UnresolvedReference {
+            reference: reference.to_owned(),
+        })?;
+    }
+    Ok(current)
 }
 
 fn type_names(schema: &Value) -> Vec<String> {
@@ -63,98 +63,195 @@ fn type_names(schema: &Value) -> Vec<String> {
     }
 }
 
-fn collect<'a>(document: &'a Value, schema: &'a Value, found: &mut Shape<'a>) {
-    found.open |= is_open(schema);
-    let schema = resolve(document, schema);
-    found.open |= is_open(schema);
-    found.node = found.node.or(Some(schema));
-    let types = type_names(schema);
-    let enumerated = schema
+/// Flattens `schema` into the alternatives a value may match.
+///
+/// # Errors
+///
+/// Returns [`SchemaError::ReferenceCycle`], [`SchemaError::DepthExceeded`] or
+/// [`SchemaError::UnresolvedReference`].
+pub(super) fn alternatives<'a>(
+    document: &'a Value,
+    schema: &'a Value,
+    trail: &Trail,
+) -> Result<Vec<Alt<'a>>, SchemaError> {
+    let mut trail = trail.clone();
+    trail.deeper("schema nesting")?;
+    let open = is_open(schema);
+    let node = resolve(document, schema, &mut trail)?;
+    let open = open || is_open(node);
+    let members = ["anyOf", "oneOf"]
+        .into_iter()
+        .filter_map(|key| node.get(key)?.as_array());
+    let members: Vec<&Value> = members.flatten().collect();
+    if !members.is_empty() {
+        let mut found = Vec::new();
+        for member in members {
+            found.extend(
+                alternatives(document, member, &trail)?
+                    .into_iter()
+                    .map(|alt| Alt {
+                        open: alt.open || open,
+                        ..alt
+                    }),
+            );
+        }
+        return Ok(found);
+    }
+    let mut parts = vec![node];
+    for part in node
+        .get("allOf")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        parts.push(resolve(document, part, &mut trail.clone())?);
+    }
+    let types = type_names(node);
+    if types.len() > 1 {
+        return Ok(types
+            .into_iter()
+            .map(|only| Alt {
+                parts: parts.clone(),
+                only: Some(only),
+                open,
+                trail: trail.clone(),
+            })
+            .collect());
+    }
+    Ok(vec![Alt {
+        parts,
+        only: None,
+        open,
+        trail,
+    }])
+}
+
+/// Facts one alternative states, with `allOf` parts merged as an intersection.
+#[derive(Debug, Clone, Default)]
+pub(super) struct Facts<'a> {
+    pub(super) types: Option<BTreeSet<String>>,
+    pub(super) literals: Option<Vec<Value>>,
+    pub(super) uppers: BTreeMap<&'static str, f64>,
+    pub(super) lowers: BTreeMap<&'static str, f64>,
+    pub(super) patterns: BTreeSet<String>,
+    pub(super) properties: BTreeMap<&'a str, &'a Value>,
+    pub(super) pattern_properties: BTreeMap<&'a str, &'a Value>,
+    pub(super) required: BTreeSet<&'a str>,
+    pub(super) closed: bool,
+    pub(super) additional: Option<&'a Value>,
+    pub(super) items: Option<&'a Value>,
+    pub(super) open: bool,
+}
+
+/// Keywords whose larger value accepts more input.
+pub(super) const UPPER_BOUNDS: [&str; 5] = [
+    "maximum",
+    "exclusiveMaximum",
+    "maxLength",
+    "maxItems",
+    "maxProperties",
+];
+/// Keywords whose smaller value accepts more input.
+pub(super) const LOWER_BOUNDS: [&str; 5] = [
+    "minimum",
+    "exclusiveMinimum",
+    "minLength",
+    "minItems",
+    "minProperties",
+];
+
+fn intersect_types(types: Option<BTreeSet<String>>, part: Vec<String>) -> Option<BTreeSet<String>> {
+    if part.is_empty() {
+        return types;
+    }
+    let part: BTreeSet<String> = part.into_iter().collect();
+    Some(types.map_or_else(
+        || part.clone(),
+        |known| known.intersection(&part).cloned().collect(),
+    ))
+}
+
+fn merge_part<'a>(facts: &mut Facts<'a>, part: &'a Value) {
+    facts.types = intersect_types(facts.types.take(), type_names(part));
+    let enumerated = part
         .get("enum")
         .and_then(Value::as_array)
         .into_iter()
         .flatten();
-    let literals: Vec<&Value> = enumerated.chain(schema.get("const")).collect();
-    if literals.is_empty() {
-        found.free_types.extend(types.iter().cloned());
+    let literals: Vec<Value> = enumerated.chain(part.get("const")).cloned().collect();
+    if part.get("enum").is_some() || part.get("const").is_some() {
+        facts.literals = Some(match facts.literals.take() {
+            Some(known) => known
+                .into_iter()
+                .filter(|value| literals.contains(value))
+                .collect(),
+            None => literals,
+        });
     }
-    found.types.extend(types);
-    found.values.extend(
-        literals
-            .iter()
-            .filter_map(|v| v.as_str().map(str::to_owned)),
+    for keyword in UPPER_BOUNDS {
+        if let Some(bound) = part.get(keyword).and_then(Value::as_f64) {
+            facts
+                .uppers
+                .entry(keyword)
+                .and_modify(|known| *known = known.min(bound))
+                .or_insert(bound);
+        }
+    }
+    for keyword in LOWER_BOUNDS {
+        if let Some(bound) = part.get(keyword).and_then(Value::as_f64) {
+            facts
+                .lowers
+                .entry(keyword)
+                .and_modify(|known| *known = known.max(bound))
+                .or_insert(bound);
+        }
+    }
+    facts.patterns.extend(
+        part.get("pattern")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
     );
-    if schema.get("properties").is_some() {
-        found.objects.push(schema);
+    let entries = |key: &str| {
+        part.get(key)
+            .and_then(Value::as_object)
+            .into_iter()
+            .flatten()
+    };
+    for (name, schema) in entries("properties") {
+        facts.properties.entry(name.as_str()).or_insert(schema);
     }
-    found.items = found.items.or_else(|| schema.get("items"));
-    let members = ["anyOf", "oneOf"]
-        .into_iter()
-        .filter_map(|key| schema.get(key)?.as_array());
-    for member in members.flatten() {
-        collect(document, member, found);
+    for (pattern, schema) in entries("patternProperties") {
+        facts
+            .pattern_properties
+            .entry(pattern.as_str())
+            .or_insert(schema);
     }
+    facts.required.extend(
+        part.get("required")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str),
+    );
+    match part.get("additionalProperties") {
+        Some(Value::Bool(false)) => facts.closed = true,
+        Some(schema @ Value::Object(_)) => facts.additional = facts.additional.or(Some(schema)),
+        _ => {}
+    }
+    facts.items = facts.items.or_else(|| part.get("items"));
 }
 
-/// Collects the facts of `schema`, resolving references against `document`.
-pub(super) fn shape_of<'a>(document: &'a Value, schema: &'a Value) -> Shape<'a> {
-    let mut found = Shape::default();
-    collect(document, schema, &mut found);
+/// Merges the parts of one alternative into its facts.
+pub(super) fn facts<'a>(alt: &Alt<'a>) -> Facts<'a> {
+    let mut found = Facts {
+        open: alt.open,
+        ..Facts::default()
+    };
+    for part in &alt.parts {
+        merge_part(&mut found, part);
+    }
+    if let Some(only) = &alt.only {
+        found.types = intersect_types(found.types.take(), vec![only.clone()]);
+    }
     found
-}
-
-fn bound(node: Option<&Value>, keyword: &str) -> Option<f64> {
-    node?.get(keyword)?.as_f64()
-}
-
-/// Whether any bound or pattern of the new node accepts less than the old node.
-fn constraint_breaks(old: Option<&Value>, new: Option<&Value>) -> Vec<BreakRule> {
-    let tighter_upper = UPPER_BOUNDS.iter().any(|keyword| {
-        bound(new, keyword).is_some_and(|n| bound(old, keyword).is_none_or(|o| n < o))
-    });
-    let tighter_lower = LOWER_BOUNDS.iter().any(|keyword| {
-        bound(new, keyword).is_some_and(|n| bound(old, keyword).is_none_or(|o| n > o))
-    });
-    let pattern = |node: Option<&Value>| node.and_then(|n| n.get("pattern")).cloned();
-    let mut rules = Vec::new();
-    if tighter_upper || tighter_lower {
-        rules.push(BreakRule::InputBoundNarrowed);
-    }
-    if pattern(new).is_some() && pattern(new) != pattern(old) {
-        rules.push(BreakRule::InputPatternChanged);
-    }
-    rules
-}
-
-/// Rules broken by the types, values and constraints of one schema position.
-pub(super) fn scalar_breaks(
-    old: &Shape<'_>,
-    new: &Shape<'_>,
-    position: Position,
-) -> Vec<BreakRule> {
-    let mut rules = Vec::new();
-    match position {
-        Position::Input => {
-            if !new.types.is_empty() && !old.types.is_subset(&new.types) {
-                rules.push(BreakRule::InputTypeNarrowed);
-            }
-            let restricted = !old.free_types.is_subset(&new.free_types);
-            let removed = !new.values.is_empty() && !old.values.is_subset(&new.values);
-            if restricted || removed {
-                rules.push(BreakRule::InputValuesNarrowed);
-            }
-            rules.extend(constraint_breaks(old.node, new.node));
-        }
-        Position::Output => {
-            if !old.types.is_empty() && new.types.is_empty() && new.objects.is_empty() {
-                rules.push(BreakRule::OutputTypeLost);
-            } else if !old.types.is_empty() && !new.types.is_subset(&old.types) {
-                rules.push(BreakRule::OutputTypeChanged);
-            }
-            if !old.values.is_empty() && !new.values.is_subset(&old.values) && !new.open {
-                rules.push(BreakRule::ClosedOutputEnumGrew);
-            }
-        }
-    }
-    rules
 }
