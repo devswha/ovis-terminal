@@ -63,6 +63,11 @@ jobs:
           # cl.exe without arguments prints its banner and a usage error; only the banner matters.
           banner="$(cl.exe 2>&1 || :)"
           [[ "$banner" == *"Version 19.44."* ]]
+          # Git Bash puts coreutils /usr/bin/link ahead of MSVC on PATH; give Cargo the
+          # pinned toolset's link.exe by absolute path.
+          linker="${VCToolsInstallDir}bin\HostX64\x64\link.exe"
+          test -f "$linker"
+          echo "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$linker" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
