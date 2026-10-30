@@ -1,0 +1,33 @@
+Task 5 holder protocol verification
+Platform: Linux 7.0.0-38-generic x86_64
+Worktree: /home/devswha/workspace/ovis-terminal-wt/lane-t5
+
+$ cargo test -p ovis-terminal-holder --test protocol happy -- --exact --nocapture
+running 1 test
+test happy ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out
+exit: 0
+
+$ cargo test -p ovis-terminal-holder --test protocol failure -- --exact --nocapture
+running 1 test
+test failure ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out
+exit: 0
+
+$ cargo nextest run -p ovis-terminal-holder
+Finished `test` profile [unoptimized + debuginfo]
+exit: 0
+
+$ cargo clippy -p ovis-terminal-holder --all-targets -- -D warnings
+Checking ovis-terminal-holder v0.1.0
+Finished `dev` profile [unoptimized + debuginfo]
+exit: 0
+
+The happy assertion-bearing test verified adoption of the same terminal,
+terminal/process incarnations, PID and process start token, raw tail bytes and
+offset range, and replay of an exit with final offset 8 until the core
+acknowledges that offset. The failure assertion-bearing test verified
+unsupported generation 999 without changing retained state, stale incarnation
+rejection, malformed frame rejection, and rejection of payloads above 16 MiB.
+Separate assertions cover stable frame-header bytes and write-grant, fence,
+and acknowledgement epochs.

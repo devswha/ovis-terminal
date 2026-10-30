@@ -1,0 +1,158 @@
+{
+  "scenario": "part-a/task-5",
+  "todo": 5,
+  "title": "Define holder protocol and adoption identity contracts",
+  "closes": ["GAP-064"],
+  "delivers": ["IDEAL-043", "IDEAL-045", "IDEAL-093"],
+  "protocol": {
+    "name": "ovis-terminal-holder",
+    "generation": 1,
+    "header": {
+      "bytes": 12,
+      "magic_ascii": "OVHP",
+      "generation": "u16-le",
+      "message_kind": "u8",
+      "flags": "u8-zero",
+      "payload_length": "u32-le",
+      "max_payload_bytes": 16777216
+    }
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "send": {
+            "kind": "Hello",
+            "generation": 1,
+            "core_build": "core-build-2",
+            "previous": "crash"
+          }
+        },
+        {
+          "receive": {
+            "kind": "Welcome",
+            "generation": 1,
+            "build": "holder-build-1",
+            "instance": "holder-instance-a",
+            "terminals": [
+              {
+                "terminal_id": "t-17",
+                "terminal_incarnation": "4",
+                "process_incarnation": "9",
+                "pid": 4242,
+                "start_token": "proc-start-abc",
+                "output_offset": "8",
+                "input_sequence": "3",
+                "exit": {
+                  "code": 0,
+                  "signal": null,
+                  "final_offset": "8"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "receive": {
+            "kind": "Tail",
+            "terminal_id": "t-17",
+            "terminal_incarnation": "4",
+            "process_incarnation": "9",
+            "from_offset": "0",
+            "through_offset": "4",
+            "bytes_utf8": "head",
+            "gap": false
+          }
+        },
+        {
+          "assert": {
+            "welcome.pid": 4242,
+            "welcome.start_token": "proc-start-abc",
+            "tail.bytes": [104, 101, 97, 100],
+            "exit.final_offset": "8",
+            "exit_acknowledged": false
+          }
+        },
+        {
+          "send": {
+            "kind": "Hello",
+            "generation": 1,
+            "core_build": "core-build-2",
+            "previous": "crash"
+          }
+        },
+        {
+          "assert": {
+            "replayed_exit.final_offset": "8",
+            "terminal_identity": "t-17@4/process-9"
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "send": {
+            "kind": "Hello",
+            "generation": 999,
+            "core_build": "core-build-new",
+            "previous": "crash"
+          }
+        },
+        {
+          "expect_error": {
+            "kind": "unsupported_generation",
+            "offered": 999,
+            "supported": 1
+          }
+        },
+        {
+          "assert": {
+            "ownership_transferred": false,
+            "retained_terminal_count": 1
+          }
+        },
+        {
+          "send": {
+            "kind": "TailRequest",
+            "terminal_id": "t-reused",
+            "terminal_incarnation": "1",
+            "process_incarnation": "3",
+            "from_offset": "0"
+          }
+        },
+        {
+          "expect_error": {
+            "kind": "stale_target",
+            "expected_terminal_incarnation": "2"
+          }
+        },
+        {
+          "inject_frame": {
+            "generation": 999,
+            "kind": "Hello",
+            "payload_bytes": 0
+          },
+          "expect_error": {
+            "kind": "unsupported_generation",
+            "ownership_transferred": false
+          }
+        },
+        {
+          "inject_frame": {
+            "magic_ascii": "BAD!",
+            "generation": 1,
+            "kind_tag": 1,
+            "flags": 0,
+            "payload_length": 0
+          },
+          "expect_error": {
+            "kind": "malformed_frame"
+          }
+        }
+      ]
+    }
+  ]
+}
