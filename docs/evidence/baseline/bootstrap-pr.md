@@ -34,7 +34,18 @@ Per-job conclusions:
 - test (windows-latest) = pass (1m29s)
 - unused dependencies (cargo-machete) = pass (17s)
 
-First PR: OPEN, 8/8 workflow jobs SUCCESS (no branch protection configured, so gh pr checks --required has no required set; recorded as such).
+Branch protection on main requires the 8 CI jobs; gh pr checks 1 --required exit 0 on head 4ad3936
+```text
+cargo deny	pass	1m2s	https://github.com/devswha/ovis-terminal/actions/runs/41104635896/job/124230808620
+msrv (1.89)	pass	48s	https://github.com/devswha/ovis-terminal/actions/runs/41104635896/job/124230809196
+rustdoc -D warnings	pass	20s	https://github.com/devswha/ovis-terminal/actions/runs/41104635896/job/124230809577
+scripts/check.sh (ubuntu)	pass	24s	https://github.com/devswha/ovis-terminal/actions/runs/41104635896/job/124230808993
+test (macos-latest)	pass	51s	https://github.com/devswha/ovis-terminal/actions/runs/41104635896/job/124230809673
+test (ubuntu-latest)	pass	35s	https://github.com/devswha/ovis-terminal/actions/runs/41104635896/job/124230809135
+test (windows-latest)	pass	2m19s	https://github.com/devswha/ovis-terminal/actions/runs/41104635896/job/124230809096
+unused dependencies (cargo-machete)	pass	20s	https://github.com/devswha/ovis-terminal/actions/runs/41104635896/job/124230809157
+exit=0
+```
 
 What landed:
 - An edition-2024 workspace with the strict lint set from cargo-strict.md, licensed MIT. Every package uses `[lints] workspace = true`. Configs: `rust-toolchain.toml` (1.99.1), `rustfmt.toml`, `clippy.toml` (3-argument threshold), `deny.toml`.
