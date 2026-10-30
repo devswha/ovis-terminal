@@ -111,9 +111,13 @@ impl CoreConnection {
     /// Returns [`CoreConnectionError::Timeout`], [`CoreConnectionError::Closed`],
     /// or a frame or socket failure.
     pub fn recv(&mut self, timeout: Duration) -> Result<Message, CoreConnectionError> {
-        self.stream
-            .set_read_timeout(Some(timeout))
-            .map_err(|source| CoreConnectionError::Io { source })?;
+        match self.stream.set_read_timeout(Some(timeout)) {
+            Ok(()) => {}
+            // macOS rejects socket options once the peer shut the socket down; the
+            // read below then reports the end of the connection.
+            Err(error) if error.raw_os_error() == Some(libc::EINVAL) => {}
+            Err(source) => return Err(CoreConnectionError::Io { source }),
+        }
         let mut buffer = [0_u8; 16 * 1024];
         loop {
             if let Some(message) = self.pending.pop_front() {

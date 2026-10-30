@@ -67,6 +67,13 @@ $ cargo metadata --locked --format-version 1 >/dev/null
 exit: 0
 ```
 
+CI fix (second commit): the first macOS run failed in
+`stop_wakes_accept_and_joins_while_a_core_is_connected` after `stop()` had
+already returned `Ok`. `CoreConnection::recv` got `EINVAL` from
+`set_read_timeout`, because macOS rejects socket options once the peer has shut
+the socket down. `recv` now proceeds to `read()` on that OS error and reports
+`Closed`. The test is unchanged.
+
 Stability: the `happy`/`failure` pair ran 160 times under 16-way parallel load
 (0 failures), and the full holder suite ran 25 consecutive times (0 failures).
 
