@@ -1,0 +1,256 @@
+
+==> cargo +nightly fmt --all -- --check
+
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+    Checking ovis-terminal-probes v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t12/probes)
+    Checking ovis-terminal-bench v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t12/bench)
+    Checking ovis-terminal-holder v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t12/crates/ovis-terminal-holder)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.58s
+
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+    Blocking waiting for file lock on package cache
+   Compiling ovis-terminal-probes v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t12/probes)
+   Compiling ovis-terminal-bench v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t12/bench)
+   Compiling ovis-terminal-holder v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t12/crates/ovis-terminal-holder)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.33s
+────────────
+ Nextest run ID 58c143ec-23ec-47e3-8785-b020fd4e99f3 with nextest profile: default
+    Starting 131 tests across 43 binaries (1 test skipped)
+        PASS [   0.011s] (  1/131) ovis-terminal-core::telemetry counter_values_saturate_at_their_bound
+        PASS [   0.012s] (  2/131) ovis-terminal-cli tests::version_line_names_binary_and_package_version
+        PASS [   0.012s] (  3/131) ovis-terminal-core::telemetry maximum_sequence_round_trips_as_decimal_string
+        PASS [   0.013s] (  4/131) ovis-terminal-bench harness::histogram::tests::percentiles_follow_nearest_rank_and_max_stays_exact
+        PASS [   0.013s] (  5/131) ovis-terminal-core::telemetry oversized_field_is_bounded
+        PASS [   0.012s] (  6/131) ovis-terminal-protocol::rpc rejects_response_with_wrong_json_rpc_version
+        PASS [   0.015s] (  7/131) ovis-terminal-core::telemetry invalid_sink_returns_typed_error
+        PASS [   0.015s] (  8/131) ovis-terminal-holder::protocol failure
+        PASS [   0.015s] (  9/131) ovis-terminal-holder::protocol adoption_transition_table_returns_typed_kinds
+        PASS [   0.015s] ( 10/131) ovis-terminal-holder protocol::property_tests::frame_errors_expose_stable_kinds_hints_and_sources
+        PASS [   0.015s] ( 11/131) ovis-terminal-cli tests::empty_and_extra_arguments_are_usage_errors
+        PASS [   0.011s] ( 12/131) ovis-terminal-cli tests::version_flag_alone_parses
+        PASS [   0.016s] ( 13/131) ovis-terminal-protocol::rpc_counter decimal_counter_round_trips_u64_max_exactly
+        PASS [   0.017s] ( 14/131) ovis-terminal-protocol::wire failure
+        PASS [   0.018s] ( 15/131) ovis-terminal-protocol::rpc failure
+        PASS [   0.018s] ( 16/131) ovis-terminal-holder protocol::property_tests::rejected_header_does_not_leave_a_partial_decoder_frame
+        PASS [   0.018s] ( 17/131) ovis-terminal-core::telemetry happy
+        PASS [   0.018s] ( 18/131) ovis-terminal-protocol::rpc rejects_non_string_target_identity_before_dispatch
+        PASS [   0.019s] ( 19/131) ovis-terminal-probes platform::measure::tests::u64_max_round_trips_exactly_as_a_string
+        PASS [   0.019s] ( 20/131) ovis-terminal-protocol::rpc_errors malformed_json_preserves_source_without_serializing_parser_prose
+        PASS [   0.019s] ( 21/131) ovis-terminal-protocol::rpc_settlement refuses_a_reply_for_a_different_in_flight_id
+        PASS [   0.019s] ( 22/131) ovis-terminal-protocol wire::properties::partial_header_resumes_after_each_byte_position
+        PASS [   0.020s] ( 23/131) ovis-terminal-protocol::rpc_counter decimal_counter_rejects_json_numbers_and_non_canonical_strings
+        PASS [   0.021s] ( 24/131) ovis-terminal-protocol::rpc rejects_unknown_target_parameter_before_dispatch
+        PASS [   0.021s] ( 25/131) ovis-terminal-core::telemetry failure
+        PASS [   0.019s] ( 26/131) ovis-terminal-protocol::rpc rejects_duplicate_in_flight_request_ids
+        PASS [   0.023s] ( 27/131) ovis-terminal-probes platform::measure::tests::every_u64_round_trips
+        PASS [   0.022s] ( 28/131) ovis-terminal-protocol::rpc_errors serializes_structured_boundary_error_fields
+        PASS [   0.025s] ( 29/131) ovis-terminal-vt::adversarial fake_status_and_paste_text_are_only_screen_text
+        PASS [   0.025s] ( 30/131) ovis-terminal-vt engine::paint_equivalence::alternate_screen_paint_restores_both_screens
+        PASS [   0.026s] ( 31/131) ovis-terminal-store evidence::tests::non_canonical_or_numeric_timestamps_are_rejected
+        PASS [   0.026s] ( 32/131) ovis-terminal-protocol::rpc rejects_unknown_nested_target_field_before_dispatch
+        PASS [   0.025s] ( 33/131) ovis-terminal-vt engine::paint_equivalence::primary_screen_paint_matches_live_state
+        PASS [   0.027s] ( 34/131) ovis-terminal-probes platform::measure::tests::numeric_and_non_canonical_forms_are_rejected
+        PASS [   0.027s] ( 35/131) ovis-terminal-holder::protocol happy
+        PASS [   0.026s] ( 36/131) ovis-terminal-store evidence::tests::timestamps_beyond_javascript_precision_round_trip_as_strings
+        PASS [   0.027s] ( 37/131) ovis-terminal-protocol::rpc_counter decimal_counter_round_trips_every_value
+        PASS [   0.027s] ( 38/131) ovis-terminal-holder protocol::counter_json_tests::every_message_variant_encodes_large_counters_as_exact_json_strings
+        PASS [   0.027s] ( 39/131) ovis-terminal-protocol::rpc_errors unknown_method_error_identifies_the_method_field
+        PASS [   0.027s] ( 40/131) ovis-terminal-protocol::rpc rejects_error_and_result_in_one_response
+        PASS [   0.026s] ( 41/131) ovis-terminal-vt::adversarial degenerate_geometry_is_a_typed_error
+        PASS [   0.029s] ( 42/131) ovis-terminal-protocol wire::properties::arbitrary_oversized_lengths_return_frame_too_large
+        PASS [   0.030s] ( 43/131) ovis-terminal-bench harness::histogram::tests::merging_equals_recording_into_one
+        PASS [   0.029s] ( 44/131) ovis-terminal-protocol::rpc_errors maps_typed_internal_error_to_json_rpc_internal_code
+        PASS [   0.033s] ( 45/131) ovis-terminal-protocol::rpc rejects_unknown_request_envelope_fields
+        PASS [   0.034s] ( 46/131) ovis-terminal-protocol::rpc happy
+        PASS [   0.033s] ( 47/131) ovis-terminal-protocol::rpc_settlement settles_interleaved_requests_once_and_keeps_ids_independent
+        PASS [   0.020s] ( 48/131) ovis-terminal-vt::continuation first_paint_preserves_a_split_utf8_character
+        PASS [   0.039s] ( 49/131) ovis-terminal-protocol wire::properties::generated_frame_sequences_are_split_invariant
+        PASS [   0.040s] ( 50/131) ovis-terminal-vt engine::paint_equivalence::cursor_outside_origin_region_spends_saved_cursor_and_says_so
+        PASS [   0.040s] ( 51/131) ovis-terminal-store::recovery rebuild_refuses_a_root_with_nothing_quarantined
+        PASS [   0.017s] ( 52/131) ovis-terminal-vt::queries queries_needing_client_facts_are_not_invented
+        PASS [   0.026s] ( 53/131) ovis-terminal-vt::continuation first_paint_preserves_an_open_title_osc
+        PASS [   0.026s] ( 54/131) ovis-terminal-vt::adversarial more_fields_than_the_parser_keeps_is_malformed_not_truncated_fields
+        PASS [   0.018s] ( 55/131) ovis-terminal-vt::queries replayed_queries_are_not_answered_twice
+        PASS [   0.043s] ( 56/131) ovis-terminal-holder protocol::property_tests::arbitrary_fragment_widths_round_trip
+        PASS [   0.043s] ( 57/131) ovis-terminal-store::compare_and_swap events_of_one_mutation_take_consecutive_sequence_numbers
+        PASS [   0.020s] ( 58/131) ovis-terminal-vt::queries replies_carry_the_offset_of_their_query
+        PASS [   0.029s] ( 59/131) ovis-terminal-vt::adversarial narrowest_grid_survives_wide_characters
+        PASS [   0.017s] ( 60/131) ovis-terminal-vt::queries split_query_is_answered_once_at_its_final_byte
+        PASS [   0.030s] ( 61/131) ovis-terminal-vt::adversarial gate_oversize_osc_after_sixteen_params_is_not_success
+        PASS [   0.017s] ( 62/131) workspace-hygiene loc::tests::comments_blank_lines_and_docs_are_not_code
+        PASS [   0.031s] ( 63/131) ovis-terminal-vt::adversarial osc_payload_at_the_limit_is_kept_and_one_byte_more_is_oversize
+        PASS [   0.024s] ( 64/131) ovis-terminal-vt::osc_bounds gate_osc_bounds_survive_control_inside_escape_introducer
+        PASS [   0.032s] ( 65/131) ovis-terminal-vt::adversarial emulator_owned_osc_numbers_never_leak_as_records
+        PASS [   0.047s] ( 66/131) ovis-terminal-protocol wire::properties::arbitrary_payload_bytes_round_trip
+        PASS [   0.047s] ( 67/131) ovis-terminal-protocol::rpc_settlement settlement_matches_a_reference_set
+        PASS [   0.047s] ( 68/131) ovis-terminal-store::writer a_ticket_resolves_on_an_async_runtime
+        PASS [   0.024s] ( 69/131) ovis-terminal-vt::queries cursor_report_after_resize_uses_the_new_grid
+        PASS [   0.019s] ( 70/131) ovis-terminal-vt::reads search_and_selection_are_revision_guarded
+        PASS [   0.025s] ( 71/131) ovis-terminal-vt::continuation gate_serde_checkpoint_cannot_bypass_version_check
+        PASS [   0.026s] ( 72/131) ovis-terminal-vt::continuation serde_checkpoint_from_a_foreign_engine_cannot_import
+        PASS [   0.048s] ( 73/131) ovis-terminal-store::retention deleting_a_resource_leaves_a_versioned_tombstone
+        PASS [   0.049s] ( 74/131) ovis-terminal-store::recovery a_newer_schema_with_a_live_wal_is_classified_without_touching_it
+        PASS [   0.020s] ( 75/131) ovis-terminal-vt::wire u64_max_round_trips_exactly_as_a_string
+        PASS [   0.021s] ( 76/131) ovis-terminal-vt::wire numeric_and_non_canonical_forms_are_rejected
+        PASS [   0.026s] ( 77/131) ovis-terminal-vt::modes kitty_stack_is_per_screen_and_survives_a_round_trip
+        PASS [   0.027s] ( 78/131) ovis-terminal-vt::modes modes_follow_the_program_and_bump_their_revision_once_per_change
+        PASS [   0.022s] ( 79/131) workspace-hygiene loc::tests::comment_markers_inside_strings_are_code
+        PASS [   0.028s] ( 80/131) ovis-terminal-vt::continuation first_paint_reports_a_control_inside_an_open_sequence
+        PASS [   0.022s] ( 81/131) workspace-hygiene::fixtures malformed_source_is_a_syntax_violation
+        PASS [   0.050s] ( 82/131) ovis-terminal-vt engine::paint_equivalence::paint_after_resize_matches_reflowed_state
+        PASS [   0.022s] ( 83/131) ovis-terminal-vt::reads reads_leave_state_untouched
+        PASS [   0.022s] ( 84/131) workspace-hygiene::fixtures receivers_count_as_parameters
+        PASS [   0.030s] ( 85/131) ovis-terminal-vt::continuation gate_first_paint_preserves_pending_control_sequence
+        PASS [   0.052s] ( 86/131) ovis-terminal-store::compare_and_swap a_conflicting_write_rolls_back_the_whole_mutation
+        PASS [   0.037s] ( 87/131) ovis-terminal-vt::adversarial oversized_dcs_string_is_discarded_until_its_terminator
+        PASS [   0.024s] ( 88/131) workspace-hygiene loc::tests::every_line_of_a_multiline_literal_and_group_counts
+        PASS [   0.054s] ( 89/131) ovis-terminal-store::recovery durable_evidence_stores_its_timestamp_as_a_decimal_string
+        PASS [   0.055s] ( 90/131) ovis-terminal-store::retention evicted_receipts_are_reported_as_not_retained
+        PASS [   0.055s] ( 91/131) ovis-terminal-store::writer a_full_writer_queue_rejects_with_backpressure
+        PASS [   0.026s] ( 92/131) ovis-terminal-vt::wire every_u64_round_trips
+        PASS [   0.055s] ( 93/131) ovis-terminal-store::transactions failure
+        PASS [   0.027s] ( 94/131) ovis-terminal-vt::reads history_reports_range_truncation_and_completeness
+        PASS [   0.032s] ( 95/131) ovis-terminal-vt::properties control_inside_an_open_sequence_is_reported_not_replayed
+        PASS [   0.041s] ( 96/131) ovis-terminal-vt::adversarial kitty_stack_overflow_is_refused_instead_of_crashing_the_engine
+        PASS [   0.028s] ( 97/131) ovis-terminal-vt::reads alternate_screen_history_is_unavailable_with_a_reason
+        PASS [   0.057s] ( 98/131) ovis-terminal-holder protocol::property_tests::identity_fields_round_trip_as_canonical_decimal_strings
+        PASS [   0.058s] ( 99/131) ovis-terminal-store::retention recreating_after_a_tombstone_continues_the_version
+        PASS [   0.059s] (100/131) ovis-terminal-store::writer a_snapshot_stays_at_its_revision_while_later_commits_land
+        PASS [   0.060s] (101/131) ovis-terminal-store::recovery rebuild_leaves_a_newer_schema_in_place
+        PASS [   0.032s] (102/131) ovis-terminal-vt::wire checkpoint_with_a_numeric_offset_is_malformed
+        PASS [   0.060s] (103/131) ovis-terminal-store::compare_and_swap a_reused_operation_id_is_rejected_without_a_second_commit
+        PASS [   0.061s] (104/131) ovis-terminal-store::writer an_oversized_value_is_rejected_before_it_is_queued
+        PASS [   0.062s] (105/131) ovis-terminal-vt::adversarial checkpoint_contradicting_its_geometry_is_rejected
+        PASS [   0.063s] (106/131) ovis-terminal-holder protocol::property_tests::all_message_kinds_round_trip_at_every_two_fragment_boundary
+        PASS [   0.063s] (107/131) ovis-terminal-store::retention evicted_events_report_the_floor_instead_of_an_empty_page
+        PASS [   0.065s] (108/131) ovis-terminal-store::recovery rebuild_carries_the_quarantine_evidence_into_the_new_database
+        PASS [   0.038s] (109/131) workspace-hygiene::fixtures exactly_250_pure_loc_and_three_parameters_pass
+        PASS [   0.045s] (110/131) ovis-terminal-vt::modes herdr_attach_preamble_shows_the_bracketed_paste_it_forces
+        PASS [   0.046s] (111/131) ovis-terminal-vt::osc_bounds every_inert_control_in_the_introducer_keeps_the_bounds
+        PASS [   0.044s] (112/131) workspace-hygiene::fixtures one_line_and_one_parameter_over_the_limit_both_fail
+        PASS [   0.045s] (113/131) workspace-hygiene::fixtures violations_report_file_line_rule_and_count
+        PASS [   0.065s] (114/131) ovis-terminal-vt::checkpoint failure
+        PASS [   0.068s] (115/131) ovis-terminal-vt::checkpoint happy
+        PASS [   0.174s] (116/131) ovis-terminal-protocol wire::connection::tests::queued_frames_obey_record_and_byte_limits
+        PASS [   0.160s] (117/131) ovis-terminal-vt::osc_bounds ten_mib_osc_with_interleaved_controls_is_still_cut_at_the_bound
+        PASS [   0.190s] (118/131) ovis-terminal-holder protocol::adoption_sequence_tests::generated_adoption_exit_ack_sequences_match_reference_model
+        PASS [   0.197s] (119/131) ovis-terminal-store::transactions happy
+        PASS [   0.206s] (120/131) ovis-terminal-store::compare_and_swap versions_follow_the_reference_model
+        PASS [   0.201s] (121/131) ovis-terminal-vt::adversarial ten_mib_unterminated_osc_is_cut_at_the_parser_bound
+        PASS [   0.226s] (122/131) ovis-terminal-store::transactions crash_before_commit_keeps_nothing
+        PASS [   0.515s] (123/131) ovis-terminal-vt engine::mirror::tests::mirror_agrees_with_every_vte_callback
+        PASS [   0.540s] (124/131) ovis-terminal-vt::osc_bounds interleaved_controls_never_change_the_records
+        PASS [   0.597s] (125/131) ovis-terminal-vt::continuation first_paint_at_any_byte_continues_like_the_live_stream
+        PASS [   0.737s] (126/131) ovis-terminal-vt::properties chunking_never_changes_state
+        PASS [   1.160s] (127/131) ovis-terminal-vt engine::paint_equivalence::paint_reproduces_arbitrary_streams
+        PASS [   1.280s] (128/131) ovis-terminal-vt::properties checkpoint_at_any_boundary_is_exact_or_says_why
+        PASS [   2.281s] (129/131) ovis-terminal-holder::platform_probe failure
+        PASS [   3.317s] (130/131) ovis-terminal-protocol::wire happy
+        PASS [   5.021s] (131/131) ovis-terminal-holder::platform_probe happy
+────────────
+     Summary [   5.022s] 131 tests run: 131 passed, 1 skipped
+
+==> cargo test --doc --workspace --all-features --locked
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+   Doc-tests ovis_terminal_agent
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_agent_adapters
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_authz
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_bench
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_cli
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_holder
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_probes
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_protocol
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_remote
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_server
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_services
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_vt
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests workspace_hygiene
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 173 file(s) checked
+
+==> bash scripts/hygiene/manifests.sh
+manifests.sh: 16 member manifest(s) checked
+
+==> bash scripts/hygiene/json.sh
+json.sh: 14 JSON file(s) checked
+
+check.sh: all steps passed
+EXIT=0

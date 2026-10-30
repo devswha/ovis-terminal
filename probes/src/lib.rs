@@ -1,6 +1,11 @@
 //! Native platform probes for PTY, process and VT behavior.
 //!
-//! Scaffold crate: harness code arrives with plan todo 12.
+//! The probes live under `probes/platform/`; they drive real pseudo-terminals
+//! through the pinned portable-pty backend and report measured behavior or a
+//! typed [`platform::ProbeError`].
+
+#[path = "../platform/platform.rs"]
+pub mod platform;
 
 /// Cargo package name of this crate, used by the workspace layering record.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
