@@ -1,0 +1,22 @@
+### pane.process_info: pane_id vs target (focused pane differs)
+$ pane.split {"pane_id":"w1:p1","direction":"right"}
+<- {"id":"r12","result":{"type":"pane_info","pane":{"pane_id":"w1:p2","terminal_id":"term_65f10d22c6f482","workspace_id":"w1","tab_id":"w1:t1","focused":false,"cwd":"<run-root>/smoke","foreground_cwd":"<run-root>/smoke","agent_status":"unknown","scroll":{"offset_from_bottom":0,"max_offset_from_bottom":0,"viewport_rows":38},"revision":0}}}
+-- ms=5 frames=1 closedByServer=true
+paneB=w1:p2 split result: {"type":"pane_info","pane":{"pane_id":"w1:p2","terminal_id":"term_65f10d22c6f482","workspace_id":"w1","tab_id":"w1:t1","focused":false,"cwd":"<run-root>/smoke","foreground_cwd":"<run-root>/smoke","agent_status":"unknown","scroll":{"offset_from_bottom":0,"max_offset_from_bottom":0,"viewport_rows":38},"revision":0}}
+$ pane.send_text {"pane_id":"w1:p2","text":"sleep 120\n"}
+<- {"id":"r13","result":{"type":"ok"}}
+-- ms=1 frames=1 closedByServer=true
+$ pane.focus {"pane_id":"w1:p1"}
+<- {"id":"r14","result":{"type":"pane_info","pane":{"pane_id":"w1:p1","terminal_id":"term_65f10d20ab0831","workspace_id":"w1","tab_id":"w1:t1","focused":true,"cwd":"<run-root>/smoke","foreground_cwd":"<run-root>/smoke","terminal_title":"<user>@<host>: <run-root>/smoke","terminal_title_stripped":"<user>@<host>: <run-root>/smoke","agent_status":"unknown","scroll":{"offset_from_bottom":0,"max_offset_from_bottom":0,"viewport_rows":40},"revision":1}}}
+-- ms=1 frames=1 closedByServer=true
+$ process_info pane_id=B (expect sleep) {"pane_id":"w1:p2"}
+<- {"id":"r15","result":{"type":"pane_process_info","process_info":{"pane_id":"w1:p2","shell_pid":2764454,"foreground_process_group_id":2764637,"foreground_processes":[{"pid":2764637,"name":"sleep","argv":["sleep","120"],"cmdline":"sleep 120","cwd":"<run-root>/smoke"}]}}}
+-- ms=1 frames=1 closedByServer=true
+$ process_info target=B (trap: answers for focused A?) {"target":"w1:p2"}
+<- {"id":"r16","result":{"type":"pane_process_info","process_info":{"pane_id":"w1:p1","shell_pid":2764185,"foreground_process_group_id":2764185,"foreground_processes":[{"pid":2764185,"name":"bash","argv":["/bin/bash"],"cmdline":"/bin/bash","cwd":"<run-root>/smoke"}]}}}
+-- ms=0 frames=1 closedByServer=true
+TRAP CHECK: pane_id=B foreground={"pane_id":"w1:p2","shell_pid":2764454,"foreground_process_group_id":2764637,"foreground_processes":[{"pid":2764637,"name":"sleep","argv":["sleep","120"],"cmdline":"sleep 120","cwd":"<run-root-truncated> | target=B foreground={"pane_id":"w1:p1","shell_pid":2764185,"foreground_process_group_id":2764185,"foreground_processes":[{"pid":2764185,"name":"bash","argv":["/bin/bash"],"cmdline":"/bin/bash","cwd":"<run-root>
+$ agent.get {"target":"w1:p1"}
+<- {"id":"r17","error":{"code":"agent_not_found","message":"agent target w1:p1 not found"}}
+-- ms=0 frames=1 closedByServer=true
+agent.get A: {"code":"agent_not_found","message":"agent target w1:p1 not found"}

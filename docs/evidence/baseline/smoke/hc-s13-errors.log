@@ -1,0 +1,21 @@
+### get nonexistent (expect exit 3 JSON error)
+$ <run-root>/bin/hc get nope-t99 --json
+--- stdout
+--- stderr
+{"error":{"hint":"see `hc ls --all`","kind":"not_found","message":"no terminal \"nope-t99\""}}
+--- exit=3 elapsed_ms=11
+
+### send without target in no-terminal context (expect 7)
+$ <run-root>/bin/hc send
+--- stdout
+--- stderr
+{"error":{"hint":"see `hc --help`","kind":"usage","message":"the following required arguments were not provided: <TERMINAL> <TEXT>"}}
+--- exit=2 elapsed_ms=13
+
+### rm live terminal (expect refusal)
+$ <run-root>/bin/hc rm sh1 --json
+--- stdout
+--- stderr
+{"error":{"hint":"kill it first: hc kill t1","kind":"live","message":"t1 is still running"}}
+--- exit=1 elapsed_ms=11
+

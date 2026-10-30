@@ -1,0 +1,19 @@
+### socket path
+$ echo <run-root>/smoke/hc-run/herdr-core/ovis-smoke.sock
+--- stdout
+<run-root>/smoke/hc-run/herdr-core/ovis-smoke.sock
+--- stderr
+--- exit=0 elapsed_ms=12
+
+### framed attach probe (bun)
+$ bun <run-root>/smoke/framed-attach.ts <run-root>/smoke/hc-run/herdr-core/ovis-smoke.sock sh1
+--- stdout
+[probe] connected <run-root>/smoke/hc-run/herdr-core/ovis-smoke.sock
+[plain<-] {"id":1,"jsonrpc":"2.0","result":{"core":{"id":"dcb5ded90ae69879514cb21f0b30c7fe","name":"<user>-thinkstation-p620"},"features":["framed","attach","events","status","shell"],"framed":true,"generation":1,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.14"}}
+[framed->] terminal.attach sh1
+[framed<- ch0 kind=0] {"id":2,"jsonrpc":"2.0","result":{"channel":1,"terminal":{"address":"t1","argv":["bash","--norc"],"cols":100,"created_ms":1793374848256,"cwd":"<home>/workspace/ovis-terminal","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["bash","--norc"],"cwd":"<home>/workspace/ovis-terminal","name":"bash","pid":2670008},"identity":"ghostty","keep":false,"labels":{
+[stream ch1 DATA 672B] "\u001b[!p\u001b[?2026l\u001b[?9l\u001b[?1000l\u001b[?1001l\u001b[?1002l\u001b[?1003l\u001b[?1004l\u001b[?1005l\u001b[?1006l\u001b[?1015l\u001b[?1016l\u001b[?2004l\u001b[?1l\u001b[?66l\u001b[?2031l\u001b[?2048l\u001b[=0;1u\u001b[?1049l\u001b[?1047l\u001b[?47l\u001b[H\u001b[2J\u001b[?2004h\u001b[3g\u001b[9G\u001bH\u001b[17G\u001bH\u001b[25G\u001bH\u001b[33G\u001bH\u001b[41G\u001bH\u001b[49G\u001bH\u001b[57G\u001bH\u001b[65G\u001bH\u001b[73G\u001bH\u001b[81G\u001bH\u001b[89G\u001bH\u001b[97G\u001bH\u001b[Hbash-5.3$ echo HELLO_SMOKE_42\r\nHELLO_SMOKE"
+[probe] timeout 6s, frames=2 streamBytes=672
+--- stderr
+--- exit=124 elapsed_ms=20015
+

@@ -1,0 +1,19 @@
+### session.snapshot + workspace.create + pane list
+$ session.snapshot {}
+<- {"id":"r4","result":{"type":"session_snapshot","snapshot":{"version":"0.9.5","protocol":22,"focused_workspace_id":"w1","focused_tab_id":"w1:t1","focused_pane_id":"w1:p1","workspaces":[{"workspace_id":"w1","number":1,"label":"ovis-smoke-ws","focused":true,"pane_count":1,"tab_count":1,"active_tab_id":"w1:t1","agent_status":"unknown"}],"tabs":[{"tab_id":"w1:t1","workspace_id":"w1","number":1,"label":"1","focused":true,"pane_count":1,"agent_status":"unknown"}],"panes":[{"pane_id":"w1:p1","terminal_id":"term_65f10c295e4f01","workspace_id":"w1","tab_id":"w1:t1","focused":true,"cwd":"<run-root>/smoke","foreground_cwd":"<run-root>/smoke","agent_status":"unknown","scroll":{"offset_from_bottom":0,"max_offset_from_bottom":0,"viewport_rows":24},"revision":0}],"layouts":[{"workspace_id":"w1","tab_id":"w1:t1","zoomed":false,"area":{"x":0,"y":0,"width":120,"height":40},"focused_pane
+-- ms=72 frames=1 closedByServer=true
+workspaces before: 1
+$ workspace.create {"cwd":"<run-root>/smoke","label":"ovis-smoke-ws","focus":false}
+<- {"id":"r5","result":{"type":"workspace_created","workspace":{"workspace_id":"w2","number":2,"label":"ovis-smoke-ws","focused":false,"pane_count":1,"tab_count":1,"active_tab_id":"w2:t1","agent_status":"unknown"},"tab":{"tab_id":"w2:t1","workspace_id":"w2","number":1,"label":"1","focused":false,"pane_count":1,"agent_status":"unknown"},"root_pane":{"pane_id":"w2:p1","terminal_id":"term_65f10c29867e42","workspace_id":"w2","tab_id":"w2:t1","focused":false,"cwd":"<run-root>/smoke","foreground_cwd":"<run-root>/smoke","agent_status":"unknown","scroll":{"offset_from_bottom":0,"max_offset_from_bottom":0,"viewport_rows":40},"revision":0}}}
+-- ms=5 frames=1 closedByServer=true
+root_pane from create: w2:p1 focused flag despite focus:false => false
+workspace id: w2 result keys: type,workspace,tab,root_pane
+$ session.snapshot {}
+<- {"id":"r6","result":{"type":"session_snapshot","snapshot":{"version":"0.9.5","protocol":22,"focused_workspace_id":"w1","focused_tab_id":"w1:t1","focused_pane_id":"w1:p1","workspaces":[{"workspace_id":"w1","number":1,"label":"ovis-smoke-ws","focused":true,"pane_count":1,"tab_count":1,"active_tab_id":"w1:t1","agent_status":"unknown"},{"workspace_id":"w2","number":2,"label":"ovis-smoke-ws","focused":false,"pane_count":1,"tab_count":1,"active_tab_id":"w2:t1","agent_status":"unknown"}],"tabs":[{"tab_id":"w1:t1","workspace_id":"w1","number":1,"label":"1","focused":true,"pane_count":1,"agent_status":"unknown"},{"tab_id":"w2:t1","workspace_id":"w2","number":1,"label":"1","focused":false,"pane_count":1,"agent_status":"unknown"}],"panes":[{"pane_id":"w1:p1","terminal_id":"term_65f10c295e4f01","workspace_id":"w1","tab_id":"w1:t1","focused":true,"cwd":"<run-root>/smoke","foreground_cwd":"/
+-- ms=1 frames=1 closedByServer=true
+workspace object keys: workspace_id,number,label,focused,pane_count,tab_count,active_tab_id,agent_status
+workspace json: {"workspace_id":"w2","number":2,"label":"ovis-smoke-ws","focused":false,"pane_count":1,"tab_count":1,"active_tab_id":"w2:t1","agent_status":"unknown"}
+$ pane.list {"workspace_id":"w2"}
+<- {"id":"r7","result":{"type":"pane_list","panes":[{"pane_id":"w2:p1","terminal_id":"term_65f10c29867e42","workspace_id":"w2","tab_id":"w2:t1","focused":false,"cwd":"<run-root>/smoke","foreground_cwd":"<run-root>/smoke","agent_status":"unknown","scroll":{"offset_from_bottom":0,"max_offset_from_bottom":0,"viewport_rows":40},"revision":0}]}}
+-- ms=0 frames=1 closedByServer=true
+paneA=w2:p1 panes result: {"type":"pane_list","panes":[{"pane_id":"w2:p1","terminal_id":"term_65f10c29867e42","workspace_id":"w2","tab_id":"w2:t1","focused":false,"cwd":"<run-root>/smoke","foreground_cwd":"<run-root>/smoke","agent_status":"unknown","scroll":{"offset_from_bottom":0,"max_offset_from_bottom":0,"viewport_rows":40},"revision":0}]}

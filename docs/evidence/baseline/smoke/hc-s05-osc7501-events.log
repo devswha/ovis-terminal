@@ -1,0 +1,75 @@
+### report working via OSC 7501
+$ <run-root>/bin/hc send sh1 printf '\e]7501;state=working:app=smoke:progress=10\e\\'
+--- stdout
+{"started":null,"status":null,"turn":0}
+--- stderr
+--- exit=0 elapsed_ms=215
+
+### get after working
+$ <run-root>/bin/hc get sh1 --json
+--- stdout
+{"address":"t1","argv":["bash","--norc"],"cols":200,"created_ms":1793374848256,"cwd":"<home>/workspace/ovis-terminal","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["bash","--norc"],"cwd":"<home>/workspace/ovis-terminal","name":"bash","pid":2670008},"identity":"ghostty","keep":false,"labels":{},"name":"sh1","notify":true,"parent":null,"pid":2670008,"reason":null,"reported":true,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":{"app":"smoke","progress":10,"state":"working"},"status_ms":1793374851666,"template":null,"title":"","turn":0}
+--- stderr
+--- exit=0 elapsed_ms=12
+
+### report blocked kind=permission
+$ <run-root>/bin/hc send sh1 printf '\e]7501;state=blocked:kind=permission:app=smoke\e\\'
+--- stdout
+{"started":true,"status":"working","turn":0}
+--- stderr
+--- exit=0 elapsed_ms=214
+
+### get after blocked
+$ <run-root>/bin/hc get sh1 --json
+--- stdout
+{"address":"t1","argv":["bash","--norc"],"cols":200,"created_ms":1793374848256,"cwd":"<home>/workspace/ovis-terminal","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["bash","--norc"],"cwd":"<home>/workspace/ovis-terminal","name":"bash","pid":2670008},"identity":"ghostty","keep":false,"labels":{},"name":"sh1","notify":true,"parent":null,"pid":2670008,"reason":null,"reported":true,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":{"app":"smoke","kind":"permission","state":"blocked"},"status_ms":1793374852928,"template":null,"title":"","turn":1}
+--- stderr
+--- exit=0 elapsed_ms=13
+
+### send while blocked (expect refusal exit 9)
+$ <run-root>/bin/hc send sh1 echo SHOULD_BE_REFUSED
+--- stdout
+--- stderr
+{"error":{"hint":"typing would answer its dialog; read its screen first (hc read t1), or --force","kind":"blocked","message":"t1 is blocked (permission)"}}
+--- exit=9 elapsed_ms=13
+
+### send --force while blocked
+$ <run-root>/bin/hc send --force sh1 printf '\e]7501;state=done:app=smoke\e\\'
+--- stdout
+{"started":false,"status":"blocked","turn":1}
+--- stderr
+--- exit=0 elapsed_ms=5213
+
+### get after done
+$ <run-root>/bin/hc get sh1 --json
+--- stdout
+{"address":"t1","argv":["bash","--norc"],"cols":200,"created_ms":1793374848256,"cwd":"<home>/workspace/ovis-terminal","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["bash","--norc"],"cwd":"<home>/workspace/ovis-terminal","name":"bash","pid":2670008},"identity":"ghostty","keep":false,"labels":{},"name":"sh1","notify":true,"parent":null,"pid":2670008,"reason":null,"reported":true,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":{"app":"smoke","state":"done"},"status_ms":1793374854221,"template":null,"title":"","turn":1}
+--- stderr
+--- exit=0 elapsed_ms=13
+
+### report idle
+$ <run-root>/bin/hc send sh1 printf '\e]7501;state=idle:app=smoke\e\\'
+--- stdout
+{"started":false,"status":"done","turn":1}
+--- stderr
+--- exit=0 elapsed_ms=5215
+
+### events stream captured lines
+$ wc -l <run-root>/evidence/smoke/hc-s05-events-stream.jsonl
+--- stdout
+6 <run-root>/evidence/smoke/hc-s05-events-stream.jsonl
+--- stderr
+--- exit=0 elapsed_ms=13
+
+### events stream head
+$ head -c 3000 <run-root>/evidence/smoke/hc-s05-events-stream.jsonl
+--- stdout
+{"channel":null,"seq":2,"terminals":[{"address":"t1","argv":["bash","--norc"],"cols":200,"created_ms":1793374848256,"cwd":"<home>/workspace/ovis-terminal","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["bash","--norc"],"cwd":"<home>/workspace/ovis-terminal","name":"bash","pid":2670008},"identity":"ghostty","keep":false,"labels":{},"name":"sh1","notify":true,"parent":null,"pid":2670008,"reason":null,"reported":false,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":null,"status_ms":null,"template":null,"title":"","turn":0}]}
+{"jsonrpc":"2.0","method":"event","params":{"data":{"records":{},"reported":true,"status":{"app":"smoke","progress":10,"state":"working"}},"seq":3,"terminal":"t1","type":"status"}}
+{"jsonrpc":"2.0","method":"event","params":{"data":{"records":{},"reported":true,"status":{"app":"smoke","kind":"permission","state":"blocked"}},"seq":4,"terminal":"t1","type":"status"}}
+{"jsonrpc":"2.0","method":"event","params":{"data":{"state":"blocked","turn":1},"seq":5,"terminal":"t1","type":"turn"}}
+{"jsonrpc":"2.0","method":"event","params":{"data":{"records":{},"reported":true,"status":{"app":"smoke","state":"done"}},"seq":6,"terminal":"t1","type":"status"}}
+{"jsonrpc":"2.0","method":"event","params":{"data":{"records":{},"reported":true,"status":{"app":"smoke","state":"idle"}},"seq":7,"terminal":"t1","type":"status"}}
+--- stderr
+--- exit=0 elapsed_ms=12
+
