@@ -47,6 +47,10 @@ impl OutputStream {
         self.received
     }
 
+    pub(super) fn pending(&self) -> &[u8] {
+        &self.pending
+    }
+
     pub(super) fn read_until(
         &mut self,
         needle: &[u8],

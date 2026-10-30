@@ -149,6 +149,13 @@ impl PtySession {
         self.output.received()
     }
 
+    /// Output received but not yet consumed by a read, for diagnosing a read
+    /// that timed out.
+    #[must_use]
+    pub fn unconsumed(&self) -> &[u8] {
+        self.output.pending()
+    }
+
     /// Writes `bytes` as terminal input.
     ///
     /// # Errors
