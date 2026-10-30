@@ -45,7 +45,7 @@ proptest! {
             HolderInstanceId::new("holder-instance".to_owned()),
         );
         let supported = Hello {
-            generation: 1,
+            generation: HOLDER_PROTOCOL_GENERATION,
             core_build: CoreBuildId::new("core-build".to_owned()),
             previous: PreviousCoreState::Crash,
         };

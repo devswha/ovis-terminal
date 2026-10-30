@@ -1,10 +1,10 @@
 //! Holder adoption and frame boundary integration tests.
 
 use ovis_terminal_holder::protocol::{
-    AdoptionTable, CoreBuildId, FrameHeader, HeldTerminal, Hello, HolderBuildId, HolderDescriptor,
-    HolderInstanceId, Message, MessageKind, PreviousCoreState, ProcessIncarnation,
-    ProcessStartToken, Tail, TailRequest, TerminalId, TerminalIncarnation, TerminalTarget,
-    decode_message, encode_message, negotiate, parse_header,
+    AdoptionTable, CoreBuildId, FrameHeader, HOLDER_PROTOCOL_GENERATION, HeldTerminal, Hello,
+    HolderBuildId, HolderDescriptor, HolderInstanceId, Message, MessageKind, PreviousCoreState,
+    ProcessIncarnation, ProcessStartToken, Tail, TailRequest, TerminalId, TerminalIncarnation,
+    TerminalTarget, decode_message, encode_message, negotiate, parse_header,
 };
 
 #[test]
@@ -37,7 +37,7 @@ fn happy() {
     let mut table = AdoptionTable::default();
     table.retain(retained).expect("holder record is valid");
     let hello = Hello {
-        generation: 1,
+        generation: HOLDER_PROTOCOL_GENERATION,
         core_build: CoreBuildId::new("core-build-2".to_owned()),
         previous: PreviousCoreState::Crash,
     };
@@ -177,7 +177,7 @@ fn adoption_transition_table_returns_typed_kinds() {
         HolderInstanceId::new("holder-instance".to_owned()),
     );
     let hello = Hello {
-        generation: 1,
+        generation: HOLDER_PROTOCOL_GENERATION,
         core_build: CoreBuildId::new("core-build".to_owned()),
         previous: PreviousCoreState::Handover,
     };

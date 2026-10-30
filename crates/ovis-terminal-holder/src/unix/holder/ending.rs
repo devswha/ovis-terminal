@@ -145,6 +145,7 @@ mod tests {
         let failure = PtyIoFailure {
             operation: PtyOperation::Read,
             os_error: Some(libc::EISDIR),
+            poll_revents: None,
         };
         assert_eq!(exit.io_failure, Some(failure));
         let kinds: Vec<&str> = terminal

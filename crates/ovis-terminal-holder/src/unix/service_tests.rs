@@ -6,7 +6,8 @@ use super::test_fixtures::{WAIT, adopt, hello, input, shell, spawn, start_servic
 use super::{CoreConnection, CoreConnectionError};
 use crate::process::{ProcessId, read_start_token};
 use crate::protocol::{
-    Drain, Goodbye, GoodbyeReason, Message, SpawnFailureKind, SpawnFailureReason,
+    Drain, Goodbye, GoodbyeReason, Message, MessageKind, SpawnFailureKind, SpawnFailureReason,
+    decode_message,
 };
 
 fn shutdown(core: &mut CoreConnection) {
@@ -211,6 +212,45 @@ fn each_launch_gets_its_own_cwd_and_environment_over_the_socket() {
     shutdown(&mut core);
     service.wait().expect("joined shutdown");
     std::fs::remove_dir_all(&root).expect("remove dirs");
+}
+
+/// A frame exactly as a generation-1 core encoded it.
+fn generation_one_frame(kind: MessageKind, payload: &[u8]) -> Vec<u8> {
+    let length = u32::try_from(payload.len()).expect("payload fits u32");
+    let mut frame = b"OVHP".to_vec();
+    frame.extend_from_slice(&1_u16.to_le_bytes());
+    frame.extend_from_slice(&[kind.wire_tag(), 0]);
+    frame.extend_from_slice(&length.to_le_bytes());
+    frame.extend_from_slice(payload);
+    frame
+}
+
+#[test]
+fn generation_one_core_is_refused_at_hello_before_any_spawn() {
+    // Given: a generation-2 holder and the recorded generation-1 Hello and Spawn.
+    let (service, socket) = start_service();
+    let hello =
+        br#"{"kind":"hello","data":{"generation":"1","core_build":"old-core","previous":"crash"}}"#;
+    let spawn = br#"{"kind":"spawn","data":{"terminal_id":"old-core","terminal_incarnation":"1","argv":["/bin/sh","-c","true"],"geometry":[80,24]}}"#;
+    let old_spawn = generation_one_frame(MessageKind::Spawn, spawn);
+
+    // Then: the codec refuses the old generation itself, never the payload shape.
+    let refused = decode_message(&old_spawn).expect_err("generation 1 is unsupported");
+    assert_eq!(refused.kind(), "unsupported_generation");
+
+    // When: an old core replays Hello then Spawn on a real connection.
+    let mut old = CoreConnection::connect(&socket).expect("connect");
+    let mut replay = generation_one_frame(MessageKind::Hello, hello);
+    replay.extend_from_slice(&old_spawn);
+    old.send_raw(&replay).expect("replay");
+
+    // Then: no Welcome, a typed reason at hello, and nothing was spawned.
+    assert!(matches!(old.recv(WAIT), Err(CoreConnectionError::Closed)));
+    let (mut core, held) = adopt(&socket);
+    assert_eq!(service.last_failure_kind(), Some("unsupported_generation"));
+    assert_eq!(held, Vec::new());
+    shutdown(&mut core);
+    service.wait().expect("joined shutdown");
 }
 
 #[test]

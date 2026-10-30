@@ -57,8 +57,7 @@ pub(super) fn read_chunk(
             Err(error) if error.kind() == ErrorKind::Interrupted => {}
             Err(error) if error.kind() == ErrorKind::WouldBlock => {
                 // After a hang-up the next read drains what remains, then reports EIO.
-                wait(file.as_fd(), libc::POLLIN)
-                    .map_err(|source| TerminalIoError::Poll { source })?;
+                wait(file.as_fd(), libc::POLLIN)?;
             }
             Err(error) if is_hangup(&error) => return Ok(ReadOutcome::Hangup),
             Err(source) => return Err(TerminalIoError::Read { source }),
@@ -78,10 +77,10 @@ pub(super) fn write_prefix(file: &mut File, bytes: &[u8]) -> WriteOutcome {
             Err(error) if error.kind() == ErrorKind::Interrupted => {}
             Err(error) if error.kind() == ErrorKind::WouldBlock => {
                 match wait(file.as_fd(), libc::POLLOUT) {
-                    Ok(true) => {}
-                    Ok(false) => break,
-                    Err(source) => {
-                        failure = Some(TerminalIoError::Poll { source });
+                    Ok(Readiness::Ready) => {}
+                    Ok(Readiness::Hangup) => break,
+                    Err(error) => {
+                        failure = Some(error);
                         break;
                     }
                 }
@@ -96,8 +95,16 @@ pub(super) fn write_prefix(file: &mut File, bytes: &[u8]) -> WriteOutcome {
     WriteOutcome { written, failure }
 }
 
-/// Waits until `fd` is ready for `events`; `Ok(false)` when it hung up instead.
-fn wait(fd: BorrowedFd<'_>, events: libc::c_short) -> io::Result<bool> {
+/// What `poll(2)` reported for one descriptor.
+#[derive(Debug, Eq, PartialEq)]
+enum Readiness {
+    Ready,
+    Hangup,
+}
+
+/// Waits until `fd` is ready for `events`. POLLHUP is the normal hang-up;
+/// POLLNVAL, or POLLERR without POLLHUP, is a typed failure carrying the flags.
+fn wait(fd: BorrowedFd<'_>, events: libc::c_short) -> Result<Readiness, TerminalIoError> {
     let mut entry = libc::pollfd {
         fd: fd.as_raw_fd(),
         events,
@@ -107,11 +114,21 @@ fn wait(fd: BorrowedFd<'_>, events: libc::c_short) -> io::Result<bool> {
         // SAFETY: `entry` is one live, initialized pollfd and the count is 1.
         let status = unsafe { libc::poll(&raw mut entry, 1, -1) };
         if status >= 0 {
-            return Ok(entry.revents & (libc::POLLHUP | libc::POLLERR | libc::POLLNVAL) == 0);
+            let revents = entry.revents;
+            let invalid = revents & libc::POLLNVAL != 0;
+            let hangup = revents & libc::POLLHUP != 0;
+            let error = revents & libc::POLLERR != 0;
+            return match (invalid, hangup, error) {
+                (false, true, _) => Ok(Readiness::Hangup),
+                (false, false, false) => Ok(Readiness::Ready),
+                (true, _, _) | (false, false, true) => Err(TerminalIoError::PollFlags {
+                    revents: u16::from_ne_bytes(revents.to_ne_bytes()),
+                }),
+            };
         }
-        let error = io::Error::last_os_error();
-        if error.kind() != ErrorKind::Interrupted {
-            return Err(error);
+        let source = io::Error::last_os_error();
+        if source.kind() != ErrorKind::Interrupted {
+            return Err(TerminalIoError::Poll { source });
         }
     }
 }
@@ -119,8 +136,9 @@ fn wait(fd: BorrowedFd<'_>, events: libc::c_short) -> io::Result<bool> {
 #[cfg(test)]
 mod tests {
     use std::fs::File;
+    use std::os::fd::AsFd;
 
-    use super::{read_chunk, write_prefix};
+    use super::{read_chunk, wait, write_prefix};
     use crate::protocol::{PtyIoFailure, PtyOperation};
 
     #[test]
@@ -139,6 +157,7 @@ mod tests {
         let wire = PtyIoFailure {
             operation: PtyOperation::Read,
             os_error: Some(libc::EISDIR),
+            poll_revents: None,
         };
         assert_eq!(failure.io_failure(), Some(wire));
         assert_eq!(failure.exit_unknown(), None);
@@ -164,5 +183,28 @@ mod tests {
             (PtyOperation::Write, Some(libc::EBADF))
         );
         std::fs::remove_file(&path).expect("remove file");
+    }
+
+    #[test]
+    fn poll_error_without_hangup_is_a_typed_failure_not_a_hangup() {
+        // Given: a pipe whose reader is gone, so poll reports POLLOUT|POLLERR, no POLLHUP.
+        let (reader, writer) = std::io::pipe().expect("pipe");
+        drop(reader);
+
+        // When: the writer waits for room.
+        let outcome = wait(writer.as_fd(), libc::POLLOUT);
+
+        // Then: the error flags are a typed poll failure that reaches the exit record.
+        let Err(failure) = outcome else {
+            panic!("POLLERR must not be erased into readiness or a hang-up");
+        };
+        assert_eq!(failure.kind(), "pty_poll_flagged");
+        let wire = failure.io_failure().expect("output-side failure");
+        assert_eq!(wire.operation, PtyOperation::Poll);
+        let pollerr = u16::from_ne_bytes(libc::POLLERR.to_ne_bytes());
+        assert_eq!(
+            wire.poll_revents.map(|flags| flags & pollerr),
+            Some(pollerr)
+        );
     }
 }

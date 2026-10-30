@@ -38,7 +38,7 @@ pub use messages::{
 };
 
 /// Independently versioned generation of the holder-to-core contract.
-pub const HOLDER_PROTOCOL_GENERATION: u16 = 1;
+pub const HOLDER_PROTOCOL_GENERATION: u16 = 2;
 
 /// Maximum encoded holder payload, in bytes.
 pub const MAX_FRAME_PAYLOAD: usize = 16 * 1024 * 1024;

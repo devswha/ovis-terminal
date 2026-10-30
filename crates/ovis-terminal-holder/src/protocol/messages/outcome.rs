@@ -131,4 +131,6 @@ pub struct PtyIoFailure {
     pub operation: PtyOperation,
     /// Operating-system error number, when the OS reported one.
     pub os_error: Option<i32>,
+    /// Raw `poll(2)` revents bits, when poll reported error flags.
+    pub poll_revents: Option<u16>,
 }

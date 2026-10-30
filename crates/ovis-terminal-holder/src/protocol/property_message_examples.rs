@@ -27,8 +27,9 @@ pub(super) fn message_examples() -> Vec<Message> {
             os_error: Some(10),
         }),
         io_failure: Some(PtyIoFailure {
-            operation: PtyOperation::Read,
-            os_error: Some(5),
+            operation: PtyOperation::Poll,
+            os_error: None,
+            poll_revents: Some(0x0008),
         }),
         final_offset: 8,
     };
@@ -49,12 +50,12 @@ pub(super) fn message_examples() -> Vec<Message> {
     };
     vec![
         Message::Hello(Hello {
-            generation: 1,
+            generation: HOLDER_PROTOCOL_GENERATION,
             core_build: CoreBuildId::new("core-build-a".to_owned()),
             previous: PreviousCoreState::Crash,
         }),
         Message::Welcome(Welcome {
-            generation: 1,
+            generation: HOLDER_PROTOCOL_GENERATION,
             build: HolderBuildId::new("holder-build-a".to_owned()),
             instance: HolderInstanceId::new("holder-instance-a".to_owned()),
             terminals: vec![held],

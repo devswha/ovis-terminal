@@ -29,6 +29,12 @@ pub enum TerminalIoError {
         #[source]
         source: io::Error,
     },
+    /// Poll reported POLLNVAL, or POLLERR without a hang-up.
+    #[error("the pseudo-terminal reported error flags {revents:#06x}")]
+    PollFlags {
+        /// Raw `revents` bits reported by `poll(2)`.
+        revents: u16,
+    },
     /// Writing program input failed; the acknowledgement carries the written prefix.
     #[error("writing program input failed")]
     Write {
@@ -65,6 +71,7 @@ impl TerminalIoError {
         match self {
             Self::Read { .. } => "pty_read_failed",
             Self::Poll { .. } => "pty_poll_failed",
+            Self::PollFlags { .. } => "pty_poll_flagged",
             Self::Write { .. } => "pty_write_failed",
             Self::Record { .. } => "output_record_failed",
             Self::PumpLost => "pump_lost",
@@ -77,7 +84,11 @@ impl TerminalIoError {
     #[must_use]
     pub const fn hint(&self) -> &'static str {
         match self {
-            Self::Read { .. } | Self::Poll { .. } | Self::Record { .. } | Self::PumpLost => {
+            Self::Read { .. }
+            | Self::Poll { .. }
+            | Self::PollFlags { .. }
+            | Self::Record { .. }
+            | Self::PumpLost => {
                 "Treat output after the final offset as lost; read the retained tail."
             }
             Self::Write { .. } => "Resend unwritten input only after re-reading the terminal.",
@@ -89,18 +100,20 @@ impl TerminalIoError {
 
     /// Wire form for an output or input failure; `None` for exit-status failures.
     pub(super) fn io_failure(&self) -> Option<PtyIoFailure> {
-        let (operation, source) = match self {
-            Self::Read { source } => (PtyOperation::Read, Some(source)),
-            Self::Poll { source } => (PtyOperation::Poll, Some(source)),
-            Self::Write { source } => (PtyOperation::Write, Some(source)),
-            Self::Record { .. } => (PtyOperation::Record, None),
-            Self::PumpLost => (PtyOperation::Pump, None),
+        let (operation, source, poll_revents) = match self {
+            Self::Read { source } => (PtyOperation::Read, Some(source), None),
+            Self::Poll { source } => (PtyOperation::Poll, Some(source), None),
+            Self::PollFlags { revents } => (PtyOperation::Poll, None, Some(*revents)),
+            Self::Write { source } => (PtyOperation::Write, Some(source), None),
+            Self::Record { .. } => (PtyOperation::Record, None, None),
+            Self::PumpLost => (PtyOperation::Pump, None, None),
             Self::Wait { .. } | Self::WaiterLost => return None,
         };
         let os_error = source.and_then(io::Error::raw_os_error);
         Some(PtyIoFailure {
             operation,
             os_error,
+            poll_revents,
         })
     }
 
@@ -111,6 +124,7 @@ impl TerminalIoError {
             Self::WaiterLost => (ExitUnknownReason::WaiterLost, None),
             Self::Read { .. }
             | Self::Poll { .. }
+            | Self::PollFlags { .. }
             | Self::Write { .. }
             | Self::Record { .. }
             | Self::PumpLost => return None,

@@ -43,6 +43,20 @@ reported `"outcome":"stopped"` while `sleep 30` kept running).
   `unix::spawn_detached` starts a holder in its own session, and
   `unix::CoreConnection` is the core side of the socket.
 
+### Dependency seam: holder protocol generation bumped to 2 (todo 5)
+
+Because the wire contract below changed, `HOLDER_PROTOCOL_GENERATION` is now
+**2**. Every frame header carries the generation, so a generation-1 core is
+refused at its first frame (its Hello) with the typed `unsupported_generation`,
+before any state-changing message. It is never accepted and then broken mid-session
+by a "missing field `cwd`" error. `generation_one_core_is_refused_at_hello_before_any_spawn`
+replays the recorded generation-1 Hello and Spawn bytes over a real connection.
+It asserts that the codec refuses the old Spawn by generation (not by payload
+shape), that the core gets no Welcome, that `last_failure_kind` is
+`unsupported_generation`, and that nothing was spawned. Pinned generations in
+todo-5 fixtures/tests and in the `part-a/task-5` and `part-a/task-6` scenario
+JSON were updated to the constant/"2".
+
 ### Dependency seam: holder protocol (todo 5) edited
 
 Fixing B1 and B3 required changing todo 5's frozen message payloads, as the
@@ -52,7 +66,8 @@ contract:
 - `Spawn` gains required `cwd` and `env`.
 - `SpawnFailed` gains `reason` (`SpawnFailureReason`), `hint` and `os_error`.
 - A new `InputRejected` message (`MessageKind` tag 16) carries `InputRejection`.
-- `Exit` gains optional `exit_unknown` and `io_failure`.
+- `Exit` gains optional `exit_unknown` and `io_failure`
+  (`PtyIoFailure{operation, os_error, poll_revents}`).
 - The new types live in `protocol/messages/outcome.rs`. The todo-5 property
   fixtures, counter-string test (the new u64 fields are decimal strings) and
   `Exit` literals in tests were updated to match.
@@ -97,7 +112,7 @@ $ cargo clippy -p ovis-terminal-holder --all-targets -- -D warnings
 exit: 0
 
 $ bash scripts/check.sh
-Summary 153 tests run: 153 passed, 1 skipped   (the skip is the pre-existing ignored store child-process fixture)
+Summary 155 tests run: 155 passed, 1 skipped   (the skip is the pre-existing ignored store child-process fixture)
 check.sh: all steps passed
 exit: 0
 ```
@@ -166,6 +181,15 @@ real Unix socket with the real frame codec; it is not the `ovis-terminal` binary
   launched over the socket with different `cwd` and `OVIS_PROBE` each print
   exactly their own canonical directory and value. A missing cwd yields
   `SpawnFailed{reason: cwd_unavailable, os_error: ENOENT}`.
+- F2 (round 2), poll error flags: `wait()` treats POLLHUP as the only normal
+  hang-up. POLLNVAL, or POLLERR without POLLHUP, becomes the typed
+  `TerminalIoError::PollFlags{revents}` (kind `pty_poll_flagged`), which reaches
+  `Exit.io_failure{operation: poll, poll_revents}` through the same path as read
+  faults. Poll syscall failures keep their `#[source]`. The reviewer's probe is
+  permanent as `poll_error_without_hangup_is_a_typed_failure_not_a_hangup`: a
+  pipe with its reader dropped gives POLLOUT|POLLERR and no POLLHUP, and the test
+  asserts the typed failure with the POLLERR bit. POLLNVAL shares the branch but
+  is not separately fault-injected.
 - B4, typed I/O failures:
   - `unexpected_read_failure_is_typed_not_a_hangup`: a real EISDIR read failure
     is `pty_read_failed` with its source and `PtyIoFailure{read, EISDIR}`, not
