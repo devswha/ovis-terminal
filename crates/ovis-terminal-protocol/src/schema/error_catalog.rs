@@ -40,11 +40,12 @@ impl CatalogEntry {
 }
 
 fn envelope_entry(kind: ErrorKind) -> CatalogEntry {
+    let (token, description) = (kind.token().to_owned(), kind.hint().to_owned());
     let error = BoundaryError::domain(kind, false);
     CatalogEntry {
-        kind: kind.token().to_owned(),
+        kind: token,
         code: JsonRpcCode::from(&error).value(),
-        description: kind.hint().to_owned(),
+        description,
     }
 }
 

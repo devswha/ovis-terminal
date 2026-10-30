@@ -4,9 +4,8 @@ use std::collections::BTreeSet;
 
 use serde_json::Value;
 
+use super::facts::{scalar_breaks, shape_of};
 use super::{Break, BreakRule};
-use crate::schema::document::COMPONENTS_PREFIX;
-use crate::schema::scalar::OPEN_ENUM_EXTENSION;
 
 /// Deepest nesting compared; recursive types stop here instead of looping.
 const MAX_DEPTH: usize = 32;
@@ -48,7 +47,7 @@ impl<'a> SchemaPair<'a> {
     }
 }
 
-/// Where in a method or event the comparison currently is.
+/// Where in a method, event or notification the comparison currently is.
 #[derive(Debug, Clone)]
 struct Site {
     position: Position,
@@ -73,72 +72,6 @@ impl Site {
     }
 }
 
-/// JSON types, enum values, openness and object members of one schema.
-#[derive(Default)]
-struct Shape<'a> {
-    types: BTreeSet<String>,
-    values: BTreeSet<String>,
-    open: bool,
-    objects: Vec<&'a Value>,
-    items: Option<&'a Value>,
-}
-
-fn is_open(schema: &Value) -> bool {
-    schema.get(OPEN_ENUM_EXTENSION).and_then(Value::as_bool) == Some(true)
-}
-
-fn resolve<'a>(document: &'a Value, schema: &'a Value) -> &'a Value {
-    let name = schema
-        .get("$ref")
-        .and_then(Value::as_str)
-        .and_then(|r| r.strip_prefix(COMPONENTS_PREFIX));
-    let definitions = document.pointer("/components/schemas");
-    name.and_then(|name| definitions?.get(name))
-        .map_or(schema, |definition| resolve(document, definition))
-}
-
-fn collect<'a>(document: &'a Value, schema: &'a Value, found: &mut Shape<'a>) {
-    found.open |= is_open(schema);
-    let schema = resolve(document, schema);
-    found.open |= is_open(schema);
-    match schema.get("type") {
-        Some(Value::String(name)) => {
-            found.types.insert(name.clone());
-        }
-        Some(Value::Array(names)) => {
-            found
-                .types
-                .extend(names.iter().filter_map(|n| n.as_str().map(str::to_owned)));
-        }
-        _ => {}
-    }
-    let enumerated = schema
-        .get("enum")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten();
-    let literals = enumerated.chain(schema.get("const"));
-    found
-        .values
-        .extend(literals.filter_map(|v| v.as_str().map(str::to_owned)));
-    if schema.get("properties").is_some() {
-        found.objects.push(schema);
-    }
-    found.items = found.items.or_else(|| schema.get("items"));
-    let members = ["anyOf", "oneOf"]
-        .into_iter()
-        .filter_map(|key| schema.get(key)?.as_array());
-    for member in members.flatten() {
-        collect(document, member, found);
-    }
-}
-
-fn shape_of<'a>(document: &'a Value, schema: &'a Value) -> Shape<'a> {
-    let mut found = Shape::default();
-    collect(document, schema, &mut found);
-    found
-}
-
 fn names(value: Option<&Value>) -> BTreeSet<&str> {
     value
         .and_then(Value::as_array)
@@ -148,30 +81,14 @@ fn names(value: Option<&Value>) -> BTreeSet<&str> {
         .collect()
 }
 
-/// Rules broken by the types and enum values of one schema position.
-fn scalar_breaks(old: &Shape<'_>, new: &Shape<'_>, position: Position) -> Vec<BreakRule> {
-    let mut rules = Vec::new();
-    match position {
-        Position::Input => {
-            if !new.types.is_empty() && !old.types.is_subset(&new.types) {
-                rules.push(BreakRule::InputTypeNarrowed);
-            }
-            if !new.values.is_empty() && !old.values.is_subset(&new.values) {
-                rules.push(BreakRule::InputValuesNarrowed);
-            }
-        }
-        Position::Output => {
-            if !old.types.is_empty() && new.types.is_empty() && new.objects.is_empty() {
-                rules.push(BreakRule::OutputTypeLost);
-            } else if !old.types.is_empty() && !new.types.is_subset(&old.types) {
-                rules.push(BreakRule::OutputTypeChanged);
-            }
-            if !old.values.is_empty() && !new.values.is_subset(&old.values) && !new.open {
-                rules.push(BreakRule::ClosedOutputEnumGrew);
-            }
-        }
-    }
-    rules
+fn property_names(object: &Value) -> BTreeSet<&str> {
+    object
+        .get("properties")
+        .and_then(Value::as_object)
+        .into_iter()
+        .flatten()
+        .map(|(key, _)| key.as_str())
+        .collect()
 }
 
 fn compare_object(pair: SchemaPair<'_>, site: &Site, out: &mut Vec<Break>) {
@@ -210,6 +127,28 @@ fn compare_object(pair: SchemaPair<'_>, site: &Site, out: &mut Vec<Break>) {
     }
 }
 
+/// The current union member that continues `old`: same property names, else
+/// same required names, else the member at the same position of an equally long union.
+fn counterpart<'a>(old_members: &[&Value], index: usize, new: &[&'a Value]) -> Option<&'a Value> {
+    let old = old_members.get(index)?;
+    let by_properties = new
+        .iter()
+        .find(|candidate| property_names(candidate) == property_names(old));
+    let by_required = || {
+        new.iter()
+            .find(|candidate| names(candidate.get("required")) == names(old.get("required")))
+    };
+    let by_position = || {
+        (new.len() == old_members.len())
+            .then(|| new.get(index))
+            .flatten()
+    };
+    by_properties
+        .or_else(by_required)
+        .or_else(by_position)
+        .copied()
+}
+
 fn walk(pair: SchemaPair<'_>, site: &Site, out: &mut Vec<Break>) {
     if site.depth > MAX_DEPTH {
         return;
@@ -222,21 +161,16 @@ fn walk(pair: SchemaPair<'_>, site: &Site, out: &mut Vec<Break>) {
     if let (Some(old_items), Some(new_items)) = (old.items, new.items) {
         walk(pair.with(old_items, new_items), &site.child("[]"), out);
     }
-    let single = (old.objects.len() == 1 && new.objects.len() == 1)
-        .then(|| new.objects.first())
-        .flatten();
-    for old_object in &old.objects {
-        let key = names(old_object.get("required"));
-        let matching = new
-            .objects
-            .iter()
-            .find(|candidate| names(candidate.get("required")) == key);
-        match (matching.or(single), site.position) {
+    for (index, old_object) in old.objects.iter().enumerate() {
+        match (
+            counterpart(&old.objects, index, &new.objects),
+            site.position,
+        ) {
             (Some(new_object), _) => {
                 compare_object(pair.with(old_object, new_object), &site.child(""), out);
             }
             (None, Position::Input) => site.report(BreakRule::InputShapeRemoved, out),
-            (None, Position::Output) => {}
+            (None, Position::Output) => site.report(BreakRule::OutputVariantRemoved, out),
         }
     }
 }

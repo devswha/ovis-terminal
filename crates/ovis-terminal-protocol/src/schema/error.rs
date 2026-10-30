@@ -44,6 +44,12 @@ pub enum SchemaError {
         /// The missing section.
         section: &'static str,
     },
+    /// A compared document has a missing section or a malformed entry.
+    #[error("compared schema is malformed at {location}")]
+    MalformedBaseline {
+        /// Where the malformed entry or missing section is.
+        location: String,
+    },
     /// The document could not be encoded or decoded as JSON.
     #[error("schema document is not valid JSON")]
     Json {
@@ -64,6 +70,7 @@ impl SchemaError {
             Self::UnresolvedReference { .. } => "schema_unresolved_reference",
             Self::UncataloguedMethod { .. } => "method_not_cataloged",
             Self::Malformed { .. } => "schema_malformed",
+            Self::MalformedBaseline { .. } => "malformed_baseline",
             Self::Json { .. } => "schema_json",
         }
     }
@@ -79,6 +86,9 @@ impl SchemaError {
             Self::DuplicateName { .. } => "publish each method and event name once",
             Self::UnresolvedReference { .. } => "derive the referenced type's schema",
             Self::UncataloguedMethod { .. } => "add the method to its namespace catalog first",
+            Self::MalformedBaseline { .. } => {
+                "regenerate or restore the released baseline; every entry needs a name and known keys"
+            }
             Self::Malformed { .. } | Self::Json { .. } => {
                 "regenerate the document with the schema generator"
             }

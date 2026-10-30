@@ -161,7 +161,7 @@ fn failure() {
         "nothing may be dispatched after a rejected decode"
     );
     let wire = BoundaryError::from(rejection);
-    assert_eq!(wire.error_kind(), ErrorKind::InvalidParams);
+    assert_eq!(wire.error_kind(), &ErrorKind::InvalidParams);
     assert_eq!(JsonRpcCode::from(&wire).value(), -32602);
     assert_eq!(wire.field_path(), Some("params.target.pane_id"));
     println!(

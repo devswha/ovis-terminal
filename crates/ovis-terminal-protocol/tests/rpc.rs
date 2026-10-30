@@ -109,7 +109,7 @@ fn failure() {
 
     let error =
         parse_request(&input.to_string()).expect_err("numeric ID must be rejected before dispatch");
-    assert_eq!(error.error_kind(), ErrorKind::InvalidRequest);
+    assert_eq!(error.error_kind(), &ErrorKind::InvalidRequest);
     assert_eq!(error.json_rpc_code(), JsonRpcCode::InvalidRequest);
     assert_eq!(error.field_path(), Some("id"));
 }
@@ -127,7 +127,7 @@ fn rejects_unknown_request_envelope_fields() {
     let error = parse_request(&request.to_string())
         .expect_err("unknown envelope property must be rejected");
 
-    assert_eq!(error.error_kind(), ErrorKind::InvalidRequest);
+    assert_eq!(error.error_kind(), &ErrorKind::InvalidRequest);
     assert_eq!(error.field_path(), Some("debug"));
 }
 
@@ -144,7 +144,7 @@ fn rejects_unknown_target_parameter_before_dispatch() {
         .validate_params(&["target"])
         .expect_err("unknown target property must fail before dispatch");
 
-    assert_eq!(error.error_kind(), ErrorKind::InvalidParams);
+    assert_eq!(error.error_kind(), &ErrorKind::InvalidParams);
     assert_eq!(error.json_rpc_code(), JsonRpcCode::InvalidParams);
     assert_eq!(error.field_path(), Some("params.pane_id"));
 }
@@ -162,7 +162,7 @@ fn rejects_unknown_nested_target_field_before_dispatch() {
         .validate_params(&["target"])
         .expect_err("unknown nested target property must fail before dispatch");
 
-    assert_eq!(error.error_kind(), ErrorKind::InvalidParams);
+    assert_eq!(error.error_kind(), &ErrorKind::InvalidParams);
     assert_eq!(error.field_path(), Some("params.target.pane_id"));
 }
 
@@ -179,7 +179,7 @@ fn rejects_non_string_target_identity_before_dispatch() {
         .validate_params(&["target"])
         .expect_err("target identity must be a string before dispatch");
 
-    assert_eq!(error.error_kind(), ErrorKind::InvalidParams);
+    assert_eq!(error.error_kind(), &ErrorKind::InvalidParams);
     assert_eq!(error.field_path(), Some("params.target.terminal_id"));
 }
 
@@ -195,7 +195,7 @@ fn rejects_error_and_result_in_one_response() {
     let error = parse_reply(&response.to_string())
         .expect_err("a terminal response cannot contain both result and error");
 
-    assert_eq!(error.error_kind(), ErrorKind::InvalidResponse);
+    assert_eq!(error.error_kind(), &ErrorKind::InvalidResponse);
     assert_eq!(error.json_rpc_code(), JsonRpcCode::InvalidRequest);
 }
 
@@ -209,7 +209,7 @@ fn rejects_response_with_wrong_json_rpc_version() {
     let error =
         parse_reply(&response.to_string()).expect_err("only JSON-RPC 2.0 responses are accepted");
 
-    assert_eq!(error.error_kind(), ErrorKind::InvalidResponse);
+    assert_eq!(error.error_kind(), &ErrorKind::InvalidResponse);
 }
 
 #[test]

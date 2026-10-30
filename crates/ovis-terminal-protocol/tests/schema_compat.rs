@@ -244,7 +244,7 @@ fn removed_event_is_breaking() {
 #[test]
 fn malformed_document_is_a_typed_failure() {
     let error = breaking_changes(released(), &json!({})).expect_err("no methods section");
-    assert_eq!(error.kind(), "schema_malformed");
+    assert_eq!(error.kind(), "malformed_baseline");
 }
 
 proptest! {

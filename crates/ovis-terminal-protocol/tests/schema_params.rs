@@ -1,11 +1,11 @@
 //! Parse-once decoding of params: closed objects, typed rejections and exact counters.
 
-use ovis_terminal_protocol::errors::BoundaryError;
+use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind};
 use ovis_terminal_protocol::rpc::{RpcRequest, parse_request};
 use ovis_terminal_protocol::schema::common::Target;
 use ovis_terminal_protocol::schema::decode_params;
 use ovis_terminal_protocol::schema::methods::input::InputSendParams;
-use ovis_terminal_protocol::schema::methods::terminal::TerminalGetParams;
+use ovis_terminal_protocol::schema::methods::terminal::{TerminalGetParams, TerminalKillParams};
 use ovis_terminal_protocol::schema::methods::terminal_read::{
     TerminalHistoryParams, TerminalSearchParams,
 };
@@ -52,11 +52,15 @@ fn wrong_type_names_the_field_without_serde_prose() {
     .expect_err("a string limit is rejected");
     let wire = BoundaryError::from(error);
     let data = serde_json::to_value(wire.data()).expect("error data encodes");
-    assert_eq!(data.get("kind"), Some(&json!("invalid_params")));
-    assert_eq!(data.get("field_path"), Some(&json!("params.limit")));
-    assert!(
-        !data.to_string().contains("invalid type"),
-        "serde prose leaked: {data}"
+    let expected = json!({
+        "kind": "invalid_params",
+        "hint": ErrorKind::InvalidParams.hint(),
+        "retryable": false,
+        "field_path": "params.limit",
+    });
+    assert_eq!(
+        data, expected,
+        "the wire data carries only structured fields"
     );
 }
 
@@ -80,11 +84,35 @@ fn numeric_counter_is_rejected_and_u64_max_string_round_trips() {
 }
 
 #[test]
-fn missing_required_field_is_rejected_before_dispatch() {
+fn missing_required_field_is_rejected_at_its_own_path() {
     let path = rejected_path::<InputSendParams>(
         &json!({"op_id": "o1", "target": {"terminal_id": "t1"}, "text": "ls"}),
     );
-    assert_eq!(path, "params");
+    assert_eq!(path, "params.submit");
+}
+
+#[test]
+fn every_missing_required_field_names_itself() {
+    let complete =
+        json!({"op_id": "o1", "target": {"terminal_id": "t1"}, "text": "ls", "submit": "enter"});
+    for field in ["op_id", "target", "text", "submit"] {
+        let mut params = complete.clone();
+        params.as_object_mut().expect("object").remove(field);
+        assert_eq!(
+            rejected_path::<InputSendParams>(&params),
+            format!("params.{field}")
+        );
+    }
+}
+
+#[test]
+fn missing_nested_field_names_its_full_path() {
+    let params =
+        json!({"op_id": "o1", "target": {"terminal_id": "t1"}, "escalation": {"hup_ms": "1"}});
+    assert_eq!(
+        rejected_path::<TerminalKillParams>(&params),
+        "params.escalation.term_ms"
+    );
 }
 
 proptest! {

@@ -65,7 +65,7 @@ pub struct EventSpec {
 }
 
 /// A kind a method may return, from either the envelope or the domain set.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum MethodErrorKind {
     /// Kind produced by request parsing and dispatch.

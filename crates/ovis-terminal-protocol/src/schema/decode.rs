@@ -51,14 +51,23 @@ impl From<ParamsError> for BoundaryError {
 pub fn decode_params<P: DeserializeOwned>(request: &RpcRequest) -> Result<P, ParamsError> {
     serde_path_to_error::deserialize(request.params()).map_err(|error| {
         let path = error.path().to_string();
-        let field_path = if path == "." {
-            "params".to_owned()
-        } else {
-            format!("params.{path}")
-        };
+        let source = error.into_inner();
+        let mut segments = vec!["params".to_owned()];
+        if path != "." {
+            segments.push(path);
+        }
+        segments.extend(missing_field(&source));
         ParamsError {
-            field_path,
-            source: error.into_inner(),
+            field_path: segments.join("."),
+            source,
         }
     })
+}
+
+/// Name of the absent required field. serde names it only in its message,
+/// while the tracked path stops at the enclosing object.
+fn missing_field(error: &serde_json::Error) -> Option<String> {
+    let message = error.to_string();
+    let rest = message.strip_prefix("missing field `")?;
+    rest.split('`').next().map(str::to_owned)
 }
