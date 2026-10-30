@@ -17,6 +17,7 @@ Linux 7.0.0-38-generic x86_64, rustc 1.99.1 (58cf8f9c3 2026-10-13). Logs in `doc
 | Command | Result | Log |
 |---|---|---|
 | `bash scripts/check.sh` | exit 0: fmt, workspace clippy `-D warnings`, nextest 183 passed / 1 skipped, doctests, hygiene 0 violations in 197 files, JSON 19, manifests, JSON | `check-script.log` |
+| `bash scripts/check.sh` after merging `origin/integration` 61a6e5a (todo 12) | exit 0: nextest 190 passed / 1 skipped, hygiene 0 violations in 228 files, manifests 16, JSON 21; `Cargo.lock` regenerated from integration's lock (`cargo generate-lockfile --offline`, `cargo metadata --locked` exit 0), differing only by this lane's 7 packages; `clippy.toml` identical to integration | `check-script-post-merge.log` |
 | `cargo nextest run -p ovis-terminal-protocol` | exit 0, 85 passed | `acceptance-nextest.log` |
 | `cargo test -p ovis-terminal-protocol --test schema_narrowing -- --nocapture` | exit 0, 8 passed (round-2 reproductions, cycle/depth/oversize) | `gate-round2-narrowing.log` |
 | `cargo test -p ovis-terminal-protocol --test schema_properties -- --nocapture` | exit 0, 2 proptests × 256 cases (random narrowing reported, random widening compatible) | `gate-round2-properties.log` |
