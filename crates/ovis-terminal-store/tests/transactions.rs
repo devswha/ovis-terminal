@@ -217,7 +217,7 @@ fn failure() {
                 MaterialDisposition::CopiedOriginalKept,
             ),
         };
-        assert_eq!(error.kind(), kind);
+        assert_eq!(error.kind(), kind, "{error:?}");
         assert_eq!(evidence.cause, cause);
         assert_eq!(evidence.flags.material, disposition);
         assert_eq!(evidence.flags.process_survival, ProcessSurvival::Unknown);

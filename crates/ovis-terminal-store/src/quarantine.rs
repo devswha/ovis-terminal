@@ -1,6 +1,6 @@
 //! Preserving damaged or newer database material and its durable evidence.
 
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::io::{ErrorKind, Write as _};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -147,7 +147,10 @@ fn write_evidence(evidence: &RecoveryEvidence) -> Result<(), StoreError> {
 
 fn copy_durably(from: &Path, to: &Path) -> Result<(), StoreError> {
     fs::copy(from, to).map_err(StoreError::io("copy", from))?;
-    File::open(to)
+    // Windows refuses FlushFileBuffers on a handle opened without write access.
+    OpenOptions::new()
+        .write(true)
+        .open(to)
         .and_then(|copy| copy.sync_all())
         .map_err(StoreError::io("sync", to))
 }

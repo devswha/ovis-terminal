@@ -73,7 +73,7 @@ fn rebuild_leaves_a_newer_schema_in_place() {
 
     let error = Store::rebuild_after_quarantine(root.path(), StoreOptions::default()).unwrap_err();
 
-    assert_eq!(error.kind(), "store_unsupported");
+    assert_eq!(error.kind(), "store_unsupported", "{error:?}");
     let cause = &error.recovery_evidence().unwrap().cause;
     assert_eq!(
         *cause,
