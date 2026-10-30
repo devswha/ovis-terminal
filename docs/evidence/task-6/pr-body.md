@@ -112,7 +112,7 @@ $ cargo clippy -p ovis-terminal-holder --all-targets -- -D warnings
 exit: 0
 
 $ bash scripts/check.sh
-Summary 217 tests run: 217 passed, 1 skipped   (merged with integration bc73b93)
+Summary 219 tests run: 219 passed, 1 skipped   (merged with integration eb9827d)
 check.sh: all steps passed
 exit: 0
 ```
@@ -253,8 +253,8 @@ probe does not run the holder pump. On Linux, `pthread_join` returns when the
 kernel clears the thread id, which happens before the task leaves
 `/proc/self/task`. A thread that has just been joined can therefore still be
 listed briefly. Locally the test passed 30/30 under 10-way parallel load on this
-branch. The assertion was not changed. Recommended to todo 12's owner: wait for
-the task entry to disappear instead of counting once immediately after the join.
+branch. The assertion was not changed. The orchestrator reproduced the race independently. Todo 72 (PR #12, now in
+integration eb9827d and merged here) replaced it with a deterministic no-leak check.
 
 ## Risks
 
