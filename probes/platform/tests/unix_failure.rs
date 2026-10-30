@@ -24,43 +24,50 @@ const MISSING_DIR: &str = "/nonexistent/ovis-probe-cwd";
 /// removes the task entry.
 const TEARDOWN_DEADLINE: Duration = Duration::from_secs(2);
 
-/// Names of this test process's threads that start with `prefix`; on Linux the
-/// kernel exposes each thread's name under `/proc/self/task`. `None` where
-/// that directory does not exist.
-fn thread_names(prefix: &str) -> Option<Vec<String>> {
-    let tasks = std::fs::read_dir("/proc/self/task").ok()?;
-    Some(
-        tasks
-            .filter_map(|task| std::fs::read_to_string(task.ok()?.path().join("comm")).ok())
-            .map(|name| name.trim_end().to_owned())
-            .filter(|name| name.starts_with(prefix))
-            .collect(),
-    )
+/// What waiting for a thread family to disappear found. `Unavailable` is a
+/// third state, never folded into `Gone`: where the OS offers no thread
+/// listing the probe cannot know.
+#[derive(Debug, PartialEq, Eq)]
+enum Teardown {
+    Gone,
+    Leftover(Vec<String>),
+    Unavailable { reason: io::ErrorKind },
 }
 
-/// Waits until at most `baseline` threads named `prefix…` remain.
-///
-/// # Errors
-///
-/// The names still present when `deadline` passes; a thread that never exits
-/// is never forgiven.
-fn await_threads_at_most(
-    prefix: &str,
-    baseline: usize,
-    deadline: Duration,
-) -> Result<(), Vec<String>> {
+/// Names of this test process's threads that start with `prefix`; on Linux the
+/// kernel exposes each thread's name under `/proc/self/task`. The error is the
+/// kind of the failed listing (`NotFound` where `/proc` does not exist).
+fn thread_names(prefix: &str) -> Result<Vec<String>, io::ErrorKind> {
+    let tasks = std::fs::read_dir("/proc/self/task").map_err(|error| error.kind())?;
+    Ok(tasks
+        .filter_map(|task| std::fs::read_to_string(task.ok()?.path().join("comm")).ok())
+        .map(|name| name.trim_end().to_owned())
+        .filter(|name| name.starts_with(prefix))
+        .collect())
+}
+
+/// Waits until at most `baseline` threads named `prefix…` remain; a thread
+/// that never exits is reported by name once `deadline` passes.
+fn await_threads_at_most(prefix: &str, baseline: usize, deadline: Duration) -> Teardown {
     let started = Instant::now();
     loop {
-        let Some(names) = thread_names(prefix) else {
-            return Ok(());
-        };
-        if names.len() <= baseline {
-            return Ok(());
+        match thread_names(prefix) {
+            Err(reason) => return Teardown::Unavailable { reason },
+            Ok(names) if names.len() <= baseline => return Teardown::Gone,
+            Ok(names) if started.elapsed() >= deadline => return Teardown::Leftover(names),
+            Ok(_) => thread::yield_now(),
         }
-        if started.elapsed() >= deadline {
-            return Err(names);
+    }
+}
+
+/// The outcome this OS must produce when `linux` is what Linux produces.
+fn on_this_os(linux: Teardown) -> Teardown {
+    if cfg!(target_os = "linux") {
+        linux
+    } else {
+        Teardown::Unavailable {
+            reason: io::ErrorKind::NotFound,
         }
-        thread::yield_now();
     }
 }
 
@@ -70,9 +77,11 @@ fn unread_input_stays_killable() {
     let threads_before = thread_names(STALL_THREADS).map_or(0, |names| names.len());
     let fixture = Path::new(env!("CARGO_BIN_EXE_ovis-terminal-probe-stall"));
     let stall = probe_stalled_writer(fixture, BOUND).unwrap();
-    if let Err(left) = await_threads_at_most(STALL_THREADS, threads_before, TEARDOWN_DEADLINE) {
-        panic!("the probe left a thread behind: {left:?}");
-    }
+    assert_eq!(
+        await_threads_at_most(STALL_THREADS, threads_before, TEARDOWN_DEADLINE),
+        on_this_os(Teardown::Gone),
+        "the probe left a thread behind"
+    );
     for pid in [stall.fixture, stall.program] {
         assert_eq!(
             observe_process(pid).unwrap_err().kind(),
@@ -196,7 +205,7 @@ fn an_exited_thread_is_reported_gone() {
     finished.join().unwrap();
     assert_eq!(
         await_threads_at_most("t72-exits", 0, TEARDOWN_DEADLINE),
-        Ok(())
+        on_this_os(Teardown::Gone)
     );
 }
 
@@ -214,12 +223,14 @@ fn a_thread_that_never_exits_is_reported_at_the_deadline() {
     started_up.recv().unwrap();
     let started = Instant::now();
     let left = await_threads_at_most("t72-parked", 0, Duration::from_millis(200));
-    assert_eq!(left, Err(vec!["t72-parked".to_owned()]));
-    assert!(started.elapsed() >= Duration::from_millis(200));
+    let leftover = Teardown::Leftover(vec!["t72-parked".to_owned()]);
+    let waited_out = left == leftover;
+    assert_eq!(left, on_this_os(leftover));
+    assert!(!waited_out || started.elapsed() >= Duration::from_millis(200));
     release.send(()).unwrap();
     stuck.join().unwrap().unwrap();
     assert_eq!(
         await_threads_at_most("t72-parked", 0, TEARDOWN_DEADLINE),
-        Ok(())
+        on_this_os(Teardown::Gone)
     );
 }
