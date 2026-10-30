@@ -28,5 +28,9 @@ tokio = { workspace = true }
 proptest = { workspace = true }
 serde_json = { workspace = true }
 
+# Used by probes/platform/, which src/lib.rs loads through #[path]; machete scans only src/.
+[package.metadata.cargo-machete]
+ignored = ["portable-pty", "serde", "thiserror", "tracing"]
+
 [lints]
 workspace = true
