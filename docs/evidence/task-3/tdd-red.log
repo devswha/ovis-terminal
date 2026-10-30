@@ -1,0 +1,10 @@
+$ cargo test -p ovis-terminal-protocol --test rpc happy -- --exact --nocapture
+exit=101
+
+Initial test-first run, before the RPC implementation:
+
+error[E0432]: unresolved imports `ovis_terminal_protocol::errors::BoundaryError`, `ErrorKind`, and `JsonRpcCode`
+error[E0432]: unresolved imports `InFlightRequests`, `RequestId`, `RpcFailure`, `RpcReply`, `RpcRequest`, and `RpcSuccess`
+error[E0432]: unresolved import `serde_json`
+
+The failure established the test/API red state, but compilation was also blocked by the protocol crate's missing direct dependency declarations.
