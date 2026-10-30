@@ -21,11 +21,11 @@ All commands ran on Linux x86_64 with rustc/cargo 1.99.1 (local isolated toolcha
 
 | Command | Exit | Result |
 |---|---|---|
-| `bash scripts/check.sh` | 0 | fmt, workspace clippy `-D warnings`, nextest (72 tests run: 72 passed, 1 skipped), doctests, hygiene (0 violation(s) in 103 file(s) checked), manifests, json ([check.log](check.log)); run after merging origin/integration (T8, T11) |
-| `cargo nextest run -p ovis-terminal-vt --locked` | 0 | 33 tests run, 33 passed ([nextest-vt.log](nextest-vt.log)) |
+| `bash scripts/check.sh` | 0 | fmt, workspace clippy `-D warnings`, nextest (83 tests run: 83 passed, 1 skipped), doctests, hygiene (0 violation(s) in 105 file(s) checked), manifests, json ([check.log](check.log)); run on the integration-merged branch after the gate-review fixes |
+| `cargo nextest run -p ovis-terminal-vt --locked` | 0 | 44 tests run, 44 passed ([nextest-vt.log](nextest-vt.log)) |
 | `cargo clippy -p ovis-terminal-vt --all-targets --locked -- -D warnings` | 0 | [clippy-vt.log](clippy-vt.log) |
 | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --workspace --locked` | 0 | |
-| `PROPTEST_CASES=4000 cargo test -p ovis-terminal-vt` | 0 | every binary passes; the paint property was stress-run several times at 4000 cases while hardening |
+| `PROPTEST_CASES=4000 cargo test -p ovis-terminal-vt --locked --no-fail-fast` (2 rounds, random seeds) | 0 | all 5 properties ran 4000 cases each per round: `paint_reproduces_arbitrary_streams`, `first_paint_at_any_byte_continues_like_the_live_stream`, `chunking_never_changes_state`, `checkpoint_at_any_boundary_is_exact_or_says_why`, `every_u64_round_trips` ([proptest-4000.log](proptest-4000.log)). No property hard-codes its case count, so `PROPTEST_CASES` governs every one. The earlier claim of "4000 cases" for the paint property was wrong: a hard-coded `with_cases(128)` overrode it, and gate review round 1 caught that. |
 | `cargo test -p ovis-terminal-vt --test checkpoint` before any implementation (TDD red) | 101 | unresolved imports ([tdd-red.log](tdd-red.log)) |
 | `target/debug/ovis-terminal --version` | 0 | `ovis-terminal 0.1.0` |
 
@@ -34,8 +34,9 @@ Test binaries:
 | Binary | Tests |
 |---|---|
 | unit `paint_equivalence` | 5 |
-| `adversarial` | 7 |
+| `adversarial` | 11 |
 | `checkpoint` | 2 |
+| `continuation` | 7 |
 | `modes` | 3 |
 | `properties` | 3 |
 | `queries` | 5 |
@@ -97,10 +98,10 @@ Additional behavior tests:
 
 | Class | Observable |
 |---|---|
-| malformed input: truncated OSC / UTF-8 | Unterminated OSC: no record, exact pending bytes. Split UTF-8: pending bytes, completed after import. Malformed or oversize OSC: typed `Malformed` / `Oversize` (`checkpoint::failure`, `adversarial::osc_payload_at_the_limit_is_kept_and_one_byte_more_is_oversize`). |
+| malformed input: truncated OSC / UTF-8 | Unterminated OSC: no record, exact pending bytes, which a first paint also carries (`continuation::first_paint_preserves_an_open_title_osc`). Split UTF-8: pending bytes, completed after import and after attach (`continuation::first_paint_preserves_a_split_utf8_character`). Malformed or oversize OSC: typed `Malformed` / `Oversize`, sized from the raw payload before vte drops fields; 17+ fields is `Malformed{too_many_fields}` (`checkpoint::failure`, `adversarial::gate_oversize_osc_after_sixteen_params_is_not_success`, `adversarial::more_fields_than_the_parser_keeps_is_malformed_not_truncated_fields`, `adversarial::osc_payload_at_the_limit_is_kept_and_one_byte_more_is_oversize`). |
 | prompt injection: fake working/approval text | Stays `ScreenLine` text. No OSC record, no query, no mode change (`checkpoint::failure`, `adversarial::fake_status_and_paste_text_are_only_screen_text`). The VT crate has no status concept at all; OSC 7501 is forwarded as raw fields for the Todo 33 owner. |
-| stale state: checkpoint version | `checkpoint_incompatible` for version 0 and for a foreign engine. A geometry contradicting the grid gives `checkpoint_inconsistent`. One column, or a numeric u64, gives `checkpoint_malformed` (`adversarial`, `wire`). |
-| resource exhaustion | 5000 kitty pushes are refused past depth 4096, with no panic. Open-sequence bytes are capped at 64 KiB, beyond which the reason is `OpenSequenceTooLong`. OSC records are capped at 4096 bytes, beyond which they are `Oversize`. |
+| stale state: checkpoint version | `checkpoint_incompatible` for version 0 and for a foreign engine, both through `Checkpoint::from_bytes` and through the public serde `Deserialize` + `Vt::from_checkpoint` route (`continuation::gate_serde_checkpoint_cannot_bypass_version_check`, `continuation::serde_checkpoint_from_a_foreign_engine_cannot_import`). A geometry contradicting the grid gives `checkpoint_inconsistent`. One column, or a numeric u64, gives `checkpoint_malformed` (`adversarial`, `wire`). |
+| resource exhaustion | 5000 kitty pushes are refused past depth 4096, with no panic. An open sequence reaching 64 KiB is aborted with CAN in both vte parsers, so neither parser's OSC buffer grows further, and the rest of the string is discarded to its terminator. A 10 MiB unterminated OSC 7501 yields exactly one `Oversize` record with terminator `truncated`, holds no pending bytes, and the discard state survives a checkpoint exactly (`adversarial::ten_mib_unterminated_osc_is_cut_at_the_parser_bound`); a 70 KiB DCS is discarded up to its ST (`adversarial::oversized_dcs_string_is_discarded_until_its_terminator`). OSC records are capped at 4096 bytes, beyond which they are `Oversize`. |
 | clipboard exfiltration | OSC 52 is disabled in the emulator, and emulator-owned OSC numbers never become records (`adversarial::emulator_owned_osc_numbers_never_leak_as_records`). |
 
 ## Contract checklist
@@ -116,9 +117,17 @@ Bounded queues and buffers:
 
 - The event queue is drained per parsed segment.
 - `FeedOutcome` vectors are bounded by the chunk the caller fed.
-- Open-sequence bytes are capped at 64 KiB, beyond which the typed reason is `OpenSequenceTooLong`.
+- Open sequences are capped at 64 KiB in the tracker's pending copy and in both vte parsers (CAN abort plus discard); an aborted OSC is reported as a typed `Oversize` record with terminator `truncated`.
 - OSC payloads are capped at 4096 bytes, beyond which the typed outcome is `Oversize`.
 - Title and kitty stacks are capped at depth 4096, beyond which kitty pushes are refused.
+
+## Gate review round 1 fixes
+
+- **B1, first paint at an open sequence:** `first_paint` appends the tracker's exact open-sequence bytes, so bytes after `FirstPaint.offset` continue the same sequence on the client. Where those bytes cannot be replayed, the paint reports `ControlInsideOpenSequence` or `OpenSequenceTooLong` instead of `Exact`. Tests: the reviewer's probe `continuation::gate_first_paint_preserves_pending_control_sequence` (`A ESC[3` + `1mB` displays `AB`), split UTF-8, open title OSC, the control-inside-sequence report, and the proptest `first_paint_at_any_byte_continues_like_the_live_stream`.
+- **B2, OSC sized before truncation:** the tracker counts each OSC's raw payload bytes and `;` separators before vte splits it. A payload over 4096 bytes is `Oversize` with its raw size; more than `OSC_FIELD_LIMIT` (16) fields is `Malformed{too_many_fields}`, never a truncated `Fields` record. Tests: the reviewer's probe and the too-many-fields test.
+- **B3, identity on every import route:** `Vt::from_checkpoint` checks format, version and engine first through the same `check_identity` as `Checkpoint::from_bytes`, so a stale or foreign checkpoint decoded by any serde route is `checkpoint_incompatible`. Tests: the reviewer's probe and the foreign-engine variant.
+- **B4, bounded parser memory:** when an open sequence reaches 64 KiB, the tracker injects CAN into both vte parsers. alacritty ignores CAN and vte returns to ground, abandoning its OSC buffer. Remaining string bytes are discarded up to BEL (OSC), ST, CAN or SUB, and that discard state travels in checkpoints. An aborted OSC is reported as `Oversize` with terminator `truncated`. Test: a 10 MiB unterminated OSC plus a 70 KiB DCS.
+- **N1, honest proptest evidence:** removed `with_cases(128)` and `with_cases(192)`; the 4000-case evidence above was produced with `PROPTEST_CASES` actually governing.
 
 ## Upstream findings (alacritty_terminal 0.26)
 
@@ -142,7 +151,7 @@ No lockfile pin unifies them; `miow` 0.6.0 would pull in `windows-sys` 0.48 inst
 
 - **Checkpoint size and format.** Checkpoints are JSON. A 200-line history is about 131 KB; 10,000+ lines will be MB-scale. Compact encoding and storage cadence belong to the recovery and store lanes (Todos 8 and 49). The format is tied to alacritty's grid serialization by `CHECKPOINT_ENGINE`, so an alacritty bump requires bumping that constant, which makes old checkpoints `checkpoint_incompatible`, never misread.
 - **Trust in checkpoint input.** Import validates geometry, cursor ranges, stack depths, palette indexes, pending size and history bounds. alacritty's internal ring-buffer fields cannot be validated through its public API, so checkpoints must come from the core's own store (CRC-guarded per plan), not from untrusted peers.
-- **Unbounded vte buffering.** vte (std) buffers an unterminated OSC/DCS without bound inside the emulator's parser. This crate caps what it keeps and reports, but bounding the parser's own memory needs the scheduling and budget work of Todo 56.
+- **Long legitimate strings are dropped.** Any OSC or DCS/SOS/PM/APC string longer than 64 KiB (for example a large sixel image or OSC 52 payload) is aborted and discarded. A first paint taken while such a string is being discarded reports `OpenSequenceTooLong`.
 - **Synchronized update.** Mode 2026 is applied immediately (state is never held back) and only reported as a mode. Attach streams still carry the raw bytes.
 - **Paint inexactness.** A cursor outside the DECOM region, or a pending wrap on a wrapped row, is parked with DECSC. That spends the program's saved cursor and is declared as `SavedCursorNotPaintable` unless the saved and current cursors are equal. When the alternate screen is active, the primary pen and saved cursor are approximated: alacritty itself overwrites the primary saved cursor on entry.
 - **Byte-at-a-time tracker.** The boundary tracker parses every byte a second time, one byte at a time. Throughput budgets belong to Todo 56.

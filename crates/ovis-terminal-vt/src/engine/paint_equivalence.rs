@@ -177,8 +177,6 @@ fn token() -> impl Strategy<Value = Vec<u8>> {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(128))]
-
     #[test]
     fn paint_reproduces_arbitrary_streams(tokens in prop::collection::vec(token(), 0..60)) {
         let mut live = engine(10, 6);

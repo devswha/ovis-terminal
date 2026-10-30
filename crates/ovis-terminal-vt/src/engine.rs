@@ -9,6 +9,7 @@ mod fidelity;
 mod history;
 mod listener;
 mod modes;
+mod observer;
 mod osc;
 mod paint;
 #[cfg(test)]
@@ -40,7 +41,7 @@ pub use modes::{
     EditingModes, KeyEncoding, KeyboardModes, ModifyOtherKeys, MouseEncoding, MouseModes,
     MouseTracking, PasteMode, ScreenBuffer, ScreenModes, TerminalModes,
 };
-pub use osc::{OSC_RECORD_LIMIT, OscContent, OscFault, OscRecord, OscTerminator};
+pub use osc::{OSC_FIELD_LIMIT, OSC_RECORD_LIMIT, OscContent, OscFault, OscRecord, OscTerminator};
 pub use paint::FirstPaint;
 pub use query::{ClientFact, QueryOutcome, TerminalQuery};
 pub use read::{CursorShape, CursorState, ReadFormat, ReadSource, ScreenLine, ScreenRead};
@@ -53,7 +54,7 @@ use self::listener::{ImmediateUpdates, Listener};
 use self::query::outcome;
 use self::recorder::Recorder;
 use self::shadow::Shadow;
-use self::tracker::Tracker;
+use self::tracker::{Cut, Scan, Tracker};
 
 /// Everything one call to [`Vt::feed`] produced.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
@@ -151,16 +152,28 @@ impl Vt {
     /// Consumes output bytes; chunk boundaries never change the result.
     pub fn feed(&mut self, bytes: &[u8]) -> FeedOutcome {
         let start = self.offset;
-        let scan = self.tracker.scan(start, bytes);
+        let Scan {
+            forward,
+            cuts,
+            completions,
+            osc,
+        } = self.tracker.scan(start, bytes);
         let mut result = FeedOutcome {
-            osc: scan.osc,
+            osc,
             ..FeedOutcome::default()
         };
+        let end = Cut {
+            forward_end: forward.len(),
+            input_end: bytes.len(),
+        };
         let mut from = 0;
-        for cut in scan.cuts.into_iter().chain(std::iter::once(bytes.len())) {
-            if let Some(segment) = bytes.get(from..cut).filter(|segment| !segment.is_empty()) {
+        for cut in cuts.into_iter().chain(std::iter::once(end)) {
+            if let Some(segment) = forward
+                .get(from..cut.forward_end)
+                .filter(|part| !part.is_empty())
+            {
+                let offset = start.advanced_by(cut.input_end);
                 for answer in self.apply(segment) {
-                    let offset = start.advanced_by(cut);
                     if offset <= self.queries_owned_through {
                         result.suppressed_queries = result.suppressed_queries.saturating_add(1);
                     } else {
@@ -171,10 +184,10 @@ impl Vt {
                     }
                 }
             }
-            from = cut;
+            from = cut.forward_end;
         }
         self.offset = start.advanced_by(bytes.len());
-        self.revision = self.revision.advanced_by(scan.completions);
+        self.revision = self.revision.advanced_by(completions);
         result
     }
 

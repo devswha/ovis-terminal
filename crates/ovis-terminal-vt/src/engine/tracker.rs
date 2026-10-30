@@ -3,88 +3,52 @@
 //!
 //! From those positions it derives the chunking-independent content revision,
 //! the segment cuts that pin query replies to offsets, the OSC records, and the
-//! bytes of a sequence still open at the stream boundary.
+//! bytes of a sequence still open at the stream boundary. It also bounds what
+//! both vte parsers accumulate: vte buffers an OSC payload without limit, so an
+//! open sequence that reaches [`SEQUENCE_LIMIT`] is aborted with CAN (which
+//! alacritty ignores), and the rest of an aborted string is discarded up to
+//! its terminator instead of reaching either parser.
 
-use alacritty_terminal::vte::{Params, Parser, Perform};
+use alacritty_terminal::vte::Parser;
+use serde::{Deserialize, Serialize};
 
 use crate::engine::fidelity::InexactReason;
-use crate::engine::osc::{OscRecord, OscTerminator, classify};
+use crate::engine::observer::{Completion, Observer};
+use crate::engine::osc::{OscRecord, OscTerminator, RawOsc, truncated};
 use crate::engine::units::OutputOffset;
 
-const ESC: u8 = 0x1b;
+const BEL: u8 = 0x07;
 const CAN: u8 = 0x18;
 const SUB: u8 = 0x1a;
+const ESC: u8 = 0x1b;
 
-/// Bytes of an open sequence kept for exact checkpoints.
-pub(super) const PENDING_LIMIT: usize = 64 * 1024;
+/// Largest open sequence, in bytes, either parser or the checkpoint holds.
+pub(super) const SEQUENCE_LIMIT: usize = 64 * 1024;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Completion {
-    /// Printable character, CSI or ESC dispatch: the parser is in ground state.
-    Ground,
-    /// OSC or DCS string end: ground, unless ESC ended it and opened an escape.
-    StringEnd { bell: bool },
-    /// C0 control executed, possibly inside an open sequence.
+/// A string sequence open in the parser.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub(super) enum StringKind {
+    /// OSC, ended by BEL or ST.
+    Osc,
+    /// DCS, SOS, PM or APC, ended by ST.
     Control,
 }
 
-#[derive(Default)]
-struct Observer {
-    completions: u64,
-    last: Option<Completion>,
-    osc: Option<(OscTerminator, crate::engine::osc::OscContent)>,
-}
-
-impl Observer {
-    const fn complete(&mut self, completion: Completion) {
-        self.completions = self.completions.saturating_add(1);
-        self.last = Some(completion);
-    }
-}
-
-/// Implements the vte callbacks whose signatures vte fixes at four or five
-/// parameters; the observer only needs to know that they completed.
-macro_rules! dispatch_observers {
-    ($($name:ident($($arg:ident: $ty:ty),*);)*) => {
-        $(fn $name(&mut self, $($arg: $ty),*) { self.complete(Completion::Ground) })*
-    };
-}
-
-impl Perform for Observer {
-    dispatch_observers! {
-        csi_dispatch(_params: &Params, _intermediates: &[u8], _ignore: bool, _action: char);
-        esc_dispatch(_intermediates: &[u8], _ignore: bool, _byte: u8);
-    }
-
-    fn print(&mut self, _: char) {
-        self.complete(Completion::Ground);
-    }
-
-    fn execute(&mut self, _: u8) {
-        self.complete(Completion::Control);
-    }
-
-    fn unhook(&mut self) {
-        self.complete(Completion::StringEnd { bell: false });
-    }
-
-    fn osc_dispatch(&mut self, params: &[&[u8]], bell_terminated: bool) {
-        self.complete(Completion::StringEnd {
-            bell: bell_terminated,
-        });
-        let terminator = if bell_terminated {
-            OscTerminator::Bell
-        } else {
-            OscTerminator::StringTerminator
-        };
-        self.osc = classify(params).map(|content| (terminator, content));
-    }
+/// A segment boundary: emulator bytes up to `forward_end` correspond to input
+/// bytes up to `input_end`.
+pub(super) struct Cut {
+    pub(super) forward_end: usize,
+    pub(super) input_end: usize,
 }
 
 /// What one fed chunk contained.
+#[derive(Default)]
 pub(super) struct Scan {
-    /// Chunk-relative positions just past each completed CSI, ESC or string.
-    pub(super) cuts: Vec<usize>,
+    /// Bytes the emulator must parse: the input minus discarded string bytes,
+    /// plus the CAN that aborted an oversized sequence.
+    pub(super) forward: Vec<u8>,
+    /// Boundaries just past each completed CSI, ESC or string.
+    pub(super) cuts: Vec<Cut>,
     pub(super) completions: u64,
     pub(super) osc: Vec<OscRecord>,
 }
@@ -92,7 +56,11 @@ pub(super) struct Scan {
 pub(super) struct Tracker {
     parser: Parser,
     pending: Vec<u8>,
-    inexact: Option<InexactReason>,
+    tainted: bool,
+    escape: bool,
+    string: Option<StringKind>,
+    raw: RawOsc,
+    draining: Option<StringKind>,
 }
 
 impl Tracker {
@@ -100,38 +68,57 @@ impl Tracker {
         Self {
             parser: Parser::new(),
             pending: Vec::new(),
-            inexact: None,
+            tainted: false,
+            escape: false,
+            string: None,
+            raw: RawOsc::default(),
+            draining: None,
         }
     }
 
     /// Rebuilds the parser state an exact checkpoint captured.
-    pub(super) fn resume(pending: &[u8]) -> Self {
+    pub(super) fn resume(pending: &[u8], draining: Option<StringKind>) -> Self {
         let mut tracker = Self::new();
-        tracker.parser.advance(&mut Observer::default(), pending);
-        tracker.pending = pending.to_vec();
+        for &byte in pending {
+            tracker.step(byte);
+        }
+        tracker.draining = draining;
         tracker
     }
 
     /// Bytes of the sequence open at the current boundary, or why they cannot
     /// be replayed.
     pub(super) fn open_sequence(&self) -> Result<&[u8], InexactReason> {
-        self.inexact.map_or(Ok(self.pending.as_slice()), Err)
+        if self.tainted {
+            Err(InexactReason::ControlInsideOpenSequence)
+        } else {
+            Ok(&self.pending)
+        }
+    }
+
+    /// The kind of aborted string whose remaining bytes are being discarded.
+    pub(super) const fn draining(&self) -> Option<StringKind> {
+        self.draining
     }
 
     pub(super) fn scan(&mut self, start: OutputOffset, bytes: &[u8]) -> Scan {
-        let mut scan = Scan {
-            cuts: Vec::new(),
-            completions: 0,
-            osc: Vec::new(),
-        };
+        let mut scan = Scan::default();
         for (index, &byte) in bytes.iter().enumerate() {
-            let mut observer = Observer::default();
-            self.parser
-                .advance(&mut observer, std::slice::from_ref(&byte));
+            if self.discards(byte) {
+                continue;
+            }
+            if self.pending.len() >= SEQUENCE_LIMIT && !self.ends_sequence(byte) {
+                self.abort(&mut scan, start.advanced_by(index));
+                if self.draining.is_some() {
+                    continue;
+                }
+            }
+            scan.forward.push(byte);
+            let observer = self.step(byte);
             scan.completions = scan.completions.saturating_add(observer.completions);
-            let end = index.saturating_add(1);
+            let input_end = index.saturating_add(1);
             if let Some((terminator, content)) = observer.osc {
-                let offset = start.advanced_by(end);
+                let offset = start.advanced_by(input_end);
                 scan.osc.push(OscRecord {
                     offset,
                     terminator,
@@ -142,11 +129,89 @@ impl Tracker {
                 observer.last,
                 Some(Completion::Ground | Completion::StringEnd { .. })
             ) {
-                scan.cuts.push(end);
+                scan.cuts.push(Cut {
+                    forward_end: scan.forward.len(),
+                    input_end,
+                });
             }
-            self.track_boundary(observer.last, byte);
         }
         scan
+    }
+
+    /// Whether `byte` belongs to an aborted string and is dropped. A string
+    /// ends at ST (its ESC is parsed normally), CAN or SUB, and an OSC also at
+    /// BEL, which is dropped with the rest.
+    fn discards(&mut self, byte: u8) -> bool {
+        let Some(kind) = self.draining else {
+            return false;
+        };
+        match byte {
+            ESC | CAN | SUB => {
+                self.draining = None;
+                false
+            }
+            BEL if kind == StringKind::Osc => {
+                self.draining = None;
+                true
+            }
+            _ => true,
+        }
+    }
+
+    fn ends_sequence(&self, byte: u8) -> bool {
+        matches!(byte, ESC | CAN | SUB) || (byte == BEL && self.string == Some(StringKind::Osc))
+    }
+
+    /// Aborts the open sequence with CAN in both parsers, reporting an
+    /// aborted OSC as a truncated oversize record.
+    fn abort(&mut self, scan: &mut Scan, at: OutputOffset) {
+        if self.string == Some(StringKind::Osc)
+            && let Some(content) = truncated(&self.pending, self.raw)
+        {
+            let terminator = OscTerminator::Truncated;
+            scan.osc.push(OscRecord {
+                offset: at,
+                terminator,
+                content,
+            });
+        }
+        self.draining = self.string;
+        scan.forward.push(CAN);
+        let observer = self.step(CAN);
+        scan.completions = scan.completions.saturating_add(observer.completions);
+    }
+
+    fn step(&mut self, byte: u8) -> Observer {
+        let mut observer = Observer::new(self.raw);
+        self.parser
+            .advance(&mut observer, std::slice::from_ref(&byte));
+        self.track_string(observer.last, byte);
+        self.track_boundary(observer.last, byte);
+        observer
+    }
+
+    fn track_string(&mut self, completion: Option<Completion>, byte: u8) {
+        if completion.is_some() || byte == ESC {
+            self.string = None;
+            self.raw = RawOsc::default();
+        } else {
+            match self.string {
+                Some(StringKind::Osc) => self.raw.push(byte),
+                None if self.escape => {
+                    self.string = match byte {
+                        b']' => Some(StringKind::Osc),
+                        b'P' | b'X' | b'^' | b'_' => Some(StringKind::Control),
+                        _ => None,
+                    };
+                }
+                Some(StringKind::Control) | None => {}
+            }
+        }
+        self.escape = byte == ESC
+            && matches!(
+                completion,
+                None | Some(Completion::StringEnd { bell: false })
+            );
     }
 
     fn track_boundary(&mut self, completion: Option<Completion>, byte: u8) {
@@ -155,29 +220,21 @@ impl Tracker {
             Some(Completion::StringEnd { bell: false }) if byte != ESC => self.close(),
             Some(Completion::Control) if byte == CAN || byte == SUB => self.close(),
             Some(Completion::Control) if self.pending.is_empty() => {}
-            Some(Completion::StringEnd { bell: false }) => {
+            // ESC opens a fresh escape from any state, abandoning what was open.
+            Some(Completion::StringEnd { bell: false }) | None if byte == ESC => {
                 self.close();
-                self.hold(byte);
+                self.pending.push(byte);
             }
             Some(Completion::Control) => {
-                self.inexact
-                    .get_or_insert(InexactReason::ControlInsideOpenSequence);
-                self.hold(byte);
+                self.tainted = true;
+                self.pending.push(byte);
             }
-            None => self.hold(byte),
+            Some(Completion::StringEnd { .. }) | None => self.pending.push(byte),
         }
     }
 
     fn close(&mut self) {
         self.pending.clear();
-        self.inexact = None;
-    }
-
-    fn hold(&mut self, byte: u8) {
-        if self.pending.len() < PENDING_LIMIT {
-            self.pending.push(byte);
-        } else {
-            self.inexact = Some(InexactReason::OpenSequenceTooLong);
-        }
+        self.tainted = false;
     }
 }

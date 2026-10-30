@@ -11,6 +11,7 @@ use crate::engine::fidelity::Fidelity;
 use crate::engine::modes::ScreenBuffer;
 use crate::engine::read::CursorShape as Shape;
 use crate::engine::shadow::Shadow;
+use crate::engine::tracker::StringKind;
 use crate::engine::units::{ContentRevision, ModeRevision, OutputOffset, VtConfig};
 
 /// Format name written into every checkpoint.
@@ -122,6 +123,7 @@ pub struct Checkpoint {
     pub(super) shadow: Shadow,
     pub(super) fidelity: Fidelity,
     pub(super) pending: Vec<u8>,
+    pub(super) draining: Option<StringKind>,
 }
 
 #[derive(Deserialize)]
@@ -179,18 +181,24 @@ impl Checkpoint {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, VtError> {
         let envelope: Envelope =
             serde_json::from_slice(bytes).map_err(VtError::CheckpointMalformed)?;
-        let found = CheckpointVersion {
+        check_identity(CheckpointVersion {
             format: envelope.format,
             version: envelope.version,
             engine: envelope.engine,
-        };
-        let supported = Self::supported_version();
-        if found != supported {
-            return Err(VtError::CheckpointIncompatible {
-                found: Box::new(found),
-                supported: Box::new(supported),
-            });
-        }
+        })?;
         serde_json::from_slice(bytes).map_err(VtError::CheckpointMalformed)
+    }
+}
+
+/// Rejects any format identity other than the one this engine writes.
+pub(super) fn check_identity(found: CheckpointVersion) -> Result<(), VtError> {
+    let supported = Checkpoint::supported_version();
+    if found == supported {
+        Ok(())
+    } else {
+        Err(VtError::CheckpointIncompatible {
+            found: Box::new(found),
+            supported: Box::new(supported),
+        })
     }
 }

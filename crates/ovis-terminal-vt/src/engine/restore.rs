@@ -16,12 +16,14 @@ use alacritty_terminal::vte::ansi::{
 
 use crate::engine::Vt;
 use crate::engine::capture::CHARSET_SLOTS;
-use crate::engine::checkpoint::{CharsetRecord, Checkpoint, CursorRecord, ScreenRecord};
-use crate::engine::error::VtError;
+use crate::engine::checkpoint::{
+    CharsetRecord, Checkpoint, CursorRecord, ScreenRecord, check_identity,
+};
+use crate::engine::error::{CheckpointVersion, VtError};
 use crate::engine::listener::{Inert, Listener};
 use crate::engine::modes::{ScreenBuffer, TerminalModes};
 use crate::engine::shadow::STACK_DEPTH_LIMIT;
-use crate::engine::tracker::{PENDING_LIMIT, Tracker};
+use crate::engine::tracker::{SEQUENCE_LIMIT, Tracker};
 use crate::engine::units::Geometry;
 
 const PRIVATE_MODES: [(TermMode, NamedPrivateMode); 13] = [
@@ -98,6 +100,11 @@ fn screen_fits(record: &ScreenRecord, geometry: Geometry) -> bool {
 }
 
 fn validate(checkpoint: &Checkpoint) -> Result<(), VtError> {
+    check_identity(CheckpointVersion {
+        format: checkpoint.format.clone(),
+        version: checkpoint.version,
+        engine: checkpoint.engine.clone(),
+    })?;
     let geometry = checkpoint.config.geometry;
     let shadow = &checkpoint.shadow;
     let checks = [
@@ -133,7 +140,7 @@ fn validate(checkpoint: &Checkpoint) -> Result<(), VtError> {
             "color index out of range",
         ),
         (
-            checkpoint.pending.len() <= PENDING_LIMIT,
+            checkpoint.pending.len() <= SEQUENCE_LIMIT,
             "open sequence exceeds the pending limit",
         ),
         (
@@ -238,8 +245,10 @@ impl Vt {
     ///
     /// # Errors
     ///
-    /// Returns [`VtError::CheckpointInconsistent`] when the checkpoint
-    /// contradicts its own geometry or bounds.
+    /// Returns [`VtError::CheckpointIncompatible`] when the checkpoint was
+    /// written by another format or emulator, however it was decoded, and
+    /// [`VtError::CheckpointInconsistent`] when it contradicts its own
+    /// geometry or bounds.
     pub fn from_checkpoint(checkpoint: &Checkpoint) -> Result<Self, VtError> {
         validate(checkpoint)?;
         let mut vt = Self::new(checkpoint.config);
@@ -256,7 +265,7 @@ impl Vt {
             vt.processor
                 .advance(&mut Inert, character.encode_utf8(&mut encoded).as_bytes());
         }
-        vt.tracker = Tracker::resume(&checkpoint.pending);
+        vt.tracker = Tracker::resume(&checkpoint.pending, checkpoint.draining);
         vt.processor.advance(&mut Inert, &checkpoint.pending);
         vt.shadow = checkpoint.shadow.clone();
         vt.offset = checkpoint.offset;

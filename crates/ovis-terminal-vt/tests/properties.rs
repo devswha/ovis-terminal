@@ -42,8 +42,6 @@ fn stream() -> impl Strategy<Value = Vec<u8>> {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(192))]
-
     #[test]
     fn chunking_never_changes_state(bytes in stream(), size in 1_usize..9) {
         let mut whole = engine();

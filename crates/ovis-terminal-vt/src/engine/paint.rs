@@ -144,8 +144,22 @@ impl Vt {
         }
         painter.screen(active);
         painter.terminal_state(self);
+        let mut fidelity = painter.lossy.map_or_else(
+            || self.fidelity.clone(),
+            |reason| self.fidelity.with(reason),
+        );
+        let mut bytes = painter.out.into_bytes();
+        // Bytes after `offset` continue whatever sequence was open there, so
+        // the paint leaves the client's parser in the same place.
+        match self.tracker.open_sequence() {
+            Ok(open) => bytes.extend_from_slice(open),
+            Err(reason) => fidelity = fidelity.with(reason),
+        }
+        if self.tracker.draining().is_some() {
+            fidelity = fidelity.with(InexactReason::OpenSequenceTooLong);
+        }
         FirstPaint {
-            bytes: painter.out.into_bytes(),
+            bytes,
             offset: self.offset,
             revision: self.revision,
             mode_revision: self.mode_revision,
@@ -153,10 +167,7 @@ impl Vt {
             modes: self.modes,
             cursor: self.cursor(),
             history_lines: u32::try_from(active.history_size()).unwrap_or(u32::MAX),
-            fidelity: painter.lossy.map_or_else(
-                || self.fidelity.clone(),
-                |reason| self.fidelity.with(reason),
-            ),
+            fidelity,
         }
     }
 }

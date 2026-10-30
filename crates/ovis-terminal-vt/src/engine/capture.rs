@@ -93,6 +93,7 @@ impl Vt {
             shadow: self.shadow.clone(),
             fidelity,
             pending,
+            draining: self.tracker.draining(),
         }
     }
 }

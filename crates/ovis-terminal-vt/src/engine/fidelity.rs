@@ -10,7 +10,8 @@ pub enum InexactReason {
     /// The stream stopped inside a sequence after a control byte already acted,
     /// so replaying the open sequence would repeat that action.
     ControlInsideOpenSequence,
-    /// The open sequence at the boundary exceeded the retained pending bytes.
+    /// A string longer than the parser bound was being discarded at the
+    /// boundary; a client starting there sees its remaining bytes as text.
     OpenSequenceTooLong,
     /// The primary screen's saved cursor diverged from its cursor while the
     /// alternate screen was active; the emulator cannot rebuild that pair.

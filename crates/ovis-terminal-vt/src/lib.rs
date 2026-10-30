@@ -12,10 +12,10 @@ pub use engine::{
     ClientFact, ContentRevision, CursorShape, CursorState, EditingModes, FeedOutcome, Fidelity,
     FirstPaint, Geometry, HistoryCompleteness, HistoryLimit, HistoryRead, HistoryUnavailableReason,
     InexactReason, KeyEncoding, KeyboardModes, LineSpan, MIN_COLUMNS, ModeRevision,
-    ModifyOtherKeys, MouseEncoding, MouseModes, MouseTracking, OSC_RECORD_LIMIT, OscContent,
-    OscFault, OscRecord, OscTerminator, OutputOffset, PasteMode, QueryOutcome, ReadFormat,
-    ReadSource, ScreenBuffer, ScreenLine, ScreenModes, ScreenRead, SearchMatch, TerminalModes,
-    TerminalQuery, Vt, VtConfig, VtError,
+    ModifyOtherKeys, MouseEncoding, MouseModes, MouseTracking, OSC_FIELD_LIMIT, OSC_RECORD_LIMIT,
+    OscContent, OscFault, OscRecord, OscTerminator, OutputOffset, PasteMode, QueryOutcome,
+    ReadFormat, ReadSource, ScreenBuffer, ScreenLine, ScreenModes, ScreenRead, SearchMatch,
+    TerminalModes, TerminalQuery, Vt, VtConfig, VtError,
 };
 
 /// Cargo package name of this crate, used by the workspace layering record.
