@@ -56,6 +56,12 @@ component cases those todos will rerun. Here is what did run, on
 | `cargo clippy -p ovis-terminal-store --all-targets -- -D warnings` | 0 | clean |
 | `RUSTDOCFLAGS=-D warnings cargo doc --no-deps --all-features --workspace --locked` | 0 | clean |
 
+The first CI run (41109382393) was red only on `test (windows-latest)`. Clippy rejected
+the non-unix no-op `sync_dir` stub (`missing_const_for_fn`, `unnecessary_wraps`). The fix
+commit defines `sync_dir` only on Unix and calls it under `#[cfg(unix)]`. Windows has no
+directory fsync and NTFS journals renames, so no stub remains and no `#[allow]` was added.
+After the fix, Windows clippy passes in CI; the run result is recorded in the PR conversation.
+
 Logs: `docs/evidence/task-8/check.log`, `qa-happy.log`, `qa-failure.log`,
 `mutation-probes.log`, `tdd-red.log` (the failing run before implementation),
 `platform.txt`, `task-8-ovis-terminal-v1.json`.
@@ -119,5 +125,5 @@ The failure test also asserts:
   `Absent`: the store cannot tell an expired id from one that never existed.
 - `lib.rs` carries one crate-level `#[expect(clippy::redundant_pub_crate)]`. That nursery
   lint contradicts the workspace's `unreachable_pub` for crate-internal items.
-- On Windows, the directory fsync after quarantine renames is a no-op (no directory handles).
+- On Windows, directory fsync after quarantine renames is not performed (Windows exposes no directory flush; NTFS journals the rename).
   Windows correctness is CI-smoke only.

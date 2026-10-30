@@ -48,8 +48,11 @@ pub(crate) fn preserve(
             MaterialDisposition::CopiedOriginalKept => copy_durably(&from, &to)?,
         }
     }
-    sync_dir(&evidence.location)?;
-    sync_dir(root)?;
+    #[cfg(unix)]
+    {
+        sync_dir(&evidence.location)?;
+        sync_dir(root)?;
+    }
     Ok(evidence)
 }
 
@@ -137,7 +140,9 @@ fn write_evidence(evidence: &RecoveryEvidence) -> Result<(), StoreError> {
         .map_err(StoreError::io("write", &staging))?;
     file.sync_all().map_err(StoreError::io("sync", &staging))?;
     fs::rename(&staging, &path).map_err(StoreError::io("publish", &path))?;
-    sync_dir(&evidence.location)
+    #[cfg(unix)]
+    sync_dir(&evidence.location)?;
+    Ok(())
 }
 
 fn copy_durably(from: &Path, to: &Path) -> Result<(), StoreError> {
@@ -147,15 +152,11 @@ fn copy_durably(from: &Path, to: &Path) -> Result<(), StoreError> {
         .map_err(StoreError::io("sync", to))
 }
 
+/// Makes renames inside `dir` durable. Unix only: Windows cannot open a directory
+/// handle for flushing, and NTFS journals renames itself.
 #[cfg(unix)]
 fn sync_dir(dir: &Path) -> Result<(), StoreError> {
     File::open(dir)
         .and_then(|handle| handle.sync_all())
         .map_err(StoreError::io("sync", dir))
-}
-
-/// Windows cannot open a directory handle for flushing; NTFS journals renames itself.
-#[cfg(not(unix))]
-fn sync_dir(_dir: &Path) -> Result<(), StoreError> {
-    Ok(())
 }
