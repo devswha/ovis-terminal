@@ -1,0 +1,74 @@
+name: probe-stress-macos
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: never
+  RUST_BACKTRACE: 1
+
+jobs:
+  stress:
+    name: stress (${{ matrix.image }}, ${{ matrix.probe }})
+    strategy:
+      fail-fast: false
+      matrix:
+        probe: [happy, all]
+        image: [macos-latest, macos-15]
+        include:
+          - image: macos-latest
+            xcode: "26.6"
+          - image: macos-15
+            xcode: "16.4"
+    runs-on: ${{ matrix.image }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: pin C toolchain
+        shell: bash
+        env:
+          XCODE: ${{ matrix.xcode }}
+        run: |
+          sudo xcode-select -s "/Applications/Xcode_${XCODE}.app"
+          version="$(xcodebuild -version)"
+          test "${version%%$'\n'*}" = "Xcode $XCODE"
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat probe 100 times (fail fast)
+        shell: bash
+        env:
+          PROBE: ${{ matrix.probe }}
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 100); do
+              printf '\nITERATION %s/100\n' "$iteration"
+              if test "$PROBE" = happy; then
+                cargo nextest run -p ovis-terminal-holder --test platform_probe happy --locked
+              else
+                cargo nextest run -p ovis-terminal-holder --test platform_probe --locked
+              fi
+              printf 'PASS %s/100\n' "$iteration"
+            done
+            printf 'RESULT 100/100\n'
+          } 2>&1 | tee probe-stress-macos.log
+      - name: summary
+        if: always()
+        shell: bash
+        run: |
+          if test -f probe-stress-macos.log; then
+            grep -E '^(PASS|RESULT|ITERATION) ' probe-stress-macos.log >> "$GITHUB_STEP_SUMMARY" || true
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: probe-stress-macos-${{ matrix.image }}-${{ matrix.probe }}-${{ github.run_id }}
+          path: probe-stress-macos.log
+          if-no-files-found: error
