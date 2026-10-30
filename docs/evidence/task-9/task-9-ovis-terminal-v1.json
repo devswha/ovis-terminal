@@ -1,0 +1,111 @@
+{
+  "task": 9,
+  "branch": "lane/t9-identity-lifecycle",
+  "base": "origin/integration",
+  "before": {
+    "observation": "RT-HD-02: target w1:p2 returned process information for focused pane w1:p1",
+    "source": "docs/evidence/baseline/smoke/herdr-h05-process-info-trap.log:16"
+  },
+  "environment": {
+    "os": "Linux 7.0.0-38-generic",
+    "architecture": "x86_64",
+    "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+    "cargo": "cargo 1.99.1 (5f94df478 2026-08-27)"
+  },
+  "checks": [
+    {
+      "command": "cargo nextest run -p ovis-terminal-core",
+      "exit": 0,
+      "result": "scripts/check.sh included the workspace nextest run; its displayed summary was 195 tests run, 195 passed, 1 skipped."
+    },
+    {
+      "command": "cargo clippy -p ovis-terminal-core --all-targets -- -D warnings",
+      "exit": 0
+    },
+    {
+      "command": "bash scripts/check.sh",
+      "exit": 0,
+      "result": "check.sh: all steps passed; workspace-hygiene reported 0 violations in 241 files; manifests.sh checked 16 member manifests; json.sh checked 22 JSON files."
+    },
+    {
+      "command": "cargo metadata --locked --format-version 1 --no-deps",
+      "exit": 0
+    }
+  ],
+  "asserted_identity_json_values": {
+    "terminal_id_max": "\"terminal:18446744073709551615\"",
+    "generation_max": "\"18446744073709551615\"",
+    "process_identity": "PID and generation are decimal strings and the complete process identity round-trips through serde_json."
+  },
+  "qa": [
+    {
+      "case": "happy",
+      "command": "cargo test -p ovis-terminal-core --test registry happy -- --exact --nocapture",
+      "exit": 0,
+      "result": "test happy ... ok; 1 passed, 0 failed"
+    },
+    {
+      "case": "failure",
+      "command": "cargo test -p ovis-terminal-core --test registry failure -- --exact --nocapture",
+      "exit": 0,
+      "result": "test failure ... ok; 1 passed, 0 failed"
+    },
+    {
+      "case": "full-width round trip",
+      "command": "cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::identity_serialization_roundtrips_full_width_decimal_strings -- --exact --nocapture",
+      "exit": 0,
+      "result": "test registry::ids::tests::identity_serialization_roundtrips_full_width_decimal_strings ... ok"
+    },
+    {
+      "case": "u64 maximum",
+      "command": "cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::identity_serialization_preserves_u64_max -- --exact --nocapture",
+      "exit": 0,
+      "result": "test registry::ids::tests::identity_serialization_preserves_u64_max ... ok"
+    }
+  ],
+  "adversarial": [
+    {
+      "class": "malformed input",
+      "probe": "zero ID, nil machine UUID, wrong resource family, invalid name, empty process start token, and missing target",
+      "asserted_kinds": [
+        "invalid_identity",
+        "invalid_name",
+        "needs_target"
+      ]
+    },
+    {
+      "class": "stale state",
+      "probe": "same PID with old start token and an old process identity after relaunch",
+      "asserted_kind": "stale_target",
+      "replacement_resolved": false
+    },
+    {
+      "class": "cross-lifetime",
+      "probe": "caller binding from another runtime lifetime",
+      "asserted_kind": "cross_lifetime"
+    },
+    {
+      "class": "misleading success",
+      "probe": "same display name on different machine IDs",
+      "asserted_kind": "ambiguous_target",
+      "candidate_count": 2,
+      "dispatch": false
+    },
+    {
+      "class": "durability and lifecycle",
+      "probe": "machine identity and reserved terminal IDs survive store reopen; core restart and upgrade keep exact process identity; holder loss and host reboot do not claim survival; confirmed relaunch advances terminal and process generations"
+    }
+  ],
+  "conformance_attempt": {
+    "command": "cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-9 --isolated --case happy --evidence \"$ATTEMPT_DIR/task-9-ovis-terminal-v1.json\"",
+    "exit": 2,
+    "stderr": "conformance: no scenarios are registered in this build (protocol crate ovis-terminal-protocol)",
+    "deferred_by_plan": "The runner is not registered until todo 21 and the real binary is not assembled for this foundational todo. See the raw attempt log."
+  },
+  "limitations": [
+    "No real ovis-terminal CLI/socket transcript exists yet; the plan defers that conformance run until assembly.",
+    "Only Linux x86_64 was exercised locally.",
+    "One workspace test was skipped by nextest; its reason was not shown in the captured summary.",
+    "Rust and JSON LSP diagnostics were unavailable because rust-analyzer and Biome are not installed."
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "scenario": "part-a/task-9",
+  "todo": 9,
+  "title": "Define identity resolution and lifecycle transition tables",
+  "closes": [
+    "GAP-009",
+    "GAP-010"
+  ],
+  "delivers": [
+    "IDEAL-009",
+    "IDEAL-045",
+    "IDEAL-080"
+  ],
+  "runner": "shell",
+  "note": "Component tests run now. The real-binary socket transcript is deferred until conformance runner and binary assembly land in todo 21; this scenario does not claim that deferred run.",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-core",
+            "--test",
+            "registry",
+            "happy",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test happy ... ok",
+              "test result: ok. 1 passed; 0 failed"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-core",
+            "--lib",
+            "registry::ids::tests::identity_serialization_roundtrips_full_width_decimal_strings",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test registry::ids::tests::identity_serialization_roundtrips_full_width_decimal_strings ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-core",
+            "--lib",
+            "registry::ids::tests::identity_serialization_preserves_u64_max",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test registry::ids::tests::identity_serialization_preserves_u64_max ... ok"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-core",
+            "--test",
+            "registry",
+            "failure",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test failure ... ok",
+              "test result: ok. 1 passed; 0 failed"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "adversarial_cases": [
+    {
+      "class": "malformed input",
+      "name": "identity from wrong resource family",
+      "test": "registry::failure",
+      "expected": {
+        "kind": "invalid_identity",
+        "resolved_target": false
+      }
+    },
+    {
+      "class": "stale state",
+      "name": "PID reuse with an old start token",
+      "test": "registry::failure",
+      "expected": {
+        "kind": "stale_target",
+        "resolved_replacement": false
+      }
+    },
+    {
+      "class": "misleading success",
+      "name": "same display name on different machines",
+      "test": "registry::happy",
+      "expected": {
+        "kind": "ambiguous_target",
+        "candidate_count": 2,
+        "dispatch": false
+      }
+    }
+  ]
+}
