@@ -112,7 +112,7 @@ $ cargo clippy -p ovis-terminal-holder --all-targets -- -D warnings
 exit: 0
 
 $ bash scripts/check.sh
-Summary 155 tests run: 155 passed, 1 skipped   (the skip is the pre-existing ignored store child-process fixture)
+Summary 215 tests run: 215 passed, 1 skipped   (merged with integration bc73b93)   (the skip is the pre-existing ignored store child-process fixture)
 check.sh: all steps passed
 exit: 0
 ```
