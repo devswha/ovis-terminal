@@ -1,0 +1,127 @@
+name: platform-probes
+
+# Native platform probes (plan todo 12): real pseudo-terminals through the
+# pinned portable-pty backend on each runner, plus the PTY latency and soak
+# harnesses on Linux and macOS. Windows runs the smoke tier only; it is not
+# full Windows QA. On Windows the probe tests are #[ignore]d so the generic
+# ci.yml job skips them; --include-ignored runs them here. A capability the
+# platform lacks is a recorded `PROBE finding`; setting
+# OVIS_PROBE_REQUIRE_PASS=1 turns findings into failures (Todos 53/54).
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      soak_seconds:
+        description: "Length of the 50-terminal soak on Linux and macOS"
+        default: "60"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  probe:
+    name: probe (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            image: ubuntu-24.04
+          - os: macos-latest
+            image: macos-15
+          - os: windows-latest
+            image: windows-2025
+    runs-on: ${{ matrix.image }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      # The probe test links the bench crate, which reaches bundled SQLite (C):
+      # pin the same native C toolchains as ci.yml.
+      - name: pin C toolchain (Linux gcc 14.2.0)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          test "$(gcc-14 -dumpfullversion)" = "14.2.0"
+          {
+            echo "CC=gcc-14"
+            echo "AR=gcc-ar-14"
+            echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=gcc-14"
+          } >> "$GITHUB_ENV"
+      - name: pin C toolchain (macOS Xcode 16.4)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+          version="$(xcodebuild -version)"
+          test "${version%%$'\n'*}" = "Xcode 16.4"
+      - name: pin C toolchain (Windows MSVC 14.44)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          toolset: "14.44"
+      - name: use the pinned MSVC linker (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          linker="${VCToolsInstallDir}bin\HostX64\x64\link.exe"
+          test -f "$linker"
+          echo "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$linker" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - name: host
+        shell: bash
+        run: uname -a
+      - name: probe happy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --locked -p ovis-terminal-holder --test platform_probe happy -- --exact --nocapture --include-ignored 2>&1 | tee probe-happy.log
+          grep -q '^test happy \.\.\. ok$' probe-happy.log
+      - name: probe failure
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --locked -p ovis-terminal-holder --test platform_probe failure -- --exact --nocapture --include-ignored 2>&1 | tee probe-failure.log
+          grep -q '^test failure \.\.\. ok$' probe-failure.log
+      - name: latency harness (16 terminals, 1 MiB/s)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo run --locked --release -p ovis-terminal-bench --bin pty-harness -- latency | tee latency.json
+      - name: soak harness (50 terminals)
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          SOAK_SECONDS: ${{ inputs.soak_seconds || '60' }}
+        run: |
+          set -o pipefail
+          cargo run --locked --release -p ovis-terminal-bench --bin pty-harness -- soak 50 "$SOAK_SECONDS" | tee soak.json
+      - name: tier note
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### ${{ matrix.os }} ($(uname -sm))"
+            if [ "${{ runner.os }}" = "Windows" ]; then
+              echo "Windows smoke tier: ConPTY spawn/exit/resize, named-pipe first instance, typed spawn failures. Not full Windows QA."
+            else
+              echo "Native probe: grid/resize, modes, start tokens, final bytes, socket identity, holder survival, latency and 50-terminal soak."
+            fi
+            grep -h '^PROBE ' probe-*.log || true
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: platform-probes-${{ matrix.os }}
+          path: |
+            probe-*.log
+            latency.json
+            soak.json
+          if-no-files-found: ignore

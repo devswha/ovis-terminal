@@ -1,0 +1,23 @@
+$ cargo test --locked -p ovis-terminal-holder --test platform_probe happy -- --exact --nocapture
+Linux x86_64
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running ../../probes/platform/tests/platform_probe.rs (target/debug/deps/platform_probe-ff07d0799ac7e5ed)
+
+running 1 test
+PROBE host {"os":"linux","family":"unix","arch":"x86_64","byte_order":"little"}
+PROBE start_token_source "linux_proc_stat"
+PROBE process {"pid":"3871383","start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:25594299","state":"live"}
+PROBE holder_frames [{"kind":"spawned","data":{"terminal_id":"probe-shell","terminal_incarnation":"1","process_incarnation":"1","pid":"3871383","start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:25594299"}},{"kind":"exit","data":{"target":{"terminal_id":"probe-shell","terminal_incarnation":"1","process_incarnation":"1"},"code":7,"signal":null,"final_offset":"146"}}]
+PROBE process_after_exit {"kind":"process_record_unreadable"}
+PROBE modes {"set":{"paste":"bracketed","buffer":"alternate"},"reset":{"paste":"plain","buffer":"primary"}}
+PROBE endpoint {"max_path_bytes":107,"first_rejected_path_bytes":108,"identity":{"device":"47","inode":"100814547","owner_uid":1000,"mode":384},"rebound_identity":{"device":"47","inode":"100814548","owner_uid":1000,"mode":384},"directory_owner_uid":1000,"exchanged":"15"}
+PROBE endpoint_inode_reused false
+PROBE detach {"interruption":"core_death","launcher_exit":{"code":1,"signal":"Killed"},"holder":{"before":{"pid":"3871397","start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:25594301","state":"live"},"after":{"pid":"3871397","start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:25594301","state":"live"}},"program":{"before":{"pid":"3871399","start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:25594301","state":"live"},"after":{"pid":"3871399","start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:25594301","state":"live"}}}
+PROBE detach {"interruption":"logout","launcher_exit":{"code":1,"signal":"Hangup"},"holder":{"before":{"pid":"3871406","start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:25594302","state":"live"},"after":{"pid":"3871406","start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:25594302","state":"live"}},"program":{"before":{"pid":"3871407","start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:25594302","state":"live"},"after":{"pid":"3871407","start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:25594302","state":"live"}}}
+PROBE latency {"terminals":16,"input_bytes_per_second":"1048576","verdict":"100000","latency":{"samples":"320","p50":"5090","p95":"19620","p99":"22740","max":"25331"},"within_verdict":true,"written":"1310720","received":"1333976","elapsed":"1252064","resident":{"harness":"10600448","programs":"123318272"}}
+PROBE soak {"terminals":50,"rounds":"165","latency":{"samples":"8250","p50":"380","p95":"530","p99":"670","max":"1899"},"resident_first":{"harness":"11833344","programs":"387624960"},"resident_peak":{"harness":"11878400","programs":"388071424"},"resident_last":{"harness":"11878400","programs":"388071424"},"programs_with_unchanged_tokens":50,"received":"2221200","elapsed":"3007091"}
+test happy ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 5.01s
+
+exit=0
