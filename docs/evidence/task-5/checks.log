@@ -1,0 +1,58 @@
+Task 5 repository check log after merging origin/integration
+Platform: Linux 7.0.0-38-generic x86_64
+The integration merge brought in the T8/T11 bundled-SQLite crates. This host
+has no system C compiler, so the first check-script attempt without the local
+wrappers failed before compilation:
+
+```text
+Compiler family detection failed: ToolNotFound: failed to find tool "cc"
+exit: 101
+```
+
+The final run used the task's isolated Rust toolchain plus local-only C wrappers:
+
+```text
+RUSTUP_HOME=/tmp/ulw-ovis-yCJzPH/toolchain/rustup
+CARGO_HOME=/tmp/ulw-ovis-yCJzPH/toolchain/cargo
+PATH=/tmp/ulw-ovis-yCJzPH/toolchain/cargo/bin:$PATH
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=/tmp/ulw-ovis-yCJzPH/toolchain/cargo/bin/zigcc-linker
+CC=/tmp/ulw-ovis-yCJzPH/toolchain/cargo/bin/zigcc-linker
+AR=/tmp/ulw-ovis-yCJzPH/toolchain/zigvenv/bin/python -m ziglang ar
+```
+
+```text
+$ cargo generate-lockfile --offline
+Locking 81 packages to highest Rust 1.89 compatible versions
+exit: 0
+
+$ cargo metadata --locked --format-version 1 >/dev/null
+exit: 0
+
+$ bash scripts/check.sh
+==> cargo +nightly fmt --all -- --check
+exit: 0
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+exit: 0
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+exit: 0
+==> cargo test --doc --workspace --all-features --locked
+exit: 0
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 91 file(s) checked
+exit: 0
+==> bash scripts/hygiene/manifests.sh
+manifests.sh: 16 member manifest(s) checked
+exit: 0
+==> bash scripts/hygiene/json.sh
+json.sh: 7 JSON file(s) checked
+exit: 0
+check.sh: all steps passed
+exit: 0
+```
+
+$ cargo test -p ovis-terminal-holder --all-targets -- --nocapture
+7 unit tests and 3 integration tests passed; 0 failed
+exit: 0
+
+$ GIT_MASTER=1 git diff --check
+exit: 0

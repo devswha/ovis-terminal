@@ -1,0 +1,15 @@
+Task 5 real-binary conformance attempt
+Platform: Linux 7.0.0-38-generic x86_64
+
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-5 --isolated --case happy --evidence "$ATTEMPT_DIR/task-5-ovis-terminal-v1.json"
+Compiling ovis-terminal-conformance v0.1.0
+Finished `dev` profile [unoptimized + debuginfo]
+Running `target/debug/conformance --binary target/debug/ovis-terminal --scenario part-a/task-5 --isolated --case happy --evidence "$ATTEMPT_DIR/task-5-ovis-terminal-v1.json"`
+conformance: no scenarios are registered in this build (protocol crate ovis-terminal-protocol)
+exit: 2
+
+This is the scaffold's explicit task-21 boundary: `conformance/src/main.rs`
+registers no scenarios yet and returns exit 2. The CLI is likewise still the
+bootstrap binary. The task-5 scenario fixture is present, but the requested
+real CLI/socket transcript cannot be produced until the conformance runner and
+runtime assembly are implemented.
