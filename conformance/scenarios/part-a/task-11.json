@@ -1,0 +1,116 @@
+{
+  "scenario": "part-a/task-11",
+  "todo": 11,
+  "title": "Add structured tracing and secret redaction foundations",
+  "closes": [
+    "GAP-135",
+    "GAP-142"
+  ],
+  "delivers": [
+    "IDEAL-108",
+    "IDEAL-115",
+    "IDEAL-116"
+  ],
+  "runner": "shell",
+  "note": "Runs assertion-bearing telemetry sink tests; protocol diagnostics remain isolated from CLI stdout.",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "-p",
+            "ovis-terminal-core",
+            "--test",
+            "telemetry",
+            "happy",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_line": "test happy ... ok"
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "run",
+            "--locked",
+            "--quiet",
+            "-p",
+            "ovis-terminal-cli",
+            "--",
+            "--version"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_line": "ovis-terminal 0.1.0"
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "-p",
+            "ovis-terminal-core",
+            "--test",
+            "telemetry",
+            "failure",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_line": "test failure ... ok"
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "-p",
+            "ovis-terminal-core",
+            "--test",
+            "telemetry",
+            "invalid_sink_returns_typed_error",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_line": "test invalid_sink_returns_typed_error ... ok"
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "-p",
+            "ovis-terminal-core",
+            "--test",
+            "telemetry",
+            "oversized_field_is_bounded",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_line": "test oversized_field_is_bounded ... ok"
+          }
+        }
+      ]
+    }
+  ]
+}
