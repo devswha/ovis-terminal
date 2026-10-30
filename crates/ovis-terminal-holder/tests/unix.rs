@@ -1,4 +1,4 @@
-//! Unix PTY holder behavior through the holder socket and the in-process API.
+//! Unix PTY holder behavior through the real holder socket.
 #![cfg(unix)]
 
 use std::collections::BTreeMap;
@@ -11,13 +11,12 @@ use std::time::Duration;
 use ovis_terminal_holder::process::{ProcessId, read_start_token};
 use ovis_terminal_holder::protocol::{
     CoreBuildId, Exit, Forget, Goodbye, GoodbyeReason, HOLDER_PROTOCOL_GENERATION, HeldTerminal,
-    Hello, HolderBuildId, HolderDescriptor, HolderInstanceId, Input, Message, PreviousCoreState,
-    Resize, Signal, SignalKind, Spawn, SpawnFailureKind, Spawned, TailRequest, TerminalId,
-    TerminalIncarnation, TerminalTarget, WriteGrant,
+    Hello, HolderBuildId, HolderDescriptor, HolderInstanceId, Input, InputRejection, Message,
+    PreviousCoreState, Resize, Signal, SignalKind, Spawn, SpawnFailureKind, SpawnFailureReason,
+    Spawned, TailRequest, TerminalId, TerminalIncarnation, TerminalTarget, WriteGrant,
 };
 use ovis_terminal_holder::unix::{
-    CoreConnection, Holder, HolderConfig, HolderError, HolderLimits, HolderService,
-    ProcessEnvironment,
+    CoreConnection, Holder, HolderConfig, HolderLimits, HolderService,
 };
 
 type Outcome<T = ()> = Result<T, Box<dyn Error>>;
@@ -28,16 +27,16 @@ const MIB: usize = 1 << 20;
 fn config() -> HolderConfig {
     let build = HolderBuildId::new("holder-test-build".to_owned());
     let instance = HolderInstanceId::new(format!("holder-test-{}", std::process::id()));
-    let vars = vec![
-        ("PATH".into(), "/usr/bin:/bin".into()),
-        ("TERM".into(), "xterm".into()),
-    ];
-    let environment = ProcessEnvironment::new(std::env::temp_dir(), vars);
     HolderConfig::new(
         HolderDescriptor::new(build, instance),
         HolderLimits::DEFAULT,
-        environment,
     )
+}
+
+fn start() -> Outcome<(HolderService, PathBuf)> {
+    let socket = socket_path();
+    let service = HolderService::start(UnixListener::bind(&socket)?, Holder::new(config()))?;
+    Ok((service, socket))
 }
 
 fn socket_path() -> PathBuf {
@@ -61,6 +60,11 @@ fn shell(terminal: &str, script: &str) -> Spawn {
         terminal_id: TerminalId::new(terminal.to_owned()),
         terminal_incarnation: TerminalIncarnation::new(1),
         argv: vec!["/bin/sh".to_owned(), "-c".to_owned(), script.to_owned()],
+        cwd: std::env::temp_dir(),
+        env: [("PATH", "/usr/bin:/bin"), ("TERM", "xterm")]
+            .into_iter()
+            .map(|(name, value)| (name.to_owned(), value.to_owned()))
+            .collect(),
         geometry: (80, 24),
     }
 }
@@ -118,8 +122,7 @@ fn output_until_exit(core: &mut CoreConnection, mut offset: u64) -> Outcome<(Vec
 #[test]
 fn happy() -> Outcome {
     // Given: a holder service, and a child that prints the first byte of "é" and waits.
-    let socket = socket_path();
-    let service = HolderService::start(UnixListener::bind(&socket)?, Holder::new(config()))?;
+    let (service, socket) = start()?;
     let (mut first, held) = adopt(&socket)?;
     assert_eq!(held, Vec::new());
     let script = "stty -echo; printf '\\303'; read gate; printf '\\251\\n'; exit 7";
@@ -174,100 +177,114 @@ fn happy() -> Outcome {
         target,
         acknowledged_final_offset,
     }))?;
-    let reason = GoodbyeReason::Shutdown;
-    second.send(&Message::Goodbye(Goodbye { reason }))?;
     let holder = service.holder().clone();
-    service.wait()?;
+    shut_down(&mut second, service, &socket)?;
     assert!(holder.is_empty());
-    Ok(std::fs::remove_file(&socket)?)
+    Ok(())
+}
+
+fn shut_down(core: &mut CoreConnection, service: HolderService, socket: &Path) -> Outcome {
+    let reason = GoodbyeReason::Shutdown;
+    core.send(&Message::Goodbye(Goodbye { reason }))?;
+    service.wait()?;
+    Ok(std::fs::remove_file(socket)?)
 }
 
 #[test]
 fn failure() -> Outcome {
-    // Given: an adopted in-process holder.
-    let holder = Holder::new(config());
-    let link = holder.adopt(&hello())?;
-    assert!(matches!(link.recv_timeout(WAIT)?, Message::Welcome(_)));
+    // Given: a holder service and an adopted core.
+    let (service, socket) = start()?;
+    let (mut core, _) = adopt(&socket)?;
 
     // When: argv names a missing executable.
     let missing = Spawn {
         argv: vec!["/nonexistent/ovis-fixture".to_owned()],
         ..shell("t-x", "")
     };
-    let Err(error) = holder.spawn_wire(&missing) else {
-        return Err("a missing executable must not spawn".into());
-    };
+    core.send(&Message::Spawn(missing))?;
 
-    // Then: a typed spawn failure, reported separately, and no terminal record.
-    assert_eq!(error.kind(), "spawn_failed");
-    let HolderError::Launch { source } = &error else {
-        return Err(format!("expected a launch failure, got {error:?}").into());
-    };
-    assert_eq!(source.kind(), "executable_rejected");
-    let Message::SpawnFailed(failed) = link.recv_timeout(WAIT)? else {
+    // Then: a typed spawn failure carrying the OS error, and no terminal record.
+    let Message::SpawnFailed(failed) = core.recv(WAIT)? else {
         return Err("expected SpawnFailed".into());
     };
-    assert_eq!(failed.kind, SpawnFailureKind::InvalidRequest);
-    assert!(holder.is_empty());
+    let expected = (
+        SpawnFailureKind::InvalidRequest,
+        SpawnFailureReason::ExecutableUnavailable,
+    );
+    assert_eq!((failed.kind, failed.reason), expected);
+    assert_eq!(failed.os_error, Some(libc::ENOENT));
+    assert_ne!(failed.hint, "");
 
     // Given: a raw-mode child that never reads stdin.
-    let spawned = holder.spawn_wire(&shell(
-        "t-full",
-        "stty raw -echo; echo ready; exec sleep 600",
-    ))?;
+    let quiet = shell("t-full", "stty raw -echo; echo ready; exec sleep 600");
+    core.send(&Message::Spawn(quiet))?;
+    let Message::Spawned(spawned) = core.recv(WAIT)? else {
+        return Err("expected Spawned".into());
+    };
     let mut seen = Vec::new();
     while !seen.windows(5).any(|window| window == b"ready") {
-        if let Message::Output(output) = link.recv_timeout(WAIT)? {
+        if let Message::Output(output) = core.recv(WAIT)? {
             seen.extend(output.bytes);
         }
     }
 
-    // When: 1 MiB inputs are offered until the 16 MiB queue is full.
-    let rejected = (1..=24_u64).find_map(|sequence| {
-        let offered = holder.input(input(&spawned, sequence, vec![b'x'; MIB]));
-        offered.err().map(|error| (sequence, error))
-    });
+    // When: twenty 1 MiB inputs are sent through the socket.
+    for sequence in 1..=20 {
+        core.send(&Message::Input(input(&spawned, sequence, vec![b'x'; MIB])))?;
+    }
 
-    // Then: a typed input_overflow, while resize and kill still settle.
-    let (overflowed, error) = rejected.ok_or("the bounded queue must reject input")?;
-    assert_eq!(error.kind(), "input_overflow");
-    assert!(matches!(error, HolderError::InputOverflow { limit, .. } if limit == 16 * MIB));
+    // Then: the holder answers with a typed input_overflow carrying its hint and bounds.
+    let rejected = loop {
+        match core.recv(WAIT)? {
+            Message::InputRejected(rejected) => break rejected,
+            Message::Output(_) => {}
+            other => return Err(format!("expected InputRejected, got {other:?}").into()),
+        }
+    };
+    assert_eq!(rejected.reason, InputRejection::InputOverflow);
     assert!(
-        overflowed <= 18,
+        rejected.sequence <= 18,
         "one entry blocks in the PTY and 16 MiB queue behind it"
     );
+    assert_eq!(
+        (rejected.limit_bytes, rejected.limit_entries),
+        (16 << 20, 4096)
+    );
+    assert!(rejected.queued_bytes.saturating_add(1 << 20) > rejected.limit_bytes);
+    assert_ne!(rejected.hint, "");
+
+    // Then: resize and kill still settle over the same socket.
     let (target, geometry, geometry_epoch) = (target_of(&spawned), (120, 40), 1);
-    holder.resize(&Resize {
+    core.send(&Message::Resize(Resize {
         target,
         geometry,
         geometry_epoch,
-    })?;
+    }))?;
     let (target, signal) = (target_of(&spawned), SignalKind::Kill);
-    holder.signal(&Signal { target, signal })?;
+    core.send(&Message::Signal(Signal { target, signal }))?;
+    let admitted = rejected.sequence.saturating_sub(1);
     let (mut acks, mut exit) = (BTreeMap::new(), None);
-    while exit.is_none() || acks.len() < usize::try_from(overflowed)? {
-        match link.recv_timeout(WAIT)? {
+    while exit.is_none() || acks.len() < usize::try_from(admitted)? {
+        match core.recv(WAIT)? {
             Message::InputWritten(ack) => {
                 assert_eq!(acks.insert(ack.sequence, ack.written_bytes), None);
             }
+            Message::InputRejected(later) => assert!(later.sequence > rejected.sequence),
             Message::Exit(record) => exit = Some(record),
             _ => {}
         }
     }
-    assert_eq!(exit.and_then(|record| record.signal), Some(9));
+    let exit = exit.ok_or("exit")?;
+    assert_eq!(
+        (exit.signal, exit.exit_unknown, exit.io_failure),
+        (Some(9), None, None)
+    );
     let partial = acks.get(&1).copied().ok_or("first entry acknowledged")?;
     assert!(
         partial > 0 && partial < 1 << 20,
         "a partial write is reported as written"
     );
-    assert_eq!(acks.get(&overflowed).copied(), Some(0));
     let total: u64 = acks.values().sum();
-    let queued = overflowed
-        .saturating_sub(1)
-        .saturating_mul(u64::try_from(MIB)?);
-    assert!(
-        total < queued,
-        "the stopped program received only what the PTY accepted"
-    );
-    Ok(holder.shutdown()?)
+    assert!(total < admitted.saturating_mul(1 << 20));
+    shut_down(&mut core, service, &socket)
 }

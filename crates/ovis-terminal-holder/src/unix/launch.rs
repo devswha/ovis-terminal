@@ -3,6 +3,7 @@
 use std::ffi::OsString;
 use std::fs::File;
 use std::os::fd::{AsFd, BorrowedFd, OwnedFd};
+use std::path::Path;
 use std::process::Child as StdChild;
 
 use portable_pty::{Child, CommandBuilder, MasterPty, PtySize, SlavePty, native_pty_system};
@@ -125,9 +126,7 @@ pub(super) struct PtyProcess {
 /// the PTY library's own writer sends a newline and EOF when dropped, which
 /// would inject input.
 pub(super) fn launch(spec: &LaunchSpec) -> Result<PtyProcess, LaunchError> {
-    if spec.argv.is_empty() {
-        return Err(LaunchError::EmptyArgv);
-    }
+    let program = spec.argv.first().ok_or(LaunchError::EmptyArgv)?;
     let cwd = &spec.environment.cwd;
     let metadata = std::fs::metadata(cwd).map_err(|source| LaunchError::CwdUnavailable {
         cwd: cwd.clone(),
@@ -135,6 +134,17 @@ pub(super) fn launch(spec: &LaunchSpec) -> Result<PtyProcess, LaunchError> {
     })?;
     if !metadata.is_dir() {
         return Err(LaunchError::CwdNotDirectory { cwd: cwd.clone() });
+    }
+    // A program given as a path is checked here so its OS error is kept; bare
+    // names are resolved by the PTY library through the explicit PATH.
+    let program = Path::new(program);
+    if program
+        .parent()
+        .is_some_and(|parent| !parent.as_os_str().is_empty())
+    {
+        let path = cwd.join(program);
+        std::fs::metadata(&path)
+            .map_err(|source| LaunchError::ExecutableUnavailable { path, source })?;
     }
     let pair = native_pty_system()
         .openpty(spec.grid.pty_size())

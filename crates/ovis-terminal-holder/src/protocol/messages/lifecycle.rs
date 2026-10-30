@@ -1,8 +1,12 @@
 //! Holder adoption and process lifecycle records.
 
+use std::collections::BTreeMap;
+use std::path::PathBuf;
+
 use serde::{Deserialize, Serialize};
 
 use super::io::Exit;
+use super::outcome::SpawnFailureReason;
 use crate::protocol::{
     CoreBuildId, HolderBuildId, HolderInstanceId, ProcessIncarnation, ProcessStartToken,
     TerminalId, TerminalIncarnation,
@@ -96,8 +100,12 @@ pub struct Spawn {
     pub terminal_id: TerminalId,
     /// Initial terminal incarnation.
     pub terminal_incarnation: TerminalIncarnation,
-    /// Requested executable and arguments.
+    /// Executable (first element, resolved with the explicit `PATH`) and arguments.
     pub argv: Vec<String>,
+    /// Working directory the program starts in; it must exist.
+    pub cwd: PathBuf,
+    /// The program's complete environment; nothing is inherited from the holder.
+    pub env: BTreeMap<String, String>,
     /// Initial terminal geometry as columns, rows.
     pub geometry: (u16, u16),
 }
@@ -137,6 +145,12 @@ pub struct SpawnFailed {
     pub terminal_incarnation: TerminalIncarnation,
     /// Stable machine-readable failure kind.
     pub kind: SpawnFailureKind,
+    /// Typed cause of the failure.
+    pub reason: SpawnFailureReason,
+    /// Recovery guidance for the cause.
+    pub hint: String,
+    /// Operating-system error number, when the OS reported one.
+    pub os_error: Option<i32>,
 }
 
 /// Typed spawn failures understood by the core.

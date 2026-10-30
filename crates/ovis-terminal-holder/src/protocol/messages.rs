@@ -3,6 +3,7 @@
 mod control;
 mod io;
 mod lifecycle;
+mod outcome;
 
 pub use control::{Drain, Goodbye, GoodbyeReason, Message, MessageKind};
 pub use io::{
@@ -11,4 +12,8 @@ pub use io::{
 };
 pub use lifecycle::{
     HeldTerminal, Hello, PreviousCoreState, Spawn, SpawnFailed, SpawnFailureKind, Spawned, Welcome,
+};
+pub use outcome::{
+    ExitUnknown, ExitUnknownReason, InputRejected, InputRejection, PtyIoFailure, PtyOperation,
+    SpawnFailureReason,
 };

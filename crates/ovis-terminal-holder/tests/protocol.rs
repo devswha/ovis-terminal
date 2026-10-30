@@ -20,6 +20,8 @@ fn happy() {
         },
         code: Some(0),
         signal: None,
+        exit_unknown: None,
+        io_failure: None,
         final_offset: 8,
     };
     let retained = HeldTerminal {

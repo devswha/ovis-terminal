@@ -7,12 +7,13 @@ use portable_pty::MasterPty;
 
 use super::super::error::HolderError;
 use super::super::input::{InputQueue, QueuedInput};
+use super::super::io_error::TerminalIoError;
 use super::super::link::{LinkClosed, Outbox};
 use super::super::tail::RetainedTail;
 use crate::process::ProcessId;
 use crate::protocol::{
-    AdoptionError, AdoptionTable, Exit, HeldTerminal, InputWritten, Message, ProcessIncarnation,
-    TerminalId, TerminalTarget,
+    AdoptionError, AdoptionTable, HeldTerminal, InputWritten, Message, ProcessIncarnation,
+    PtyIoFailure, TerminalId, TerminalTarget,
 };
 
 /// The running side of a terminal; dropped once its exit is recorded.
@@ -28,6 +29,10 @@ pub(super) struct Terminal {
     pub(super) live: Option<LiveTerminal>,
     pub(super) geometry_epoch: Option<u64>,
     pub(super) admitted_sequence: Option<u64>,
+    /// Unexpected failures with their sources; each worker records at most one.
+    pub(super) io_errors: Vec<Arc<TerminalIoError>>,
+    /// Wire form of the first failure before exit, carried by the exit record.
+    pub(super) first_io_failure: Option<PtyIoFailure>,
 }
 
 impl Terminal {
@@ -38,13 +43,6 @@ impl Terminal {
             process_incarnation: self.held.process_incarnation,
         }
     }
-}
-
-/// Exit evidence observed by the waiter: `None` fields mean the OS gave none.
-#[derive(Clone, Copy, Debug)]
-pub(super) struct ExitEvidence {
-    pub(super) code: Option<i32>,
-    pub(super) signal: Option<i32>,
 }
 
 /// The write-boundary result for one input entry.
@@ -143,24 +141,6 @@ impl HolderState {
             bytes: chunk.to_vec(),
         }));
         Ok(())
-    }
-
-    /// Records exit after the pump reached EOF, so `final_offset` covers all output.
-    pub(super) fn record_exit(&mut self, terminal_id: &TerminalId, evidence: ExitEvidence) {
-        let Some(terminal) = self.terminals.get_mut(terminal_id) else {
-            return;
-        };
-        let exit = Exit {
-            target: terminal.target(),
-            code: evidence.code,
-            signal: evidence.signal,
-            final_offset: terminal.tail.head(),
-        };
-        terminal.held.exit = Some(exit.clone());
-        if let Some(live) = terminal.live.take() {
-            live.input.close();
-        }
-        self.publish(Message::Exit(exit));
     }
 
     /// Publishes the actual write-boundary byte count for one input entry.

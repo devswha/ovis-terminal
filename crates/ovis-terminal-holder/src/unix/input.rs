@@ -2,11 +2,13 @@
 //!
 //! Input never shares a queue with resize, signal or cancel: those act on the
 //! PTY or process directly, so a program that stops reading stdin blocks only
-//! this queue's writer.
+//! this queue's writer. Both the queued bytes and the queued entries are bounded,
+//! so empty requests cannot grow the queue either.
 
 use std::collections::VecDeque;
 use std::sync::{Condvar, Mutex, PoisonError};
 
+use super::config::QueueLimits;
 use crate::protocol::WriteGrant;
 
 /// One admitted input request awaiting its PTY write.
@@ -17,10 +19,20 @@ pub(super) struct QueuedInput {
     pub(super) bytes: Vec<u8>,
 }
 
+/// What is waiting for the PTY at one instant.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct QueueUsage {
+    pub(super) bytes: usize,
+    pub(super) entries: usize,
+}
+
 /// Why an input request was not queued; a full queue hands the entry back.
 #[derive(Debug)]
 pub(super) enum PushRejected {
-    Full { queued: usize, input: QueuedInput },
+    Full {
+        queued: QueueUsage,
+        input: QueuedInput,
+    },
     Closed,
 }
 
@@ -46,65 +58,88 @@ struct QueueState {
     closed: bool,
 }
 
-#[derive(Debug)]
-pub(super) struct InputQueue {
-    state: Mutex<QueueState>,
-    ready: Condvar,
-    limit: usize,
-}
-
-impl InputQueue {
-    pub(super) fn new(limit: usize) -> Self {
-        Self {
-            state: Mutex::new(QueueState::default()),
-            ready: Condvar::new(),
-            limit,
+impl QueueState {
+    fn usage(&self) -> QueueUsage {
+        QueueUsage {
+            bytes: self.queued_bytes,
+            entries: self.entries.len(),
         }
     }
 
-    /// Queues `input` within the byte bound.
-    ///
-    /// A grant with a newer fence epoch first revokes every unsent entry admitted
-    /// under an older fence; bytes already written are not retracted. A grant
-    /// older than the current fence is revoked on arrival and never queued.
-    pub(super) fn push(&self, input: QueuedInput) -> Admission {
-        let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+    fn admit(&mut self, input: QueuedInput, limits: QueueLimits) -> Admission {
         let mut fenced = Vec::new();
-        if !state.closed && input.grant.fence_epoch < state.fence_epoch {
+        if !self.closed && input.grant.fence_epoch < self.fence_epoch {
             fenced.push(input);
             return Admission {
                 fenced,
                 outcome: Ok(()),
             };
         }
-        if input.grant.fence_epoch > state.fence_epoch {
-            state.fence_epoch = input.grant.fence_epoch;
-            let fence = state.fence_epoch;
-            let (revoked, kept): (VecDeque<_>, VecDeque<_>) = state
+        if input.grant.fence_epoch > self.fence_epoch {
+            self.fence_epoch = input.grant.fence_epoch;
+            let fence = self.fence_epoch;
+            let (revoked, kept): (VecDeque<_>, VecDeque<_>) = self
                 .entries
                 .drain(..)
                 .partition(|entry| entry.grant.fence_epoch < fence);
-            state.entries = kept;
+            self.entries = kept;
             fenced.extend(revoked);
-            state.queued_bytes = state.entries.iter().map(|entry| entry.bytes.len()).sum();
+            self.queued_bytes = self.entries.iter().map(|entry| entry.bytes.len()).sum();
         }
-        let outcome = if state.closed {
-            Err(PushRejected::Closed)
-        } else {
-            match state.queued_bytes.checked_add(input.bytes.len()) {
-                Some(total) if total <= self.limit => {
-                    state.queued_bytes = total;
-                    state.entries.push_back(input);
-                    self.ready.notify_one();
-                    Ok(())
-                }
-                Some(_) | None => Err(PushRejected::Full {
-                    queued: state.queued_bytes,
-                    input,
-                }),
+        let usage = self.usage();
+        let bytes = usage
+            .bytes
+            .checked_add(input.bytes.len())
+            .filter(|total| *total <= limits.bytes);
+        let outcome = match (self.closed, bytes) {
+            (true, _) => Err(PushRejected::Closed),
+            (false, Some(total)) if usage.entries < limits.entries => {
+                self.queued_bytes = total;
+                self.entries.push_back(input);
+                Ok(())
             }
+            (false, _) => Err(PushRejected::Full {
+                queued: usage,
+                input,
+            }),
         };
         Admission { fenced, outcome }
+    }
+}
+
+#[derive(Debug)]
+pub(super) struct InputQueue {
+    state: Mutex<QueueState>,
+    ready: Condvar,
+    limits: QueueLimits,
+}
+
+impl InputQueue {
+    pub(super) fn new(limits: QueueLimits) -> Self {
+        Self {
+            state: Mutex::new(QueueState::default()),
+            ready: Condvar::new(),
+            limits,
+        }
+    }
+
+    pub(super) const fn limits(&self) -> QueueLimits {
+        self.limits
+    }
+
+    /// Queues `input` within the byte and entry bounds.
+    ///
+    /// A grant with a newer fence epoch first revokes every unsent entry admitted
+    /// under an older fence; bytes already written are not retracted. A grant
+    /// older than the current fence is revoked on arrival and never queued.
+    pub(super) fn push(&self, input: QueuedInput) -> Admission {
+        let admission = self
+            .state
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .admit(input, self.limits);
+        self.ready.notify_one();
+        admission
     }
 
     /// Blocks until an entry is available; `None` once closed and empty.
@@ -150,69 +185,5 @@ impl InputQueue {
             .unwrap_or_else(PoisonError::into_inner)
             .closed = true;
         self.ready.notify_all();
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use proptest::prelude::*;
-
-    use super::{InputQueue, PushRejected, QueuedInput};
-    use crate::protocol::{ProcessIncarnation, WriteGrant};
-
-    const LIMIT: usize = 128;
-
-    fn offered(sequence: u64, (length, fence_epoch): (usize, u64)) -> QueuedInput {
-        let process_incarnation = ProcessIncarnation::new(1);
-        let grant = WriteGrant {
-            grant_epoch: 1,
-            fence_epoch,
-            process_incarnation,
-        };
-        QueuedInput {
-            sequence,
-            grant,
-            bytes: vec![0; length],
-        }
-    }
-
-    proptest! {
-        #[test]
-        fn admission_matches_a_byte_bounded_fenced_model(
-            offers in proptest::collection::vec((0_usize..64, 0_u64..4), 1..40),
-        ) {
-            let queue = InputQueue::new(LIMIT);
-            let mut model: Vec<(u64, usize, u64)> = Vec::new();
-            let mut fence = 0_u64;
-            for (sequence, offer) in (1_u64..).zip(offers) {
-                let admission = queue.push(offered(sequence, offer));
-                let (length, epoch) = offer;
-                fence = fence.max(epoch);
-                let (kept, revoked): (Vec<_>, Vec<_>) =
-                    model.into_iter().partition(|entry| entry.2 >= fence);
-                model = kept;
-                let mut revoked_sequences: Vec<u64> = revoked.iter().map(|entry| entry.0).collect();
-                let stale = epoch < fence;
-                if stale {
-                    revoked_sequences.push(sequence);
-                }
-                let fenced: Vec<u64> = admission.fenced.iter().map(|entry| entry.sequence).collect();
-                prop_assert_eq!(fenced, revoked_sequences);
-                let queued: usize = model.iter().map(|entry| entry.1).sum();
-                let fits = queued.saturating_add(length) <= LIMIT;
-                match admission.outcome {
-                    Ok(()) if stale => {}
-                    Ok(()) => {
-                        prop_assert!(fits);
-                        model.push((sequence, length, epoch));
-                    }
-                    Err(PushRejected::Full { queued: reported, input }) => {
-                        prop_assert!(!fits);
-                        prop_assert_eq!((reported, input.sequence), (queued, sequence));
-                    }
-                    Err(PushRejected::Closed) => prop_assert!(false, "queue is open"),
-                }
-            }
-        }
     }
 }

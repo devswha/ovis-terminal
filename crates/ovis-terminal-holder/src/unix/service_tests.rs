@@ -1,9 +1,13 @@
 //! Holder socket service under disconnects, re-adoption and hostile frames.
 
+use std::collections::BTreeMap;
+
 use super::test_fixtures::{WAIT, adopt, hello, input, shell, spawn, start_service};
 use super::{CoreConnection, CoreConnectionError};
 use crate::process::{ProcessId, read_start_token};
-use crate::protocol::{Drain, Goodbye, GoodbyeReason, Message, SpawnFailureKind};
+use crate::protocol::{
+    Drain, Goodbye, GoodbyeReason, Message, SpawnFailureKind, SpawnFailureReason,
+};
 
 fn shutdown(core: &mut CoreConnection) {
     let reason = GoodbyeReason::Shutdown;
@@ -147,6 +151,66 @@ fn draining_holder_refuses_spawns_and_completes_once_empty() {
     core.send(&Message::Drain(Drain::Complete))
         .expect("complete");
     service.wait().expect("drained service stops");
+}
+
+#[test]
+fn each_launch_gets_its_own_cwd_and_environment_over_the_socket() {
+    // Given: two directories and a probe printing its directory and one variable.
+    let (service, socket) = start_service();
+    let (mut core, _) = adopt(&socket);
+    let root = std::env::temp_dir().join(format!("ovis-t6-cwd-{}", std::process::id()));
+    let launches = [
+        ("t-one", root.join("one"), "first"),
+        ("t-two", root.join("two"), "second"),
+    ];
+    let probe = "printf '%s|%s\\n' \"$(pwd -P)\" \"$OVIS_PROBE\"";
+
+    // When: each terminal is launched with its own cwd and environment.
+    for (terminal, dir, value) in &launches {
+        std::fs::create_dir_all(dir).expect("create dir");
+        let mut request = shell(terminal, probe);
+        request.cwd.clone_from(dir);
+        request
+            .env
+            .insert("OVIS_PROBE".to_owned(), (*value).to_owned());
+        core.send(&Message::Spawn(request)).expect("spawn");
+    }
+    let mut output: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut exits = 0;
+    while exits < launches.len() {
+        match core.recv(WAIT).expect("message") {
+            Message::Output(chunk) => output
+                .entry(chunk.target.terminal_id.as_str().to_owned())
+                .or_default()
+                .extend(chunk.bytes),
+            Message::Exit(_) => exits += 1,
+            Message::Spawned(_) => {}
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
+    // Then: each program saw exactly its own directory and value.
+    for (terminal, dir, value) in &launches {
+        let canonical = dir.canonicalize().expect("canonical dir");
+        let expected = format!("{}|{value}\r\n", canonical.display());
+        let seen = String::from_utf8(output.remove(*terminal).expect("output")).expect("utf-8");
+        assert_eq!(seen, expected);
+    }
+
+    // When / Then: a missing working directory is a typed failure with its OS error.
+    let mut absent = shell("t-absent", "true");
+    absent.cwd = root.join("absent");
+    core.send(&Message::Spawn(absent)).expect("spawn");
+    let Message::SpawnFailed(failed) = core.recv(WAIT).expect("outcome") else {
+        panic!("a missing cwd is refused");
+    };
+    assert_eq!(
+        (failed.reason, failed.os_error),
+        (SpawnFailureReason::CwdUnavailable, Some(libc::ENOENT))
+    );
+    shutdown(&mut core);
+    service.wait().expect("joined shutdown");
+    std::fs::remove_dir_all(&root).expect("remove dirs");
 }
 
 #[test]

@@ -30,9 +30,11 @@ pub use identity::{
     TerminalId, TerminalIncarnation,
 };
 pub use messages::{
-    Drain, Exit, Forget, Goodbye, GoodbyeReason, HeldTerminal, Hello, Input, InputWritten, Message,
-    MessageKind, Output, PreviousCoreState, Resize, Signal, SignalKind, Spawn, SpawnFailed,
-    SpawnFailureKind, Spawned, Tail, TailRequest, TerminalTarget, Welcome, WriteGrant,
+    Drain, Exit, ExitUnknown, ExitUnknownReason, Forget, Goodbye, GoodbyeReason, HeldTerminal,
+    Hello, Input, InputRejected, InputRejection, InputWritten, Message, MessageKind, Output,
+    PreviousCoreState, PtyIoFailure, PtyOperation, Resize, Signal, SignalKind, Spawn, SpawnFailed,
+    SpawnFailureKind, SpawnFailureReason, Spawned, Tail, TailRequest, TerminalTarget, Welcome,
+    WriteGrant,
 };
 
 /// Independently versioned generation of the holder-to-core contract.

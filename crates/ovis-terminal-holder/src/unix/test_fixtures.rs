@@ -1,13 +1,12 @@
 //! Fixtures shared by the holder unit tests: configuration, socket service, core.
 
+use std::collections::BTreeMap;
 use std::os::unix::net::UnixListener;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
-use super::{
-    CoreConnection, Holder, HolderConfig, HolderLimits, HolderService, ProcessEnvironment,
-};
+use super::{CoreConnection, Holder, HolderConfig, HolderLimits, HolderService};
 use crate::protocol::{
     CoreBuildId, HOLDER_PROTOCOL_GENERATION, HeldTerminal, Hello, HolderBuildId, HolderDescriptor,
     HolderInstanceId, Input, Message, PreviousCoreState, Spawn, Spawned, TerminalId,
@@ -19,16 +18,18 @@ pub(super) const WAIT: Duration = Duration::from_secs(30);
 pub(super) fn config() -> HolderConfig {
     let build = HolderBuildId::new("holder-unit-build".to_owned());
     let instance = HolderInstanceId::new(format!("holder-unit-{}", std::process::id()));
-    let vars = vec![
-        ("PATH".into(), "/usr/bin:/bin".into()),
-        ("TERM".into(), "xterm".into()),
-    ];
-    let environment = ProcessEnvironment::new(std::env::temp_dir(), vars);
     HolderConfig::new(
         HolderDescriptor::new(build, instance),
         HolderLimits::DEFAULT,
-        environment,
     )
+}
+
+/// The explicit environment every fixture launch carries.
+pub(super) fn base_env() -> BTreeMap<String, String> {
+    [("PATH", "/usr/bin:/bin"), ("TERM", "xterm")]
+        .into_iter()
+        .map(|(name, value)| (name.to_owned(), value.to_owned()))
+        .collect()
 }
 
 pub(super) fn hello_record(generation: u16) -> Hello {
@@ -50,6 +51,8 @@ pub(super) fn shell(terminal: &str, script: &str) -> Spawn {
         terminal_id: TerminalId::new(terminal.to_owned()),
         terminal_incarnation: TerminalIncarnation::new(1),
         argv: vec!["/bin/sh".to_owned(), "-c".to_owned(), script.to_owned()],
+        cwd: std::env::temp_dir(),
+        env: base_env(),
         geometry: (80, 24),
     }
 }

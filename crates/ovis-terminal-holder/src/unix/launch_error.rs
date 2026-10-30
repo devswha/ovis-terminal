@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 use crate::process::StartTokenError;
-use crate::protocol::SpawnFailureKind;
+use crate::protocol::{SpawnFailureKind, SpawnFailureReason};
 
 /// Boxed error from the PTY library, preserved as the failure source.
 pub type PtySourceError = Box<dyn StdError + Send + Sync + 'static>;
@@ -52,7 +52,16 @@ pub enum LaunchError {
     /// The PTY master exposes no file descriptor to duplicate.
     #[error("the pseudo-terminal master has no file descriptor")]
     PtyDescriptorMissing,
-    /// The executable does not exist, is not executable or is a directory.
+    /// The executable path given in argv could not be inspected.
+    #[error("executable {path:?} is not accessible")]
+    ExecutableUnavailable {
+        /// Executable path, resolved against the working directory.
+        path: PathBuf,
+        /// Inspection failure.
+        #[source]
+        source: io::Error,
+    },
+    /// The executable was not found on PATH, is not executable or is a directory.
     #[error("the executable was rejected before it ran")]
     ExecutableRejected {
         /// Resolution or permission failure.
@@ -94,6 +103,7 @@ impl LaunchError {
             Self::CwdNotDirectory { .. } => "cwd_not_directory",
             Self::PtyUnavailable { .. } => "pty_unavailable",
             Self::PtyDescriptorMissing => "pty_descriptor_missing",
+            Self::ExecutableUnavailable { .. } => "executable_unavailable",
             Self::ExecutableRejected { .. } => "executable_rejected",
             Self::ExecFailed { .. } => "exec_failed",
             Self::UnsupportedChild { .. } => "unsupported_child_handle",
@@ -112,8 +122,8 @@ impl LaunchError {
             }
             Self::PtyUnavailable { .. } => "Close unused terminals or raise the PTY limit.",
             Self::PtyDescriptorMissing => "Report the platform; its PTY master has no descriptor.",
-            Self::ExecutableRejected { .. } => {
-                "Pass an executable path, or a PATH entry in the explicit environment."
+            Self::ExecutableUnavailable { .. } | Self::ExecutableRejected { .. } => {
+                "Pass an existing executable path, or a PATH entry in the explicit environment."
             }
             Self::ExecFailed { .. } | Self::UnsupportedChild { .. } => {
                 "Retry the launch; the holder kept no record of it."
@@ -130,12 +140,56 @@ impl LaunchError {
             | Self::InvalidGrid { .. }
             | Self::CwdUnavailable { .. }
             | Self::CwdNotDirectory { .. }
+            | Self::ExecutableUnavailable { .. }
             | Self::ExecutableRejected { .. } => SpawnFailureKind::InvalidRequest,
             Self::PtyUnavailable { .. } => SpawnFailureKind::LimitExceeded,
             Self::PtyDescriptorMissing
             | Self::ExecFailed { .. }
             | Self::UnsupportedChild { .. }
             | Self::StartToken { .. } => SpawnFailureKind::Unavailable,
+        }
+    }
+
+    /// Returns the typed cause reported in `SpawnFailed`.
+    #[must_use]
+    pub const fn reason(&self) -> SpawnFailureReason {
+        match self {
+            Self::EmptyArgv => SpawnFailureReason::EmptyArgv,
+            Self::InvalidGrid { .. } => SpawnFailureReason::InvalidGrid,
+            Self::CwdUnavailable { .. } => SpawnFailureReason::CwdUnavailable,
+            Self::CwdNotDirectory { .. } => SpawnFailureReason::CwdNotDirectory,
+            Self::PtyUnavailable { .. } => SpawnFailureReason::PtyUnavailable,
+            Self::PtyDescriptorMissing => SpawnFailureReason::PtyDescriptorMissing,
+            Self::ExecutableUnavailable { .. } => SpawnFailureReason::ExecutableUnavailable,
+            Self::ExecutableRejected { .. } => SpawnFailureReason::ExecutableRejected,
+            Self::ExecFailed { .. } => SpawnFailureReason::ExecFailed,
+            Self::UnsupportedChild { .. } => SpawnFailureReason::UnsupportedChildHandle,
+            Self::StartToken { .. } => SpawnFailureReason::StartTokenUnavailable,
+        }
+    }
+
+    /// Returns the operating-system error number behind the failure, if any.
+    #[must_use]
+    pub fn os_error(&self) -> Option<i32> {
+        match self {
+            Self::CwdUnavailable { source, .. } | Self::ExecutableUnavailable { source, .. } => {
+                source.raw_os_error()
+            }
+            Self::PtyUnavailable { source }
+            | Self::ExecutableRejected { source }
+            | Self::ExecFailed { source } => source
+                .downcast_ref::<io::Error>()
+                .and_then(io::Error::raw_os_error),
+            Self::StartToken {
+                source: StartTokenError::Unreadable { source },
+                ..
+            } => source.raw_os_error(),
+            Self::EmptyArgv
+            | Self::InvalidGrid { .. }
+            | Self::CwdNotDirectory { .. }
+            | Self::PtyDescriptorMissing
+            | Self::UnsupportedChild { .. }
+            | Self::StartToken { .. } => None,
         }
     }
 

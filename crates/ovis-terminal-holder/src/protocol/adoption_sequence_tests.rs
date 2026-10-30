@@ -74,6 +74,8 @@ proptest! {
                             target,
                             code: Some(0),
                             signal: None,
+                            exit_unknown: None,
+                            io_failure: None,
                             final_offset: offset,
                         }),
                     };
@@ -133,6 +135,8 @@ proptest! {
                             target,
                             code: Some(0),
                             signal: None,
+                            exit_unknown: None,
+                            io_failure: None,
                             final_offset: next_final_offset,
                         }),
                     };

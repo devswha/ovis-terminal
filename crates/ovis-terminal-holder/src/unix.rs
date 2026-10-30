@@ -2,7 +2,7 @@
 //!
 //! One holder serves every terminal of a session and build (the shared holder):
 //! it is the parent of each program, always drains its PTY into a bounded raw
-//! tail, queues input per terminal within a byte bound, and applies resize and
+//! tail, queues input per terminal within byte and entry bounds, and applies resize and
 //! signals without waiting behind that input. A core adopts it over a Unix
 //! socket; when the core disconnects or crashes, programs keep running and the
 //! next adoption sees the same PID and start token.
@@ -21,6 +21,9 @@ mod holder;
 #[cfg(test)]
 mod holder_tests;
 mod input;
+#[cfg(test)]
+mod input_tests;
+mod io_error;
 mod launch;
 mod launch_error;
 mod link;
@@ -33,11 +36,12 @@ mod tail;
 #[cfg(test)]
 mod test_fixtures;
 
-pub use config::{HolderConfig, HolderLimits, ProcessEnvironment};
+pub use config::{HolderConfig, HolderLimits, ProcessEnvironment, QueueLimits};
 pub use core_connection::{CoreConnection, CoreConnectionError};
 pub use detach::spawn_detached;
 pub use error::HolderError;
 pub use holder::Holder;
+pub use io_error::TerminalIoError;
 pub use launch::{Grid, LaunchRequest, LaunchSpec};
 pub use launch_error::{LaunchError, PtySourceError};
 pub use link::{CoreLink, LinkClosed, RecvError};

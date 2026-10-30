@@ -1,7 +1,10 @@
 //! The holder: owns every PTY and child, drains output, and reports to one core.
 
+mod admission;
 mod control;
+mod ending;
 mod state;
+mod threads;
 mod workers;
 
 use std::ffi::OsString;
@@ -10,14 +13,16 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
 
 use self::state::{HolderState, LiveTerminal, Terminal};
-use super::config::HolderConfig;
+use super::config::{HolderConfig, ProcessEnvironment};
 use super::error::HolderError;
 use super::input::InputQueue;
 use super::launch::{Grid, LaunchRequest, LaunchSpec, launch};
+use super::launch_error::LaunchError;
 use super::link::{CoreLink, Outbox};
 use super::tail::RetainedTail;
 use crate::protocol::{
-    HeldTerminal, Hello, Message, Spawn, SpawnFailed, SpawnFailureKind, Spawned, negotiate,
+    HeldTerminal, Hello, Message, Spawn, SpawnFailed, SpawnFailureKind, SpawnFailureReason,
+    Spawned, TerminalId, TerminalIncarnation, negotiate,
 };
 
 pub(super) struct Shared {
@@ -120,7 +125,13 @@ impl Holder {
                 });
             }
             if state.draining {
-                state.publish(spawn_failed(&request, SpawnFailureKind::Unavailable));
+                let refusal = Refusal {
+                    kind: SpawnFailureKind::Unavailable,
+                    reason: SpawnFailureReason::HolderDraining,
+                    hint: HolderError::Draining.hint(),
+                    os_error: None,
+                };
+                state.publish(refusal.message(&request.terminal_id, request.terminal_incarnation));
                 return Err(HolderError::Draining);
             }
             state.allocate_process()?
@@ -128,9 +139,9 @@ impl Holder {
         let process = match launch(&request.spec) {
             Ok(process) => process,
             Err(error) => {
-                self.shared
-                    .lock()
-                    .publish(spawn_failed(&request, error.failure_kind()));
+                let refusal = Refusal::launch(&error);
+                let message = refusal.message(&request.terminal_id, request.terminal_incarnation);
+                self.shared.lock().publish(message);
                 return Err(error.into());
             }
         };
@@ -141,7 +152,7 @@ impl Holder {
             pid: process.pid.get(),
             start_token: process.start_token.clone(),
         };
-        let input = Arc::new(InputQueue::new(self.shared.config.limits.input_queue_bytes));
+        let input = Arc::new(InputQueue::new(self.shared.config.limits.input));
         let pid = process.pid;
         let parts = workers::Parts::split(process, Arc::clone(&input));
         // Workers start under the state lock, so none can publish before `Spawned`.
@@ -167,11 +178,19 @@ impl Holder {
                 }),
                 geometry_epoch: None,
                 admitted_sequence: None,
+                io_errors: Vec::new(),
+                first_io_failure: None,
             },
         );
         if let Err(source) = workers::start(&self.shared, &request.terminal_id, parts.threads) {
             let cleanup = workers::abandon(&mut state, &request.terminal_id, pid).err();
-            state.publish(spawn_failed(&request, SpawnFailureKind::LimitExceeded));
+            let refusal = Refusal {
+                kind: SpawnFailureKind::LimitExceeded,
+                reason: SpawnFailureReason::WorkerUnavailable,
+                hint: "Free thread or memory resources and relaunch.",
+                os_error: source.raw_os_error(),
+            };
+            state.publish(refusal.message(&request.terminal_id, request.terminal_incarnation));
             return Err(HolderError::WorkerUnavailable { source, cleanup });
         }
         state.publish(Message::Spawned(spawned.clone()));
@@ -179,8 +198,8 @@ impl Holder {
         Ok(spawned)
     }
 
-    /// Spawns a v1 wire `Spawn`, which carries argv and geometry; the working
-    /// directory and environment come from [`HolderConfig::wire_environment`].
+    /// Spawns a wire `Spawn`, which carries the complete per-launch argv, working
+    /// directory, environment and grid.
     ///
     /// # Errors
     ///
@@ -191,18 +210,19 @@ impl Holder {
         let grid = match Grid::new(cols, rows) {
             Ok(grid) => grid,
             Err(error) => {
-                self.shared
-                    .lock()
-                    .publish(Message::SpawnFailed(SpawnFailed {
-                        terminal_id: spawn.terminal_id.clone(),
-                        terminal_incarnation: spawn.terminal_incarnation,
-                        kind: error.failure_kind(),
-                    }));
+                let refusal = Refusal::launch(&error);
+                let message = refusal.message(&spawn.terminal_id, spawn.terminal_incarnation);
+                self.shared.lock().publish(message);
                 return Err(error.into());
             }
         };
         let argv = spawn.argv.iter().map(OsString::from).collect();
-        let environment = self.shared.config.wire_environment.clone();
+        let vars = spawn
+            .env
+            .iter()
+            .map(|(name, value)| (OsString::from(name), OsString::from(value)))
+            .collect();
+        let environment = ProcessEnvironment::new(spawn.cwd.clone(), vars);
         self.spawn(LaunchRequest::new(
             spawn.terminal_id.clone(),
             spawn.terminal_incarnation,
@@ -211,10 +231,36 @@ impl Holder {
     }
 }
 
-fn spawn_failed(request: &LaunchRequest, kind: SpawnFailureKind) -> Message {
-    Message::SpawnFailed(SpawnFailed {
-        terminal_id: request.terminal_id.clone(),
-        terminal_incarnation: request.terminal_incarnation,
-        kind,
-    })
+/// What a refused spawn reports on the wire; no terminal record is kept.
+struct Refusal {
+    kind: SpawnFailureKind,
+    reason: SpawnFailureReason,
+    hint: &'static str,
+    os_error: Option<i32>,
+}
+
+impl Refusal {
+    fn launch(error: &LaunchError) -> Self {
+        Self {
+            kind: error.failure_kind(),
+            reason: error.reason(),
+            hint: error.hint(),
+            os_error: error.os_error(),
+        }
+    }
+
+    fn message(
+        self,
+        terminal_id: &TerminalId,
+        terminal_incarnation: TerminalIncarnation,
+    ) -> Message {
+        Message::SpawnFailed(SpawnFailed {
+            terminal_id: terminal_id.clone(),
+            terminal_incarnation,
+            kind: self.kind,
+            reason: self.reason,
+            hint: self.hint.to_owned(),
+            os_error: self.os_error,
+        })
+    }
 }

@@ -2,8 +2,8 @@
 //!
 //! The v1 holder wire has no error reply, so a rejected request ends the
 //! connection with a typed, queryable reason; the core re-adopts to resynchronize.
-//! Spawn failures and input overflow are not rejections: the holder already
-//! answered them with `SpawnFailed` and a zero-byte `InputWritten`.
+//! Spawn failures and input overflow are not connection failures: the holder
+//! already answered them with typed `SpawnFailed` and `InputRejected` records.
 
 use std::io::{ErrorKind, Read, Write};
 use std::net::Shutdown;
@@ -135,7 +135,8 @@ impl Session<'_> {
             | Message::Output(_)
             | Message::InputWritten(_)
             | Message::Exit(_)
-            | Message::Tail(_)) => {
+            | Message::Tail(_)
+            | Message::InputRejected(_)) => {
                 return Err(ConnectionError::UnexpectedMessage { kind: other.kind() });
             }
         }

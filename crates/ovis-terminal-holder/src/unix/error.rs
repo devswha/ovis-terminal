@@ -4,6 +4,7 @@ use std::io;
 
 use thiserror::Error;
 
+use super::config::QueueLimits;
 use super::launch_error::{LaunchError, PtySourceError};
 use super::link::LinkClosed;
 use crate::process::SignalError;
@@ -41,15 +42,19 @@ pub enum HolderError {
         #[from]
         source: LaunchError,
     },
-    /// Accepting the input would exceed the terminal's input queue bound.
-    #[error("{requested} input bytes do not fit: {queued} of {limit} are already queued")]
+    /// Accepting the input would exceed the terminal's input queue bounds.
+    #[error(
+        "{requested_bytes} input bytes do not fit behind {queued_bytes} bytes in {queued_entries} queued requests"
+    )]
     InputOverflow {
         /// Bytes already waiting for the PTY.
-        queued: usize,
+        queued_bytes: usize,
+        /// Requests already waiting for the PTY.
+        queued_entries: usize,
         /// Bytes in the rejected input.
-        requested: usize,
-        /// Per-terminal queue bound.
-        limit: usize,
+        requested_bytes: usize,
+        /// Per-terminal byte and entry bounds.
+        limits: QueueLimits,
     },
     /// The input sequence does not advance past the last admitted sequence.
     #[error("input sequence {sequence} does not follow {last}")]

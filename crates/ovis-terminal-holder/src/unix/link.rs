@@ -180,7 +180,8 @@ const fn message_cost(message: &Message) -> usize {
         | Message::TailRequest(_)
         | Message::Forget(_)
         | Message::Drain(_)
-        | Message::Goodbye(_) => 0,
+        | Message::Goodbye(_)
+        | Message::InputRejected(_) => 0,
     };
     payload.saturating_add(MESSAGE_OVERHEAD)
 }

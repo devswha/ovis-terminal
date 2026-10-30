@@ -17,11 +17,15 @@ const COUNTER_FIELDS: &[&str] = &[
     "grant_epoch",
     "geometry_epoch",
     "input_sequence",
+    "limit_bytes",
+    "limit_entries",
     "offset",
     "output_offset",
     "payload_len",
     "pid",
     "process_incarnation",
+    "queued_bytes",
+    "queued_entries",
     "sequence",
     "start_token",
     "terminal_incarnation",
@@ -90,6 +94,14 @@ fn raise_counters(message: &mut Message) {
         Message::Forget(forget) => {
             raise_target_counters(&mut forget.target);
             forget.acknowledged_final_offset = Some(ABOVE_SAFE_INTEGER);
+        }
+        Message::InputRejected(rejected) => {
+            raise_target_counters(&mut rejected.target);
+            rejected.sequence = ABOVE_SAFE_INTEGER;
+            rejected.queued_bytes = ABOVE_SAFE_INTEGER;
+            rejected.queued_entries = ABOVE_SAFE_INTEGER;
+            rejected.limit_bytes = u64::MAX;
+            rejected.limit_entries = u64::MAX;
         }
         Message::Drain(_) | Message::Goodbye(_) => {}
     }

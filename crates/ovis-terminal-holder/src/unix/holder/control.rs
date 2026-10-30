@@ -6,20 +6,23 @@
 use std::sync::{Arc, PoisonError};
 
 use super::Holder;
-use super::state::{HolderState, WriteAck};
+use super::admission::admit_input;
+use super::state::HolderState;
 use crate::process::{ProcessId, SignalError, SignalScope, send_signal};
-use crate::protocol::{Forget, Input, Resize, Signal, SignalKind, Tail, TailRequest};
+use crate::protocol::{
+    Forget, Input, Resize, Signal, SignalKind, Tail, TailRequest, TerminalTarget,
+};
 use crate::unix::error::HolderError;
-use crate::unix::input::{PushRejected, QueuedInput};
+use crate::unix::io_error::TerminalIoError;
 use crate::unix::launch::Grid;
 use crate::unix::link::LinkClosed;
 
 impl Holder {
     /// Queues input for the PTY; `InputWritten` later reports the bytes actually written.
     ///
-    /// An overflowing request is rejected before any of its bytes are queued and
-    /// is also acknowledged on the link as a zero-byte write, because the v1 wire
-    /// has no input rejection message.
+    /// A request that would exceed the byte or entry bound is rejected before any
+    /// of its bytes are queued, and `InputRejected` (kind, hint, bounds) is
+    /// published to the adopted core; its sequence is not consumed.
     ///
     /// # Errors
     ///
@@ -28,9 +31,21 @@ impl Holder {
     /// does not advance, [`HolderError::StaleTarget`] when the grant names another
     /// process incarnation, and [`HolderError::ProcessExited`] after exit.
     pub fn input(&self, input: Input) -> Result<(), HolderError> {
-        let limit = self.shared.config.limits.input_queue_bytes;
+        self.shared.with_state(|state| admit_input(state, input))
+    }
+
+    /// Unexpected I/O and process-observation failures of a held terminal, with
+    /// their sources; the exit record carries the first one in wire form.
+    ///
+    /// # Errors
+    ///
+    /// Returns a target error when the terminal is not held under `target`.
+    pub fn io_errors(
+        &self,
+        target: &TerminalTarget,
+    ) -> Result<Vec<Arc<TerminalIoError>>, HolderError> {
         self.shared
-            .with_state(|state| admit_input(state, input, limit))
+            .with_state(|state| Ok(state.terminal_mut(target)?.io_errors.clone()))
     }
 
     /// Applies a new grid immediately, independent of queued input.
@@ -171,57 +186,6 @@ impl Holder {
             Ok(())
         } else {
             Err(HolderError::WorkerPanicked { count: panicked })
-        }
-    }
-}
-
-fn admit_input(state: &mut HolderState, input: Input, limit: usize) -> Result<(), HolderError> {
-    let terminal = state.terminal_mut(&input.target)?;
-    if terminal.held.process_incarnation != Some(input.grant.process_incarnation) {
-        return Err(HolderError::StaleTarget {
-            terminal_id: input.target.terminal_id,
-        });
-    }
-    if let Some(last) = terminal
-        .admitted_sequence
-        .filter(|last| input.sequence <= *last)
-    {
-        return Err(HolderError::SequenceRegression {
-            sequence: input.sequence,
-            last,
-        });
-    }
-    let live = terminal.live.as_ref().ok_or(HolderError::ProcessExited)?;
-    let queue = Arc::clone(&live.input);
-    terminal.admitted_sequence = Some(input.sequence);
-    let output_offset = terminal.tail.head();
-    let terminal_id = input.target.terminal_id.clone();
-    let requested = input.bytes.len();
-    let admission = queue.push(QueuedInput {
-        sequence: input.sequence,
-        grant: input.grant,
-        bytes: input.bytes,
-    });
-    let fence_epoch = queue.fence_epoch();
-    let refused = |input| WriteAck {
-        input,
-        written: 0,
-        fence_epoch,
-        output_offset,
-    };
-    for fenced in admission.fenced {
-        state.acknowledge(&terminal_id, &refused(fenced));
-    }
-    match admission.outcome {
-        Ok(()) => Ok(()),
-        Err(PushRejected::Closed) => Err(HolderError::ProcessExited),
-        Err(PushRejected::Full { queued, input }) => {
-            state.acknowledge(&terminal_id, &refused(input));
-            Err(HolderError::InputOverflow {
-                queued,
-                requested,
-                limit,
-            })
         }
     }
 }
