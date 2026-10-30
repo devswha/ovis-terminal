@@ -67,6 +67,12 @@ impl fmt::Debug for Holder {
 }
 
 impl Holder {
+    /// Handles to the shared holder state; each live worker thread owns one.
+    #[cfg(test)]
+    pub(super) fn handle_count(&self) -> usize {
+        Arc::strong_count(&self.shared)
+    }
+
     /// Creates a holder with no terminals and no adopted core.
     #[must_use]
     pub fn new(config: HolderConfig) -> Self {

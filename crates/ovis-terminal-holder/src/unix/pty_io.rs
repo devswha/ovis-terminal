@@ -8,7 +8,7 @@
 
 use std::fs::File;
 use std::io::{self, ErrorKind, Read, Write};
-use std::os::fd::{AsFd, AsRawFd, BorrowedFd};
+use std::os::fd::{AsFd, AsRawFd, BorrowedFd, RawFd};
 
 use super::io_error::TerminalIoError;
 
@@ -105,8 +105,13 @@ enum Readiness {
 /// Waits until `fd` is ready for `events`. POLLHUP is the normal hang-up;
 /// POLLNVAL, or POLLERR without POLLHUP, is a typed failure carrying the flags.
 fn wait(fd: BorrowedFd<'_>, events: libc::c_short) -> Result<Readiness, TerminalIoError> {
+    poll_raw(fd.as_raw_fd(), events)
+}
+
+/// Polls a raw descriptor number; a number that is not open reports POLLNVAL.
+fn poll_raw(fd: RawFd, events: libc::c_short) -> Result<Readiness, TerminalIoError> {
     let mut entry = libc::pollfd {
-        fd: fd.as_raw_fd(),
+        fd,
         events,
         revents: 0,
     };
@@ -114,17 +119,7 @@ fn wait(fd: BorrowedFd<'_>, events: libc::c_short) -> Result<Readiness, Terminal
         // SAFETY: `entry` is one live, initialized pollfd and the count is 1.
         let status = unsafe { libc::poll(&raw mut entry, 1, -1) };
         if status >= 0 {
-            let revents = entry.revents;
-            let invalid = revents & libc::POLLNVAL != 0;
-            let hangup = revents & libc::POLLHUP != 0;
-            let error = revents & libc::POLLERR != 0;
-            return match (invalid, hangup, error) {
-                (false, true, _) => Ok(Readiness::Hangup),
-                (false, false, false) => Ok(Readiness::Ready),
-                (true, _, _) | (false, false, true) => Err(TerminalIoError::PollFlags {
-                    revents: u16::from_ne_bytes(revents.to_ne_bytes()),
-                }),
-            };
+            return classify(entry.revents);
         }
         let source = io::Error::last_os_error();
         if source.kind() != ErrorKind::Interrupted {
@@ -133,12 +128,26 @@ fn wait(fd: BorrowedFd<'_>, events: libc::c_short) -> Result<Readiness, Terminal
     }
 }
 
+/// POLLHUP is the normal hang-up; POLLNVAL, or POLLERR without POLLHUP, is a
+/// typed failure carrying the raw flags.
+const fn classify(revents: libc::c_short) -> Result<Readiness, TerminalIoError> {
+    let invalid = revents & libc::POLLNVAL != 0;
+    let hangup = revents & libc::POLLHUP != 0;
+    let error = revents & libc::POLLERR != 0;
+    match (invalid, hangup, error) {
+        (false, true, _) => Ok(Readiness::Hangup),
+        (false, false, false) => Ok(Readiness::Ready),
+        (true, _, _) | (false, false, true) => Err(TerminalIoError::PollFlags {
+            revents: u16::from_ne_bytes(revents.to_ne_bytes()),
+        }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs::File;
-    use std::os::fd::AsFd;
 
-    use super::{read_chunk, wait, write_prefix};
+    use super::{Readiness, classify, poll_raw, read_chunk, write_prefix};
     use crate::protocol::{PtyIoFailure, PtyOperation};
 
     #[test]
@@ -186,25 +195,45 @@ mod tests {
     }
 
     #[test]
-    fn poll_error_without_hangup_is_a_typed_failure_not_a_hangup() {
-        // Given: a pipe whose reader is gone, so poll reports POLLOUT|POLLERR, no POLLHUP.
-        let (reader, writer) = std::io::pipe().expect("pipe");
-        drop(reader);
+    fn poll_flags_classify_hangup_readiness_and_typed_failures() {
+        // Given / When / Then: POLLHUP (with or without POLLERR) is a hang-up,
+        // POLLERR without POLLHUP and POLLNVAL are typed failures.
+        assert_eq!(classify(libc::POLLHUP).ok(), Some(Readiness::Hangup));
+        assert_eq!(
+            classify(libc::POLLHUP | libc::POLLERR).ok(),
+            Some(Readiness::Hangup)
+        );
+        assert_eq!(classify(libc::POLLOUT).ok(), Some(Readiness::Ready));
+        for flags in [libc::POLLOUT | libc::POLLERR, libc::POLLNVAL] {
+            let failure = classify(flags).expect_err("error flags are a failure");
+            assert_eq!(failure.kind(), "pty_poll_flagged");
+            let wire = failure.io_failure().expect("output-side failure");
+            let expected = u16::from_ne_bytes(flags.to_ne_bytes());
+            assert_eq!(
+                (wire.operation, wire.poll_revents),
+                (PtyOperation::Poll, Some(expected))
+            );
+        }
+    }
 
-        // When: the writer waits for room.
-        let outcome = wait(writer.as_fd(), libc::POLLOUT);
+    #[test]
+    fn kernel_poll_error_flags_are_a_typed_failure_not_a_hangup() {
+        // Given: a descriptor number that is never open; Linux and macOS both
+        // report POLLNVAL for it.
+        let never_open = libc::c_int::MAX / 2;
 
-        // Then: the error flags are a typed poll failure that reaches the exit record.
-        let Err(failure) = outcome else {
-            panic!("POLLERR must not be erased into readiness or a hang-up");
+        // When: the holder waits on it.
+        let Err(failure) = poll_raw(never_open, libc::POLLOUT) else {
+            panic!("POLLNVAL must not be erased into readiness or a hang-up");
         };
-        assert_eq!(failure.kind(), "pty_poll_flagged");
+
+        // Then: the kernel's flags arrive as the typed poll failure.
+        let pollnval = u16::from_ne_bytes(libc::POLLNVAL.to_ne_bytes());
         let wire = failure.io_failure().expect("output-side failure");
         assert_eq!(wire.operation, PtyOperation::Poll);
-        let pollerr = u16::from_ne_bytes(libc::POLLERR.to_ne_bytes());
         assert_eq!(
-            wire.poll_revents.map(|flags| flags & pollerr),
-            Some(pollerr)
+            wire.poll_revents.map(|flags| flags & pollnval),
+            Some(pollnval)
         );
     }
 }

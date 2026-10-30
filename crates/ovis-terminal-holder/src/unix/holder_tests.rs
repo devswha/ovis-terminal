@@ -134,3 +134,35 @@ fn stale_process_incarnation_and_sequence_regressions_are_rejected() {
     );
     holder.shutdown().expect("joined");
 }
+
+#[test]
+fn no_worker_thread_survives_kill_reap_and_shutdown() {
+    // Given: a non-reading program with a blocked input writer.
+    let holder = Holder::new(config());
+    let link = adopt(&holder);
+    let quiet = shell("t-threads", "stty raw -echo; echo ready; exec sleep 600");
+    let spawned = holder.spawn_wire(&quiet).expect("spawn");
+    let mut seen = Vec::new();
+    while !seen.windows(5).any(|window| window == b"ready") {
+        if let Message::Output(output) = link.recv_timeout(WAIT).expect("output") {
+            seen.extend(output.bytes);
+        }
+    }
+    let mut blocked = input(&spawned, 1, 1);
+    blocked.bytes = vec![b'x'; 1 << 20];
+    holder.input(blocked).expect("blocked entry");
+    assert_eq!(
+        holder.handle_count(),
+        4,
+        "the waiter, pump and writer each hold the state"
+    );
+
+    // When: the program is killed, its exit is observed, and the holder shuts down.
+    let (target, signal) = (target_of(&spawned), SignalKind::Kill);
+    holder.signal(&Signal { target, signal }).expect("kill");
+    while !matches!(link.recv_timeout(WAIT).expect("exit"), Message::Exit(_)) {}
+    holder.shutdown().expect("joined");
+
+    // Then: every worker thread has ended and released the holder state.
+    assert_eq!(holder.handle_count(), 1);
+}

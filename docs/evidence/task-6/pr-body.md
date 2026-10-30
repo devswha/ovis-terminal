@@ -112,7 +112,7 @@ $ cargo clippy -p ovis-terminal-holder --all-targets -- -D warnings
 exit: 0
 
 $ bash scripts/check.sh
-Summary 215 tests run: 215 passed, 1 skipped   (merged with integration bc73b93)   (the skip is the pre-existing ignored store child-process fixture)
+Summary 217 tests run: 217 passed, 1 skipped   (merged with integration bc73b93)
 check.sh: all steps passed
 exit: 0
 ```
@@ -188,8 +188,19 @@ real Unix socket with the real frame codec; it is not the `ovis-terminal` binary
   faults. Poll syscall failures keep their `#[source]`. The reviewer's probe is
   permanent as `poll_error_without_hangup_is_a_typed_failure_not_a_hangup`: a
   pipe with its reader dropped gives POLLOUT|POLLERR and no POLLHUP, and the test
-  asserts the typed failure with the POLLERR bit. POLLNVAL shares the branch but
-  is not separately fault-injected.
+  The rule is the pure function `classify(revents)`, which is table-tested on
+  every platform: POLLOUT|POLLERR and POLLNVAL are typed failures; POLLHUP and
+  POLLHUP|POLLERR are hang-ups; POLLOUT is ready.
+  `kernel_poll_error_flags_are_a_typed_failure_not_a_hangup` injects a real
+  kernel fault portably by polling a never-open descriptor number (POLLNVAL on
+  Linux and macOS) and asserts the typed failure. This replaces the reviewer's
+  Linux-only pipe probe: on macOS a pipe whose reader is gone reports POLLHUP,
+  not POLLERR.
+- No surviving holder threads: `no_worker_thread_survives_kill_reap_and_shutdown`.
+  With a writer blocked on a non-reader, the shared holder state has 4 handles
+  (holder, waiter, pump, writer). After kill, the observed `Exit` and
+  `shutdown()`, exactly 1 remains, which proves every worker thread ended and
+  was joined. This is deterministic and needs no `/proc` scan.
 - B4, typed I/O failures:
   - `unexpected_read_failure_is_typed_not_a_hangup`: a real EISDIR read failure
     is `pty_read_failed` with its source and `PtyIoFailure{read, EISDIR}`, not
@@ -231,6 +242,19 @@ real Unix socket with the real frame codec; it is not the `ovis-terminal` binary
    with a `SAFETY:` comment.
 6. Evidence: this body states what each test asserts. Real-binary conformance
    is DEFERRED-BY-PLAN, with the exit-2 attempt recorded above.
+
+## CI note: todo-12 probe `unread_input_stays_killable`
+
+One CI run (54f19c9, check.sh ubuntu) failed todo 12's assertion "the probe left
+a thread behind" (`Some(1)` vs `Some(0)`). The only thread it counts is
+`probe-stall-report`, which todo 12's `probes/platform/stall.rs` spawns and joins.
+No holder thread has that name (holder workers are `ovis-holder-*`), and that
+probe does not run the holder pump. On Linux, `pthread_join` returns when the
+kernel clears the thread id, which happens before the task leaves
+`/proc/self/task`. A thread that has just been joined can therefore still be
+listed briefly. Locally the test passed 30/30 under 10-way parallel load on this
+branch. The assertion was not changed. Recommended to todo 12's owner: wait for
+the task entry to disappear instead of counting once immediately after the join.
 
 ## Risks
 
