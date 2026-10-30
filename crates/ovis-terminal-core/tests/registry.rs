@@ -159,6 +159,8 @@ async fn happy() -> TestResult<()> {
         .await?;
     let snapshot = store.snapshot()?;
     assert!(reservation.is_reserved(&snapshot, first_id)?);
+    // Release the SQLite reader before closing and reopening this store (Windows locks the file).
+    drop(snapshot);
     store.close()?;
 
     let reopened = Store::open(&root.0, StoreOptions::default())?;

@@ -63,6 +63,15 @@
       "result": "test registry::ids::tests::identity_serialization_preserves_u64_max ... ok"
     }
   ],
+  "windows_ci_follow_up": {
+    "initial_head": "af30f0102c93ef166d733bdcf03b7f8d9e765b",
+    "job_id": "124351154181",
+    "failed_test": "ovis-terminal-core::registry happy",
+    "error": "Os { code: 32, kind: Uncategorized, message: \"The process cannot access the file because it is being used by another process.\" }",
+    "analysis": "The happy test kept a SQLite Snapshot reader connection alive across Store::close and reopening the store.",
+    "fix": "Explicitly drop the Snapshot immediately after the reservation assertion and before closing the store. No product store path or retry behavior changed.",
+    "verification": "Linux happy test and scripts/check.sh pass after the test ordering change; the Windows CI rerun is pending on the repair commit."
+  },
   "adversarial": [
     {
       "class": "malformed input",

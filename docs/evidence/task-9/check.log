@@ -19,3 +19,8 @@ JSON hygiene: 22 JSON files checked
 
 Command: cargo metadata --locked --format-version 1 --no-deps
 Exit: 0
+
+Windows sharing-violation follow-up:
+Initial Windows test job 124351154181 failed registry happy with OS error 32 because a test Snapshot reader remained alive across store close/reopen. The test now drops it before close.
+After the ordering change, `cargo test -p ovis-terminal-core --test registry happy -- --exact --nocapture` exited 0, and `bash scripts/check.sh` again exited 0.
+The updated Windows CI check is pending on the repair commit; see windows-sharing-violation.log.

@@ -27,6 +27,8 @@ DEFERRED VERIFICATION (runner lands in Todo 21): this foundational todo has no r
 
 The full workspace nextest summary reported 195 passed and 1 skipped. The skip reason was not present in the captured summary.
 
+The initial Windows CI run on head `af30f0102c93ef166d733bdcf03b7f8d9e765b` failed in `registry happy` with sharing violation error 32. Inspection found the test retained a `Store::snapshot()` SQLite reader across store close/reopen. This repair explicitly drops the snapshot before closing the store; it changes no product store path and adds no retry or skip. The updated Windows CI result is available on this PR's current head.
+
 ## Adversarial
 
 The failure test asserts typed rejection for zero and wrong-family IDs, invalid names, missing targets, cross-lifetime caller bindings, and a PID reused with the prior start token. A caller bound to the old process receives `stale_target`, not the new process. The happy test asserts that same-name terminals on two machine IDs return two ambiguity candidates and no implicit selection.

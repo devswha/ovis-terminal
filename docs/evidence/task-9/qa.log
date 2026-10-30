@@ -19,3 +19,10 @@ test registry::ids::tests::identity_serialization_preserves_u64_max ... ok
 Exit: 0
 
 The happy case asserts stable identity by explicit scoped ID after rename and ambiguity with two machine candidates. The failure case asserts needs_target, cross_lifetime, invalid_identity, invalid_name and stale_target on PID/start-token reuse; it returns no replacement resolution.
+
+Windows CI follow-up:
+Initial Windows job 124351154181 failed registry happy with OS error 32 while the test Snapshot still held a SQLite reader connection across store close/reopen. The test now drops the snapshot before close.
+Command: cargo test -p ovis-terminal-core --test registry happy -- --exact --nocapture
+Exit after fix: 0; test happy ... ok
+Command: bash scripts/check.sh
+Exit after fix: 0; check.sh: all steps passed
