@@ -42,6 +42,12 @@ isolated Rust environment.
 | Same command (round 2, immediately following round 1) | 0 | 4000 generated cases plus saved seeds; 17.69 s. [proptest-round-2.log](proptest-round-2.log) |
 | Same command (round 3, immediately following round 2) | 0 | 4000 generated cases plus saved seeds; 17.58 s. [proptest-round-3.log](proptest-round-3.log) |
 | `bash scripts/check.sh` | 0 | Formatting, workspace Clippy with `-D warnings`, nextest (125 passed, one existing skip), doctests, source hygiene (zero violations), manifests, JSON. [check.log](check.log) |
+| Same regression and `bash scripts/check.sh`, after merging integration `61a6e5a` (todo 12) | 0 | Regression passed; all gate steps passed, nextest 132 passed with one existing skip, source hygiene zero violations in 175 files. [check-after-integration.log](check-after-integration.log) |
+
+The integration merge is `4702bfe`; no conflicts required lockfile regeneration
+or Clippy-list edits. The PR diff remains confined to the task's authorized
+paths. The three 4000-case rounds preceded the integration merge; todo 12 did
+not change the VT engine or its equivalence property.
 
 The original minimized seed is committed in the existing
 `crates/ovis-terminal-vt/proptest-regressions/paint_equivalence.txt`.

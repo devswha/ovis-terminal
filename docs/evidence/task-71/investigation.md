@@ -42,3 +42,10 @@ passed. No lint suppression or property weakening was used.
 Rust-analyzer is absent. Compiler and workspace Clippy diagnostics ran through
 check.sh instead. Runtime: rustc 1.99.1 (58cf8f9c3 2026-10-13),
 cargo 1.99.1 (5f94df478 2026-08-27), Linux x86_64.
+
+Before pushing, integration advanced to 61a6e5a (todo 12). It merged cleanly as
+4702bfe, preserving the integrated Cargo.lock, manifests and Clippy list.
+The initial merge command stopped because vim was absent; an explicit-message
+merge commit completed it. Regression and check.sh were rerun on that merge,
+both exit 0: 132 nextest tests passed, one existing skip, zero source-hygiene
+violations. No manual edits outside task-71 scope were made.
