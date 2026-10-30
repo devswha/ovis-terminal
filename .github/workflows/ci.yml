@@ -18,10 +18,45 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+        # Job names keep the os label; runner images are pinned so each native C toolchain is fixed.
+        include:
+          - os: ubuntu-latest
+            image: ubuntu-24.04
+          - os: macos-latest
+            image: macos-15
+          - os: windows-latest
+            image: windows-2025
+    runs-on: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v4
+      # Bundled SQLite is C: pin the compiler, archiver and linker per target.
+      - name: pin C toolchain (Linux gcc 14.2.0)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          test "$(gcc-14 -dumpfullversion)" = "14.2.0"
+          {
+            echo "CC=gcc-14"
+            echo "AR=gcc-ar-14"
+            echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=gcc-14"
+          } >> "$GITHUB_ENV"
+      - name: pin C toolchain (macOS Xcode 16.4)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+          xcodebuild -version | grep -qx 'Xcode 16.4'
+          clang --version
+      - name: pin C toolchain (Windows MSVC 14.44)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          toolset: "14.44"
+      - name: verify C toolchain (Windows MSVC 14.44)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: cl.exe 2>&1 | grep -q 'Version 19\.44\.'
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
@@ -67,9 +102,19 @@ jobs:
 
   check-script:
     name: scripts/check.sh (ubuntu)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      # Bundled SQLite is C: pin the compiler, archiver and linker (gcc 14.2.0 on ubuntu-24.04).
+      - name: pin C toolchain (gcc 14.2.0)
+        shell: bash
+        run: |
+          test "$(gcc-14 -dumpfullversion)" = "14.2.0"
+          {
+            echo "CC=gcc-14"
+            echo "AR=gcc-ar-14"
+            echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=gcc-14"
+          } >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
@@ -82,9 +127,19 @@ jobs:
 
   doc:
     name: rustdoc -D warnings
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      # Bundled SQLite is C: pin the compiler, archiver and linker (gcc 14.2.0 on ubuntu-24.04).
+      - name: pin C toolchain (gcc 14.2.0)
+        shell: bash
+        run: |
+          test "$(gcc-14 -dumpfullversion)" = "14.2.0"
+          {
+            echo "CC=gcc-14"
+            echo "AR=gcc-ar-14"
+            echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=gcc-14"
+          } >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@1.99.1
       - uses: Swatinem/rust-cache@v2
       - env:
@@ -93,9 +148,19 @@ jobs:
 
   msrv:
     name: msrv (1.89)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      # Bundled SQLite is C: pin the compiler, archiver and linker (gcc 14.2.0 on ubuntu-24.04).
+      - name: pin C toolchain (gcc 14.2.0)
+        shell: bash
+        run: |
+          test "$(gcc-14 -dumpfullversion)" = "14.2.0"
+          {
+            echo "CC=gcc-14"
+            echo "AR=gcc-ar-14"
+            echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=gcc-14"
+          } >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@1.89
       - uses: Swatinem/rust-cache@v2
       - run: cargo +1.89 check --workspace --all-targets --all-features --locked

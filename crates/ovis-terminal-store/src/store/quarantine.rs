@@ -6,16 +6,18 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::error::StoreError;
-use crate::evidence::{MaterialDisposition, RecoveryCause, RecoveryEvidence, RecoveryFlags};
+use crate::evidence::{
+    IncidentId, MaterialDisposition, RecoveryCause, RecoveryEvidence, RecoveryFlags, UnixMillis,
+};
 
-pub(crate) const DB_FILE: &str = "state.db";
+pub(super) const DB_FILE: &str = "state.db";
 const MATERIAL: [&str; 3] = ["state.db", "state.db-wal", "state.db-shm"];
 const QUARANTINE_DIR: &str = "quarantine";
 const EVIDENCE_FILE: &str = "evidence.json";
 const MAX_SAME_MILLISECOND_INCIDENTS: u32 = 64;
 
 /// Records the evidence first, then moves or copies the material next to it.
-pub(crate) fn preserve(
+pub(super) fn preserve(
     root: &Path,
     cause: RecoveryCause,
     material: MaterialDisposition,
@@ -23,7 +25,8 @@ pub(crate) fn preserve(
     let detected_at_unix_ms = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .ok()
-        .and_then(|elapsed| u64::try_from(elapsed.as_millis()).ok());
+        .and_then(|elapsed| u64::try_from(elapsed.as_millis()).ok())
+        .map(UnixMillis::new);
     let (id, location) = create_incident_dir(root, detected_at_unix_ms)?;
     let preserved = MATERIAL
         .iter()
@@ -85,7 +88,7 @@ pub fn read_quarantine_evidence(root: &Path) -> Result<Vec<RecoveryEvidence>, St
 }
 
 /// An earlier incident with the same cause, so repeated opens do not pile up copies.
-pub(crate) fn find_incident(
+pub(super) fn find_incident(
     root: &Path,
     cause: &RecoveryCause,
 ) -> Result<Option<RecoveryEvidence>, StoreError> {
@@ -96,11 +99,11 @@ pub(crate) fn find_incident(
         .find(|evidence| evidence.cause == *cause))
 }
 
-pub(crate) fn latest_incident(root: &Path) -> Result<Option<RecoveryEvidence>, StoreError> {
+pub(super) fn latest_incident(root: &Path) -> Result<Option<RecoveryEvidence>, StoreError> {
     Ok(read_quarantine_evidence(root)?.pop())
 }
 
-pub(crate) fn into_error(evidence: RecoveryEvidence) -> StoreError {
+pub(super) fn into_error(evidence: RecoveryEvidence) -> StoreError {
     let evidence = Box::new(evidence);
     match evidence.cause {
         RecoveryCause::UnsupportedSchema { .. } => StoreError::Unsupported { evidence },
@@ -110,15 +113,21 @@ pub(crate) fn into_error(evidence: RecoveryEvidence) -> StoreError {
     }
 }
 
-fn create_incident_dir(root: &Path, now_ms: Option<u64>) -> Result<(String, PathBuf), StoreError> {
+fn create_incident_dir(
+    root: &Path,
+    now: Option<UnixMillis>,
+) -> Result<(IncidentId, PathBuf), StoreError> {
     let parent = root.join(QUARANTINE_DIR);
     fs::create_dir_all(&parent).map_err(StoreError::io("create", &parent))?;
-    let stamp = now_ms.map_or_else(|| "unknown-time".to_owned(), |ms| format!("{ms:013}"));
+    let stamp = now.map_or_else(
+        || "unknown-time".to_owned(),
+        |ms| format!("{:013}", ms.get()),
+    );
     for attempt in 0..MAX_SAME_MILLISECOND_INCIDENTS {
         let id = format!("{stamp}-{attempt:02}");
         let location = parent.join(&id);
         match fs::create_dir(&location) {
-            Ok(()) => return Ok((id, location)),
+            Ok(()) => return Ok((IncidentId::new(id), location)),
             Err(error) if error.kind() == ErrorKind::AlreadyExists => {}
             Err(error) => return Err(StoreError::io("create", location)(error)),
         }

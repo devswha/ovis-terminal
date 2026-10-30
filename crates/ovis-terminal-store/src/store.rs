@@ -1,18 +1,26 @@
 //! Opening, rebuilding and closing a store root.
 
+mod apply;
+mod quarantine;
+mod schema;
+mod writer;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use rusqlite::{Connection, params};
 
+use self::quarantine::DB_FILE;
+pub use self::quarantine::read_quarantine_evidence;
+use self::schema::Probe;
+pub use self::schema::SCHEMA_VERSION;
+pub use self::writer::Ticket;
+use self::writer::Writer;
 use crate::error::StoreError;
 use crate::evidence::{MaterialDisposition, RecoveryCause};
 use crate::mutation::Mutation;
 use crate::options::{StoreLimits, StoreOptions};
-use crate::quarantine::{self, DB_FILE};
-use crate::schema::{self, Probe, SCHEMA_VERSION};
 use crate::snapshot::Snapshot;
-use crate::writer::{Ticket, Writer};
 
 /// An opened store: one dedicated writer and any number of pinned read snapshots.
 #[derive(Debug)]
@@ -70,7 +78,7 @@ impl Store {
             })?;
             tx.execute(
                 "INSERT INTO recovery_evidence (id, evidence) VALUES (?1, ?2)",
-                params![evidence.id, text],
+                params![evidence.id.as_str(), text],
             )?;
         }
         tx.commit()?;
@@ -130,14 +138,12 @@ impl Store {
 }
 
 /// Probes `db` and quarantines it when it cannot be used; `None` means there is no database.
+/// The writable connection is opened only after the read-only probe classified the file.
 fn settle(root: &Path, db: &Path) -> Result<Option<(Connection, i64)>, StoreError> {
     fs::create_dir_all(root).map_err(StoreError::io("create", root))?;
     match schema::probe(db)? {
         Probe::Missing => Ok(None),
-        Probe::Ready {
-            connection,
-            version,
-        } => Ok(Some((connection, version))),
+        Probe::Ready { version } => Ok(Some((Connection::open(db)?, version))),
         Probe::Damaged(cause) => {
             let evidence =
                 quarantine::preserve(root, cause, MaterialDisposition::MovedToQuarantine)?;

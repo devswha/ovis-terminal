@@ -4,7 +4,8 @@ use std::fs::File;
 use std::io::{ErrorKind, Read as _};
 use std::path::Path;
 
-use rusqlite::{Connection, ErrorCode};
+use rusqlite::config::DbConfig;
+use rusqlite::{Connection, ErrorCode, OpenFlags};
 
 use crate::error::StoreError;
 use crate::evidence::RecoveryCause;
@@ -54,17 +55,14 @@ const MIGRATIONS: [&str; 1] = ["
 
 /// What an existing database file turned out to be, decided before any write.
 #[derive(Debug)]
-pub(crate) enum Probe {
+pub(super) enum Probe {
     Missing,
-    Ready {
-        connection: Connection,
-        version: i64,
-    },
+    Ready { version: i64 },
     Damaged(RecoveryCause),
     Newer(i64),
 }
 
-pub(crate) fn probe(db: &Path) -> Result<Probe, StoreError> {
+pub(super) fn probe(db: &Path) -> Result<Probe, StoreError> {
     let mut header = Vec::with_capacity(SQLITE_MAGIC.len());
     match File::open(db) {
         Ok(file) => file
@@ -87,7 +85,11 @@ pub(crate) fn probe(db: &Path) -> Result<Probe, StoreError> {
 }
 
 fn inspect(db: &Path) -> rusqlite::Result<Probe> {
-    let connection = Connection::open(db)?;
+    // Read-only and without checkpoint-on-close: classifying a database must neither fold its
+    // WAL into the main file nor delete the WAL that quarantine has to preserve byte for byte.
+    let flags = OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX;
+    let connection = Connection::open_with_flags(db, flags)?;
+    connection.set_db_config(DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, true)?;
     let version: i64 = connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
     if version > SCHEMA_VERSION {
         return Ok(Probe::Newer(version));
@@ -102,10 +104,7 @@ fn inspect(db: &Path) -> rusqlite::Result<Probe> {
             detail: verdict,
         }));
     }
-    Ok(Probe::Ready {
-        connection,
-        version,
-    })
+    Ok(Probe::Ready { version })
 }
 
 fn damage_of(error: &rusqlite::Error) -> Option<RecoveryCause> {
@@ -120,7 +119,7 @@ fn damage_of(error: &rusqlite::Error) -> Option<RecoveryCause> {
 }
 
 /// Switches to WAL with full fsync on commit, then applies every migration after `from`.
-pub(crate) fn prepare(connection: &mut Connection, from: i64) -> Result<(), StoreError> {
+pub(super) fn prepare(connection: &mut Connection, from: i64) -> Result<(), StoreError> {
     let mode: String =
         connection.pragma_update_and_check(None, "journal_mode", "WAL", |row| row.get(0))?;
     if !mode.eq_ignore_ascii_case("wal") {

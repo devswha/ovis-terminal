@@ -1,20 +1,23 @@
 //! Shared test fixtures: a private store root per test and one-key document mutations.
 
-#![expect(
-    clippy::redundant_pub_crate,
-    reason = "rustc's unreachable_pub (workspace lint) requires pub(crate) here, which this nursery lint contradicts"
-)]
-
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use ovis_terminal_store::{CasWrite, EventKind, Mutation, NewEvent, OpId, Payload, ResourceKey};
 
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "unreachable_pub requires pub(crate) on this shared fixture item; the nursery lint contradicts it"
+)]
 pub(crate) type Fallible<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
 static NEXT_ROOT: AtomicU64 = AtomicU64::new(0);
 
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "unreachable_pub requires pub(crate) on this shared fixture item; the nursery lint contradicts it"
+)]
 pub(crate) struct TempRoot {
     path: PathBuf,
 }
@@ -49,10 +52,18 @@ impl Drop for TempRoot {
     }
 }
 
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "unreachable_pub requires pub(crate) on this shared fixture item; the nursery lint contradicts it"
+)]
 pub(crate) fn key(id: &str) -> ResourceKey {
     ResourceKey::new("doc", id)
 }
 
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "unreachable_pub requires pub(crate) on this shared fixture item; the nursery lint contradicts it"
+)]
 /// A mutation whose receipt result and `doc.changed` event payload are the operation id.
 pub(crate) fn set(op: &str, write: CasWrite) -> Mutation {
     let event = NewEvent::new(EventKind::new("doc.changed"), Payload::from(op));

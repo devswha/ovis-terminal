@@ -6,7 +6,7 @@ use std::thread::{self, JoinHandle};
 use rusqlite::{Connection, TransactionBehavior};
 use tokio::sync::oneshot;
 
-use crate::apply::apply;
+use super::apply::apply;
 use crate::error::StoreError;
 use crate::mutation::{CommitReceipt, Mutation};
 use crate::options::{CommitBarrier, StoreOptions};
@@ -21,14 +21,14 @@ struct Job {
 
 /// The submitting side of the writer; dropping it lets the thread drain and exit.
 #[derive(Debug)]
-pub(crate) struct Writer {
+pub(super) struct Writer {
     queue: SyncSender<Job>,
     capacity: usize,
     thread: JoinHandle<()>,
 }
 
 impl Writer {
-    pub(crate) fn spawn(connection: Connection, options: StoreOptions) -> Result<Self, StoreError> {
+    pub(super) fn spawn(connection: Connection, options: StoreOptions) -> Result<Self, StoreError> {
         let capacity = options.limits.writer_queue;
         let (queue, jobs) = sync_channel(capacity);
         let thread = thread::Builder::new()
@@ -42,7 +42,7 @@ impl Writer {
         })
     }
 
-    pub(crate) fn submit(&self, mutation: Mutation) -> Result<Ticket, StoreError> {
+    pub(super) fn submit(&self, mutation: Mutation) -> Result<Ticket, StoreError> {
         let (reply, outcome) = oneshot::channel();
         match self.queue.try_send(Job { mutation, reply }) {
             Ok(()) => Ok(Ticket { outcome }),
@@ -53,7 +53,7 @@ impl Writer {
         }
     }
 
-    pub(crate) fn shut_down(self) -> Result<(), StoreError> {
+    pub(super) fn shut_down(self) -> Result<(), StoreError> {
         drop(self.queue);
         self.thread.join().map_err(|_| StoreError::WriterPanicked)
     }

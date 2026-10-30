@@ -7,7 +7,7 @@ use crate::ids::{Payload, Revision, Version};
 use crate::mutation::{CasWrite, CommitReceipt, Mutation};
 use crate::options::StoreLimits;
 
-pub(crate) fn apply(
+pub(super) fn apply(
     tx: &Transaction<'_>,
     mutation: &Mutation,
     limits: &StoreLimits,

@@ -3,48 +3,71 @@
 
 ==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
     Checking ovis-terminal-store v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-store)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.32s
+    Checking ovis-terminal-authz v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-authz)
+    Checking ovis-terminal-core v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-core)
+    Checking ovis-terminal-agent v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-agent)
+    Checking ovis-terminal-services v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-services)
+    Checking ovis-terminal-remote v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-remote)
+    Checking ovis-terminal-bench v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/bench)
+    Checking ovis-terminal-agent-adapters v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-agent-adapters)
+    Checking ovis-terminal-server v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-server)
+    Checking ovis-terminal-cli v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.50s
 
 ==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
    Compiling ovis-terminal-store v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-store)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.64s
+   Compiling ovis-terminal-authz v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-authz)
+   Compiling ovis-terminal-core v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-core)
+   Compiling ovis-terminal-agent v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-agent)
+   Compiling ovis-terminal-services v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-services)
+   Compiling ovis-terminal-remote v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-remote)
+   Compiling ovis-terminal-bench v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/bench)
+   Compiling ovis-terminal-agent-adapters v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-agent-adapters)
+   Compiling ovis-terminal-server v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-server)
+   Compiling ovis-terminal-cli v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.49s
 ────────────
- Nextest run ID 8a1e803b-686c-4599-92ed-3ee65405b141 with nextest profile: default
-    Starting 29 tests across 24 binaries (1 test skipped)
-        PASS [   0.009s] ( 1/29) workspace-hygiene loc::tests::comment_markers_inside_strings_are_code
-        PASS [   0.010s] ( 2/29) ovis-terminal-cli tests::version_line_names_binary_and_package_version
-        PASS [   0.012s] ( 3/29) workspace-hygiene loc::tests::every_line_of_a_multiline_literal_and_group_counts
-        PASS [   0.013s] ( 4/29) ovis-terminal-cli tests::empty_and_extra_arguments_are_usage_errors
-        PASS [   0.012s] ( 5/29) workspace-hygiene::fixtures receivers_count_as_parameters
-        PASS [   0.013s] ( 6/29) workspace-hygiene loc::tests::comments_blank_lines_and_docs_are_not_code
-        PASS [   0.013s] ( 7/29) workspace-hygiene::fixtures malformed_source_is_a_syntax_violation
-        PASS [   0.013s] ( 8/29) ovis-terminal-cli tests::version_flag_alone_parses
-        PASS [   0.019s] ( 9/29) ovis-terminal-store::recovery rebuild_refuses_a_root_with_nothing_quarantined
-        PASS [   0.030s] (10/29) ovis-terminal-store::compare_and_swap a_conflicting_write_rolls_back_the_whole_mutation
-        PASS [   0.030s] (11/29) ovis-terminal-store::writer an_oversized_value_is_rejected_before_it_is_queued
-        PASS [   0.032s] (12/29) ovis-terminal-store::recovery rebuild_leaves_a_newer_schema_in_place
-        PASS [   0.032s] (13/29) ovis-terminal-store::writer a_snapshot_stays_at_its_revision_while_later_commits_land
-        PASS [   0.033s] (14/29) ovis-terminal-store::writer a_full_writer_queue_rejects_with_backpressure
-        PASS [   0.033s] (15/29) ovis-terminal-store::writer a_ticket_resolves_on_an_async_runtime
-        PASS [   0.033s] (16/29) workspace-hygiene::fixtures one_line_and_one_parameter_over_the_limit_both_fail
-        PASS [   0.033s] (17/29) ovis-terminal-store::compare_and_swap a_reused_operation_id_is_rejected_without_a_second_commit
-        PASS [   0.034s] (18/29) workspace-hygiene::fixtures violations_report_file_line_rule_and_count
-        PASS [   0.035s] (19/29) workspace-hygiene::fixtures exactly_250_pure_loc_and_three_parameters_pass
-        PASS [   0.036s] (20/29) ovis-terminal-store::compare_and_swap events_of_one_mutation_take_consecutive_sequence_numbers
-        PASS [   0.036s] (21/29) ovis-terminal-store::retention recreating_after_a_tombstone_continues_the_version
-        PASS [   0.036s] (22/29) ovis-terminal-store::retention deleting_a_resource_leaves_a_versioned_tombstone
-        PASS [   0.036s] (23/29) ovis-terminal-store::transactions failure
-        PASS [   0.037s] (24/29) ovis-terminal-store::retention evicted_receipts_are_reported_as_not_retained
-        PASS [   0.039s] (25/29) ovis-terminal-store::retention evicted_events_report_the_floor_instead_of_an_empty_page
-        PASS [   0.043s] (26/29) ovis-terminal-store::recovery rebuild_carries_the_quarantine_evidence_into_the_new_database
-        PASS [   0.168s] (27/29) ovis-terminal-store::transactions crash_before_commit_keeps_nothing
-        PASS [   0.182s] (28/29) ovis-terminal-store::compare_and_swap versions_follow_the_reference_model
-        PASS [   0.196s] (29/29) ovis-terminal-store::transactions happy
+ Nextest run ID be652e0b-6a93-4bd2-a966-3df4e96e30ae with nextest profile: default
+    Starting 33 tests across 24 binaries (1 test skipped)
+        PASS [   0.009s] ( 1/33) ovis-terminal-cli tests::version_line_names_binary_and_package_version
+        PASS [   0.012s] ( 2/33) workspace-hygiene loc::tests::every_line_of_a_multiline_literal_and_group_counts
+        PASS [   0.023s] ( 3/33) workspace-hygiene loc::tests::comment_markers_inside_strings_are_code
+        PASS [   0.024s] ( 4/33) ovis-terminal-cli tests::version_flag_alone_parses
+        PASS [   0.025s] ( 5/33) workspace-hygiene::fixtures malformed_source_is_a_syntax_violation
+        PASS [   0.025s] ( 6/33) ovis-terminal-cli tests::empty_and_extra_arguments_are_usage_errors
+        PASS [   0.025s] ( 7/33) workspace-hygiene loc::tests::comments_blank_lines_and_docs_are_not_code
+        PASS [   0.025s] ( 8/33) ovis-terminal-store evidence::tests::timestamps_beyond_javascript_precision_round_trip_as_strings
+        PASS [   0.030s] ( 9/33) workspace-hygiene::fixtures receivers_count_as_parameters
+        PASS [   0.033s] (10/33) ovis-terminal-store evidence::tests::non_canonical_or_numeric_timestamps_are_rejected
+        PASS [   0.041s] (11/33) ovis-terminal-store::recovery rebuild_refuses_a_root_with_nothing_quarantined
+        PASS [   0.044s] (12/33) ovis-terminal-store::compare_and_swap events_of_one_mutation_take_consecutive_sequence_numbers
+        PASS [   0.044s] (13/33) ovis-terminal-store::compare_and_swap a_conflicting_write_rolls_back_the_whole_mutation
+        PASS [   0.045s] (14/33) workspace-hygiene::fixtures one_line_and_one_parameter_over_the_limit_both_fail
+        PASS [   0.046s] (15/33) ovis-terminal-store::recovery rebuild_leaves_a_newer_schema_in_place
+        PASS [   0.048s] (16/33) ovis-terminal-store::recovery a_newer_schema_with_a_live_wal_is_classified_without_touching_it
+        PASS [   0.053s] (17/33) ovis-terminal-store::retention recreating_after_a_tombstone_continues_the_version
+        PASS [   0.053s] (18/33) workspace-hygiene::fixtures violations_report_file_line_rule_and_count
+        PASS [   0.053s] (19/33) ovis-terminal-store::writer an_oversized_value_is_rejected_before_it_is_queued
+        PASS [   0.053s] (20/33) ovis-terminal-store::retention evicted_receipts_are_reported_as_not_retained
+        PASS [   0.053s] (21/33) workspace-hygiene::fixtures exactly_250_pure_loc_and_three_parameters_pass
+        PASS [   0.054s] (22/33) ovis-terminal-store::writer a_full_writer_queue_rejects_with_backpressure
+        PASS [   0.054s] (23/33) ovis-terminal-store::writer a_ticket_resolves_on_an_async_runtime
+        PASS [   0.058s] (24/33) ovis-terminal-store::writer a_snapshot_stays_at_its_revision_while_later_commits_land
+        PASS [   0.062s] (25/33) ovis-terminal-store::transactions failure
+        PASS [   0.062s] (26/33) ovis-terminal-store::recovery durable_evidence_stores_its_timestamp_as_a_decimal_string
+        PASS [   0.062s] (27/33) ovis-terminal-store::retention evicted_events_report_the_floor_instead_of_an_empty_page
+        PASS [   0.063s] (28/33) ovis-terminal-store::compare_and_swap a_reused_operation_id_is_rejected_without_a_second_commit
+        PASS [   0.065s] (29/33) ovis-terminal-store::retention deleting_a_resource_leaves_a_versioned_tombstone
+        PASS [   0.068s] (30/33) ovis-terminal-store::recovery rebuild_carries_the_quarantine_evidence_into_the_new_database
+        PASS [   0.227s] (31/33) ovis-terminal-store::compare_and_swap versions_follow_the_reference_model
+        PASS [   0.234s] (32/33) ovis-terminal-store::transactions happy
+        PASS [   0.264s] (33/33) ovis-terminal-store::transactions crash_before_commit_keeps_nothing
 ────────────
-     Summary [   0.196s] 29 tests run: 29 passed, 1 skipped
+     Summary [   0.265s] 33 tests run: 33 passed, 1 skipped
 
 ==> cargo test --doc --workspace --all-features --locked
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+   Compiling ovis-terminal-bench v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/bench)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
    Doc-tests ovis_terminal_agent
 
 running 0 tests

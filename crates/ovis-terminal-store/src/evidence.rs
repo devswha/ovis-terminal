@@ -1,8 +1,31 @@
 //! Durable recovery evidence recorded when a store cannot be opened as it is.
 
+use std::fmt;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
+
+/// The identity of one quarantine incident: its directory name, which sorts by detection time.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct IncidentId(String);
+
+impl IncidentId {
+    pub(crate) const fn new(id: String) -> Self {
+        Self(id)
+    }
+
+    /// The incident id text, also the quarantine directory name.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for IncidentId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
 
 /// What was found when the store refused to open its database.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,8 +103,8 @@ impl RecoveryFlags {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct RecoveryEvidence {
-    /// The quarantine directory name, unique per incident.
-    pub id: String,
+    /// The incident identity, unique per incident.
+    pub id: IncidentId,
     /// What was found.
     pub cause: RecoveryCause,
     /// The directory holding the preserved material and this evidence.
@@ -89,7 +112,97 @@ pub struct RecoveryEvidence {
     /// File names preserved in `location`.
     pub preserved: Vec<String>,
     /// Wall-clock detection time; `None` when the clock reads before the Unix epoch.
-    pub detected_at_unix_ms: Option<u64>,
+    pub detected_at_unix_ms: Option<UnixMillis>,
     /// Recovery flags.
     pub flags: RecoveryFlags,
+}
+
+/// Milliseconds since the Unix epoch, written to durable JSON as a canonical decimal string
+/// so readers limited to 53-bit integers never lose precision.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct UnixMillis(u64);
+
+impl UnixMillis {
+    pub(crate) const fn new(millis: u64) -> Self {
+        Self(millis)
+    }
+
+    /// The raw millisecond count.
+    pub const fn get(self) -> u64 {
+        self.0
+    }
+}
+
+impl Serialize for UnixMillis {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(&self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for UnixMillis {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        use serde::de::Error as _;
+        let text = String::deserialize(deserializer)?;
+        let millis: u64 = text
+            .parse()
+            .map_err(|_| D::Error::custom(format!("not a decimal u64: {text:?}")))?;
+        if millis.to_string() != text {
+            return Err(D::Error::custom(format!(
+                "non-canonical decimal u64: {text:?}"
+            )));
+        }
+        Ok(Self(millis))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::{
+        IncidentId, MaterialDisposition, RecoveryCause, RecoveryEvidence, RecoveryFlags, UnixMillis,
+    };
+
+    fn evidence_at(detected_at_unix_ms: Option<UnixMillis>) -> RecoveryEvidence {
+        RecoveryEvidence {
+            id: IncidentId::new("0000000000001-00".to_owned()),
+            cause: RecoveryCause::CorruptHeader,
+            location: PathBuf::from("quarantine/0000000000001-00"),
+            preserved: vec!["state.db".to_owned()],
+            detected_at_unix_ms,
+            flags: RecoveryFlags::for_material(MaterialDisposition::MovedToQuarantine),
+        }
+    }
+
+    #[test]
+    fn timestamps_beyond_javascript_precision_round_trip_as_strings() {
+        let original = evidence_at(Some(UnixMillis::new(u64::MAX)));
+
+        let json = serde_json::to_value(&original).unwrap();
+
+        assert_eq!(
+            json.get("detected_at_unix_ms"),
+            Some(&serde_json::json!("18446744073709551615"))
+        );
+        assert_eq!(
+            serde_json::from_value::<RecoveryEvidence>(json).unwrap(),
+            original
+        );
+    }
+
+    #[test]
+    fn non_canonical_or_numeric_timestamps_are_rejected() {
+        let mut json = serde_json::to_value(evidence_at(Some(UnixMillis::new(7)))).unwrap();
+        for bad in [
+            serde_json::json!("007"),
+            serde_json::json!("+7"),
+            serde_json::json!(7),
+        ] {
+            *json.get_mut("detected_at_unix_ms").unwrap() = bad.clone();
+
+            let parsed = serde_json::from_value::<RecoveryEvidence>(json.clone());
+
+            assert!(parsed.is_err(), "{bad} was accepted");
+        }
+    }
 }

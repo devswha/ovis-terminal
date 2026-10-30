@@ -7,36 +7,24 @@
 //! and a damaged or newer database is preserved with durable [`RecoveryEvidence`] instead
 //! of being replaced by an empty store.
 
-#![expect(
-    clippy::redundant_pub_crate,
-    reason = "rustc's unreachable_pub (workspace lint) requires pub(crate) on crate-internal items in private modules, which this nursery lint contradicts"
-)]
-
-mod apply;
 mod error;
 mod evidence;
 mod ids;
 mod mutation;
 mod options;
-mod quarantine;
-mod schema;
 mod snapshot;
 mod store;
-mod writer;
 
 pub use error::StoreError;
 pub use evidence::{
-    MaterialDisposition, ProcessSurvival, RecoveryCause, RecoveryEvidence, RecoveryFlags,
-    RelaunchPolicy,
+    IncidentId, MaterialDisposition, ProcessSurvival, RecoveryCause, RecoveryEvidence,
+    RecoveryFlags, RelaunchPolicy, UnixMillis,
 };
 pub use ids::{EventKind, OpId, Payload, ResourceKey, Revision, Version};
 pub use mutation::{CasWrite, CommitReceipt, Mutation, NewEvent};
 pub use options::{CommitBarrier, StoreLimits, StoreOptions};
-pub use quarantine::read_quarantine_evidence;
-pub use schema::SCHEMA_VERSION;
 pub use snapshot::{EventPage, ReceiptLookup, ResourceLookup, Snapshot, StoredEvent};
-pub use store::Store;
-pub use writer::Ticket;
+pub use store::{SCHEMA_VERSION, Store, Ticket, read_quarantine_evidence};
 
 /// Cargo package name of this crate, used by the workspace layering record.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
