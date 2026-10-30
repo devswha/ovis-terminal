@@ -1,0 +1,312 @@
+{
+  "task": 12,
+  "plan": "ovis-terminal-v1",
+  "os_arch": "Linux x86_64",
+  "toolchain": "rustc/cargo 1.99.1",
+  "conformance_attempt": {
+    "command": "cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-12 --isolated --case happy --evidence \"$ATTEMPT_DIR/task-12-ovis-terminal-v1.json\"",
+    "stdout": "conformance: no scenarios are registered in this build (protocol crate ovis-terminal-protocol)",
+    "exit": 2,
+    "status": "DEFERRED-BY-PLAN (runner lands in Todo 21)"
+  },
+  "qa_happy": {
+    "command": "cargo test --locked -p ovis-terminal-holder --test platform_probe happy -- --exact --nocapture",
+    "exit": 0,
+    "records": {
+      "host": [
+        {
+          "os": "linux",
+          "family": "unix",
+          "arch": "x86_64",
+          "byte_order": "little"
+        }
+      ],
+      "start_token_source": [
+        "linux_proc_stat"
+      ],
+      "process": [
+        {
+          "pid": "2860508",
+          "start_token": "linux:44213f41-39db-4eed-a62b-f5e5992ca358:25378370",
+          "state": "live"
+        }
+      ],
+      "holder_frames": [
+        [
+          {
+            "kind": "spawned",
+            "data": {
+              "terminal_id": "probe-shell",
+              "terminal_incarnation": "1",
+              "process_incarnation": "1",
+              "pid": "2860508",
+              "start_token": "linux:44213f41-39db-4eed-a62b-f5e5992ca358:25378370"
+            }
+          },
+          {
+            "kind": "exit",
+            "data": {
+              "target": {
+                "terminal_id": "probe-shell",
+                "terminal_incarnation": "1",
+                "process_incarnation": "1"
+              },
+              "code": 7,
+              "signal": null,
+              "final_offset": "146"
+            }
+          }
+        ]
+      ],
+      "process_after_exit": [
+        {
+          "kind": "process_record_unreadable"
+        }
+      ],
+      "modes": [
+        {
+          "set": {
+            "paste": "bracketed",
+            "buffer": "alternate"
+          },
+          "reset": {
+            "paste": "plain",
+            "buffer": "primary"
+          }
+        }
+      ],
+      "endpoint": [
+        {
+          "max_path_bytes": 107,
+          "first_rejected_path_bytes": 108,
+          "identity": {
+            "device": "47",
+            "inode": "100344824",
+            "owner_uid": 1000,
+            "mode": 384
+          },
+          "rebound_identity": {
+            "device": "47",
+            "inode": "100344825",
+            "owner_uid": 1000,
+            "mode": 384
+          },
+          "directory_owner_uid": 1000,
+          "exchanged": "15"
+        }
+      ],
+      "endpoint_inode_reused": [
+        false
+      ],
+      "detach": [
+        {
+          "interruption": "core_death",
+          "launcher_exit": {
+            "code": 1,
+            "signal": "Killed"
+          },
+          "holder": {
+            "before": {
+              "pid": "2860519",
+              "start_token": "linux:44213f41-39db-4eed-a62b-f5e5992ca358:25378372",
+              "state": "live"
+            },
+            "after": {
+              "pid": "2860519",
+              "start_token": "linux:44213f41-39db-4eed-a62b-f5e5992ca358:25378372",
+              "state": "live"
+            }
+          },
+          "program": {
+            "before": {
+              "pid": "2860520",
+              "start_token": "linux:44213f41-39db-4eed-a62b-f5e5992ca358:25378372",
+              "state": "live"
+            },
+            "after": {
+              "pid": "2860520",
+              "start_token": "linux:44213f41-39db-4eed-a62b-f5e5992ca358:25378372",
+              "state": "live"
+            }
+          }
+        },
+        {
+          "interruption": "logout",
+          "launcher_exit": {
+            "code": 1,
+            "signal": "Hangup"
+          },
+          "holder": {
+            "before": {
+              "pid": "2860527",
+              "start_token": "linux:44213f41-39db-4eed-a62b-f5e5992ca358:25378373",
+              "state": "live"
+            },
+            "after": {
+              "pid": "2860527",
+              "start_token": "linux:44213f41-39db-4eed-a62b-f5e5992ca358:25378373",
+              "state": "live"
+            }
+          },
+          "program": {
+            "before": {
+              "pid": "2860528",
+              "start_token": "linux:44213f41-39db-4eed-a62b-f5e5992ca358:25378373",
+              "state": "live"
+            },
+            "after": {
+              "pid": "2860528",
+              "start_token": "linux:44213f41-39db-4eed-a62b-f5e5992ca358:25378373",
+              "state": "live"
+            }
+          }
+        }
+      ],
+      "latency": [
+        {
+          "terminals": 16,
+          "input_bytes_per_second": "1048576",
+          "verdict": "100000",
+          "latency": {
+            "samples": "320",
+            "p50": "4390",
+            "p95": "5370",
+            "p99": "5730",
+            "max": "5846"
+          },
+          "within_verdict": true,
+          "written": "1310720",
+          "received": "1333976",
+          "elapsed": "1251516",
+          "resident": {
+            "harness": "10477568",
+            "programs": "123850752"
+          }
+        }
+      ],
+      "soak": [
+        {
+          "terminals": 50,
+          "rounds": "153",
+          "latency": {
+            "samples": "7650",
+            "p50": "410",
+            "p95": "550",
+            "p99": "690",
+            "max": "1901"
+          },
+          "resident_first": {
+            "harness": "11710464",
+            "programs": "387592192"
+          },
+          "resident_peak": {
+            "harness": "11763712",
+            "programs": "387592192"
+          },
+          "resident_last": {
+            "harness": "11763712",
+            "programs": "387592192"
+          },
+          "programs_with_unchanged_tokens": 50,
+          "received": "2059320",
+          "elapsed": "3005812"
+        }
+      ]
+    }
+  },
+  "qa_failure": {
+    "command": "cargo test --locked -p ovis-terminal-holder --test platform_probe failure -- --exact --nocapture",
+    "exit": 0,
+    "records": {
+      "stall": [
+        {
+          "attempted": "1048576",
+          "accepted_before_kill": "8192",
+          "writer_blocked": true,
+          "backend_kill_ended_program": false,
+          "exit": {
+            "code": 1,
+            "signal": "Killed"
+          },
+          "kill_to_exit": "1002196",
+          "writer": "still_blocked"
+        }
+      ],
+      "spawn_failed": [
+        {
+          "hint": "check the executable path and permissions before retrying",
+          "holder_kind": "unavailable",
+          "kind": "spawn_failed"
+        }
+      ],
+      "openpty_refused": [
+        {
+          "backend": "openpty refused: failed to openpty: Os { code: 24, kind: TooManyOpenFiles, message: \"Too many open files\" }",
+          "frame": {
+            "kind": "unavailable",
+            "terminal_id": "probe-openpty",
+            "terminal_incarnation": "1"
+          }
+        }
+      ],
+      "missing_cwd": [
+        {
+          "requested": "/nonexistent/ovis-probe-cwd",
+          "used": "/home/devswha"
+        }
+      ],
+      "broken_endpoint": [
+        {
+          "connect_to_removed": "entity not found",
+          "write_to_closed_peer": "broken pipe"
+        }
+      ]
+    }
+  },
+  "harness_latency_release": {
+    "terminals": 16,
+    "input_bytes_per_second": "1048576",
+    "verdict": "100000",
+    "latency": {
+      "samples": "320",
+      "p50": "4270",
+      "p95": "5260",
+      "p99": "5800",
+      "max": "7232"
+    },
+    "within_verdict": true,
+    "written": "1310720",
+    "received": "1333976",
+    "elapsed": "1251514",
+    "resident": {
+      "harness": "5234688",
+      "programs": "123748352"
+    }
+  },
+  "harness_soak_release_50x30s": {
+    "terminals": 50,
+    "rounds": "816",
+    "latency": {
+      "samples": "40800",
+      "p50": "460",
+      "p95": "2370",
+      "p99": "6110",
+      "max": "94680"
+    },
+    "resident_first": {
+      "harness": "5107712",
+      "programs": "387325952"
+    },
+    "resident_peak": {
+      "harness": "5238784",
+      "programs": "387493888"
+    },
+    "resident_last": {
+      "harness": "5238784",
+      "programs": "387493888"
+    },
+    "programs_with_unchanged_tokens": 50,
+    "received": "11003190",
+    "elapsed": "30054301"
+  }
+}
