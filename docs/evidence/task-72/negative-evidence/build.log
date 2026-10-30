@@ -1,0 +1,40 @@
+warning: unused variable: `other`
+  --> docs/evidence/task-72/negative-evidence/harness.rs:24:13
+   |
+24 |             other => panic!("unknown mode {other}"),
+   |             ^^^^^           ---------------------- you might have meant to use string interpolation in this string literal
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+help: string interpolation only works in `format!` invocations
+   |
+24 |             other => panic!(format!("unknown mode {other}")),
+   |                             ++++++++                      +
+help: if this is intentional, prefix it with an underscore
+   |
+24 |             _other => panic!("unknown mode {other}"),
+   |             +
+
+warning: panic message contains an unused formatting placeholder
+  --> docs/evidence/task-72/negative-evidence/harness.rs:24:43
+   |
+24 |             other => panic!("unknown mode {other}"),
+   |                                           ^^^^^^^
+   |
+   = note: this message is not used as a format string when given without arguments, but will be in Rust 2021
+   = note: for more information, see <https://doc.rust-lang.org/edition-guide/rust-2021/panic-macro-consistency.html>
+   = note: `#[warn(non_fmt_panics)]` (part of `#[warn(rust_2021_compatibility)]`) on by default
+help: add the missing argument
+   |
+24 |             other => panic!("unknown mode {other}", ...),
+   |                                                   +++++
+help: or add a "{}" format string to use the message literally
+   |
+24 |             other => panic!("{}", "unknown mode {other}"),
+   |                             +++++
+
+warning: linker stderr: ignoring deprecated linker optimization setting "1"
+  |
+  = note: `#[warn(linker_messages)]` on by default
+
+warning: 3 warnings emitted
+
