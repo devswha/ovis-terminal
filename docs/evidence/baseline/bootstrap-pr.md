@@ -22,7 +22,19 @@ nextest: `11 tests run: 11 passed, 0 skipped`. The tests cover the hygiene check
 
 Full log: [`docs/evidence/baseline/task-1-check.log`](docs/evidence/baseline/task-1-check.log).
 
-CI: CI_RUN_PLACEHOLDER
+CI: https://github.com/devswha/ovis-terminal/actions/runs/41103014618
+
+Per-job conclusions:
+- cargo deny = pass (49s)
+- msrv (1.89) = pass (1m39s)
+- rustdoc -D warnings = pass (1m3s)
+- scripts/check.sh (ubuntu) = pass (38s)
+- test (macos-latest) = pass (1m37s)
+- test (ubuntu-latest) = pass (43s)
+- test (windows-latest) = pass (1m29s)
+- unused dependencies (cargo-machete) = pass (17s)
+
+First PR: OPEN, 8/8 workflow jobs SUCCESS (no branch protection configured, so gh pr checks --required has no required set; recorded as such).
 
 What landed:
 - An edition-2024 workspace with the strict lint set from cargo-strict.md, licensed MIT. Every package uses `[lints] workspace = true`. Configs: `rust-toolchain.toml` (1.99.1), `rustfmt.toml`, `clippy.toml` (3-argument threshold), `deny.toml`.
