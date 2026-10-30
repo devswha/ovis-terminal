@@ -18,7 +18,7 @@ Linux x86_64, rustc 1.99.1 (58cf8f9c3 2026-10-13). Full command receipts live in
 
 | Command | Result | Evidence |
 |---|---|---|
-| `bash scripts/check.sh` after merge with `origin/integration` | Exit 0: fmt, workspace Clippy `-D warnings`, nextest 58 tests/1 skipped, doctests, hygiene 0/83, manifests, JSON | `check-script-post-merge.log` |
+| `bash scripts/check.sh` after merge with `origin/integration` | Exit 0: fmt, workspace Clippy `-D warnings`, nextest 65 tests/1 skipped, doctests, hygiene 0/92, manifests, JSON | `check-script-latest-integration.log` |
 | `cargo nextest run -p ovis-terminal-protocol` | Exit 0: 19 tests passed | `acceptance-nextest-gate-fix.log` |
 | `cargo clippy -p ovis-terminal-protocol --all-targets -- -D warnings` | Exit 0 | `acceptance-clippy.log` |
 | `cargo test -p ovis-terminal-protocol --test rpc happy -- --exact --nocapture` | Exit 0: 1 test passed, 8 filtered | `qa-happy-gate-fix.log` |
