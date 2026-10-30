@@ -1,0 +1,21 @@
+### send delayed READY
+$ <run-root>/bin/hc send sh1 sleep 1; echo READY_MARK
+--- stdout
+{"started":false,"status":"idle","turn":1}
+--- stderr
+--- exit=0 elapsed_ms=5213
+
+### wait --output READY_MARK
+$ <run-root>/bin/hc wait sh1 --output READY_MARK --timeout 5 --json
+--- stdout
+{"children":[],"ended":false,"exit_code":null,"reason":"timeout","signal":null,"status":"idle","terminal":"t1","turn":1}
+--- stderr
+--- exit=0 elapsed_ms=5014
+
+### wait plain terminal (expect timeout reason)
+$ <run-root>/bin/hc wait sh1 --timeout 2 --json
+--- stdout
+{"children":[],"ended":true,"exit_code":null,"reason":"status","signal":null,"status":"idle","terminal":"t1","turn":1}
+--- stderr
+--- exit=0 elapsed_ms=12
+

@@ -1,0 +1,122 @@
+{
+  "scenario": "part-a/task-1",
+  "todo": 1,
+  "title": "Bootstrap the public repository and strict workspace",
+  "closes": [
+    "GAP-145"
+  ],
+  "delivers": [
+    "IDEAL-110",
+    "IDEAL-112"
+  ],
+  "runner": "shell",
+  "note": "Scaffold scenario: runs workspace commands, not the conformance socket runner (plan todo 21).",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "run",
+            "--locked",
+            "--quiet",
+            "-p",
+            "ovis-terminal-cli",
+            "--",
+            "--version"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_line": "ovis-terminal 0.1.0"
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "run",
+            "--locked",
+            "--quiet",
+            "-p",
+            "workspace-hygiene",
+            "--",
+            "check",
+            "--fixture",
+            "boundary-250-loc-three-parameters"
+          ],
+          "expect": {
+            "exit": 0
+          }
+        },
+        {
+          "argv": [
+            "bash",
+            "scripts/check.sh"
+          ],
+          "expect": {
+            "exit": 0
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "run",
+            "--locked",
+            "--quiet",
+            "-p",
+            "workspace-hygiene",
+            "--",
+            "check",
+            "--fixture",
+            "excessive-loc-and-parameters"
+          ],
+          "expect": {
+            "exit": 1,
+            "stdout_lines": [
+              "scripts/hygiene/fixtures/excessive-loc-and-parameters.rs:1: rule=max-pure-loc count=251 limit=250",
+              "scripts/hygiene/fixtures/excessive-loc-and-parameters.rs:8: rule=max-parameters fn=too_many count=4 limit=3"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "run",
+            "--locked",
+            "--quiet",
+            "-p",
+            "workspace-hygiene",
+            "--",
+            "check",
+            "--fixture",
+            "malformed-syntax"
+          ],
+          "expect": {
+            "exit": 1,
+            "stdout_rule": "syntax"
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "run",
+            "--locked",
+            "--quiet",
+            "-p",
+            "ovis-terminal-cli",
+            "--",
+            "--bogus"
+          ],
+          "expect": {
+            "exit": 2
+          }
+        }
+      ]
+    }
+  ]
+}

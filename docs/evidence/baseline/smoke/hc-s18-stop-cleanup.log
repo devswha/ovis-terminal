@@ -1,0 +1,42 @@
+### server stop
+$ <run-root>/bin/hc server stop --json
+--- stdout
+{"stopped":true}
+--- stderr
+--- exit=0 elapsed_ms=118
+
+### server status after stop
+$ <run-root>/bin/hc server status --json
+--- stdout
+{"core":{"id":"dcb5ded90ae69879514cb21f0b30c7fe","name":"<user>-thinkstation-p620"},"finished":1,"holder":null,"holders":[],"installed_by":null,"live":0,"pid":2678504,"uptime_ms":9,"version":"0.1.14"}
+--- stderr
+--- exit=0 elapsed_ms=24
+
+### pgrep smoke processes (expect empty)
+$ bash -c pgrep -af '<run-root>/smoke' || echo NONE
+--- stdout
+2669938 /bin/bash -c bash <run-root>/smoke/hc-smoke.sh 2>&1 | tail -5
+2669947 bash <run-root>/smoke/hc-smoke.sh
+2678520 timeout 20 bash -c pgrep -af '<run-root>/smoke' || echo NONE
+2678521 bash -c pgrep -af '<run-root>/smoke' || echo NONE
+--- stderr
+--- exit=0 elapsed_ms=213
+
+### pgrep herdr-core from RUN_TMP (expect empty)
+$ bash -c pgrep -af '<run-root>/bin/herdr-core' || echo NONE
+--- stdout
+2678504 <run-root>/bin/herdr-core serve
+2678533 timeout 20 bash -c pgrep -af '<run-root>/bin/herdr-core' || echo NONE
+2678534 bash -c pgrep -af '<run-root>/bin/herdr-core' || echo NONE
+--- stderr
+--- exit=0 elapsed_ms=218
+
+receipt: ~/.local/bin before=b39159c3 after=b39159c3
+receipt: ~/.local/state/herdr-core before=d41d8cd9 after=d41d8cd9
+receipt: ~/.config/herdr-core before=d41d8cd9 after=d41d8cd9
+receipt: user herdr still answers: herdr 0.9.5
+
+receipt (post-run, 2026-10-30T15:43:12.675Z): second 'hc server stop' issued because 'hc server status' auto-started a core after the first stop (observed pid 2678504 uptime 9ms); pgrep result:
+{"stopped":true}
+2690402 /usr/bin/bash -c HC_SESSION=ovis-smoke XDG_STATE_HOME=<run-root>/smoke/hc-state XDG_CONFIG_HOME=<run-root>/smoke/hc-config XDG_RUNTIME_DIR=<run-root>/smoke/hc-run <run-root>/bin/hc server stop --json; sleep 1; pgrep -af '<run-root>/bin/herdr-core' || echo NONE_HC; pgrep -af '<run-root>/smoke/' | grep -v pgrep || echo NONE_SMOKE
+NONE_SMOKE

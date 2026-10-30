@@ -1,0 +1,14 @@
+### pane.send_text + pane.read text/ansi
+$ pane.send_text {"pane_id":"w1:p1","text":"echo HERDR_SMOKE_7\n"}
+<- {"id":"r8","result":{"type":"ok"}}
+-- ms=1 frames=1 closedByServer=true
+$ pane.read {"pane_id":"w1:p1","lines":20,"source":"visible"}
+<- {"id":"r9","result":{"type":"pane_read","read":{"pane_id":"w1:p1","workspace_id":"w1","tab_id":"w1:t1","source":"visible","format":"text","text":"<user>@<host>:<run-root>/smoke$ echo HERDR_SMOKE_7\nHERDR_SMOKE_7\n<user>@<host>:<run-root>/smoke$\n","revision":0,"truncated":false}}}
+-- ms=1 frames=1 closedByServer=true
+read result keys: type,read text includes marker: true
+$ pane.read {"pane_id":"w1:p1","lines":5,"source":"visible","format":"ansi"}
+<- {"id":"r10","result":{"type":"pane_read","read":{"pane_id":"w1:p1","workspace_id":"w1","tab_id":"w1:t1","source":"visible","format":"ansi","text":"\u001b[0m\u001b[1m\u001b[38;5;2m<user>@<host>\u001b[0m:\u001b[0m\u001b[1m\u001b[38;5;4m<run-root>/smoke\u001b[0m$ echo HERDR_SMOKE_7\r\nHERDR_SMOKE_7\r\n\u001b[0m\u001b[1m\u001b[38;5;2m<user>@<host>\u001b[0m:\u001b[0m\u001b[1m\u001b[38;5;4m<run-root>/smoke\u001b[0m$ ","revision":0,"truncated":false}}}
+-- ms=0 frames=1 closedByServer=true
+$ pane.read with target instead of pane_id {"target":"w1:p1","lines":5,"source":"visible"}
+<- {"id":"r11","error":{"code":"invalid_request","message":"invalid request: missing field `pane_id` at line 1 column 90"}}
+-- ms=0 frames=1 closedByServer=true

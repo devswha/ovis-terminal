@@ -1,0 +1,140 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/*",
+    "scripts/hygiene",
+    "conformance",
+    "bench",
+    "probes",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+# Raised from the 2024-edition floor (1.85) because rusqlite 0.41 needs 1.89.
+rust-version = "1.89"
+license = "MIT"
+authors = ["devswha"]
+repository = "https://github.com/devswha/ovis-terminal"
+homepage = "https://github.com/devswha/ovis-terminal"
+readme = "README.md"
+keywords = ["terminal", "pty", "agents", "json-rpc", "runtime"]
+categories = ["command-line-utilities", "development-tools"]
+publish = false
+
+[workspace.dependencies]
+# Workspace crates: members write `ovis-terminal-protocol = { workspace = true }`.
+ovis-terminal-protocol = { path = "crates/ovis-terminal-protocol" }
+ovis-terminal-store = { path = "crates/ovis-terminal-store" }
+ovis-terminal-vt = { path = "crates/ovis-terminal-vt" }
+ovis-terminal-holder = { path = "crates/ovis-terminal-holder" }
+ovis-terminal-core = { path = "crates/ovis-terminal-core" }
+ovis-terminal-agent = { path = "crates/ovis-terminal-agent" }
+ovis-terminal-agent-adapters = { path = "crates/ovis-terminal-agent-adapters" }
+ovis-terminal-services = { path = "crates/ovis-terminal-services" }
+ovis-terminal-remote = { path = "crates/ovis-terminal-remote" }
+ovis-terminal-authz = { path = "crates/ovis-terminal-authz" }
+ovis-terminal-server = { path = "crates/ovis-terminal-server" }
+ovis-terminal-cli = { path = "crates/ovis-terminal-cli" }
+
+# One version per third-party dependency (plan: Must have). Members opt in with
+# `name = { workspace = true }`; unused entries do not enter Cargo.lock.
+alacritty_terminal = "0.26"
+insta = "1.49"
+portable-pty = "0.9"
+proc-macro2 = { version = "1.0", features = ["span-locations"] }
+proptest = "1.12"
+rusqlite = { version = "0.41", features = ["bundled"] }
+schemars = "1.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+syn = { version = "3.0", features = ["full", "visit"] }
+thiserror = "2.0"
+tokio = { version = "1.54", features = ["full"] }
+tracing = "0.1"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_docs = "warn"
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+unused_must_use = "deny"
+elided_lifetimes_in_paths = "warn"
+non_ascii_idents = "deny"
+trivial_numeric_casts = "warn"
+unused_lifetimes = "warn"
+single_use_lifetimes = "warn"
+# every custom cfg is declared here; a typo like cfg(feture = "x") fails the build
+unexpected_cfgs = { level = "deny", check-cfg = ["cfg(loom)"] }
+
+[workspace.lints.clippy]
+# Groups
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+
+# Hard denies - turn warnings into errors for sharp tools
+undocumented_unsafe_blocks = "deny"
+multiple_unsafe_ops_per_block = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+indexing_slicing = "deny"
+mem_forget = "deny"
+arithmetic_side_effects = "warn"
+cast_possible_truncation = "warn"
+cast_possible_wrap = "warn"
+cast_precision_loss = "warn"
+cast_sign_loss = "warn"
+as_underscore = "deny"
+as_ptr_cast_mut = "deny"
+ptr_as_ptr = "warn"
+borrow_as_ptr = "warn"
+fn_to_numeric_cast_any = "deny"
+clone_on_ref_ptr = "warn"
+mutex_atomic = "warn"
+rc_buffer = "warn"
+rc_mutex = "warn"
+exit = "warn"
+allow_attributes = "deny"                 # silence with #[expect(lint, reason)], never #[allow]
+allow_attributes_without_reason = "deny"
+let_underscore_must_use = "deny"          # `let _ = fallible()` drops the error
+dbg_macro = "warn"
+print_stderr = "warn"
+print_stdout = "warn"
+use_debug = "warn"
+
+# Stylistic relaxations (project-wide opinions only)
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+
+# Restriction lints - opt-in soundness rails
+mod_module_files = "warn"      # prefer foo.rs over foo/mod.rs
+empty_drop = "warn"
+empty_structs_with_brackets = "warn"
+empty_enums = "warn"
+exhaustive_enums = "warn"      # public enums should consider #[non_exhaustive]
+exhaustive_structs = "warn"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
+debug = "line-tables-only"
+
+[profile.dev]
+opt-level = 0
+debug = true
+incremental = true
+codegen-units = 256
+
+[profile.miri]
+inherits = "test"
+opt-level = 1
+overflow-checks = true

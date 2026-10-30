@@ -1,0 +1,15 @@
+### events.subscribe, second subscribe on same connection, then trigger events
+subscribe ack: {"id":"sub1","result":{"type":"subscription_started"}}
+frames after second subscribe (expect no ack if ignored): 1
+$ pane.split {"pane_id":"w1:p1","direction":"down"}
+<- {"id":"r18","result":{"type":"pane_info","pane":{"pane_id":"w1:p3","terminal_id":"term_65f10d252c14d3","workspace_id":"w1","tab_id":"w1:t1","focused":false,"cwd":"<run-root>/smoke","foreground_cwd":"<run-root>/smoke","agent_status":"unknown","scroll":{"offset_from_bottom":0,"max_offset_from_bottom":0,"viewport_rows":18},"revision":0}}}
+-- ms=6 frames=1 closedByServer=true
+$ report_agent on B (second subscription target) {"pane_id":"w1:p2","agent":"smoke-agent","state":"working","source":"agent"}
+<- {"id":"r19","result":{"type":"ok"}}
+-- ms=1 frames=1 closedByServer=true
+$ report_agent on A (first subscription target) {"pane_id":"w1:p1","agent":"smoke-agent","state":"blocked","source":"agent"}
+<- {"id":"r20","result":{"type":"ok"}}
+-- ms=1 frames=1 closedByServer=true
+event frames total: 1 closed=true
+  ev0: {"id":"sub1","result":{"type":"subscription_started"}}
+TRAP CHECK: status event for A (first subscribe) received=false; for B (second subscribe on same conn) received=false

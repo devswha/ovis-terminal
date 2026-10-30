@@ -1,0 +1,22 @@
+### single events.subscribe (pane.created + status for A), then split + report_agent; measure latency
+ack: {"id":"sub9","result":{"type":"subscription_started"}}
+$ pane.split {"pane_id":"w1:p1","direction":"right"}
+<- {"id":"r21","result":{"type":"pane_info","pane":{"pane_id":"w1:p4","terminal_id":"term_65f10d27a99a44","workspace_id":"w1","tab_id":"w1:t1","focused":false,"cwd":"<run-root>/smoke","foreground_cwd":"<run-root>/smoke","agent_status":"unknown","scroll":{"offset_from_bottom":0,"max_offset_from_bottom":0,"viewport_rows":18},"revision":0}}}
+-- ms=6 frames=1 closedByServer=true
+$ pane.report_agent {"pane_id":"w1:p1","agent":"smoke-agent","state":"working","source":"agent"}
+<- {"id":"r22","result":{"type":"ok"}}
+-- ms=1 frames=1 closedByServer=true
+$ pane.focus {"pane_id":"w1:p2"}
+<- {"id":"r23","result":{"type":"pane_info","pane":{"pane_id":"w1:p2","terminal_id":"term_65f10d22c6f482","workspace_id":"w1","tab_id":"w1:t1","focused":true,"cwd":"<run-root>/smoke","foreground_cwd":"<run-root>/smoke","agent":"smoke-agent","terminal_title":"<user>@<host>: <run-root>/smoke","terminal_title_stripped":"<user>@<host>: <run-root>/smoke","agent_status":"working","scroll":{"offset_from_bottom":0,"max_offset_from_bottom":0,"viewport_rows":38},"revision":1}}}
+-- ms=1 frames=1 closedByServer=true
+frames=5
+  ev0 +0ms since split: {"id":"sub9","result":{"type":"subscription_started"}}
+  ev1 +100ms since split: {"data":{"pane":{"agent_status":"unknown","cwd":"<run-root>/smoke","focused":false,"foreground_cwd":"<run-root>/smoke","pane_id":"w1:p4","revision":0,"scroll":{"max_offset_from_bottom":0,"offset_from_bottom":0,"viewport_rows":18},"tab_id":"w1:t1","terminal_id":"term_65f10d27a99a4
+  ev2 +1605ms since split: {"data":{"agent":"smoke-agent","agent_status":"working","pane_id":"w1:p1","workspace_id":"w1"},"event":"pane.agent_status_changed"}
+  ev3 +1805ms since split: {"data":{"agent":"smoke-agent","agent_status":"unknown","pane_id":"w1:p1","workspace_id":"w1"},"event":"pane.agent_status_changed"}
+  ev4 +3009ms since split: {"data":{"pane_id":"w1:p2","type":"pane_focused","workspace_id":"w1"},"event":"pane_focused"}
+pane.created received=true status for A received=true focused received=true
+$ agent.get after report_agent working {"target":"w1:p1"}
+<- {"id":"r24","error":{"code":"agent_not_found","message":"agent target w1:p1 not found"}}
+-- ms=0 frames=1 closedByServer=true
+agent.get after report: {"code":"agent_not_found","message":"agent target w1:p1 not found"}
