@@ -1,4 +1,6 @@
-use std::{fmt, io};
+use std::io;
+
+use thiserror::Error;
 
 use super::serialize::serialize;
 use super::{FieldValue, TraceContext};
@@ -14,11 +16,15 @@ pub trait TelemetrySink {
 }
 
 /// Stable telemetry boundary failures.
+#[derive(Debug, Error)]
 #[non_exhaustive]
-#[derive(Debug)]
 pub enum TelemetryError {
     /// The configured sink rejected a record.
-    TelemetryIo(io::Error),
+    #[error("telemetry sink rejected a record")]
+    TelemetryIo(#[source] io::Error),
+    /// Encoding the structured record failed.
+    #[error("telemetry record serialization failed")]
+    TelemetrySerialization(#[source] serde_json::Error),
 }
 
 impl TelemetryError {
@@ -26,22 +32,15 @@ impl TelemetryError {
     pub const fn kind(&self) -> &'static str {
         match self {
             Self::TelemetryIo(_) => "telemetry_io",
+            Self::TelemetrySerialization(_) => "telemetry_serialize",
         }
     }
-}
 
-impl fmt::Display for TelemetryError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    /// Returns stable recovery guidance for the error kind.
+    pub const fn hint(&self) -> &'static str {
         match self {
-            Self::TelemetryIo(_) => formatter.write_str("telemetry sink rejected a record"),
-        }
-    }
-}
-
-impl std::error::Error for TelemetryError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::TelemetryIo(error) => Some(error),
+            Self::TelemetryIo(_) => "check sink path permissions and retry",
+            Self::TelemetrySerialization(_) => "inspect telemetry fields and retry",
         }
     }
 }
@@ -50,13 +49,14 @@ impl std::error::Error for TelemetryError {
 ///
 /// # Errors
 ///
-/// Returns [`TelemetryError::TelemetryIo`] when the injected sink rejects output.
+/// Returns [`TelemetryError::TelemetrySerialization`] when JSON encoding fails or
+/// [`TelemetryError::TelemetryIo`] when the injected sink rejects output.
 pub fn emit(
     sink: &mut impl TelemetrySink,
     context: &TraceContext,
     value: Option<FieldValue<'_>>,
 ) -> Result<(), TelemetryError> {
-    let record = serialize(context, value);
+    let record = serialize(context, value)?;
     sink.write_record(&record)
         .map_err(TelemetryError::TelemetryIo)
 }
@@ -67,7 +67,8 @@ pub fn emit(
 ///
 /// # Errors
 ///
-/// Returns [`TelemetryError::TelemetryIo`] when the injected sink rejects output.
+/// Returns [`TelemetryError::TelemetrySerialization`] when JSON encoding fails or
+/// [`TelemetryError::TelemetryIo`] when the injected sink rejects output.
 pub fn log_handled_error(
     sink: &mut impl TelemetrySink,
     context: &TraceContext,

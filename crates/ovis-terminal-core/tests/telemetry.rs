@@ -1,6 +1,7 @@
 //! Contract tests for redaction, structured correlation, and sink failures.
 
 use std::io;
+use std::str::FromStr as _;
 
 use ovis_terminal_core::telemetry::{
     Counter, Counters, FieldValue, Outcome, TelemetryError, TelemetrySink, TraceContext, emit,
@@ -42,20 +43,71 @@ fn happy() {
 
     emit(&mut sink, &context, Some(FieldValue::Text("hostile\ntext"))).expect("sink accepts");
 
-    let record = String::from_utf8_lossy(
-        sink.records
-            .first()
-            .expect("emit writes one captured record"),
+    let record = sink
+        .records
+        .first()
+        .expect("emit writes one captured record");
+    let fields: serde_json::Value = serde_json::from_slice(record).expect("record is JSON");
+    assert_eq!(
+        fields.get("request").and_then(serde_json::Value::as_str),
+        Some("request-7")
     );
-    assert!(record.contains("\"request\":\"request-7\""));
-    assert!(record.contains("\"operation\":\"operation-9\""));
-    assert!(record.contains("\"principal\":\"principal-a\""));
-    assert!(record.contains("\"machine\":\"machine-b\""));
-    assert!(record.contains("\"runtime\":\"runtime-c\""));
-    assert!(record.contains("\"resource\":\"pane-d\""));
-    assert!(record.contains("\"sequence\":42"));
-    assert!(record.contains("\"outcome\":\"success\""));
-    assert!(record.contains("hostile\\ntext"));
+    assert_eq!(
+        fields.get("operation").and_then(serde_json::Value::as_str),
+        Some("operation-9")
+    );
+    assert_eq!(
+        fields.get("principal").and_then(serde_json::Value::as_str),
+        Some("principal-a")
+    );
+    assert_eq!(
+        fields.get("machine").and_then(serde_json::Value::as_str),
+        Some("machine-b")
+    );
+    assert_eq!(
+        fields.get("runtime").and_then(serde_json::Value::as_str),
+        Some("runtime-c")
+    );
+    assert_eq!(
+        fields.get("resource").and_then(serde_json::Value::as_str),
+        Some("pane-d")
+    );
+    assert_eq!(
+        fields.get("sequence").and_then(serde_json::Value::as_str),
+        Some("42")
+    );
+    assert_eq!(
+        fields.get("outcome").and_then(serde_json::Value::as_str),
+        Some("success")
+    );
+    assert_eq!(
+        fields.get("value").and_then(serde_json::Value::as_str),
+        Some("hostile\ntext")
+    );
+}
+
+#[test]
+fn maximum_sequence_round_trips_as_decimal_string() {
+    let mut sink = CaptureSink::default();
+    let context = TraceContext::default().with_sequence(u64::MAX);
+
+    emit(&mut sink, &context, None).expect("sink accepts");
+
+    let record = sink
+        .records
+        .first()
+        .expect("emit writes one captured record");
+    let value: serde_json::Value = serde_json::from_slice(record).expect("record is JSON");
+    let sequence = value
+        .get("sequence")
+        .and_then(serde_json::Value::as_str)
+        .expect("sequence is a decimal string");
+
+    assert_eq!(sequence, "18446744073709551615");
+    assert_eq!(
+        u64::from_str(sequence).expect("u64 sequence parses"),
+        u64::MAX
+    );
 }
 
 #[test]
@@ -90,8 +142,11 @@ fn failure() {
 fn invalid_sink_returns_typed_error() {
     let result = emit(&mut RejectSink, &TraceContext::default(), None);
 
-    assert!(matches!(result, Err(TelemetryError::TelemetryIo(_))));
-    assert_eq!(result.err().map(|error| error.kind()), Some("telemetry_io"));
+    let error = result.expect_err("sink rejects the record");
+    assert!(matches!(&error, TelemetryError::TelemetryIo(_)));
+    assert_eq!(error.kind(), "telemetry_io");
+    assert_eq!(error.hint(), "check sink path permissions and retry");
+    assert!(std::error::Error::source(&error).is_some());
 }
 
 #[test]
@@ -100,7 +155,7 @@ fn oversized_field_is_bounded() {
     let value = "x".repeat(1024);
     emit(
         &mut sink,
-        &TraceContext::default().with_resource(value),
+        &TraceContext::default().with_resource(value.into()),
         None,
     )
     .expect("sink accepts");

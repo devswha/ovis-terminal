@@ -8,6 +8,9 @@ mod counters;
 mod serialize;
 mod sink;
 
-pub use context::{FieldValue, Outcome, TraceContext};
+pub use context::{
+    FieldValue, MachineId, OperationId, Outcome, PrincipalId, RequestId, ResourceId, RuntimeId,
+    TraceContext,
+};
 pub use counters::{Counter, Counters};
 pub use sink::{TelemetryError, TelemetrySink, emit, log_handled_error};

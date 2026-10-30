@@ -1,117 +1,54 @@
+use serde_json::{Map, Value};
+
+use super::sink::TelemetryError;
 use super::{FieldValue, TraceContext};
 
 const MAX_FIELD_CHARS: usize = 256;
 
-pub(super) fn serialize(context: &TraceContext, value: Option<FieldValue<'_>>) -> Vec<u8> {
-    let mut fields = JsonFields {
-        output: String::from("{"),
-        first: true,
-    };
-    for (key, value) in [
-        ("request", context.request.as_deref()),
-        ("operation", context.operation.as_deref()),
-        ("principal", context.principal.as_deref()),
-        ("machine", context.machine.as_deref()),
-        ("runtime", context.runtime.as_deref()),
-        ("resource", context.resource.as_deref()),
-    ] {
-        if let Some(value) = value {
-            fields.string(key, value);
-        }
+pub(super) fn serialize(
+    context: &TraceContext,
+    value: Option<FieldValue<'_>>,
+) -> Result<Vec<u8>, TelemetryError> {
+    let mut fields = Map::new();
+    if let Some(request) = &context.request {
+        insert_bounded_text(&mut fields, "request", request.as_ref());
+    }
+    if let Some(operation) = &context.operation {
+        insert_bounded_text(&mut fields, "operation", operation.as_ref());
+    }
+    if let Some(principal) = &context.principal {
+        insert_bounded_text(&mut fields, "principal", principal.as_ref());
+    }
+    if let Some(machine) = &context.machine {
+        insert_bounded_text(&mut fields, "machine", machine.as_ref());
+    }
+    if let Some(runtime) = &context.runtime {
+        insert_bounded_text(&mut fields, "runtime", runtime.as_ref());
+    }
+    if let Some(resource) = &context.resource {
+        insert_bounded_text(&mut fields, "resource", resource.as_ref());
     }
     if let Some(sequence) = context.sequence {
-        fields.number("sequence", sequence);
+        fields.insert("sequence".to_owned(), Value::String(sequence.to_string()));
     }
     if let Some(outcome) = context.outcome {
-        fields.string("outcome", outcome.field());
+        fields.insert(
+            "outcome".to_owned(),
+            Value::String(outcome.field().to_owned()),
+        );
     }
     if let Some(value) = value {
-        let rendered = match value {
-            FieldValue::Text(text) => bounded(text),
-            FieldValue::Credential(_) | FieldValue::SecretInput(_) => "[REDACTED]".to_owned(),
-        };
-        fields.string("value", &rendered);
-    }
-    fields.output.push('}');
-    fields.output.into_bytes()
-}
-
-struct JsonFields {
-    output: String,
-    first: bool,
-}
-
-impl JsonFields {
-    fn string(&mut self, key: &str, value: &str) {
-        self.separator();
-        self.output.push('"');
-        self.output.push_str(key);
-        self.output.push_str("\":\"");
-        self.output.push_str(&escape(&bounded(value)));
-        self.output.push('"');
-    }
-
-    fn number(&mut self, key: &str, value: u64) {
-        self.separator();
-        self.output.push('"');
-        self.output.push_str(key);
-        self.output.push_str("\":");
-        self.output.push_str(&value.to_string());
-    }
-
-    fn separator(&mut self) {
-        if !self.first {
-            self.output.push(',');
-        }
-        self.first = false;
-    }
-}
-
-fn bounded(value: &str) -> String {
-    value.chars().take(MAX_FIELD_CHARS).collect()
-}
-
-fn escape(value: &str) -> String {
-    let mut escaped = String::with_capacity(value.len());
-    for character in value.chars() {
-        match character {
-            '"' => escaped.push_str("\\\""),
-            '\\' => escaped.push_str("\\\\"),
-            '\n' => escaped.push_str("\\n"),
-            '\r' => escaped.push_str("\\r"),
-            '\t' => escaped.push_str("\\t"),
-            character if character.is_control() => {
-                let code = u32::from(character);
-                escaped.push_str("\\u");
-                escaped.push(hex_digit((code >> 12) & 0xf));
-                escaped.push(hex_digit((code >> 8) & 0xf));
-                escaped.push(hex_digit((code >> 4) & 0xf));
-                escaped.push(hex_digit(code & 0xf));
+        match value {
+            FieldValue::Text(text) => insert_bounded_text(&mut fields, "value", text),
+            FieldValue::Credential(_) | FieldValue::SecretInput(_) => {
+                fields.insert("value".to_owned(), Value::String("[REDACTED]".to_owned()));
             }
-            character => escaped.push(character),
         }
     }
-    escaped
+    serde_json::to_vec(&Value::Object(fields)).map_err(TelemetryError::TelemetrySerialization)
 }
 
-const fn hex_digit(value: u32) -> char {
-    match value {
-        0 => '0',
-        1 => '1',
-        2 => '2',
-        3 => '3',
-        4 => '4',
-        5 => '5',
-        6 => '6',
-        7 => '7',
-        8 => '8',
-        9 => '9',
-        10 => 'a',
-        11 => 'b',
-        12 => 'c',
-        13 => 'd',
-        14 => 'e',
-        15 => 'f',
-        _ => '?',
-    }
+fn insert_bounded_text(fields: &mut Map<String, Value>, key: &str, text: &str) {
+    let value: String = text.chars().take(MAX_FIELD_CHARS).collect();
+    fields.insert(key.to_owned(), Value::String(value));
 }

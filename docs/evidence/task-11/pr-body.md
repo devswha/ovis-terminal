@@ -4,17 +4,17 @@
 
 ## After
 
-`cargo test -p ovis-terminal-core --test telemetry happy -- --exact --nocapture` — exit 0, 1 assertion-bearing test passed. The structured sink record asserts request, operation, principal, machine, runtime, resource, sequence, and outcome fields; hostile text remains escaped data.
+`cargo test -p ovis-terminal-core --test telemetry` — exit 0, 6 passed. `bash scripts/check.sh` — exit 0; workspace nextest ran 17 tests, 17 passed and 0 skipped; Clippy, rustfmt, doctests and hygiene checks passed. Logs: `docs/evidence/task-11/check.log` and `docs/evidence/task-11/tests.log`.
 
-`cargo test -p ovis-terminal-core --test telemetry failure -- --exact --nocapture` — exit 0, 1 assertion-bearing test passed. `SECRET_TEST_VALUE` and `secret-input-payload` are absent from captured records.
+`cargo test -p ovis-terminal-core --test telemetry happy -- --exact --nocapture` — exit 0; parsed JSON assertions verify request, operation, principal, machine, runtime, resource and outcome. Sequence is a JSON string, and hostile text round-trips as data.
 
-`cargo test -p ovis-terminal-core --test telemetry invalid_sink_returns_typed_error -- --exact --nocapture` — exit 0; sink failure is asserted as `telemetry_io`.
+`cargo test -p ovis-terminal-core --test telemetry maximum_sequence_round_trips_as_decimal_string -- --exact --nocapture` — exit 0; parsed sequence `"18446744073709551615"` round-trips through `u64::from_str` to `u64::MAX`.
 
-`cargo nextest run -p ovis-terminal-core` — exit 0, 5 passed, 0 skipped.
+`cargo test -p ovis-terminal-core --test telemetry failure -- --exact --nocapture` — exit 0; `SECRET_TEST_VALUE` and `secret-input-payload` are absent from captured records.
 
-`cargo clippy -p ovis-terminal-core --all-targets -- -D warnings` — exit 0.
+`cargo test -p ovis-terminal-core --test telemetry invalid_sink_returns_typed_error -- --exact --nocapture` — exit 0; `TelemetryError::TelemetryIo`, kind `telemetry_io`, the recovery hint and the underlying source are asserted.
 
-`bash scripts/check.sh` — exit 0, all steps passed; workspace nextest ran 16 tests with 16 passed, 0 skipped. Evidence: `docs/evidence/task-11/check.log` and `docs/evidence/task-11/tests.log`.
+The telemetry API uses distinct `RequestId`, `OperationId`, `PrincipalId`, `MachineId`, `RuntimeId`, and `ResourceId` types. `TelemetryError` derives `thiserror::Error` and exposes stable `kind()` and `hint()` accessors.
 
 `cargo run --locked --quiet -p ovis-terminal-cli -- --version` — stdout `ovis-terminal 0.1.0`, exit 0. No telemetry diagnostics were written to protocol/CLI stdout.
 
@@ -24,9 +24,10 @@ The requested assembled binary/socket transcript was not produced: `conformance/
 
 ## QA
 
-- Happy: correlated fields were asserted in the sink record and hostile field content remained escaped data; exact named test passed.
+- Happy: correlated fields were parsed from valid JSON; hostile field content remained one value; exact named test passed.
+- Precision: maximum `u64` sequence was emitted and parsed as the exact decimal string.
 - Failure: credential and secret-input sentinels were absent from captured records; exact named test passed.
-- Invalid sink: typed `telemetry_io` was asserted without a panic; exact test passed.
+- Invalid sink: typed `telemetry_io`, stable recovery hint and preserved source were asserted without a panic.
 - Stdout: CLI version output was exactly the success line; exit 0.
 - Real-socket conformance: unavailable until todo 21 registers the runner scenarios.
 
