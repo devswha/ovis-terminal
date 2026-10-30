@@ -1,0 +1,77 @@
+Plan todo 4, wave 3. Closes GAP-018, GAP-019, GAP-139, GAP-140; delivers IDEAL-008, IDEAL-112, IDEAL-113.
+
+## Before
+
+RT-HD-12, GAP-018, GAP-019, GAP-139, GAP-140. Baseline `docs/evidence/baseline/smoke/herdr-h10-errors.log:9` (original `/tmp/ulw-ovis-yCJzPH/evidence/smoke/herdr-h10-errors.log:9`; the plan's `docs/evidence/baseline/herdr-h10-errors.log` path lives under `smoke/` in the repo):
+
+```text
+<- {"id":"r29","error":{"code":"invalid_request","message":"invalid request: invalid type: string \"many\", expected u32 at line 1 column 96"}}
+```
+
+A wrong param type came back as `invalid_request` with serde prose and no field path. herdr also has no single versioned schema for events/channels/limits (GAP-139), no same-generation additive promise (GAP-140), reuses request/response names (GAP-019) and rejects unknown enum values (GAP-018).
+
+## After
+
+Linux 7.0.0-38-generic x86_64, rustc 1.99.1 (58cf8f9c3 2026-10-13). Logs in `docs/evidence/task-4/`.
+
+| Command | Result | Log |
+|---|---|---|
+| `bash scripts/check.sh` | exit 0: fmt, workspace clippy `-D warnings`, nextest 160 passed / 1 skipped, doctests, hygiene 0 violations in 187 files, manifests, JSON | `check-script.log` |
+| `cargo nextest run -p ovis-terminal-protocol` | exit 0, 62 passed | `acceptance-nextest.log` |
+| `cargo clippy -p ovis-terminal-protocol --all-targets -- -D warnings` | exit 0 | `acceptance-clippy.log` |
+| `cargo test -p ovis-terminal-protocol --test schema happy -- --exact --nocapture` | exit 0, 1 passed, 5 filtered | `qa-happy.log` |
+| `cargo test -p ovis-terminal-protocol --test schema failure -- --exact --nocapture` | exit 0, 1 passed, 5 filtered | `qa-failure.log` |
+| `cargo run --locked --quiet -p ovis-terminal-protocol --bin openrpc -- check schema/ovis-terminal.openrpc.json` | exit 0, `{"bytes":494525,"fresh":"schema/ovis-terminal.openrpc.json"}` | `openrpc-check.log` |
+| `cargo run --locked --quiet -p ovis-terminal-protocol --bin openrpc -- compat schema/released.openrpc.json` | exit 0, `{"compatible_with":"schema/released.openrpc.json"}` | `openrpc-compat.log` |
+
+### DEFERRED VERIFICATION (runner lands in Todo 21)
+
+```text
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-4 --isolated --case happy --evidence "$ATTEMPT_DIR/task-4-ovis-terminal-v1.json"
+conformance: no scenarios are registered in this build (protocol crate ovis-terminal-protocol)
+exit=2
+```
+
+DEFERRED-BY-PLAN (plan line 275): no real-socket runner (todo 21) or assembled binary serving `rpc.discover` (todo 31) exists yet. This exit-2 attempt is not a conformance pass, and no `ovis-terminal` socket transcript is claimed. `conformance/scenarios/part-a/task-4.json` records the steps and adversarial cases the runner will execute.
+
+## What landed
+
+- `crates/ovis-terminal-protocol/src/schema/`: serde + schemars types for every request, reply, event, error, channel, limit and capability. Inputs are closed (`deny_unknown_fields`); outputs are additive. Partitioned by namespace (`methods/{server,terminal,terminal_read,input,attach,events,status,agent,template,layout,worktree,plugin,doc,machine,service,update,discovery}.rs`); every file is at most 250 pure LOC.
+- Catalog: 99 methods, including thin layout (`layout.get/edit`, `selection.set`), input, agent, service and remote (`machine.*`) namespaces, plus 34 event types, the `event`/`heartbeat`/`missed` notifications, 123 error kinds (11 envelope + 112 domain), the framed-channel layout (read from the wire codec), limits with v1 defaults, and capabilities.
+- `openrpc_document()` / `render_openrpc()` are deterministic. `verify_document` rejects duplicate method/event/notification names, dangling `$ref`s and schemars-disambiguated (digit-suffixed) definition names.
+- `schema/ovis-terminal.openrpc.json` (generated) and `schema/released.openrpc.json` (the generation-1 baseline, identical at this commit). The JSON data stays outside Rust source.
+- `check_compatibility` / `breaking_changes` return typed `Break { path, rule }` for: removed method, param or event; newly required param or input property; narrowed input type or values; removed input property or union variant; input closed; output type changed or lost; output property removed or no longer required; closed output enum grew.
+- Output enums are `OpenEnum<T>` (`Known(T) | Unknown(String)`, marked `x-ovis-open-enum`), so a newer value decodes as `Unknown` instead of failing (GAP-018).
+- `decode_params::<P>` decodes once, with the field path (`serde_path_to_error`), into `ParamsError` (kind, hint, `#[source]`), which converts to `BoundaryError::InvalidParams`.
+- `advertised_methods(registered)` returns only methods with a registered handler, in catalog order, and refuses uncatalogued or duplicate handlers. `hello` therefore never advertises a specified-only method.
+- `src/bin/openrpc.rs`: `write`/`check`/`compat`. Success prints JSON to stdout. Failures print typed JSON (`kind`, `hint`, `breaks`) to stderr with exit 1 (exit 2 for usage errors).
+
+## QA
+
+Happy test (`qa-happy.log`): renders the document twice and asserts byte equality, then equality with the checked-in `schema/ovis-terminal.openrpc.json`. It runs `verify_document` (unique names, every `$ref` resolves, no colliding definition names), asserts the presence of methods from every namespace and the stream kinds `DATA, CREDIT, CLOSE`, and runs `check_compatibility` against the released baseline. Output: `methods=99 events=34 schemas=304 bytes=494525`, `test happy ... ok`.
+
+Failure test (`qa-failure.log`): injects `schema/fixtures/breaking-required-param.json` (a new required `pane_id` param on `terminal.get`) and asserts `kind() == "schema_incompatible"` with a `required_param_added` break at `terminal.get(pane_id)`. It then decodes `{"target":{"pane_id":"p1"}}` as `TerminalGetParams` and asserts `invalid_params`, `field_path == "params.target.pane_id"`, JSON-RPC -32602 after conversion, and a dispatch counter still at 0. Output: `injected terminal.get(pane_id): schema_incompatible -> required_param_added`, `unknown target property: invalid_params at Some("params.target.pane_id")`, `test failure ... ok`.
+
+## Adversarial
+
+- **Malformed input / closed schema:** proptests reject random unknown top-level and target fields at their exact paths (`schema_params.rs`). Two-key targets are rejected at `params.target`. The herdr baseline case (`"limit":"many"`) gives `invalid_params` at `params.limit` and the wire data contains no serde prose (`wrong_type_names_the_field_without_serde_prose`). Unknown input enum values are rejected (`input_enums_stay_closed`).
+- **Stale state / released baseline:** `openrpc compat` against a baseline that has an extra method exits 1 with `{"kind":"schema_incompatible","breaks":[{"path":"pane.get","rule":"method_removed"}]}` (`adversarial-removed-method.log`). `schema_compat.rs` edits the real document and asserts each rule; proptest asserts that every randomly removed method is reported exactly, and that random optional params never break.
+- **Misleading success:** `openrpc check` on a file differing by one byte exits 1 with `schema_stale` (`adversarial-stale.log`). The happy test fails if the checked-in document is stale. `verify_document` rejects dangling refs, duplicate names and colliding names (three tests). A mutation check (disabling the newly-required-input rule) made `newly_required_input_is_breaking` fail; the source was restored.
+
+## Contract checklist
+
+1. **Decimal-string counters:** `EventSeq`, `Revision`, `ByteOffset`, `ByteCount`, `LeaseEpoch`, `Incarnation`, `ProtocolGeneration`, `TimestampMs`, `RecordVersion`, `LineNumber`, `TurnNumber` and `DurationMs` wrap `DecimalU64` and are published as `{"type":"string","pattern":"^(0|[1-9][0-9]{0,19})$"}`. Tests: `u64::MAX` round trip, a numeric value rejected at `params.from_line`, and a proptest round trip of any `u64` revision.
+2. **Typed boundary errors:** `SchemaError` and `ParamsError` (plus the bin's `CliError`) derive `thiserror::Error` and `Debug`, with `kind()`/`hint()` as static tokens and `#[source]` on `serde_json::Error`. Display strings do not repeat the kind token. Compat breaks are typed (`BreakRule` with `token()`), not strings.
+3. **Semantic newtypes:** 30+ distinct string identity types (terminal, lease, stream, subscription, prompt, agent, workspace/tab/pane/split node, repository/checkout, plugin/run, update, and so on). `ProcessPid(u32)`, and the counters above. `Option` is used only where absence is a real state.
+4. **Behavior tests:** schema regeneration, compat rules on the real document, decode rejections with typed kinds and paths, advertisement filtering, stream layout checked against `Frame::encode`, and limit defaults checked against `wire::MAX_FRAME_PAYLOAD`. Proptests cover unknown-field rejection, counter round trips, removed-method reporting and optional-param additivity.
+5. **No suppression or placeholders:** no `#[allow]` and no TODO. Two item-level `#[expect]`s, each with a reason: `exhaustive_enums` on `OpenEnum` (Known/Unknown is the complete contract) and `empty_structs_with_brackets` on `NoParams` (it must decode from `{}`).
+6. **Evidence:** the claims above are limited to what the tests assert. Conformance is DEFERRED-BY-PLAN, with the exit-2 attempt recorded verbatim.
+
+## Risks
+
+- `errors::ErrorKind` (todo 3's scope) still has the 11 envelope kinds and a closed `Deserialize`. The 112 domain kinds are published here (`DomainErrorKind`, `x-error-kinds`, and `ErrorData.kind` as an open enum), but the runtime `BoundaryError` cannot emit them until a later lane extends `ErrorKind`, and a Rust client decoding `ErrorData` will reject unknown kinds until `ErrorKind` gains an unknown variant.
+- All wire structs are `#[non_exhaustive]` (the workspace denies `exhaustive_structs`), so other crates must decode result values or use constructors added later. Server-side result construction lands with each method's owning todo.
+- Field shapes follow ultrabrain-spec-full sections 1.1–1.11 plus the plan's layout/worktree/plugin/update/service additions. Later owning todos may add optional fields additively. Any breaking change must refresh `schema/released.openrpc.json` deliberately, which the gate makes visible.
+- Dependency seams: `schemars 1.2` (already pinned) and `serde_path_to_error 0.1` (one new `[workspace.dependencies]` line in the root `Cargo.toml`). `Cargo.lock` gained dyn-clone, ref-cast(-impl), schemars(_derive), serde_derive_internals and serde_path_to_error, all MIT/Apache-2.0.
+- Tests are split across `tests/schema.rs` (named QA targets) and `schema_catalog.rs`, `schema_compat.rs` and `schema_params.rs` to meet the 250-LOC cap (same precedent as todo 3). The compat rules independently implement the herdr-core design already covered by `THIRD_PARTY_NOTICES.md`; no upstream code is mirrored.
+- The missing-required-field path is the containing object (`params`), a `serde_path_to_error` limitation.

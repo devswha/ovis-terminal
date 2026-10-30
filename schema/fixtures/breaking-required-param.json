@@ -1,0 +1,16 @@
+{
+  "description": "Adds a new required request field to a released method; the released-baseline gate must reject it as schema_incompatible.",
+  "method": "terminal.get",
+  "inject_param": {
+    "name": "pane_id",
+    "required": true,
+    "schema": {
+      "type": "string"
+    }
+  },
+  "expect": {
+    "kind": "schema_incompatible",
+    "rule": "required_param_added",
+    "path": "terminal.get(pane_id)"
+  }
+}
