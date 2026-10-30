@@ -1,0 +1,47 @@
+OS: Linux 7.0.0-38-generic x86_64
+
+$ cargo test -p ovis-terminal-core --test telemetry
+running 6 tests
+test counter_values_saturate_at_their_bound ... ok
+test failure ... ok
+test happy ... ok
+test invalid_sink_returns_typed_error ... ok
+test maximum_sequence_round_trips_as_decimal_string ... ok
+test oversized_field_is_bounded ... ok
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+exit: 0
+
+$ cargo test -p ovis-terminal-core --test telemetry happy -- --exact --nocapture
+running 1 test
+test happy ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out
+exit: 0
+Parsed JSON assertions cover request, operation, principal, machine, runtime, resource, decimal-string sequence and outcome; hostile text round-trips as a single value.
+
+$ cargo test -p ovis-terminal-core --test telemetry failure -- --exact --nocapture
+running 1 test
+test failure ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out
+exit: 0
+Assertions verified neither SECRET_TEST_VALUE nor secret-input-payload appeared in captured sink records.
+
+$ cargo test -p ovis-terminal-core --test telemetry invalid_sink_returns_typed_error -- --exact --nocapture
+running 1 test
+test invalid_sink_returns_typed_error ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out
+exit: 0
+The assertion matched TelemetryError::TelemetryIo, kind telemetry_io, its recovery hint, and a preserved source error.
+
+$ cargo test -p ovis-terminal-core --test telemetry maximum_sequence_round_trips_as_decimal_string -- --exact --nocapture
+running 1 test
+test maximum_sequence_round_trips_as_decimal_string ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out
+exit: 0
+The emitted JSON sequence parsed as &str "18446744073709551615"; u64::from_str returned u64::MAX exactly.
+
+The telemetry boundary uses distinct RequestId, OperationId, PrincipalId, MachineId, RuntimeId and ResourceId types with From, AsRef, and Display implementations.
+TelemetryError uses thiserror::Error with source-preserving variants and stable kind() / hint() accessors.
+
+Conformance runner note:
+Not run. conformance/src/main.rs states that no scenarios are registered until plan todo 21.
+The requested real-socket transcript therefore remains unverified at this wave.

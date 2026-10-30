@@ -2,7 +2,7 @@ use std::error::Error;
 
 use super::{ConnectionDecoder, FeedOutcome, WireMessage};
 use crate::wire::{
-    Channel, Frame, FrameKind, FRAME_HEADER_LEN, MAX_FRAME_PAYLOAD, MAX_READY_BYTES,
+    Channel, FRAME_HEADER_LEN, Frame, FrameKind, MAX_FRAME_PAYLOAD, MAX_READY_BYTES,
     MAX_READY_RECORDS,
 };
 

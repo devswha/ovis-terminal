@@ -1,0 +1,56 @@
+{
+  "scenario": "part-a/task-8",
+  "todo": 8,
+  "kind": "component QA (cargo test); the conformance socket runner (todo 21) does not exist yet",
+  "platform": [
+    "Linux 7.0.0-38-generic x86_64",
+    "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+    "sqlite_version via libsqlite3-sys: version = \"0.39.1\"",
+    "bundled SQLITE_VERSION        \"3.54.1\""
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "ovis-terminal-store",
+        "--test",
+        "transactions",
+        "happy",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "exit": 0,
+      "observed": [
+        "reopened after crash: revision=1 resource=Live { version: Version(1), value: Payload([118, 49]), revision: Revision(1) } receipt=Found { revision: Revision(1), result: Payload([111, 112, 45, 49]) }",
+        "cas: committed=CommitReceipt { revision: Revision(2), first_event: Revision(2), versions: [(ResourceKey { kind: \"doc\", id: \"app\" }, Version(2))] } conflict.kind=conflict resource=Live { version: Version(2), value: Payload([118, 50]), revision: Revision(2) }",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.16s"
+      ]
+    },
+    {
+      "case": "failure",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "ovis-terminal-store",
+        "--test",
+        "transactions",
+        "failure",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "exit": 0,
+      "observed": [
+        "Header: kind=store_corrupted hint=inspect the quarantined database and WAL, then rebuild_after_quarantine starts an empty store that keeps this evidence evidence=RecoveryEvidence { id: \"1793385736689-00\", cause: CorruptHeader, location: \"/tmp/ovis-store-failure-3157073-0/quarantine/1793385736689-00\", preserved: [\"state.db\"], detected_at_unix_ms: Some(1793385736689), flags: RecoveryFlags { material: MovedToQuarantine, process_survival: Unknown, relaunch: RequiresIndependentEvidence } }",
+        "FutureSchema: kind=store_unsupported hint=open the store with the newer build that wrote it; the original stays in place and a copy is in quarantine evidence=RecoveryEvidence { id: \"1793385736694-00\", cause: UnsupportedSchema { found: 999, supported: 1 }, location: \"/tmp/ovis-store-failure-3157073-1/quarantine/1793385736694-00\", preserved: [\"state.db\"], detected_at_unix_ms: Some(1793385736694), flags: RecoveryFlags { material: CopiedOriginalKept, process_survival: Unknown, relaunch: RequiresIndependentEvidence } }",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.01s"
+      ]
+    }
+  ],
+  "mutation_probes": "mutation-probes.log: 4 mutants, 4 killed"
+}
