@@ -2,9 +2,11 @@
 //! SIGHUP, a missing executable, exhausted descriptors, a missing working
 //! directory and a broken socket endpoint.
 
-use std::io;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::sync::mpsc;
+use std::time::{Duration, Instant};
+use std::{io, thread};
 
 use ovis_terminal_holder::protocol::{FrameDecoder, Message, SpawnFailureKind};
 use ovis_terminal_probes::platform::{
@@ -14,31 +16,63 @@ use portable_pty::CommandBuilder;
 
 use crate::{BOUND, ScratchDir, assert_spawn_failure_is_typed, record};
 
+const STALL_THREADS: &str = "probe-stall";
 const MISSING_DIR: &str = "/nonexistent/ovis-probe-cwd";
 
-/// Threads of this test process whose name starts with `probe-stall`; on
-/// Linux the kernel exposes each thread's name under `/proc/self/task`.
-fn stall_threads() -> Option<usize> {
+/// How long a joined thread may linger in `/proc/self/task`: `pthread_join`
+/// returns once the kernel clears the child's tid, slightly before the kernel
+/// removes the task entry.
+const TEARDOWN_DEADLINE: Duration = Duration::from_secs(2);
+
+/// Names of this test process's threads that start with `prefix`; on Linux the
+/// kernel exposes each thread's name under `/proc/self/task`. `None` where
+/// that directory does not exist.
+fn thread_names(prefix: &str) -> Option<Vec<String>> {
     let tasks = std::fs::read_dir("/proc/self/task").ok()?;
     Some(
         tasks
-            .map(|task| std::fs::read_to_string(task.unwrap().path().join("comm")).unwrap())
-            .filter(|name| name.starts_with("probe-stall"))
-            .count(),
+            .filter_map(|task| std::fs::read_to_string(task.ok()?.path().join("comm")).ok())
+            .map(|name| name.trim_end().to_owned())
+            .filter(|name| name.starts_with(prefix))
+            .collect(),
     )
+}
+
+/// Waits until at most `baseline` threads named `prefix…` remain.
+///
+/// # Errors
+///
+/// The names still present when `deadline` passes; a thread that never exits
+/// is never forgiven.
+fn await_threads_at_most(
+    prefix: &str,
+    baseline: usize,
+    deadline: Duration,
+) -> Result<(), Vec<String>> {
+    let started = Instant::now();
+    loop {
+        let Some(names) = thread_names(prefix) else {
+            return Ok(());
+        };
+        if names.len() <= baseline {
+            return Ok(());
+        }
+        if started.elapsed() >= deadline {
+            return Err(names);
+        }
+        thread::yield_now();
+    }
 }
 
 /// The blocked writer runs in a fixture subprocess; the probe must return with
 /// no thread, fixture or program left behind.
 fn unread_input_stays_killable() {
-    let threads_before = stall_threads();
+    let threads_before = thread_names(STALL_THREADS).map_or(0, |names| names.len());
     let fixture = Path::new(env!("CARGO_BIN_EXE_ovis-terminal-probe-stall"));
     let stall = probe_stalled_writer(fixture, BOUND).unwrap();
-    assert_eq!(
-        stall_threads(),
-        threads_before,
-        "the probe left a thread behind"
-    );
+    if let Err(left) = await_threads_at_most(STALL_THREADS, threads_before, TEARDOWN_DEADLINE) {
+        panic!("the probe left a thread behind: {left:?}");
+    }
     for pid in [stall.fixture, stall.program] {
         assert_eq!(
             observe_process(pid).unwrap_err().kind(),
@@ -151,4 +185,41 @@ pub fn run() {
     exhausted_descriptors_are_unavailable();
     missing_working_directory_is_not_reported_as_used();
     broken_endpoint_is_typed();
+}
+
+#[test]
+fn an_exited_thread_is_reported_gone() {
+    let finished = thread::Builder::new()
+        .name("t72-exits".into())
+        .spawn(|| ())
+        .unwrap();
+    finished.join().unwrap();
+    assert_eq!(
+        await_threads_at_most("t72-exits", 0, TEARDOWN_DEADLINE),
+        Ok(())
+    );
+}
+
+#[test]
+fn a_thread_that_never_exits_is_reported_at_the_deadline() {
+    let (release, parked) = mpsc::channel::<()>();
+    let (running, started_up) = mpsc::channel::<()>();
+    let stuck = thread::Builder::new()
+        .name("t72-parked".into())
+        .spawn(move || {
+            running.send(()).unwrap();
+            parked.recv()
+        })
+        .unwrap();
+    started_up.recv().unwrap();
+    let started = Instant::now();
+    let left = await_threads_at_most("t72-parked", 0, Duration::from_millis(200));
+    assert_eq!(left, Err(vec!["t72-parked".to_owned()]));
+    assert!(started.elapsed() >= Duration::from_millis(200));
+    release.send(()).unwrap();
+    stuck.join().unwrap().unwrap();
+    assert_eq!(
+        await_threads_at_most("t72-parked", 0, TEARDOWN_DEADLINE),
+        Ok(())
+    );
 }
