@@ -105,6 +105,15 @@ impl Painter {
         let last = grid.columns().saturating_sub(1);
         if cursor.input_needs_wrap {
             let row = &grid[cursor.point.line];
+            if row[Column(last)].c == '\t' {
+                // HT cannot set pending wrap, and printing its styled blank
+                // would overwrite the tab already replayed by flush_tabs.
+                // A wide glyph rejected at the margin with DECAWM off sets
+                // pending wrap without touching the cell, as it did live.
+                self.goto(cursor.point.line, last);
+                self.out.push_str("\x1b[?7l\u{4e2d}\x1b[?7h");
+                return;
+            }
             let column = if row[Column(last)].flags.contains(Flags::WIDE_CHAR_SPACER) {
                 last.saturating_sub(1)
             } else {
