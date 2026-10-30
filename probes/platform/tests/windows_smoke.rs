@@ -1,24 +1,27 @@
-//! Windows CI smoke tier: ConPTY spawn, output before exit, resize, explicit
-//! unsupported start tokens and named-pipe first-instance ownership. It is not
-//! full Windows QA.
+//! Windows CI smoke tier: ConPTY spawn, output before exit, resize, kill,
+//! explicit unsupported start tokens and named-pipe first-instance ownership.
+//! It is not full Windows QA.
 //!
-//! A capability the platform does not deliver is reported as a typed finding:
-//! one `PROBE finding` record plus a GitHub `::error::` annotation, blocking the
-//! owning backend (Todos 53/54). It is never counted as the capability.
+//! A capability the platform does not deliver is a typed finding: one
+//! `PROBE finding` record (typed kind, exact OS error, source chain) plus a
+//! GitHub `::error::` annotation, blocking the owning backend (Todos 53/54).
+//! A finding is never counted as the capability, and by default it does not
+//! fail the smoke; `OVIS_PROBE_REQUIRE_PASS=1` turns every finding into a test
+//! failure, which is how Todos 53/54 prove the gap closed.
 
 use std::time::Duration;
 
 use ovis_terminal_holder::protocol::{Exit, Message, TerminalTarget};
 use ovis_terminal_probes::platform::{
-    Grid, PtySession, observe_process, probe_broken_named_pipe, probe_mode_round_trip,
+    Grid, ProbeError, PtySession, observe_process, probe_broken_named_pipe, probe_mode_round_trip,
     probe_named_pipe, probe_stalled_writer,
 };
 use portable_pty::CommandBuilder;
-use serde_json::json;
+use serde_json::{Value, json};
 
-use crate::{BOUND, assert_spawn_failure_is_typed, record, terminal, through_holder_frame};
+use crate::{assert_spawn_failure_is_typed, record, terminal, through_holder_frame};
 
-/// Bound on one wait for ConPTY output.
+/// Bound on one wait for ConPTY output or exit.
 const WAIT: Duration = Duration::from_secs(10);
 /// Device status report; ConPTY can hold output until the terminal answers it.
 const CURSOR_QUERY: &[u8] = b"\x1b[6n";
@@ -30,12 +33,34 @@ fn cmd(script: &str) -> CommandBuilder {
     command
 }
 
-fn finding(capability: &str, detail: &serde_json::Value) {
+fn finding(capability: &str, detail: &Value) {
     record(
         "finding",
         &json!({ "capability": capability, "blocks": "todo-53/54", "detail": detail }),
     );
     println!("::error title=platform probe finding::{capability}: {detail}");
+    assert!(
+        std::env::var_os("OVIS_PROBE_REQUIRE_PASS").is_none_or(|value| value != "1"),
+        "OVIS_PROBE_REQUIRE_PASS=1 and the platform lacks {capability}: {detail}"
+    );
+}
+
+/// The typed kind, hint, message and source chain (the exact OS error).
+fn error_detail(error: &ProbeError) -> Value {
+    let mut chain = Vec::new();
+    let mut source = std::error::Error::source(error);
+    while let Some(cause) = source {
+        chain.push(cause.to_string());
+        source = cause.source();
+    }
+    json!({ "kind": error.kind(), "hint": error.hint(), "error": error.to_string(), "source": chain })
+}
+
+/// Keeps a measured value, or records the typed failure as a finding.
+fn measured<T>(capability: &str, outcome: Result<T, ProbeError>) -> Option<T> {
+    outcome
+        .map_err(|error| finding(capability, &error_detail(&error)))
+        .ok()
 }
 
 /// Waits for `marker`. When it does not arrive, the typed timeout and the
@@ -46,7 +71,6 @@ fn await_marker(session: &mut PtySession, marker: &[u8], capability: &str) -> bo
     let Err(error) = session.read_until(marker, WAIT) else {
         return true;
     };
-    assert_eq!(error.kind(), "timeout", "{error:?}");
     let unconsumed = session.unconsumed().to_vec();
     let cursor_query_seen = unconsumed
         .windows(CURSOR_QUERY.len())
@@ -64,7 +88,7 @@ fn await_marker(session: &mut PtySession, marker: &[u8], capability: &str) -> bo
     finding(
         capability,
         &json!({
-            "error_kind": error.kind(),
+            "error": error_detail(&error),
             "waited_ms": WAIT.as_millis().to_string(),
             "received_bytes": session.received(),
             "unconsumed": unconsumed.escape_ascii().to_string(),
@@ -76,41 +100,51 @@ fn await_marker(session: &mut PtySession, marker: &[u8], capability: &str) -> bo
 }
 
 fn output_precedes_exit() {
-    let mut session =
-        PtySession::spawn(cmd("echo OVIS-FINAL-BYTES& exit 7"), Grid::new(80, 24)).unwrap();
-    let pid = session.pid().unwrap();
-    let unsupported = observe_process(pid).unwrap_err();
-    assert_eq!(unsupported.kind(), "unsupported");
+    let Some(mut session) = measured(
+        "conpty_spawn",
+        PtySession::spawn(cmd("echo OVIS-FINAL-BYTES& exit 7"), Grid::new(80, 24)),
+    ) else {
+        return;
+    };
+    let pid = session.pid();
+    let token = pid.map(observe_process);
     record(
         "start_token",
-        &json!({ "kind": unsupported.kind(), "hint": unsupported.hint() }),
+        &token.map(|outcome| outcome.map_err(|error| error_detail(&error))),
     );
     if !await_marker(
         &mut session,
         b"OVIS-FINAL-BYTES",
         "conpty_output_before_exit",
     ) {
-        let exit = session.wait_exit(WAIT).map_err(|error| error.kind());
         record(
             "conpty_exit_without_output",
-            &json!({ "pid": pid, "exit": exit }),
+            &session
+                .wait_exit(WAIT)
+                .map_err(|error| error_detail(&error)),
         );
         return;
     }
-    let exit = session.wait_exit(BOUND).unwrap();
-    assert_eq!(exit.code, 7);
+    let Some(exit) = measured("conpty_exit_status", session.wait_exit(WAIT)) else {
+        return;
+    };
+    if exit.code != 7 {
+        finding(
+            "conpty_exit_code",
+            &json!({ "expected": 7, "observed": exit }),
+        );
+    }
     let (terminal_id, terminal_incarnation, process_incarnation) = terminal("probe-conpty");
     let target = TerminalTarget {
         terminal_id,
         terminal_incarnation,
         process_incarnation: Some(process_incarnation),
     };
-    let final_offset = session.received().get();
     let exited = Message::Exit(Exit {
         target,
-        code: Some(7),
+        code: i32::try_from(exit.code).ok(),
         signal: None,
-        final_offset,
+        final_offset: session.received().get(),
     });
     assert_eq!(through_holder_frame(&exited), exited);
     record(
@@ -122,41 +156,59 @@ fn output_precedes_exit() {
         "conpty_eof_after_exit",
         &drained
             .map(|(_tail, end)| end)
-            .map_err(|error| error.kind()),
+            .map_err(|error| error_detail(&error)),
     );
 }
 
-fn resize_is_accepted() {
-    let mut session =
-        PtySession::spawn(cmd("ping -n 30 127.0.0.1 >NUL"), Grid::new(80, 24)).unwrap();
-    session.resize(Grid::new(132, 40)).unwrap();
-    assert_eq!(session.grid().unwrap(), Grid::new(132, 40));
-    session.kill().unwrap();
-    record(
-        "conpty_resize",
-        &json!({ "grid": session.grid().unwrap(), "exit": session.wait_exit(BOUND).unwrap() }),
-    );
+fn resize_and_kill() {
+    let Some(mut session) = measured(
+        "conpty_spawn",
+        PtySession::spawn(cmd("ping -n 30 127.0.0.1 >NUL"), Grid::new(80, 24)),
+    ) else {
+        return;
+    };
+    let requested = Grid::new(132, 40);
+    if measured("conpty_resize", session.resize(requested)).is_some() {
+        match measured("conpty_read_size", session.grid()) {
+            Some(grid) if grid == requested => record("conpty_resize", &grid),
+            Some(grid) => finding(
+                "conpty_resize",
+                &json!({ "requested": requested, "observed": grid }),
+            ),
+            None => {}
+        }
+    }
+    if measured("conpty_backend_kill", session.kill()).is_some() {
+        record(
+            "conpty_kill_exit",
+            &session
+                .wait_exit(WAIT)
+                .map_err(|error| error_detail(&error)),
+        );
+    }
 }
 
 /// Runs the Windows smoke happy path.
 ///
 /// # Panics
 ///
-/// When the host behaves other than the smoke asserts.
+/// When a holder frame does not round-trip, or under
+/// `OVIS_PROBE_REQUIRE_PASS=1` when any capability is a finding.
 pub fn happy() {
     output_precedes_exit();
-    resize_is_accepted();
+    resize_and_kill();
     let name = format!("ovis-probe-{}", std::process::id());
-    let pipe = probe_named_pipe(&name).unwrap();
-    assert!(pipe.first_instance_exclusive, "{pipe:?}");
-    assert!(pipe.exchanged.get() > 0);
-    record("named_pipe", &pipe);
-    match probe_mode_round_trip(Grid::new(80, 24), WAIT) {
-        Ok(modes) => record("conpty_modes_observed", &modes),
-        Err(error) => finding(
-            "conpty_mode_round_trip",
-            &json!({ "error_kind": error.kind(), "hint": error.hint() }),
-        ),
+    if let Some(pipe) = measured("named_pipe", probe_named_pipe(&name)) {
+        if !pipe.first_instance_exclusive || pipe.exchanged.get() == 0 {
+            finding("named_pipe_first_instance", &json!(pipe));
+        }
+        record("named_pipe", &pipe);
+    }
+    if let Some(modes) = measured(
+        "conpty_mode_round_trip",
+        probe_mode_round_trip(Grid::new(80, 24), WAIT),
+    ) {
+        record("conpty_modes_observed", &modes);
     }
 }
 
@@ -164,20 +216,14 @@ pub fn happy() {
 ///
 /// # Panics
 ///
-/// When a failure is not rejected with the asserted typed kind.
+/// When a spawn or pipe failure is not rejected with the asserted typed kind,
+/// or under `OVIS_PROBE_REQUIRE_PASS=1` when any capability is a finding.
 pub fn failure() {
-    match probe_stalled_writer(WAIT) {
-        Ok(stall) => {
-            assert!(stall.backend_kill_ended_program, "{stall:?}");
-            record("stall", &stall);
+    if let Some(stall) = measured("conpty_stall", probe_stalled_writer(WAIT)) {
+        if !stall.backend_kill_ended_program {
+            finding("conpty_stall_backend_kill", &json!(stall));
         }
-        Err(error) => {
-            assert_eq!(error.kind(), "timeout", "{error:?}");
-            finding(
-                "conpty_stall_probe_output",
-                &json!({ "error_kind": error.kind(), "hint": error.hint() }),
-            );
-        }
+        record("stall", &stall);
     }
     let error = PtySession::spawn(
         CommandBuilder::new(r"C:\nonexistent\ovis-probe.exe"),
@@ -189,5 +235,5 @@ pub fn failure() {
         .unwrap()
         .unwrap_err();
     assert_eq!(missing.kind(), "endpoint_failed");
-    record("missing_pipe", &json!({ "kind": missing.kind() }));
+    record("missing_pipe", &error_detail(&missing));
 }

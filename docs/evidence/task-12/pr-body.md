@@ -20,7 +20,7 @@ All commands ran on **Linux x86_64**, rustc/cargo 1.99.1 (isolated local toolcha
 
 | Command | Exit | Result |
 |---|---|---|
-| `bash scripts/check.sh` | 0 | fmt, workspace clippy `-D warnings`, nextest **131 run, 131 passed, 1 skipped** (the skip is pre-existing), doctests, hygiene 0 violations in 173 files, manifests (16), json (13) ([check.log](check.log)) |
+| `bash scripts/check.sh` (final head, [check-fix2.log](check-fix2.log)) | 0 | 131 run, 131 passed, 1 skipped; hygiene 0 violations in 173 files. First head: | fmt, workspace clippy `-D warnings`, nextest **131 run, 131 passed, 1 skipped** (the skip is pre-existing), doctests, hygiene 0 violations in 173 files, manifests (16), json (13) ([check.log](check.log)) |
 | `cargo nextest run -p ovis-terminal-holder --locked` | 0 | 12 run, 12 passed, 0 skipped ([acceptance-nextest.log](acceptance-nextest.log)) |
 | `cargo clippy -p ovis-terminal-holder --all-targets --locked -- -D warnings` | 0 | [acceptance-clippy.log](acceptance-clippy.log) |
 | `cargo test --locked -p ovis-terminal-holder --test platform_probe happy -- --exact --nocapture` | 0 | `test happy ... ok` ([qa-happy.log](qa-happy.log)) |
@@ -71,6 +71,45 @@ Conformance execution is deferred by plan (plan line 275) for part-A foundationa
 
 The first failure run wrote 4 KiB chunks without newlines. On Linux, canonical mode accepted all 1 MiB without blocking, so no write blocked and the input past 4095 bytes per line was never delivered ([failure-run1-canonical-discard.log](failure-run1-canonical-discard.log)). The probe now writes whole lines; that silent discard is listed under Risks.
 
+## Platform findings
+
+Records below come from the PR's own CI runs of `platform-probes.yml`, copied from the job logs (`PROBE` lines) into [ci-probe-records.log](ci-probe-records.log).
+
+### Windows (windows-2025, x86_64): blocks Todos 53/54
+
+- **`conpty_output_before_exit`**: ConPTY withholds all program output until the terminal answers its cursor-position query. Exact record from run 41127802737 (head 4b5295e):
+
+  ```json
+  {"blocks":"todo-53/54","capability":"conpty_output_before_exit","detail":{"after_cursor_reply":"marker_arrived","cursor_query_seen":true,"error_kind":"timeout","received_bytes":"79","unconsumed":"\\x1b[6n","waited_ms":"10000"}}
+  ```
+
+  The only bytes ConPTY sent within 10 s were `ESC [ 6 n` (DSR). After the probe wrote `ESC [ 1 ; 1 R`, the marker arrived, exit code 7 was collected and the holder `Exit` frame round-tripped (`conpty_exit`). **Implication for Todos 53/54:** the Windows holder must answer ConPTY's startup DSR `ESC[6n` itself, from the core's VT state or with a holder-side cursor reply, before any output or attach can flow. Otherwise every ConPTY terminal stalls with no output. This is not permission to mirror.
+- **`conpty_eof_after_exit`**: after the program exited, the output stream did not reach EOF within 2 s (`{"Err":"timeout"}` in the earlier run). The holder must decide when output after exit is complete without waiting for EOF from ConPTY (final-drain-before-exit, IDEAL-043).
+- **`conpty_backend_kill`**: in run 41127802737, `PtySession::kill()` (portable-pty's cloned `ChildKiller` on Windows) failed with `Io { operation: Kill, source: Os { code: 6, message: "The handle is invalid." } }` on a running `ping`. The holder cannot rely on portable-pty's cloned killer handle on Windows and needs its own process/job handle for termination. From this push the smoke records it as a finding instead of panicking.
+- **Start tokens**: `observe_process` returns typed `unsupported` on Windows (IDEAL-071 explicit unsupported field); `CreationTime` belongs to Todo 53.
+
+How findings behave: the Windows smoke records each missing capability as one `PROBE finding` line (typed kind, hint, message and OS source chain) plus a GitHub `::error::` annotation, and the test still exits 0 because the finding *is* the measurement. `OVIS_PROBE_REQUIRE_PASS=1` turns every finding into a test failure; Todos 53/54 should run the smoke that way to prove the gap closed. On Windows the probe tests are `#[cfg_attr(windows, ignore = ...)]` so the generic `ci.yml` `test (windows-latest)` job skips them, and `platform-probes.yml` runs them with `--include-ignored`. On Linux/macOS they are not ignored, so the plan's literal QA commands still run them.
+
+### macOS (macos-15 runner, aarch64), native: passes, no findings
+
+From run 41127802737:
+
+- Start token `macos-lstart:Fri Oct 30 21:02:02 2026` (source `macos_ps_lstart`).
+- Modes `set {bracketed, alternate}` / `reset {plain, primary}`.
+- Socket path limit 103 (first rejected 104), mode `0o600`.
+- Detach: `core_death` (`Killed: 9`) and `logout` (`Hangup: 1`), with holder and program tokens unchanged and `live`.
+- Latency: 16 PTYs p50 5.80 ms, p99 17.50 ms, max 17.76 ms, `within_verdict: true`.
+- Soak (50 PTYs × 3 s): 505 rounds, p99 0.20 ms, max 7.45 ms, 50/50 tokens unchanged.
+- Failure side:
+  - Stall: `accepted_before_kill: "0"`, SIGHUP ignored, SIGKILL `Killed: 9`; unlike Linux, the blocked writer was **released** with `input/output error`.
+  - `openpty` refused under `ulimit -n 4` (`EMFILE`) gives `SpawnFailed{unavailable}`.
+  - Missing cwd fell back to `/Users/runner`.
+  - Broken endpoint: `NotFound` / `BrokenPipe`.
+
+### Linux (ubuntu-24.04 runner, x86_64), native: passes, no findings
+
+Same shape as the local run. Socket path limit 107; `endpoint_inode_reused: true` on the runner's filesystem (a rebound socket got the same inode, so `(dev, ino)` alone cannot detect socket replacement there). Stall writer still blocked after SIGKILL. Latency p99 3.78 ms; soak 50/50 tokens unchanged.
+
 ## Adversarial
 
 | Class | Observable |
@@ -108,6 +147,7 @@ The first failure run wrote 4 KiB chunks without newlines. On Linux, canonical m
     4. In canonical mode, input lines longer than the line-discipline buffer are silently discarded on Linux, not blocked.
     5. On Linux, a write after the program exits is accepted without error ([portable-pty-spike.log](portable-pty-spike.log)).
   - Todos 53/54 (Windows): the ConPTY EOF-after-exit and mode passthrough are *recorded*, not asserted, in the smoke (`conpty_eof_after_exit`, `conpty_modes_observed`).
-- **Windows and macOS are unproven locally.** They are covered only by CI on this PR (`ci.yml` nextest runs `platform_probe` on all three OSes, and `platform-probes.yml` runs both QA tests plus, on Linux/macOS, the harness bins). The macOS paths (`ps` tokens at one-second resolution, `ulimit -n 4` injection, socket limit 103/104) were written for macOS but not run here. Windows is the smoke tier only; no full Windows QA is claimed.
+- **Windows and macOS were not run locally.** They are proven by this PR's CI only (see Platform findings). macOS passes natively in both `ci.yml` and `platform-probes.yml`. Windows is the smoke tier, and its three findings are open blockers for Todos 53/54; no full Windows QA is claimed.
+- **`(dev, ino)` socket identity:** the Linux CI runner reused the inode for a rebound socket, so endpoint ownership checks in the server lanes need more than `(dev, ino)` (for example a nonce exchanged over the socket).
 - **Harness scope:** the latency harness measures PTY round trips (write → `cat` → read), not the RPC admission/event contract. The 8-client/16-request part of the profile needs the server (Todo 30). The soak's 94.7 ms worst sample on this 128-core host is a capacity observation, not a verdict. Program RSS counts shared library pages per process.
 - **Start tokens:** macOS `lstart` has one-second resolution, so a PID reused within the same second would collide. The proc_pidinfo implementation belongs to the Todo 6 backend.

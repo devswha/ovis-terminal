@@ -3,7 +3,10 @@ name: platform-probes
 # Native platform probes (plan todo 12): real pseudo-terminals through the
 # pinned portable-pty backend on each runner, plus the PTY latency and soak
 # harnesses on Linux and macOS. Windows runs the smoke tier only; it is not
-# full Windows QA.
+# full Windows QA. On Windows the probe tests are #[ignore]d so the generic
+# ci.yml job skips them; --include-ignored runs them here. A capability the
+# platform lacks is a recorded `PROBE finding`; setting
+# OVIS_PROBE_REQUIRE_PASS=1 turns findings into failures (Todos 53/54).
 
 on:
   pull_request:
@@ -78,13 +81,13 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          cargo test --locked -p ovis-terminal-holder --test platform_probe happy -- --exact --nocapture 2>&1 | tee probe-happy.log
+          cargo test --locked -p ovis-terminal-holder --test platform_probe happy -- --exact --nocapture --include-ignored 2>&1 | tee probe-happy.log
           grep -q '^test happy \.\.\. ok$' probe-happy.log
       - name: probe failure
         shell: bash
         run: |
           set -o pipefail
-          cargo test --locked -p ovis-terminal-holder --test platform_probe failure -- --exact --nocapture 2>&1 | tee probe-failure.log
+          cargo test --locked -p ovis-terminal-holder --test platform_probe failure -- --exact --nocapture --include-ignored 2>&1 | tee probe-failure.log
           grep -q '^test failure \.\.\. ok$' probe-failure.log
       - name: latency harness (16 terminals, 1 MiB/s)
         if: runner.os != 'Windows'

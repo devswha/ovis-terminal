@@ -16,8 +16,6 @@ pub mod unix_happy;
 #[cfg(windows)]
 pub mod windows_smoke;
 
-use std::time::Duration;
-
 use ovis_terminal_holder::protocol::{
     Message, ProcessIncarnation, SpawnFailed, SpawnFailureKind, TerminalId, TerminalIncarnation,
     decode_message, encode_message,
@@ -26,7 +24,8 @@ use ovis_terminal_probes::platform::{ByteOrder, HostFacts, ProbeError};
 use serde::Serialize;
 
 /// Upper bound on any single wait in the probe.
-const BOUND: Duration = Duration::from_secs(20);
+#[cfg(unix)]
+const BOUND: std::time::Duration = std::time::Duration::from_secs(20);
 
 #[cfg(test)]
 fn record(label: &str, value: &impl Serialize) {
@@ -92,6 +91,10 @@ impl Drop for ScratchDir {
 }
 
 #[test]
+#[cfg_attr(
+    windows,
+    ignore = "Windows smoke tier: runs only in .github/workflows/platform-probes.yml with --include-ignored"
+)]
 fn happy() {
     let host = HostFacts::current();
     assert_eq!(host.byte_order, ByteOrder::compiled());
@@ -107,6 +110,10 @@ fn happy() {
 }
 
 #[test]
+#[cfg_attr(
+    windows,
+    ignore = "Windows smoke tier: runs only in .github/workflows/platform-probes.yml with --include-ignored"
+)]
 fn failure() {
     #[cfg(unix)]
     unix_failure::run();
