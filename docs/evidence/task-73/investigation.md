@@ -173,3 +173,24 @@ uncaught failing test. All setup runs outside the catch.
 Full logs are in the lane's ignored attempt directory pending final promotion.
 The changed source is 185 pure lines; no new dependencies, public types,
 wire/JSON fields, unsafe code, lint suppressions, or test serialization.
+
+## Acceptance stress dispatches
+
+After the lane-only push registered the workflow, manual dispatch became
+available. Three consecutive `gh workflow run probe-stress-macos.yml
+--ref lane/t73-macos-resize-probe --repo devswha/ovis-terminal` calls
+targeted fixed head `89bb89b41c48cf221249a4be0cf9b40112840210`:
+
+- <https://github.com/devswha/ovis-terminal/actions/runs/41141232863>
+- <https://github.com/devswha/ovis-terminal/actions/runs/41141274758>
+- <https://github.com/devswha/ovis-terminal/actions/runs/41141298345>
+
+Their results are pending. Each run covers 100 single-happy and 100
+whole-binary iterations on each of macOS 15 and macOS 26 (`macos-latest`).
+The redundant fixed-code push run 41141198738 was cancelled before testing;
+the diagnostic run 41140598357 was cancelled after its failing job log
+was preserved, to free native runner capacity. Neither is counted as green.
+The original pre-fix run 41140283121 was left running to its natural result.
+
+The temporary lane push trigger has now been removed. The retained workflow
+is manual-only, as originally required.
