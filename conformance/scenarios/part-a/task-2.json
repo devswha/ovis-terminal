@@ -1,0 +1,66 @@
+{
+  "scenario": "part-a/task-2",
+  "todo": 2,
+  "title": "Incremental channel framing and bounded decoding",
+  "closes": [
+    "GAP-007"
+  ],
+  "delivers": [
+    "IDEAL-006",
+    "IDEAL-007"
+  ],
+  "runner": "shell",
+  "note": "Protocol conformance runs assertion-bearing wire tests; the real socket runner is supplied by plan todo 21.",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "-p",
+            "ovis-terminal-protocol",
+            "--test",
+            "wire",
+            "happy",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_lines": [
+              "test happy ... ok"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "-p",
+            "ovis-terminal-protocol",
+            "--test",
+            "wire",
+            "failure",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_lines": [
+              "test failure ... ok"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

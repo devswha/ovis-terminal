@@ -1,0 +1,19 @@
+Ready-queue backpressure:
+cargo test -p ovis-terminal-protocol --lib wire::connection::tests::queued_frames_obey_record_and_byte_limits -- --exact --nocapture
+Result: exit 0; 1 passed, 0 failed. The test verifies both the 64-record and 32 MiB payload limits, NeedDrain consumption, and successful resubmission after draining.
+
+Generated properties and header cancellation/resume:
+cargo test -p ovis-terminal-protocol --lib wire::properties:: -- --nocapture
+Result: exit 0; 4 passed, 0 failed. Includes generated frame-sequence segmentation, arbitrary payload round trips, oversized lengths, and resume after every header-byte position. Proptest's default file failure persistence is enabled; no failing cases or regression files were produced.
+
+Targeted cancellation/resume:
+cargo test -p ovis-terminal-protocol --lib wire::properties::partial_header_resumes_after_each_byte_position -- --exact --nocapture
+Result: exit 0; 1 passed, 0 failed.
+
+Thiserror and semantic offsets:
+cargo test -p ovis-terminal-protocol --test wire failure -- --exact --nocapture
+Result: exit 0; 1 passed, 0 failed. Assertions cover stable error kinds, hints, UTF-8 source preservation, and typed wire offsets.
+
+Before evidence:
+docs/evidence/baseline/smoke/herdr-h02-connection.log:2
+The RT-HD-01 copy is present at the corrected `smoke/` path.
