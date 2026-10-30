@@ -3,11 +3,12 @@
 //! directory and a broken socket endpoint.
 
 use std::io;
+use std::path::Path;
 use std::process::{Command, Stdio};
 
 use ovis_terminal_holder::protocol::{FrameDecoder, Message, SpawnFailureKind};
 use ovis_terminal_probes::platform::{
-    Grid, PtySession, probe_broken_unix_endpoint, probe_stalled_writer,
+    Grid, PtySession, observe_process, probe_broken_unix_endpoint, probe_stalled_writer,
 };
 use portable_pty::CommandBuilder;
 
@@ -15,14 +16,42 @@ use crate::{BOUND, ScratchDir, assert_spawn_failure_is_typed, record};
 
 const MISSING_DIR: &str = "/nonexistent/ovis-probe-cwd";
 
+/// Threads of this test process whose name starts with `probe-stall`; on
+/// Linux the kernel exposes each thread's name under `/proc/self/task`.
+fn stall_threads() -> Option<usize> {
+    let tasks = std::fs::read_dir("/proc/self/task").ok()?;
+    Some(
+        tasks
+            .map(|task| std::fs::read_to_string(task.unwrap().path().join("comm")).unwrap())
+            .filter(|name| name.starts_with("probe-stall"))
+            .count(),
+    )
+}
+
+/// The blocked writer runs in a fixture subprocess; the probe must return with
+/// no thread, fixture or program left behind.
 fn unread_input_stays_killable() {
-    let stall = probe_stalled_writer(BOUND).unwrap();
+    let threads_before = stall_threads();
+    let fixture = Path::new(env!("CARGO_BIN_EXE_ovis-terminal-probe-stall"));
+    let stall = probe_stalled_writer(fixture, BOUND).unwrap();
+    assert_eq!(
+        stall_threads(),
+        threads_before,
+        "the probe left a thread behind"
+    );
+    for pid in [stall.fixture, stall.program] {
+        assert_eq!(
+            observe_process(pid).unwrap_err().kind(),
+            "process_record_unreadable",
+            "{pid} outlived the probe"
+        );
+    }
     assert!(
-        !stall.backend_kill_ended_program,
+        !stall.report.backend_kill_ended_program,
         "SIGHUP ended a program that ignores it: {stall:?}"
     );
-    assert!(stall.exit.signal.is_some(), "{stall:?}");
-    assert!(stall.kill_to_exit.as_duration() < BOUND, "{stall:?}");
+    assert!(stall.report.exit.signal.is_some(), "{stall:?}");
+    assert!(stall.report.kill_to_exit.as_duration() < BOUND, "{stall:?}");
     record("stall", &stall);
 }
 

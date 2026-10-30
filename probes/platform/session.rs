@@ -9,7 +9,7 @@ use std::{fmt, mem};
 use portable_pty::{
     ChildKiller, CommandBuilder, ExitStatus, MasterPty, PtySize, native_pty_system,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::error::{ProbeError, PtyOperation};
 use super::measure::ByteCount;
@@ -45,7 +45,8 @@ impl Grid {
 }
 
 /// The exit status the backend collected.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct ExitRecord {
     /// Exit code (1 when the program was ended by a signal).
@@ -176,10 +177,6 @@ impl PtySession {
             .write_all(bytes)
             .and_then(|()| writer.flush())
             .map_err(io_error)
-    }
-
-    pub(super) const fn take_writer(&mut self) -> Option<Box<dyn Write + Send>> {
-        self.writer.take()
     }
 
     /// Changes the terminal grid.

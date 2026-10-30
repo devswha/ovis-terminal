@@ -1,34 +1,30 @@
 //! A program that never reads its input must stay killable while a writer is
-//! blocked on the full input queue.
+//! blocked on its full input queue.
+//!
+//! The blocking writer runs in the stall fixture subprocess, never in the
+//! caller: a writer blocked in the kernel cannot be cancelled from user space.
+//! The probe bounds the fixture, SIGKILLs it, reaps it and joins its own report
+//! reader before returning, so no blocked thread or descriptor outlives it.
 
-use std::io::{self, Write};
-use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
+use std::io::{self, BufRead, BufReader, Read};
+use std::path::Path;
+use std::process::{ChildStdout, Command, Stdio};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, SyncSender, sync_channel};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use portable_pty::CommandBuilder;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::error::{ProbeError, PtyOperation};
 use super::measure::{ByteCount, Micros};
-use super::session::{ExitRecord, Grid, PtySession};
-
-/// Input is written as complete lines: in canonical mode a line longer than
-/// the line discipline's buffer is truncated instead of blocking the writer.
-const LINE: &[u8; 64] = b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n";
-const CHUNK_LINES: usize = 64;
-const CHUNKS: u64 = 256;
-/// No progress for this long counts as a writer blocked on the input queue.
-const QUIET: Duration = Duration::from_millis(250);
-
-enum WriterEvent {
-    Progress(u64),
-    Done(io::Result<()>),
-}
+use super::process::Pid;
+#[cfg(unix)]
+use super::process::{ProcessState, observe_process};
+use super::session::ExitRecord;
 
 /// What the blocked writer did after the program was killed.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
 #[non_exhaustive]
 pub enum WriterAfterKill {
     /// The writer finished; `error` names the OS error kind when it failed.
@@ -36,13 +32,13 @@ pub enum WriterAfterKill {
         /// OS error kind of the failed write, if any.
         error: Option<String>,
     },
-    /// The writer was still blocked when the probe gave up on it; its thread
-    /// is left blocked in the kernel.
+    /// The writer was still blocked one second after the program died.
     StillBlocked,
 }
 
-/// Measured behavior of a program that never reads its input.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+/// What the fixture measured.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct StallReport {
     /// Input the writer attempted.
@@ -51,8 +47,10 @@ pub struct StallReport {
     pub accepted_before_kill: ByteCount,
     /// Whether the writer was blocked when the kill was sent.
     pub writer_blocked: bool,
-    /// Whether the backend's own kill ended the program within the bound.
+    /// Whether the backend's own kill ended the program within one second.
     pub backend_kill_ended_program: bool,
+    /// The backend kill's error, when it failed outright.
+    pub backend_kill_error: Option<String>,
     /// The exit finally collected.
     pub exit: ExitRecord,
     /// From the first kill to the collected exit.
@@ -61,132 +59,142 @@ pub struct StallReport {
     pub writer: WriterAfterKill,
 }
 
-#[cfg(unix)]
-fn program() -> CommandBuilder {
-    let mut command = CommandBuilder::new("sh");
-    command.args([
-        "-c",
-        r#"trap "" HUP; printf 'STALL-READY\n'; exec sleep 600"#,
-    ]);
-    command
+/// The measurement plus the containment the probe performed.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[non_exhaustive]
+pub struct StallOutcome {
+    /// The fixture's measurement.
+    pub report: StallReport,
+    /// Whether the writer was still blocked when the probe killed the fixture.
+    pub writer_still_blocked_at_kill: bool,
+    /// The fixture process, killed and reaped before the probe returned.
+    pub fixture: Pid,
+    /// The program that never read, verified gone before the probe returned.
+    pub program: Pid,
 }
 
-#[cfg(windows)]
-fn program() -> CommandBuilder {
-    let mut command = CommandBuilder::new("cmd.exe");
-    command.args(["/d", "/c", "echo STALL-READY& ping -n 600 127.0.0.1 >NUL"]);
-    command
+enum FixtureLine {
+    Program(Option<Pid>),
+    Report(String),
 }
 
-/// Fills the input of a program that never reads it, then kills the program.
-///
-/// The backend's kill comes first (SIGHUP on Unix, which this program
-/// ignores), then SIGKILL on Unix when the program survived it.
+/// Runs `fixture stall` under `bound` per step, then kills and reaps it.
 ///
 /// # Errors
 ///
-/// Any session error, or [`ProbeError::Timeout`] when even the forced kill
-/// leaves the program running for `bound`.
-pub fn probe_stalled_writer(bound: Duration) -> Result<StallReport, ProbeError> {
-    let mut session = PtySession::spawn(program(), Grid::new(80, 24))?;
-    session.read_until(b"STALL-READY", bound)?;
-    let writer = session.take_writer().ok_or_else(|| ProbeError::Io {
-        operation: PtyOperation::Write,
-        source: io::Error::new(
-            io::ErrorKind::NotConnected,
-            "the input writer was handed off",
-        ),
-    })?;
-    let events = spawn_writer(writer)?;
-    let (accepted, done) = watch_progress(&events);
-    let killed_at = Instant::now();
-    session.kill()?;
-    let backend_kill = session.wait_exit(bound.min(Duration::from_secs(1)));
-    let backend_kill_ended_program = backend_kill.is_ok();
-    let exit = match backend_kill {
-        Ok(exit) => exit,
-        Err(ProbeError::Timeout { .. }) => force(&mut session, bound)?,
-        Err(other) => return Err(other),
-    };
-    let kill_to_exit = Micros::from_duration(killed_at.elapsed());
-    let writer_blocked = done.is_none();
-    let outcome = done.or_else(|| await_done(&events, Duration::from_secs(1)));
-    let writer = outcome.map_or(WriterAfterKill::StillBlocked, |outcome| {
-        WriterAfterKill::Released {
-            error: outcome.err().map(|error| error.kind().to_string()),
-        }
-    });
-    Ok(StallReport {
-        attempted: ByteCount::new(CHUNKS.saturating_mul(
-            u64::try_from(LINE.len().saturating_mul(CHUNK_LINES)).unwrap_or(u64::MAX),
-        )),
-        accepted_before_kill: ByteCount::new(accepted),
-        writer_blocked,
-        backend_kill_ended_program,
-        exit,
-        kill_to_exit,
-        writer,
-    })
-}
-
-#[cfg(unix)]
-fn force(session: &mut PtySession, bound: Duration) -> Result<ExitRecord, ProbeError> {
-    let pid = session.pid().ok_or(ProbeError::OutputEnded)?;
-    super::process::force_kill(pid)?;
-    session.wait_exit(bound)
-}
-
-#[cfg(windows)]
-fn force(session: &mut PtySession, bound: Duration) -> Result<ExitRecord, ProbeError> {
-    session.wait_exit(bound)
-}
-
-fn spawn_writer(mut writer: Box<dyn Write + Send>) -> Result<Receiver<WriterEvent>, ProbeError> {
-    let (sender, receiver) = channel();
-    let chunk = LINE.repeat(CHUNK_LINES);
-    thread::Builder::new()
-        .name("probe-stalled-writer".into())
-        .spawn(move || {
-            let mut written = 0_u64;
-            for _ in 0..CHUNKS {
-                if let Err(error) = writer.write_all(&chunk) {
-                    return sender.send(WriterEvent::Done(Err(error)));
-                }
-                written = written.saturating_add(u64::try_from(chunk.len()).unwrap_or(u64::MAX));
-                if sender.send(WriterEvent::Progress(written)).is_err() {
-                    return Ok(());
-                }
-            }
-            sender.send(WriterEvent::Done(writer.flush()))
-        })
+/// [`ProbeError::SpawnFailed`] when the fixture cannot start,
+/// [`ProbeError::Timeout`] when it reports nothing in time,
+/// [`ProbeError::Io`] when it exits without a report (its stderr becomes the
+/// source) and [`ProbeError::MalformedReport`] for an unparsable report.
+/// The fixture is killed and reaped on every path.
+pub fn probe_stalled_writer(fixture: &Path, bound: Duration) -> Result<StallOutcome, ProbeError> {
+    let mut child = Command::new(fixture)
+        .arg("stall")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| ProbeError::SpawnFailed {
+            source: error.into(),
+        })?;
+    let fixture_pid = Pid::new(child.id());
+    let stdout = child.stdout.take().ok_or(ProbeError::OutputEnded)?;
+    let (sender, lines) = sync_channel(2);
+    let reader = thread::Builder::new()
+        .name("probe-stall-report".into())
+        .spawn(move || forward(stdout, &sender))
         .map_err(|source| ProbeError::Io {
             operation: PtyOperation::StartThread,
             source,
         })?;
-    Ok(receiver)
+    let waited = bound.saturating_mul(3);
+    let (program, report) = collect(&lines, waited);
+    let killed = child.kill().is_ok();
+    let status = child.wait().map_err(|source| ProbeError::Io {
+        operation: PtyOperation::Wait,
+        source,
+    })?;
+    reader.join().map_err(|_panic| ProbeError::Io {
+        operation: PtyOperation::StartThread,
+        source: io::Error::other("the fixture report reader panicked"),
+    })?;
+    #[cfg(unix)]
+    if let Some(pid) = program {
+        reap_program(pid)?;
+    }
+    let report = match report {
+        Ok(report) => report,
+        Err(RecvTimeoutError::Timeout) => return Err(ProbeError::Timeout { waited }),
+        Err(RecvTimeoutError::Disconnected) => {
+            let stderr = child.stderr.take().map(read_all).unwrap_or_default();
+            return Err(ProbeError::Io {
+                operation: PtyOperation::Wait,
+                source: io::Error::other(format!(
+                    "the stall fixture exited ({status}) without a report: {}",
+                    stderr.trim()
+                )),
+            });
+        }
+    };
+    let report: StallReport =
+        serde_json::from_str(&report).map_err(|_unparsable| ProbeError::MalformedReport {
+            report: "STALL <StallReport json>",
+        })?;
+    Ok(StallOutcome {
+        writer_still_blocked_at_kill: killed && report.writer == WriterAfterKill::StillBlocked,
+        report,
+        fixture: fixture_pid,
+        program: program.ok_or(ProbeError::MalformedReport {
+            report: "PROGRAM <pid>",
+        })?,
+    })
 }
 
-/// Collects progress until the writer goes quiet or finishes.
-fn watch_progress(events: &Receiver<WriterEvent>) -> (u64, Option<io::Result<()>>) {
-    let mut accepted = 0;
-    loop {
-        match events.recv_timeout(QUIET) {
-            Ok(WriterEvent::Progress(written)) => accepted = written,
-            Ok(WriterEvent::Done(outcome)) => return (accepted, Some(outcome)),
-            Err(RecvTimeoutError::Timeout | RecvTimeoutError::Disconnected) => {
-                return (accepted, None);
-            }
+fn forward(stdout: ChildStdout, sender: &SyncSender<FixtureLine>) {
+    for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+        let parsed = if let Some(pid) = line.strip_prefix("PROGRAM ") {
+            FixtureLine::Program(pid.trim().parse().ok().map(Pid::new))
+        } else if let Some(json) = line.strip_prefix("STALL ") {
+            FixtureLine::Report(json.to_owned())
+        } else {
+            continue;
+        };
+        if sender.send(parsed).is_err() {
+            return;
         }
     }
 }
 
-fn await_done(events: &Receiver<WriterEvent>, bound: Duration) -> Option<io::Result<()>> {
-    let deadline = Instant::now().checked_add(bound)?;
+/// The program PID and the report line, or why the report is missing.
+fn collect(
+    lines: &Receiver<FixtureLine>,
+    bound: Duration,
+) -> (Option<Pid>, Result<String, RecvTimeoutError>) {
+    let mut program = None;
     loop {
-        match events.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
-            Ok(WriterEvent::Progress(_)) => {}
-            Ok(WriterEvent::Done(outcome)) => return Some(outcome),
-            Err(RecvTimeoutError::Timeout | RecvTimeoutError::Disconnected) => return None,
+        match lines.recv_timeout(bound) {
+            Ok(FixtureLine::Program(pid)) => program = pid,
+            Ok(FixtureLine::Report(report)) => return (program, Ok(report)),
+            Err(missing) => return (program, Err(missing)),
         }
+    }
+}
+
+/// The program ignores SIGHUP, so a fixture that died early can leave it
+/// running; it is killed here rather than left to the init process. On
+/// Windows, closing the pseudoconsole with the fixture ends its programs.
+#[cfg(unix)]
+fn reap_program(pid: Pid) -> Result<(), ProbeError> {
+    match observe_process(pid) {
+        Ok(observed) if observed.state == ProcessState::Live => super::process::force_kill(pid),
+        Ok(_) | Err(_) => Ok(()),
+    }
+}
+
+fn read_all(mut pipe: impl Read) -> String {
+    let mut text = String::new();
+    match pipe.read_to_string(&mut text) {
+        Ok(_) => text,
+        Err(error) => format!("<stderr unreadable: {error}>"),
     }
 }

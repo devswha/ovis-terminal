@@ -20,7 +20,7 @@ All commands ran on **Linux x86_64**, rustc/cargo 1.99.1 (isolated local toolcha
 
 | Command | Exit | Result |
 |---|---|---|
-| `bash scripts/check.sh` (final head, [check-fix2.log](check-fix2.log)) | 0 | 131 run, 131 passed, 1 skipped; hygiene 0 violations in 173 files. First head: | fmt, workspace clippy `-D warnings`, nextest **131 run, 131 passed, 1 skipped** (the skip is pre-existing), doctests, hygiene 0 violations in 173 files, manifests (16), json (13) ([check.log](check.log)) |
+| `bash scripts/check.sh` (B1 head, [check-b1.log](check-b1.log); earlier heads [check-fix2.log](check-fix2.log)) | 0 | 131 run, 131 passed, 1 skipped; hygiene 0 violations in 173 files. First head: | fmt, workspace clippy `-D warnings`, nextest **131 run, 131 passed, 1 skipped** (the skip is pre-existing), doctests, hygiene 0 violations in 173 files, manifests (16), json (13) ([check.log](check.log)) |
 | `cargo nextest run -p ovis-terminal-holder --locked` | 0 | 12 run, 12 passed, 0 skipped ([acceptance-nextest.log](acceptance-nextest.log)) |
 | `cargo clippy -p ovis-terminal-holder --all-targets --locked -- -D warnings` | 0 | [acceptance-clippy.log](acceptance-clippy.log) |
 | `cargo test --locked -p ovis-terminal-holder --test platform_probe happy -- --exact --nocapture` | 0 | `test happy ... ok` ([qa-happy.log](qa-happy.log)) |
@@ -63,13 +63,24 @@ Conformance execution is deferred by plan (plan line 275) for part-A foundationa
 
 ### failure (Linux x86_64, [qa-failure.log](qa-failure.log))
 
-- **Hung command (no-read child):** `sh -c 'trap "" HUP; …; exec sleep 600'`. The writer blocked after 8,192 of 1,048,576 bytes. portable-pty's own `kill()` (SIGHUP on Unix) did **not** end the program (`backend_kill_ended_program:false`, asserted). SIGKILL did (`signal:"Killed"`, asserted), 1.0 s after the first kill (mostly the bounded SIGHUP wait). The blocked writer was **still blocked** after the program died (`writer:"still_blocked"`, recorded).
+- **Hung command (no-read child), contained in a reaped subprocess:** the measurement runs in the stall fixture (`ovis-terminal-probe-stall`, `probes/fixtures/stall_writer.rs`). The no-read program is `sh -c 'trap "" HUP; …; exec sleep 600'`. The fixture's writer blocked after 8,192 of 1,048,576 bytes. portable-pty's own `kill()` (SIGHUP on Unix) did **not** end the program (`backend_kill_ended_program:false`, asserted); SIGKILL did (`signal:"Killed"`, asserted), 1.0 s after the first kill. The fixture's writer was **still blocked** after the program died (`writer:"still_blocked"`). `probe_stalled_writer` then SIGKILLed and reaped the fixture, joined its own report reader, and returned `writer_still_blocked_at_kill:true`, `fixture` and `program` PIDs. **Regression (gate B1):** the test counts this process's `probe-stall*` threads from `/proc/self/task/*/comm` before and after the probe and asserts they are equal. It also asserts that both the fixture and program PIDs resolve to `process_record_unreadable` after the probe returns. Record: `{"report":{"attempted":"1048576","accepted_before_kill":"8192","writer_blocked":true,"backend_kill_ended_program":false,"backend_kill_error":null,"exit":{"code":1,"signal":"Killed"},"kill_to_exit":"1002907","writer":"still_blocked"},"writer_still_blocked_at_kill":true,"fixture":"3863200","program":"3863202"}`.
 - **Missing executable:** `PtySession::spawn` fails with `kind() == "spawn_failed"` and `spawn_failure_kind() == Unavailable`. The holder `SpawnFailed{kind: unavailable}` frame round-trips. No process record is produced.
 - **PTY creation refused:** under `ulimit -n 4` the fixture's `openpty` fails with `EMFILE` (`Too many open files`) and writes one holder frame, which decodes to `SpawnFailed{kind:"unavailable"}` (asserted).
 - **Missing cwd:** requested `/nonexistent/ovis-probe-cwd`; portable-pty 0.9.0 started the program in `$HOME` (`/home/devswha`). The test asserts the program never reports the missing directory as its own.
 - **Broken endpoint:** connecting to a removed socket gives `endpoint_failed` with io kind `NotFound`; writing to a closed peer gives `endpoint_failed` with io kind `BrokenPipe` (asserted, `ConnectionReset` also accepted for macOS).
 
 The first failure run wrote 4 KiB chunks without newlines. On Linux, canonical mode accepted all 1 MiB without blocking, so no write blocked and the input past 4095 bytes per line was never delivered ([failure-run1-canonical-discard.log](failure-run1-canonical-discard.log)). The probe now writes whole lines; that silent discard is listed under Risks.
+
+## Gate review round 1 fix (B1)
+
+- **Defect:** `probe_stalled_writer` returned while its own writer thread stayed blocked in `write(2)`. That leaked a task and violated V-220 / RUST-ASYNC-cancel; the reviewer reproduced it with `/proc/self/task` (0 threads before, 1 after).
+- **Fix:** the blocking writer now runs only in the stall fixture subprocess (`probes/fixtures/stall_writer.rs`, bin `ovis-terminal-probe-stall` of the holder crate). The fixture prints `PROGRAM <pid>` and `STALL <json>`, then blocks.
+  - `probe_stalled_writer(fixture, bound)` waits for the report, SIGKILLs and reaps the fixture (`Child::kill` + `Child::wait`) and joins its report-reader thread.
+  - On Unix it also SIGKILLs the PTY program if that program somehow survived.
+  - It returns `StallOutcome { report, writer_still_blocked_at_kill, fixture, program }`, and every error path kills and reaps the fixture too.
+  - The Linux finding is preserved unchanged (`writer:"still_blocked"`, `writer_still_blocked_at_kill:true`).
+- **Regression:** the reviewer's thread count, plus PID checks, is now part of `failure` (see QA). `PtySession::take_writer` became unused and was removed.
+- **Unrelated failure seen during this round:** one `scripts/check.sh` run failed in `ovis-terminal-vt` `engine::paint_equivalence::paint_reproduces_arbitrary_streams` (Todo 7's crate, not touched by this lane). Its random proptest shrank to `ESC[?7l`, `aa aaa  a`, TAB, `中文` ([check-b1-vt-proptest-failure.log](check-b1-vt-proptest-failure.log), [vt-paint-equivalence-proptest-failure.txt](vt-paint-equivalence-proptest-failure.txt)). The regression file proptest wrote into `crates/ovis-terminal-vt/` was removed because it is outside this lane's scope. The defect is reported, not fixed; the rerun passed ([check-b1.log](check-b1.log)).
 
 ## Platform findings
 
@@ -114,10 +125,10 @@ Same shape as the local run. Socket path limit 107; `endpoint_inode_reused: true
 
 | Class | Observable |
 |---|---|
-| hung commands: no-read child | Stall probe: blocked writer, SIGHUP ignored, SIGKILL collects the exit within the bound; the writer thread stays blocked (measured, reported to Todo 6). |
+| hung commands: no-read child | Stall fixture subprocess: blocked writer, SIGHUP ignored, SIGKILL collects the exit within the bound; the writer stays blocked (measured, reported to Todo 6). The probe kills and reaps the fixture and asserts no thread or process survives it. |
 | repeated interruptions: core death / logout | `probe_detach` runs both: launcher SIGKILL and launcher SIGHUP. Holder and program PID + start token unchanged and `live` after each (asserted twice). |
 | misleading success: actual platform process evidence | Survival is decided from the OS process table (`/proc` / `ps`) including zombie state, never from the fixture's own claim. A dead PID reports `process_record_unreadable`. The missing-cwd case asserts the backend's substitute directory is not reported as the requested one. Spawn and openpty failures become typed `spawn_failed`/`unavailable`, never a process record. |
-| Not reproduced: EXCL-019, EXCL-024, V-RT-HC-01, V-220 | No probe injects scroll input to read history (EXCL-019). No write waits for a status change; round trips wait only for their own echoed marker (EXCL-024/V-RT-HC-01). Every probe thread is bounded and joined by `finish`/`thread::scope`; the only unjoined thread is the deliberately blocked stall writer, reported as `still_blocked` (V-220). |
+| Not reproduced: EXCL-019, EXCL-024, V-RT-HC-01, V-220 | No probe injects scroll input to read history (EXCL-019). No write waits for a status change; round trips wait only for their own echoed marker (EXCL-024/V-RT-HC-01). Every probe thread is bounded and joined (`finish`, `thread::scope`, the stall probe's report reader). The one writer that cannot be cancelled while blocked in `write(2)` lives in the stall fixture subprocess, which the probe SIGKILLs and reaps before returning (V-220). |
 
 ## Contract checklist
 

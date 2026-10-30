@@ -219,8 +219,9 @@ pub fn happy() {
 /// When a spawn or pipe failure is not rejected with the asserted typed kind,
 /// or under `OVIS_PROBE_REQUIRE_PASS=1` when any capability is a finding.
 pub fn failure() {
-    if let Some(stall) = measured("conpty_stall", probe_stalled_writer(WAIT)) {
-        if !stall.backend_kill_ended_program {
+    let fixture = std::path::Path::new(env!("CARGO_BIN_EXE_ovis-terminal-probe-stall"));
+    if let Some(stall) = measured("conpty_stall", probe_stalled_writer(fixture, WAIT)) {
+        if !stall.report.backend_kill_ended_program {
             finding("conpty_stall_backend_kill", &json!(stall));
         }
         record("stall", &stall);

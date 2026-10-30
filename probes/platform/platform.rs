@@ -37,4 +37,4 @@ pub use process::{
     Pid, ProcessObservation, ProcessState, StartTokenSource, observe_process, resident_memory,
 };
 pub use session::{ExitRecord, Grid, PtySession};
-pub use stall::{StallReport, WriterAfterKill, probe_stalled_writer};
+pub use stall::{StallOutcome, StallReport, WriterAfterKill, probe_stalled_writer};
