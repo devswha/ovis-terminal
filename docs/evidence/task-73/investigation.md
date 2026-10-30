@@ -56,3 +56,29 @@ exit 1
 GitHub does not register this newly added manual-only workflow from a branch
 push. The default branch is `main`. Registration on that branch is outside
 this lane's authorized scope; the user has been notified.
+
+The user then authorized a lane-only push trigger to bootstrap and run stress
+without changing protected `main`. The default-branch registration monitor
+was stopped. Both dispatch attempts (CLI resolution and direct REST POST)
+returned 404 before any run was created.
+
+## Additional source-level candidate (not yet runtime-confirmed)
+
+Apple's shipped Bash 3.2 readline has a read-then-write winsize sequence:
+`lib/readline/rltty.c:set_winsize` reads `TIOCGWINSZ`, then writes that same
+value with `TIOCSWINSZ`. `get_tty_settings` calls this during terminal
+preparation. Source:
+<https://github.com/apple-oss-distributions/bash/blob/main/bash-3.2/lib/readline/rltty.c>.
+
+This introduces a different candidate from delayed XNU publication: after
+the first `GRID` report has been printed, the interactive shell may be
+preparing its next readline. If its read sees 80x24, the test resizes to
+132x40, and readline then writes its saved 80x24, a fresh slave query will
+correctly see the overwritten size. A prompt-ready barrier or a
+noninteractive shell command waiting in a builtin read would avoid this
+unowned write, whereas repeated slave queries alone could time out forever.
+This is a source-level mechanism, not a confirmed explanation of the CI
+failure. Runner reproduction and a distinguishing observation remain required.
+
+After merging task 72, `bash scripts/check.sh` passed again on Linux x86_64:
+193 tests passed, 1 skipped, exit 0.
