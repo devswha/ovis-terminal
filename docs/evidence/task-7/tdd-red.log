@@ -1,0 +1,89 @@
+   Compiling libc v0.2.191
+   Compiling serde_core v1.0.229
+   Compiling cfg-if v1.0.5
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling rustix v1.1.6
+   Compiling linux-raw-sys v0.12.1
+   Compiling rand_core v0.10.1
+   Compiling getrandom v0.4.3
+   Compiling memchr v2.8.3
+   Compiling parking_lot_core v0.9.12
+   Compiling serde v1.0.229
+   Compiling zmij v1.0.23
+   Compiling once_cell v1.21.4
+   Compiling autocfg v1.5.1
+   Compiling smallvec v1.16.4
+   Compiling scopeguard v1.2.0
+   Compiling fastrand v2.5.0
+   Compiling signal-hook v0.4.5
+   Compiling regex-syntax v0.8.11
+   Compiling cursor-icon v1.2.0
+   Compiling thiserror v2.0.21
+   Compiling arrayvec v0.7.8
+   Compiling serde_json v1.0.154
+   Compiling log v0.4.34
+   Compiling quick-error v1.2.3
+   Compiling fnv v1.0.7
+   Compiling bit-vec v0.10.1
+   Compiling unicode-width v0.2.3
+   Compiling cpufeatures v0.3.1
+   Compiling home v0.5.12
+   Compiling base64 v0.22.1
+   Compiling itoa v1.0.18
+   Compiling core_detect v1.0.0
+   Compiling unarray v0.1.4
+   Compiling ovis-terminal-protocol v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t7/crates/ovis-terminal-protocol)
+   Compiling similar v2.7.0
+   Compiling rand_xorshift v0.5.0
+   Compiling lock_api v0.4.14
+   Compiling chacha20 v0.10.2
+   Compiling num-traits v0.2.19
+   Compiling bit-set v0.11.1
+   Compiling aho-corasick v1.1.5
+   Compiling syn v3.0.9
+   Compiling errno v0.3.14
+   Compiling wait-timeout v0.2.1
+   Compiling console v0.16.6
+   Compiling signal-hook-registry v1.4.8
+   Compiling rand v0.10.3
+   Compiling parking_lot v0.12.5
+   Compiling regex-automata v0.4.18
+   Compiling bitflags v2.13.2
+   Compiling serde_derive v1.0.229
+   Compiling thiserror-impl v2.0.21
+   Compiling vte v0.15.0
+   Compiling tempfile v3.27.0
+   Compiling polling v3.11.0
+   Compiling rustix-openpty v0.2.0
+   Compiling alacritty_terminal v0.26.0
+   Compiling rusty-fork v0.3.1
+   Compiling insta v1.49.0
+   Compiling proptest v1.12.0
+   Compiling ovis-terminal-vt v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t7/crates/ovis-terminal-vt)
+error[E0432]: unresolved imports `ovis_terminal_vt::Checkpoint`, `ovis_terminal_vt::Fidelity`, `ovis_terminal_vt::Geometry`, `ovis_terminal_vt::HistoryLimit`, `ovis_terminal_vt::OscContent`, `ovis_terminal_vt::OscFault`, `ovis_terminal_vt::QueryOutcome`, `ovis_terminal_vt::Vt`, `ovis_terminal_vt::VtConfig`
+ --> crates/ovis-terminal-vt/tests/checkpoint.rs:6:5
+  |
+6 |     Checkpoint, Fidelity, Geometry, HistoryLimit, OscContent, OscFault, QueryOutcome, Vt,
+  |     ^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^^^^  ^^ no `Vt` in the root
+  |     |           |         |         |             |           |         |
+  |     |           |         |         |             |           |         no `QueryOutcome` in the root
+  |     |           |         |         |             |           no `OscFault` in the root
+  |     |           |         |         |             no `OscContent` in the root
+  |     |           |         |         no `HistoryLimit` in the root
+  |     |           |         no `Geometry` in the root
+  |     |           no `Fidelity` in the root
+  |     no `Checkpoint` in the root
+7 |     VtConfig,
+  |     ^^^^^^^^ no `VtConfig` in the root
+
+error[E0425]: cannot find type `TerminalQuery` in crate `ovis_terminal_vt`
+  --> crates/ovis-terminal-vt/tests/checkpoint.rs:34:41
+   |
+34 | fn replies(queries: &[ovis_terminal_vt::TerminalQuery]) -> Vec<(u64, Vec<u8>)> {
+   |                                         ^^^^^^^^^^^^^ not found in `ovis_terminal_vt`
+
+Some errors have detailed explanations: E0425, E0432.
+For more information about an error, try `rustc --explain E0425`.
+error: could not compile `ovis-terminal-vt` (test "checkpoint") due to 2 previous errors

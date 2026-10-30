@@ -1,0 +1,236 @@
+$ PROPTEST_CASES=4000 cargo test -p ovis-terminal-vt --locked --no-fail-fast  (round 1)
+   Compiling ovis-terminal-vt v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t7/crates/ovis-terminal-vt)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.50s
+     Running unittests src/lib.rs (target/debug/deps/ovis_terminal_vt-1978d71f9ad24741)
+
+running 6 tests
+test engine::paint_equivalence::alternate_screen_paint_restores_both_screens ... ok
+test engine::paint_equivalence::cursor_outside_origin_region_spends_saved_cursor_and_says_so ... ok
+test engine::paint_equivalence::primary_screen_paint_matches_live_state ... ok
+test engine::paint_equivalence::paint_after_resize_matches_reflowed_state ... ok
+test engine::mirror::tests::mirror_agrees_with_every_vte_callback ... ok
+test engine::paint_equivalence::paint_reproduces_arbitrary_streams ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.57s
+
+     Running tests/adversarial.rs (target/debug/deps/adversarial-ca07c4f2e81f8e28)
+
+running 11 tests
+test degenerate_geometry_is_a_typed_error ... ok
+test emulator_owned_osc_numbers_never_leak_as_records ... ok
+test fake_status_and_paste_text_are_only_screen_text ... ok
+test more_fields_than_the_parser_keeps_is_malformed_not_truncated_fields ... ok
+test narrowest_grid_survives_wide_characters ... ok
+test gate_oversize_osc_after_sixteen_params_is_not_success ... ok
+test osc_payload_at_the_limit_is_kept_and_one_byte_more_is_oversize ... ok
+test oversized_dcs_string_is_discarded_until_its_terminator ... ok
+test kitty_stack_overflow_is_refused_instead_of_crashing_the_engine ... ok
+test checkpoint_contradicting_its_geometry_is_rejected ... ok
+test ten_mib_unterminated_osc_is_cut_at_the_parser_bound ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests/checkpoint.rs (target/debug/deps/checkpoint-f320bf58080ecfc5)
+
+running 2 tests
+test failure ... ok
+test happy ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/continuation.rs (target/debug/deps/continuation-09520ccd8cf3ea58)
+
+running 7 tests
+test first_paint_reports_a_control_inside_an_open_sequence ... ok
+test first_paint_preserves_a_split_utf8_character ... ok
+test first_paint_preserves_an_open_title_osc ... ok
+test gate_first_paint_preserves_pending_control_sequence ... ok
+test gate_serde_checkpoint_cannot_bypass_version_check ... ok
+test serde_checkpoint_from_a_foreign_engine_cannot_import ... ok
+test first_paint_at_any_byte_continues_like_the_live_stream ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.25s
+
+     Running tests/modes.rs (target/debug/deps/modes-0c209d6fb5c209c8)
+
+running 3 tests
+test kitty_stack_is_per_screen_and_survives_a_round_trip ... ok
+test modes_follow_the_program_and_bump_their_revision_once_per_change ... ok
+test herdr_attach_preamble_shows_the_bracketed_paste_it_forces ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/osc_bounds.rs (target/debug/deps/osc_bounds-98739a00c85e5818)
+
+running 4 tests
+test gate_osc_bounds_survive_control_inside_escape_introducer ... ok
+test every_inert_control_in_the_introducer_keeps_the_bounds ... ok
+test ten_mib_osc_with_interleaved_controls_is_still_cut_at_the_bound ... ok
+test interleaved_controls_never_change_the_records ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.53s
+
+     Running tests/properties.rs (target/debug/deps/properties-7f513843795558c6)
+
+running 3 tests
+test control_inside_an_open_sequence_is_reported_not_replayed ... ok
+test chunking_never_changes_state ... ok
+test checkpoint_at_any_boundary_is_exact_or_says_why ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.72s
+
+     Running tests/queries.rs (target/debug/deps/queries-f256a10404b82885)
+
+running 5 tests
+test queries_needing_client_facts_are_not_invented ... ok
+test replies_carry_the_offset_of_their_query ... ok
+test split_query_is_answered_once_at_its_final_byte ... ok
+test replayed_queries_are_not_answered_twice ... ok
+test cursor_report_after_resize_uses_the_new_grid ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/reads.rs (target/debug/deps/reads-9c23f468a05fe7e8)
+
+running 4 tests
+test search_and_selection_are_revision_guarded ... ok
+test alternate_screen_history_is_unavailable_with_a_reason ... ok
+test history_reports_range_truncation_and_completeness ... ok
+test reads_leave_state_untouched ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/wire.rs (target/debug/deps/wire-0869674ac7338414)
+
+running 4 tests
+test u64_max_round_trips_exactly_as_a_string ... ok
+test numeric_and_non_canonical_forms_are_rejected ... ok
+test checkpoint_with_a_numeric_offset_is_malformed ... ok
+test every_u64_round_trips ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+   Doc-tests ovis_terminal_vt
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+$ PROPTEST_CASES=4000 cargo test -p ovis-terminal-vt --locked --no-fail-fast  (round 2)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running unittests src/lib.rs (target/debug/deps/ovis_terminal_vt-1978d71f9ad24741)
+
+running 6 tests
+test engine::paint_equivalence::cursor_outside_origin_region_spends_saved_cursor_and_says_so ... ok
+test engine::paint_equivalence::alternate_screen_paint_restores_both_screens ... ok
+test engine::paint_equivalence::primary_screen_paint_matches_live_state ... ok
+test engine::paint_equivalence::paint_after_resize_matches_reflowed_state ... ok
+test engine::mirror::tests::mirror_agrees_with_every_vte_callback ... ok
+test engine::paint_equivalence::paint_reproduces_arbitrary_streams ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.67s
+
+     Running tests/adversarial.rs (target/debug/deps/adversarial-ca07c4f2e81f8e28)
+
+running 11 tests
+test degenerate_geometry_is_a_typed_error ... ok
+test emulator_owned_osc_numbers_never_leak_as_records ... ok
+test fake_status_and_paste_text_are_only_screen_text ... ok
+test more_fields_than_the_parser_keeps_is_malformed_not_truncated_fields ... ok
+test narrowest_grid_survives_wide_characters ... ok
+test gate_oversize_osc_after_sixteen_params_is_not_success ... ok
+test osc_payload_at_the_limit_is_kept_and_one_byte_more_is_oversize ... ok
+test kitty_stack_overflow_is_refused_instead_of_crashing_the_engine ... ok
+test oversized_dcs_string_is_discarded_until_its_terminator ... ok
+test checkpoint_contradicting_its_geometry_is_rejected ... ok
+test ten_mib_unterminated_osc_is_cut_at_the_parser_bound ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/checkpoint.rs (target/debug/deps/checkpoint-f320bf58080ecfc5)
+
+running 2 tests
+test happy ... ok
+test failure ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/continuation.rs (target/debug/deps/continuation-09520ccd8cf3ea58)
+
+running 7 tests
+test first_paint_reports_a_control_inside_an_open_sequence ... ok
+test first_paint_preserves_an_open_title_osc ... ok
+test first_paint_preserves_a_split_utf8_character ... ok
+test gate_first_paint_preserves_pending_control_sequence ... ok
+test gate_serde_checkpoint_cannot_bypass_version_check ... ok
+test serde_checkpoint_from_a_foreign_engine_cannot_import ... ok
+test first_paint_at_any_byte_continues_like_the_live_stream ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.04s
+
+     Running tests/modes.rs (target/debug/deps/modes-0c209d6fb5c209c8)
+
+running 3 tests
+test kitty_stack_is_per_screen_and_survives_a_round_trip ... ok
+test modes_follow_the_program_and_bump_their_revision_once_per_change ... ok
+test herdr_attach_preamble_shows_the_bracketed_paste_it_forces ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/osc_bounds.rs (target/debug/deps/osc_bounds-98739a00c85e5818)
+
+running 4 tests
+test gate_osc_bounds_survive_control_inside_escape_introducer ... ok
+test every_inert_control_in_the_introducer_keeps_the_bounds ... ok
+test ten_mib_osc_with_interleaved_controls_is_still_cut_at_the_bound ... ok
+test interleaved_controls_never_change_the_records ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.72s
+
+     Running tests/properties.rs (target/debug/deps/properties-7f513843795558c6)
+
+running 3 tests
+test control_inside_an_open_sequence_is_reported_not_replayed ... ok
+test chunking_never_changes_state ... ok
+test checkpoint_at_any_boundary_is_exact_or_says_why ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.44s
+
+     Running tests/queries.rs (target/debug/deps/queries-f256a10404b82885)
+
+running 5 tests
+test queries_needing_client_facts_are_not_invented ... ok
+test replies_carry_the_offset_of_their_query ... ok
+test split_query_is_answered_once_at_its_final_byte ... ok
+test replayed_queries_are_not_answered_twice ... ok
+test cursor_report_after_resize_uses_the_new_grid ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/reads.rs (target/debug/deps/reads-9c23f468a05fe7e8)
+
+running 4 tests
+test search_and_selection_are_revision_guarded ... ok
+test alternate_screen_history_is_unavailable_with_a_reason ... ok
+test history_reports_range_truncation_and_completeness ... ok
+test reads_leave_state_untouched ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/wire.rs (target/debug/deps/wire-0869674ac7338414)
+
+running 4 tests
+test numeric_and_non_canonical_forms_are_rejected ... ok
+test u64_max_round_trips_exactly_as_a_string ... ok
+test checkpoint_with_a_numeric_offset_is_malformed ... ok
+test every_u64_round_trips ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+   Doc-tests ovis_terminal_vt
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

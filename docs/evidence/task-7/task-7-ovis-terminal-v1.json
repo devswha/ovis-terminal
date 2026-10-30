@@ -1,0 +1,113 @@
+{
+  "task": 7,
+  "plan": "ovis-terminal-v1",
+  "producer": "lane executor (conformance runner deferred by plan until todo 21)",
+  "os_arch": "Linux x86_64",
+  "toolchain": "rustc/cargo 1.99.1",
+  "conformance_attempt": {
+    "command": "cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-7 --isolated --case happy --evidence \"$ATTEMPT_DIR/task-7-ovis-terminal-v1.json\"",
+    "exit": 2,
+    "stderr": "conformance: no scenarios are registered in this build (protocol crate ovis-terminal-protocol)"
+  },
+  "qa": {
+    "happy": {
+      "command": "cargo test -p ovis-terminal-vt --test checkpoint happy -- --exact --nocapture",
+      "exit": 0,
+      "output": {
+        "checkpoint_bytes": 130907,
+        "checkpoint_offset": "857",
+        "cursor": {
+          "blinking": false,
+          "column": 7,
+          "pending_wrap": false,
+          "row": 2,
+          "shape": "block",
+          "visible": true
+        },
+        "mode_revision": "8",
+        "modes": {
+          "editing": {
+            "insert": false,
+            "linefeed_newline": false,
+            "synchronized_update": false
+          },
+          "keyboard": {
+            "cursor_keys": "normal",
+            "keypad": "normal",
+            "kitty_flags": 1,
+            "modify_other_keys": "all",
+            "win32_input": true
+          },
+          "mouse": {
+            "alternate_scroll": true,
+            "encoding": "sgr",
+            "focus_events": false,
+            "tracking": "drag"
+          },
+          "paste": "bracketed",
+          "screen": {
+            "autowrap": true,
+            "buffer": "primary",
+            "cursor_visible": true,
+            "origin": false
+          }
+        },
+        "offset": "920",
+        "pending_bytes": "\u001b[3",
+        "replies": [
+          [
+            "887",
+            "\u001b[1;6R"
+          ]
+        ],
+        "restored_equals_live": true,
+        "revision": "456"
+      }
+    },
+    "failure": {
+      "command": "cargo test -p ovis-terminal-vt --test checkpoint failure -- --exact --nocapture",
+      "exit": 0,
+      "output": {
+        "foreign_engine": {
+          "kind": "checkpoint_incompatible",
+          "message": "checkpoint ovis-terminal-vt-checkpoint v1 (another-emulator 9.9) is not readable by this engine, which reads ovis-terminal-vt-checkpoint v1 (alacritty_terminal 0.26.0)"
+        },
+        "osc_records": [
+          {
+            "content": {
+              "malformed": {
+                "fault": "invalid_number"
+              }
+            },
+            "offset": "53",
+            "terminator": "bell"
+          },
+          {
+            "content": {
+              "oversize": {
+                "bytes": 5023,
+                "number": 7501
+              }
+            },
+            "offset": "5079",
+            "terminator": "bell"
+          }
+        ],
+        "screen_lines": [
+          "Status: working",
+          "Approve? [y/n]"
+        ],
+        "stale_version": {
+          "hint": "discard the checkpoint and rebuild the screen from retained output in a fresh engine",
+          "kind": "checkpoint_incompatible",
+          "message": "checkpoint ovis-terminal-vt-checkpoint v0 (alacritty_terminal 0.26.0) is not readable by this engine, which reads ovis-terminal-vt-checkpoint v1 (alacritty_terminal 0.26.0)"
+        },
+        "truncated_json": {
+          "kind": "checkpoint_malformed",
+          "message": "checkpoint bytes could not be decoded"
+        },
+        "truncated_osc_pending": "\u001b]7501;state=working"
+      }
+    }
+  }
+}
