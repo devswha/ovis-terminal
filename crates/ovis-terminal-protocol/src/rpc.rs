@@ -108,7 +108,7 @@ impl RpcRequest {
 ///
 /// Returns a typed parse or invalid-request error without forwarding serde prose.
 pub fn parse_request(input: &str) -> Result<RpcRequest, BoundaryError> {
-    let value: Value = serde_json::from_str(input).map_err(|_| BoundaryError::parse_error())?;
+    let value: Value = serde_json::from_str(input).map_err(BoundaryError::parse_error)?;
     let Some(object) = value.as_object() else {
         return Err(BoundaryError::invalid_request(Some("$")));
     };
@@ -222,6 +222,17 @@ pub enum RpcReply {
     Failure(RpcFailure),
 }
 
+impl RpcReply {
+    /// Returns the request ID that this terminal response settles.
+    #[must_use]
+    pub const fn id(&self) -> &RequestId {
+        match self {
+            Self::Success(success) => &success.id,
+            Self::Failure(failure) => &failure.id,
+        }
+    }
+}
+
 /// Parses and validates a response envelope, including branch exclusivity.
 ///
 /// # Errors
@@ -229,7 +240,7 @@ pub enum RpcReply {
 /// Returns [`BoundaryError::InvalidResponse`] for an envelope with both or neither branch.
 pub fn parse_reply(input: &str) -> Result<RpcReply, BoundaryError> {
     let reply: RpcReply =
-        serde_json::from_str(input).map_err(|_| BoundaryError::invalid_response())?;
+        serde_json::from_str(input).map_err(BoundaryError::invalid_response_json)?;
     let jsonrpc = match &reply {
         RpcReply::Success(success) => success.jsonrpc.as_str(),
         RpcReply::Failure(failure) => failure.jsonrpc.as_str(),
@@ -261,9 +272,21 @@ impl InFlightRequests {
         }
     }
 
-    /// Removes an ID after its terminal response has been written.
-    pub fn complete(&mut self, id: &RequestId) -> bool {
-        self.ids.remove(id)
+    /// Settles one active request with its matching terminal response.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BoundaryError::ResponseIdMismatch`] if the reply has another ID.
+    /// Returns [`BoundaryError::UnknownOrSettledRequestId`] if the ID is not active.
+    pub fn complete(&mut self, id: &RequestId, reply: RpcReply) -> Result<RpcReply, BoundaryError> {
+        if reply.id() != id {
+            return Err(BoundaryError::response_id_mismatch());
+        }
+        if self.ids.remove(id) {
+            Ok(reply)
+        } else {
+            Err(BoundaryError::unknown_or_settled_request_id())
+        }
     }
 }
 

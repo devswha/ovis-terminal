@@ -1,6 +1,6 @@
 //! Behavior tests for correlated JSON-RPC request and response envelopes.
 
-use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind, JsonRpcCode};
+use ovis_terminal_protocol::errors::{ErrorKind, JsonRpcCode};
 use ovis_terminal_protocol::rpc::{
     InFlightRequests, RequestId, RpcReply, RpcSuccess, parse_reply, parse_request,
 };
@@ -25,11 +25,21 @@ fn happy() {
         .expect("second ID should be accepted");
 
     let replies = [
-        RpcReply::Success(RpcSuccess::new(
-            first.id().clone(),
-            json!({"pane_id": "p1"}),
-        )),
-        RpcReply::Success(RpcSuccess::new(second.id().clone(), json!({"panes": []}))),
+        in_flight
+            .complete(
+                second.id(),
+                RpcReply::Success(RpcSuccess::new(second.id().clone(), json!({"panes": []}))),
+            )
+            .expect("the second response should settle by its own ID"),
+        in_flight
+            .complete(
+                first.id(),
+                RpcReply::Success(RpcSuccess::new(
+                    first.id().clone(),
+                    json!({"pane_id": "p1"}),
+                )),
+            )
+            .expect("the first response should settle by its own ID"),
     ];
     let encoded: Vec<Value> = replies
         .iter()
@@ -43,16 +53,16 @@ fn happy() {
             .pointer("/id")
             .cloned()
             .unwrap_or(Value::Null),
-        "request-a"
+        "request-b"
     );
     assert_eq!(
         encoded
             .first()
             .expect("reply 0 should exist")
-            .pointer("/result/pane_id")
+            .pointer("/result/panes")
             .cloned()
             .unwrap_or(Value::Null),
-        "p1"
+        json!([])
     );
     assert!(
         encoded
@@ -68,16 +78,16 @@ fn happy() {
             .pointer("/id")
             .cloned()
             .unwrap_or(Value::Null),
-        "request-b"
+        "request-a"
     );
     assert_eq!(
         encoded
             .get(1)
             .expect("reply 1 should exist")
-            .pointer("/result/panes")
+            .pointer("/result/pane_id")
             .cloned()
             .unwrap_or(Value::Null),
-        json!([])
+        "p1"
     );
     assert!(
         encoded
@@ -210,8 +220,8 @@ fn rejects_duplicate_in_flight_request_ids() {
     in_flight
         .begin(id.clone())
         .expect("initial request should be accepted");
-    assert_eq!(
-        in_flight.begin(id),
-        Err(BoundaryError::duplicate_request_id())
-    );
+    let error = in_flight
+        .begin(id)
+        .expect_err("duplicate active ID must be rejected");
+    assert_eq!(error.kind(), "duplicate_request_id");
 }

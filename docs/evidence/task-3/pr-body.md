@@ -1,70 +1,70 @@
-Plan todo 3 (wave 2). Closes GAP-006, GAP-014, GAP-015; delivers IDEAL-005, IDEAL-008, IDEAL-013.
-
-Adds `ovis_terminal_protocol::rpc` (string `RequestId`, closed `RpcRequest` parsed only through `parse_request`, `RpcSuccess`/`RpcFailure`/`RpcReply` with result/error exclusivity, `InFlightRequests` duplicate-ID rejection, `DecimalU64` canonical counters) and `ovis_terminal_protocol::errors` (`BoundaryError` thiserror enum, `ErrorKind` with stable `token()`/`hint()`, `JsonRpcCode`, `TargetId`/`OpId`/`FieldPath` newtypes).
+Plan todo 3, wave 2. Closes GAP-006, GAP-014, GAP-015; delivers IDEAL-005, IDEAL-008, IDEAL-013.
 
 ## Before
 
-RT-HC-06, GAP-006, GAP-014, GAP-015. Keeper, extended here: hc already emits `kind` + `hint`.
+RT-HC-06, GAP-006, GAP-014, GAP-015. hc's stable `kind` and `hint` are a keeper extended here.
 
-`docs/evidence/baseline/smoke/hc-s13-errors.log:5`
+Baseline `docs/evidence/baseline/smoke/hc-s13-errors.log:5`:
 
-```
+```json
 {"error":{"hint":"see `hc ls --all`","kind":"not_found","message":"no terminal \"nope-t99\""}}
 ```
 
-Excerpt with source path: `docs/evidence/task-3/baseline-hc-s13-errors.log`. What the keeper lacks and this lane adds: `retryable`, `field_path`, `target`, `op_id`, a JSON-RPC code derived from the typed kind (never from message text), and request-ID correlation guarantees (GAP-006).
+The hc envelope lacks `retryable`, `field_path`, `target`, and `op_id`; older herdr RPC errors also fail to guarantee request-ID correlation. Source excerpt is copied to `docs/evidence/task-3/baseline-hc-s13-errors.log`.
 
 ## After
 
-Linux x86_64, rustc 1.99.1 (58cf8f9c3 2026-10-13), isolated toolchain. Full logs under `docs/evidence/task-3/`.
+Linux x86_64, rustc 1.99.1 (58cf8f9c3 2026-10-13). Full command receipts live in `docs/evidence/task-3/`.
 
-| Command | Exit | Evidence |
+| Command | Result | Evidence |
 |---|---|---|
-| `bash scripts/check.sh` (fmt, clippy -D warnings, nextest 25/25, doctests, hygiene 0/57, manifests, json) | 0 | `check-script.log` |
-| `cargo nextest run -p ovis-terminal-protocol` | 0, 14 tests run, 14 passed | `acceptance-nextest.log` |
-| `cargo clippy -p ovis-terminal-protocol --all-targets -- -D warnings` | 0 | `acceptance-clippy.log` |
-| `cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-3 --isolated --case happy --evidence "$ATTEMPT_DIR/task-3-ovis-terminal-v1.json"` | **2** | `conformance-attempt.log` |
+| `bash scripts/check.sh` | Exit 0: fmt, workspace Clippy `-D warnings`, nextest 30/30, doctests, hygiene 0/61, manifest and JSON checks | `check-script-gate-fix.log` |
+| `cargo nextest run -p ovis-terminal-protocol` | Exit 0: 19 tests passed | `acceptance-nextest-gate-fix.log` |
+| `cargo clippy -p ovis-terminal-protocol --all-targets -- -D warnings` | Exit 0 | `acceptance-clippy.log` |
+| `cargo test -p ovis-terminal-protocol --test rpc happy -- --exact --nocapture` | Exit 0: 1 test passed, 8 filtered | `qa-happy-gate-fix.log` |
+| `cargo test -p ovis-terminal-protocol --test rpc failure -- --exact --nocapture` | Exit 0: 1 test passed, 8 filtered | `qa-failure-gate-fix.log` |
+| `cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-3 --isolated --case happy --evidence "$ATTEMPT_DIR/task-3-ovis-terminal-v1.json"` | Exit 2: no scenarios registered | `conformance-attempt.log` |
 
-Conformance output, verbatim:
+Conformance result, verbatim:
 
-```
+```text
 conformance: no scenarios are registered in this build (protocol crate ovis-terminal-protocol)
 exit=2
 ```
 
-The runner is implemented by todo 21 and the binary by todo 31; neither is on `origin/integration`. Per plan line 275 the real-socket conformance for part-A foundational todos is deferred until todo 21 lands. **No ovis-terminal socket transcript exists for this lane yet**; the acceptance item "conformance `part-a/task-3` exits 0 after assembly" is unmet by design at this point. `conformance/scenarios/part-a/task-3.json` is checked in for that runner (JSON validated by `scripts/hygiene/json.sh`).
-
-TDD red run (API absent, crate uncompilable) is recorded in `tdd-red.log`.
+Conformance execution is **DEFERRED-BY-PLAN** (plan line 275): the real-socket scenario runner belongs to todo 21 and the assembled binary to todo 31. Neither is present on the current integration base. This exit-2 attempt is not a conformance pass; no socket transcript or `task-3-ovis-terminal-v1.json` result is claimed.
 
 ## QA
 
-Happy: `cargo test -p ovis-terminal-protocol --test rpc happy -- --exact --nocapture` -> `test failure ... ok`, `1 passed; 8 filtered out`, exit 0 (`qa-happy.log`). The test parses two interleaved requests with string IDs `request-a` and `request-b`, admits both into `InFlightRequests`, serializes one `RpcSuccess` per ID and asserts each encoded reply carries exactly its own `id`, a `result`, and no `error` key.
+Happy command: `cargo test -p ovis-terminal-protocol --test rpc happy -- --exact --nocapture`. It runs exactly one assertion-bearing `happy` test: parse two requests with IDs `request-a` and `request-b`, admit both in flight, settle `request-b` before `request-a`, and assert each terminal reply has its matching ID, corresponding result, and no error branch. Result: `test happy ... ok`; 1 passed, 8 filtered, exit 0 (`qa-happy-gate-fix.log`).
 
-Failure: `cargo test -p ovis-terminal-protocol --test rpc failure -- --exact --nocapture` -> `test failure ... ok`, `1 passed; 8 filtered out`, exit 0 (`qa-failure.log`). The test feeds `{"jsonrpc":"2.0","id":7,"method":"terminal.get","params":{"pane_id":"p1"}}` to `parse_request` and asserts `Err` with `error_kind() == InvalidRequest`, `json_rpc_code() == InvalidRequest` (-32600) and `field_path() == Some("id")`. Because `parse_request` returns `Err`, no `RpcRequest` value exists to dispatch; dispatch count is zero by construction. The unknown `pane_id` field is covered by the separate `rejects_unknown_target_parameter_before_dispatch` test (`invalid_params`, -32602, `field_path == "params.pane_id"`).
+Failure command: `cargo test -p ovis-terminal-protocol --test rpc failure -- --exact --nocapture`. It feeds `{"jsonrpc":"2.0","id":7,"method":"terminal.get","params":{"pane_id":"p1"}}` to `parse_request` and asserts `invalid_request`, JSON-RPC -32600, and `field_path == "id"`. The parser returns `Err`, so no request value is available to dispatch. Result: `test failure ... ok`; 1 passed, 8 filtered, exit 0 (`qa-failure-gate-fix.log`). The unknown parameter field is independently rejected as `invalid_params` (-32602) with `params.pane_id`.
 
 ## Adversarial
 
-- malformed input, wrong ID type: numeric `id` -> `invalid_request`, `field_path:"id"` (`failure` test).
-- malformed input, unknown target field: `params.pane_id` -> `invalid_params` with that path (`rejects_unknown_target_parameter_before_dispatch`); unknown field inside `params.target` -> `invalid_params`, `field_path:"params.target.pane_id"` (`rejects_unknown_nested_target_field_before_dispatch`); non-string `target.terminal_id` -> `invalid_params`, `field_path:"params.target.terminal_id"` (`rejects_non_string_target_identity_before_dispatch`).
-- malformed input, unknown envelope field: top-level `debug` -> `invalid_request`, `field_path:"debug"` (`rejects_unknown_request_envelope_fields`).
-- misleading success, error/result exclusivity: a reply carrying both `result` and `error` -> `parse_reply` returns `invalid_response` (`rejects_error_and_result_in_one_response`); a reply with `jsonrpc:"1.0"` is likewise rejected (`rejects_response_with_wrong_json_rpc_version`).
-- duplicate in-flight ID: second `begin` with the same `RequestId` -> `Err(duplicate_request_id)` (`rejects_duplicate_in_flight_request_ids`).
-- precision: `DecimalU64` rejects JSON numbers, `"03"`, `""`, `"+3"`, and `2^64` as a string; `u64::MAX` round-trips exactly; proptest over all `u64` (`tests/rpc_counter.rs`).
+- Numeric request ID: rejected as `invalid_request`, field path `id`.
+- Unknown top-level request field: rejected as `invalid_request`, field path `debug`.
+- Unknown top-level or nested target field and non-string target identity: rejected as `invalid_params` with the precise field path before dispatch.
+- Error/result exclusivity and wrong JSON-RPC version: `parse_reply` returns `invalid_response`.
+- Duplicate in-flight ID: second begin returns `duplicate_request_id`.
+- B1 parser source: `parse_request("{")` exposes `Error::source()`, while the serialized error data omits the serde diagnostic (`malformed_json_preserves_source_without_serializing_parser_prose`).
+- B2 unknown method: `BoundaryError::method_not_found()` has and serializes `field_path == "method"`.
+- N1 exactly-once settlement: two IDs complete out of order; a second completion returns `unknown_or_settled_request_id`; a mismatched response ID leaves the matching request active. Proptest checks begin/complete sequences against a reference `HashSet` (`tests/rpc_settlement.rs`).
+- N2 prose overfit removed: no assertion constrains the wording of Display text; stable kind and hint accessors are tested separately.
+- Counter encoding: `DecimalU64` rejects JSON numeric values, non-canonical strings and overflow; `u64::MAX` round-trips exactly. Proptest exercises random u64 values and random settlement sequences against a reference set.
 
 ## Contract checklist
 
-1. Canonical decimal counters: `rpc::DecimalU64` serializes every u64 as a decimal string and its deserializer rejects JSON numbers (`visit_u64/i64/f64` -> `invalid_type`), leading zeros, sign, empty and overflow. Tests: `decimal_counter_round_trips_u64_max_exactly` (exact `"18446744073709551615"`), `decimal_counter_rejects_json_numbers_and_non_canonical_strings`, proptest `decimal_counter_round_trips_every_value`. This todo defines no other numeric wire field; later todos must use `DecimalU64` for seq/revision/offset/generation.
-2. Typed boundary errors: `BoundaryError` is `#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]`; `kind() -> &'static str` returns `ErrorKind::token()` (snake_case machine token, identical to the serde name); `hint() -> &'static str` is per-kind recovery guidance; `#[error("...")]` strings describe the condition and never contain the token (asserted by `!display.contains(kind_token)` in `serializes_structured_boundary_error_fields`). No inner error is wrapped at this boundary, so no `#[source]` field exists; serde/parse failures are mapped to `ParseError`/`InvalidResponse` without carrying serde prose (V-RT-HD-12). No hand-written `Error` impl, no `String` errors.
-3. Identity newtypes: `RequestId(String)`, `TargetId(String)`, `OpId(String)`, `FieldPath(String)`, `DecimalU64(u64)`; `with_target`/`with_op_id` take the newtypes, not `&str`. `Option` appears only on `field_path`/`target`/`op_id`, where absence is a real state (IDEAL-013: "when known").
-4. Behavior tests: every test drives `parse_request`/`parse_reply`/`InFlightRequests::begin`/serde and asserts the resulting kind, code, path or encoded field; no test reads back a locally assigned literal. `proptest` is a dev-dependency and covers the counter round trip.
-5. No `#[allow]`, no `#[expect]`, no TODO/placeholder in the crate (grep: zero matches). Panicking JSON indexing in tests was replaced by `Value::pointer`.
-6. Evidence states exactly what each test asserts (see QA/Adversarial). Conformance execution is deferred by plan (line 275) until todo 21; the exit-2 attempt is recorded verbatim above and in `conformance-attempt.log`.
-
-Bounded queues/backpressure (plan:220) are not in this todo's scope: this crate defines envelopes and errors only; `InFlightRequests` is a set keyed by ID whose cap belongs to the connection owner (todo 13), which will reject overflow with a typed kind.
+1. **Canonical decimal counters:** `DecimalU64` serializes as a decimal JSON string and accepts only canonical strings. Tests cover exact `u64::MAX`, numeric and malformed string rejection, and proptest round trips. This todo defines no other numeric counter field; later sequence/revision/offset/generation fields must use this type.
+2. **Typed boundary errors:** `BoundaryError` derives `Debug` and `thiserror::Error`; `kind()` and `hint()` return static strings. `ParseError` and `InvalidResponseJson` retain `serde_json::Error` under `#[source]`. Wire data is built separately and does not serialize source prose. Tests assert `source().is_some()` and that wire JSON omits the source text. Display prose is not pinned.
+3. **Semantic newtypes:** `RequestId`, `TargetId`, `OpId`, `FieldPath`, and `DecimalU64` distinguish identities and numeric units. Target/op IDs are accepted by typed methods, not interchangeable with `String`.
+4. **Behavior and property tests:** parser, response exclusivity, source-preservation, settlement, target-field and error-code tests assert observable results. Proptest checks counter round trips and random settlement sequences against a reference model.
+5. **No suppression or placeholder escapes:** no `#[allow]`, `#[expect]`, TODO, FIXME, `todo!`, or `unimplemented!` in the protocol crate. Test JSON access uses `Value::pointer`/`first()` rather than panic indexing.
+6. **Evidence matches assertions:** the QA and adversarial descriptions above state the actual test behavior. Real-socket execution is **DEFERRED-BY-PLAN** until todo 21; the observed exit-2 attempt is recorded in `conformance-attempt.log`.
 
 ## Risks
 
-- Scope: `crates/ovis-terminal-protocol/Cargo.toml` and `Cargo.lock` were changed (serde, serde_json, thiserror; dev: proptest, serde_json) under the orchestrator ruling that the manifest is a dependency seam; `Cargo.lock` was regenerated by Cargo, not hand-edited (`cargo-scope-decision.md`). `tests/rpc_counter.rs` and `tests/rpc_errors.rs` exist because the 250 pure-LOC gate would not accept one test file; the plan's `--test rpc happy|failure` targets are unchanged.
-- `ErrorKind` is `#[non_exhaustive]`; todo 4's OpenRPC generation must enumerate it from `token()` so the schema and the enum cannot drift.
-- `RpcRequest::validate_params` checks only the top-level field set and the `target` object shape; full per-method schemas arrive with schemars in todo 4.
-- No real-socket proof yet (see After).
+- Connection-wide in-flight capacity/backpressure is owned by the connection layer (todos 13/14); `InFlightRequests` only enforces identity and settlement, not a queue bound.
+- Full per-method request schemas and dispatch-time rejection arrive with schemars/dispatcher work in todos 4/14.
+- The manifest dependency seam added serde, serde_json, thiserror, and dev proptest; Cargo regenerated `Cargo.lock`. `errors/` and the `tests/rpc_*.rs` files split responsibilities to satisfy the 250 pure-LOC gate; the named `--test rpc happy|failure` targets are unchanged.
+- No real-socket transcript exists for this foundational lane; see the explicit deferred conformance result above.
