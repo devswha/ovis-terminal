@@ -18,12 +18,12 @@ Linux x86_64, rustc 1.99.1 (58cf8f9c3 2026-10-13). Full command receipts live in
 
 | Command | Result | Evidence |
 |---|---|---|
-| `bash scripts/check.sh` | Exit 0: fmt, workspace Clippy `-D warnings`, nextest 30/30, doctests, hygiene 0/61, manifest and JSON checks | `check-script-gate-fix.log` |
+| `bash scripts/check.sh` after merge with `origin/integration` | Exit 0: fmt, workspace Clippy `-D warnings`, nextest 58 tests/1 skipped, doctests, hygiene 0/83, manifests, JSON | `check-script-post-merge.log` |
 | `cargo nextest run -p ovis-terminal-protocol` | Exit 0: 19 tests passed | `acceptance-nextest-gate-fix.log` |
 | `cargo clippy -p ovis-terminal-protocol --all-targets -- -D warnings` | Exit 0 | `acceptance-clippy.log` |
 | `cargo test -p ovis-terminal-protocol --test rpc happy -- --exact --nocapture` | Exit 0: 1 test passed, 8 filtered | `qa-happy-gate-fix.log` |
 | `cargo test -p ovis-terminal-protocol --test rpc failure -- --exact --nocapture` | Exit 0: 1 test passed, 8 filtered | `qa-failure-gate-fix.log` |
-| `cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-3 --isolated --case happy --evidence "$ATTEMPT_DIR/task-3-ovis-terminal-v1.json"` | Exit 2: no scenarios registered | `conformance-attempt.log` |
+| `cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-3 --isolated --case happy --evidence "$ATTEMPT_DIR/task-3-ovis-terminal-v1.json"` | Exit 2: no scenarios registered | `conformance-attempt-postmerge.log` |
 
 Conformance result, verbatim:
 
@@ -32,7 +32,7 @@ conformance: no scenarios are registered in this build (protocol crate ovis-term
 exit=2
 ```
 
-Conformance execution is **DEFERRED-BY-PLAN** (plan line 275): the real-socket scenario runner belongs to todo 21 and the assembled binary to todo 31. Neither is present on the current integration base. This exit-2 attempt is not a conformance pass; no socket transcript or `task-3-ovis-terminal-v1.json` result is claimed.
+Conformance execution is **DEFERRED-BY-PLAN** (plan line 275): the real-socket scenario runner belongs to todo 21 and the assembled binary to todo 31. After merging the current integration base, the runner still registers no scenarios and the CLI still lacks RPC assembly. This exit-2 attempt is not a conformance pass; no socket transcript or `task-3-ovis-terminal-v1.json` result is claimed.
 
 ## QA
 

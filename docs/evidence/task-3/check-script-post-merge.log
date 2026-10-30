@@ -1,0 +1,18 @@
+$ bash scripts/check.sh
+exit=0
+
+==> cargo +nightly fmt --all -- --check
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+Finished dev profile, exit=0
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+58 tests run: 58 passed, 1 skipped
+==> cargo test --doc --workspace --all-features --locked
+all workspace doctest targets passed
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 83 files checked
+==> bash scripts/hygiene/manifests.sh
+manifests.sh: 16 member manifests checked
+==> bash scripts/hygiene/json.sh
+json.sh: 7 JSON files checked
+check.sh: all steps passed
+Linux x86_64, rustc 1.99.1 (58cf8f9c3 2026-10-13)
