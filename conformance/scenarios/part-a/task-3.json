@@ -1,0 +1,138 @@
+{
+  "scenario": "part-a/task-3",
+  "todo": 3,
+  "title": "Define correlated RPC envelopes and boundary error types",
+  "closes": [
+    "GAP-006",
+    "GAP-014",
+    "GAP-015"
+  ],
+  "delivers": [
+    "IDEAL-005",
+    "IDEAL-008",
+    "IDEAL-013"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "connection": "persistent",
+      "requests": [
+        {
+          "bytes": "{\"jsonrpc\":\"2.0\",\"id\":\"request-a\",\"method\":\"terminal.get\",\"params\":{\"target\":{\"terminal_id\":\"p1\"}}}\n",
+          "dispatch": "accepted"
+        },
+        {
+          "bytes": "{\"jsonrpc\":\"2.0\",\"id\":\"request-b\",\"method\":\"terminal.list\",\"params\":{}}\n",
+          "dispatch": "accepted"
+        }
+      ],
+      "expected": [
+        {
+          "id": "request-a",
+          "exactly_one_of": ["result", "error"]
+        },
+        {
+          "id": "request-b",
+          "exactly_one_of": ["result", "error"]
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "connection": "persistent",
+      "requests": [
+        {
+          "bytes": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"terminal.get\",\"params\":{\"pane_id\":\"p1\"}}\n",
+          "dispatch": "rejected"
+        }
+      ],
+      "expected": {
+        "jsonrpc_error_code": [-32600, -32602],
+        "kind": ["invalid_request", "invalid_params"],
+        "field_path": ["id", "params.pane_id"],
+        "dispatch_count": 0
+      }
+    }
+  ],
+  "adversarial_cases": [
+    {
+      "name": "numeric request ID",
+      "request_bytes": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"terminal.get\",\"params\":{\"pane_id\":\"p1\"}}\n",
+      "expected": {
+        "kind": "invalid_request",
+        "field_path": "id",
+        "dispatch_count": 0
+      }
+    },
+    {
+      "name": "unknown target parameter",
+      "request_bytes": "{\"jsonrpc\":\"2.0\",\"id\":\"unknown-target\",\"method\":\"terminal.get\",\"params\":{\"pane_id\":\"p1\"}}\n",
+      "expected": {
+        "kind": "invalid_params",
+        "field_path": "params.pane_id",
+        "dispatch_count": 0
+      }
+    },
+    {
+      "name": "unknown nested target field",
+      "request_bytes": "{\"jsonrpc\":\"2.0\",\"id\":\"unknown-nested-target\",\"method\":\"terminal.get\",\"params\":{\"target\":{\"pane_id\":\"p1\"}}}\n",
+      "expected": {
+        "kind": "invalid_params",
+        "field_path": "params.target.pane_id",
+        "dispatch_count": 0
+      }
+    },
+    {
+      "name": "non-string target identity",
+      "request_bytes": "{\"jsonrpc\":\"2.0\",\"id\":\"wrong-target-type\",\"method\":\"terminal.get\",\"params\":{\"target\":{\"terminal_id\":17}}}\n",
+      "expected": {
+        "kind": "invalid_params",
+        "field_path": "params.target.terminal_id",
+        "dispatch_count": 0
+      }
+    },
+    {
+      "name": "unknown request envelope field",
+      "request_bytes": "{\"jsonrpc\":\"2.0\",\"id\":\"unknown-envelope\",\"method\":\"terminal.get\",\"params\":{\"target\":{\"terminal_id\":\"p1\"}},\"debug\":true}\n",
+      "expected": {
+        "kind": "invalid_request",
+        "field_path": "debug",
+        "dispatch_count": 0
+      }
+    },
+    {
+      "name": "response containing both result and error",
+      "response": {
+        "jsonrpc": "2.0",
+        "id": "r1",
+        "result": {},
+        "error": {
+          "code": -32600,
+          "message": "invalid",
+          "data": {
+            "kind": "invalid_request",
+            "hint": "correct the request",
+            "retryable": false
+          }
+        }
+      },
+      "expected": {
+        "accepted": false,
+        "kind": "invalid_response"
+      }
+    },
+    {
+      "name": "duplicate in-flight string ID",
+      "requests": [
+        "{\"jsonrpc\":\"2.0\",\"id\":\"same-id\",\"method\":\"terminal.get\",\"params\":{\"target\":{\"terminal_id\":\"p1\"}}}\n",
+        "{\"jsonrpc\":\"2.0\",\"id\":\"same-id\",\"method\":\"terminal.list\",\"params\":{}}\n"
+      ],
+      "expected": {
+        "first": "accepted",
+        "second": "rejected",
+        "kind": "duplicate_request_id",
+        "dispatch_count": 1
+      }
+    }
+  ]
+}
