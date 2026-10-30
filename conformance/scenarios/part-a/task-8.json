@@ -1,0 +1,74 @@
+{
+  "scenario": "part-a/task-8",
+  "todo": 8,
+  "title": "Implement atomic SQLite storage and quarantine primitives",
+  "closes": [
+    "GAP-125"
+  ],
+  "delivers": [
+    "IDEAL-097",
+    "IDEAL-098",
+    "IDEAL-101"
+  ],
+  "runner": "shell",
+  "note": "Component scenario: runs the store crate's process-level crash and quarantine tests. The real-binary socket rerun is added when the store is assembled behind ovis-terminal (plan todos 21 and 31).",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-store",
+            "--test",
+            "transactions",
+            "happy",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "reopened after crash: revision=1",
+              "conflict.kind=conflict",
+              "test result: ok. 1 passed; 0 failed"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-store",
+            "--test",
+            "transactions",
+            "failure",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "Header: kind=store_corrupted",
+              "FutureSchema: kind=store_unsupported",
+              "relaunch: RequiresIndependentEvidence",
+              "test result: ok. 1 passed; 0 failed"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

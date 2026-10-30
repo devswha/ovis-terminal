@@ -21,7 +21,7 @@ All commands ran on Linux x86_64 with rustc/cargo 1.99.1 (local isolated toolcha
 
 | Command | Exit | Result |
 |---|---|---|
-| `bash scripts/check.sh` | 0 | fmt, workspace clippy `-D warnings`, nextest (44 tests, 44 passed), doctests, hygiene (0 violations in 81 files), manifests, json ([check.log](check.log)) |
+| `bash scripts/check.sh` | 0 | fmt, workspace clippy `-D warnings`, nextest (72 tests run: 72 passed, 1 skipped), doctests, hygiene (0 violation(s) in 103 file(s) checked), manifests, json ([check.log](check.log)); run after merging origin/integration (T8, T11) |
 | `cargo nextest run -p ovis-terminal-vt --locked` | 0 | 33 tests run, 33 passed ([nextest-vt.log](nextest-vt.log)) |
 | `cargo clippy -p ovis-terminal-vt --all-targets --locked -- -D warnings` | 0 | [clippy-vt.log](clippy-vt.log) |
 | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --workspace --locked` | 0 | |
