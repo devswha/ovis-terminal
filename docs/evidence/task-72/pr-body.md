@@ -20,7 +20,9 @@ Plan todo 72 (wave 4, follow-up to todo 12). Closes V-220; delivers IDEAL-108 (r
 | Command | Exit | Result |
 |---|---|---|
 | `P=8 bash docs/evidence/task-72/stress.sh 50 stress.log` (50 `cargo nextest run -p ovis-terminal-holder --test platform_probe --locked`, 8 concurrent) | 0 | total=50 ok=50 failed=0 ([stress.log](stress.log)); no fixture process left behind afterwards |
-| macOS (CI `test (macos-latest)`) | see PR checks | the first head (35418a5) failed there with `left Ok(()) right Err(["t72-parked"])`; this head asserts the typed `Unavailable` instead. Not run locally (Linux host). |
+| CI `probe (macos-latest)` on 1e397d6 | pass | runs `platform_probe` including `failure` and both helper unit tests; the typed `Unavailable` path passes on macOS |
+| CI `test (macos-latest)` on 1e397d6 (two attempts) | **fail** | NOT caused by this change: `platform_probe happy` panics at `unix_happy.rs:45` (`left: Grid { columns: 80, rows: 24 } right: Grid { columns: 132, rows: 40 }`, the post-resize size read in the todo-12 happy probe). That file is outside this todo's write scope and is left unchanged; it needs its own follow-up. |
+| (superseded) first head 35418a5 macOS | the first head (35418a5) failed there with `left Ok(()) right Err(["t72-parked"])`; this head asserts the typed `Unavailable` instead. Not run locally (Linux host). |
 | `bash scripts/check.sh` | 0 | all steps passed ([check.log](check.log)); includes both helper unit tests |
 
 DEFERRED VERIFICATION (runner lands in Todo 21): `cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-12 --isolated --case happy --evidence ...` exits 2 with `conformance: no scenarios are registered in this build` ([conformance-attempt.log](conformance-attempt.log)).
