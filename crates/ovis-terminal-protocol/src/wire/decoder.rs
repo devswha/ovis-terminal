@@ -1,12 +1,62 @@
-use super::{Channel, FRAME_HEADER_LEN, Frame, FrameError, FrameKind, MAX_FRAME_PAYLOAD};
+use super::{
+    Channel, FRAME_HEADER_LEN, Frame, FrameError, FrameKind, MAX_FRAME_PAYLOAD, WireOffset,
+};
+
+#[derive(Debug)]
+pub(super) struct DecodeBatch {
+    pub(super) frames: Vec<Frame>,
+    pub(super) consumed: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct DecodeLimits {
+    pub(super) records: usize,
+    pub(super) payload_bytes: usize,
+}
+
+struct InputProgress<'a> {
+    bytes: &'a [u8],
+    consumed: usize,
+}
+
+impl InputProgress<'_> {
+    const fn is_exhausted(&self) -> bool {
+        self.consumed == self.bytes.len()
+    }
+
+    fn copy_to(&mut self, decoder: &mut FrameDecoder, target: usize) -> Result<(), FrameError> {
+        let needed = target
+            .checked_sub(decoder.pending.len())
+            .ok_or(FrameError::QueueAccountingOverflow)?;
+        let available = self
+            .bytes
+            .len()
+            .checked_sub(self.consumed)
+            .ok_or(FrameError::QueueAccountingOverflow)?;
+        let count = needed.min(available);
+        let end = self
+            .consumed
+            .checked_add(count)
+            .ok_or(FrameError::QueueAccountingOverflow)?;
+        let bytes = self
+            .bytes
+            .get(self.consumed..end)
+            .ok_or(FrameError::QueueAccountingOverflow)?;
+        let next_offset = decoder.byte_offset.checked_add(count)?;
+        decoder.pending.extend_from_slice(bytes);
+        decoder.byte_offset = next_offset;
+        self.consumed = end;
+        Ok(())
+    }
+}
 
 /// Incrementally decodes bounded frames while retaining incomplete bytes.
 #[derive(Debug, Default)]
 pub struct FrameDecoder {
     pending: Vec<u8>,
     expected_payload: Option<usize>,
-    frame_offset: u64,
-    byte_offset: u64,
+    frame_offset: WireOffset,
+    byte_offset: WireOffset,
 }
 
 impl FrameDecoder {
@@ -21,75 +71,87 @@ impl FrameDecoder {
     /// # Errors
     /// Returns a typed error for an oversized frame, unknown kind, or offset overflow.
     pub fn push(&mut self, input: &[u8]) -> Result<Vec<Frame>, FrameError> {
+        let batch = self.push_bounded(
+            input,
+            DecodeLimits {
+                records: usize::MAX,
+                payload_bytes: usize::MAX,
+            },
+        )?;
+        if batch.consumed != input.len() {
+            return Err(FrameError::QueueAccountingOverflow);
+        }
+        Ok(batch.frames)
+    }
+
+    pub(super) fn push_bounded(
+        &mut self,
+        input: &[u8],
+        limits: DecodeLimits,
+    ) -> Result<DecodeBatch, FrameError> {
         let mut frames = Vec::new();
-        let mut consumed = 0_usize;
+        let mut output_bytes = 0_usize;
+        let mut progress = InputProgress {
+            bytes: input,
+            consumed: 0,
+        };
         loop {
             if self.pending.is_empty() {
                 self.frame_offset = self.byte_offset;
             }
-            let target = match self.expected_payload {
-                Some(payload) => {
-                    FRAME_HEADER_LEN
-                        .checked_add(payload)
-                        .ok_or(FrameError::OffsetOverflow {
-                            offset: self.frame_offset,
-                            amount: payload,
-                        })?
-                }
-                None => FRAME_HEADER_LEN,
-            };
-            if self.pending.len() < target && consumed < input.len() {
-                let needed =
-                    target
-                        .checked_sub(self.pending.len())
-                        .ok_or(FrameError::OffsetOverflow {
-                            offset: self.frame_offset,
-                            amount: target,
-                        })?;
-                let available =
-                    input
-                        .len()
-                        .checked_sub(consumed)
-                        .ok_or(FrameError::OffsetOverflow {
-                            offset: self.byte_offset,
-                            amount: input.len(),
-                        })?;
-                let count = needed.min(available);
-                let end = consumed
-                    .checked_add(count)
-                    .ok_or(FrameError::OffsetOverflow {
-                        offset: self.byte_offset,
-                        amount: count,
-                    })?;
-                let bytes = input.get(consumed..end).ok_or(FrameError::OffsetOverflow {
-                    offset: self.byte_offset,
-                    amount: count,
-                })?;
-                let next_offset = advance_offset(self.byte_offset, count)?;
-                self.pending.extend_from_slice(bytes);
-                self.byte_offset = next_offset;
-                consumed = end;
-            }
-            if self.pending.len() == FRAME_HEADER_LEN && self.expected_payload.is_none() {
-                self.expected_payload = Some(self.parse_header()?);
-            }
-            if let Some(payload_length) = self.expected_payload {
-                let frame_length = FRAME_HEADER_LEN.checked_add(payload_length).ok_or(
-                    FrameError::OffsetOverflow {
-                        offset: self.frame_offset,
-                        amount: payload_length,
-                    },
-                )?;
-                if self.pending.len() == frame_length {
-                    frames.push(self.take_frame()?);
+            if self.expected_payload.is_none() {
+                if self.pending.len() == FRAME_HEADER_LEN {
+                    self.expected_payload = Some(self.parse_header()?);
                     continue;
                 }
+                if frames.len() >= limits.records || progress.is_exhausted() {
+                    break;
+                }
+                progress.copy_to(self, FRAME_HEADER_LEN)?;
+                if self.pending.len() == FRAME_HEADER_LEN {
+                    self.expected_payload = Some(self.parse_header()?);
+                }
+                continue;
             }
-            if consumed == input.len() {
+
+            let Some(payload_length) = self.expected_payload else {
+                continue;
+            };
+            let next_record_count = frames
+                .len()
+                .checked_add(1)
+                .ok_or(FrameError::QueueAccountingOverflow)?;
+            let next_payload_bytes = output_bytes
+                .checked_add(payload_length)
+                .ok_or(FrameError::QueueAccountingOverflow)?;
+            if next_record_count > limits.records || next_payload_bytes > limits.payload_bytes {
                 break;
             }
+            let frame_length =
+                FRAME_HEADER_LEN
+                    .checked_add(payload_length)
+                    .ok_or(FrameError::OffsetOverflow {
+                        offset: self.frame_offset,
+                        amount: payload_length,
+                    })?;
+            if self.pending.len() == frame_length {
+                frames.push(self.take_frame()?);
+                output_bytes = next_payload_bytes;
+                continue;
+            }
+            if progress.is_exhausted() {
+                break;
+            }
+            progress.copy_to(self, frame_length)?;
+            if self.pending.len() == frame_length {
+                frames.push(self.take_frame()?);
+                output_bytes = next_payload_bytes;
+            }
         }
-        Ok(frames)
+        Ok(DecodeBatch {
+            frames,
+            consumed: progress.consumed,
+        })
     }
 
     /// Reports an incomplete header or payload at end-of-stream.
@@ -121,7 +183,7 @@ impl FrameDecoder {
 
     /// Returns the absolute offset of the next byte accepted by this decoder.
     #[must_use]
-    pub const fn byte_offset(&self) -> u64 {
+    pub const fn byte_offset(&self) -> WireOffset {
         self.byte_offset
     }
 
@@ -212,12 +274,4 @@ impl FrameDecoder {
         self.expected_payload = None;
         Ok(frame)
     }
-}
-
-fn advance_offset(offset: u64, amount: usize) -> Result<u64, FrameError> {
-    let amount_u64 =
-        u64::try_from(amount).map_err(|_| FrameError::OffsetOverflow { offset, amount })?;
-    offset
-        .checked_add(amount_u64)
-        .ok_or(FrameError::OffsetOverflow { offset, amount })
 }

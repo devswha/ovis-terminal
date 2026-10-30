@@ -1,15 +1,15 @@
-use super::{FrameError, MAX_FRAME_PAYLOAD};
+use super::{Continuation, FrameError, LogicalOffset, LogicalTotal, MAX_FRAME_PAYLOAD};
 
 /// Continuation and completeness fields for one part of a logical result.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct ChunkMetadata {
     /// Total byte length of the complete logical result.
-    pub total: u64,
+    pub total: LogicalTotal,
     /// Absolute byte offset of this chunk in that result.
-    pub offset: u64,
+    pub offset: LogicalOffset,
     /// Offset to request next, or `None` after the final chunk.
-    pub continuation: Option<u64>,
+    pub continuation: Option<Continuation>,
     /// Whether bytes are absent from the logical result represented here.
     pub truncated: bool,
 }
@@ -28,19 +28,16 @@ pub struct LogicalChunk<'a> {
 #[derive(Debug, Clone, Copy)]
 pub struct LogicalResult<'a> {
     bytes: &'a [u8],
-    total: u64,
+    total: LogicalTotal,
 }
 
 impl<'a> LogicalResult<'a> {
     /// Creates a complete logical result from its bytes.
     ///
     /// # Errors
-    /// Returns [`FrameError::OffsetOverflow`] if its length cannot fit a wire offset.
+    /// Returns [`FrameError::LogicalLengthOverflow`] if its length cannot fit a logical total.
     pub fn new(bytes: &'a [u8]) -> Result<Self, FrameError> {
-        let total = u64::try_from(bytes.len()).map_err(|_| FrameError::OffsetOverflow {
-            offset: 0,
-            amount: bytes.len(),
-        })?;
+        let total = LogicalTotal::from_usize(bytes.len())?;
         Ok(Self { bytes, total })
     }
 
@@ -59,7 +56,7 @@ impl<'a> LogicalResult<'a> {
 #[derive(Debug, Clone)]
 pub struct LogicalChunks<'a> {
     bytes: &'a [u8],
-    total: u64,
+    total: LogicalTotal,
     cursor: usize,
 }
 
@@ -75,25 +72,20 @@ impl<'a> Iterator for LogicalChunks<'a> {
             .saturating_add(MAX_FRAME_PAYLOAD)
             .min(self.bytes.len());
         let Some(payload) = self.bytes.get(self.cursor..end) else {
-            return Some(Err(FrameError::OffsetOverflow {
-                offset: self.total,
-                amount: self.cursor,
+            return Some(Err(FrameError::LogicalLengthOverflow {
+                length: self.cursor,
             }));
         };
-        let Ok(offset) = u64::try_from(self.cursor) else {
-            return Some(Err(FrameError::OffsetOverflow {
-                offset: self.total,
-                amount: self.cursor,
-            }));
+        let offset = match LogicalOffset::from_usize(self.cursor) {
+            Ok(offset) => offset,
+            Err(error) => return Some(Err(error)),
         };
         let continuation = if end < self.bytes.len() {
-            let Ok(next) = u64::try_from(end) else {
-                return Some(Err(FrameError::OffsetOverflow {
-                    offset: self.total,
-                    amount: end,
-                }));
+            let next = match LogicalOffset::from_usize(end) {
+                Ok(offset) => offset,
+                Err(error) => return Some(Err(error)),
             };
-            Some(next)
+            Some(Continuation::new(next))
         } else {
             None
         };

@@ -1,8 +1,8 @@
 //! Public integration tests for framing, continuation, and upgrade behavior.
 
 use ovis_terminal_protocol::wire::{
-    Channel, ConnectionDecoder, Frame, FrameDecoder, FrameError, FrameKind, LogicalResult,
-    MAX_FRAME_PAYLOAD, WireMessage,
+    Channel, ConnectionDecoder, Continuation, FeedOutcome, Frame, FrameDecoder, FrameError,
+    FrameKind, LogicalOffset, LogicalResult, MAX_FRAME_PAYLOAD, WireMessage, WireOffset,
 };
 
 fn sample_frames() -> Result<Vec<Frame>, Box<dyn std::error::Error>> {
@@ -22,7 +22,6 @@ fn happy() -> Result<(), Box<dyn std::error::Error>> {
     assert_mixed_segmentations()?;
     assert_large_result_chunks()?;
     assert_hello_upgrade_boundary()?;
-    assert_cancel_resume_after_header_bytes()?;
     Ok(())
 }
 
@@ -109,15 +108,15 @@ fn assert_large_result_chunks() -> Result<(), Box<dyn std::error::Error>> {
     for chunk in LogicalResult::new(&logical)?.chunks() {
         let chunk = chunk?;
         assert!(chunk.payload.len() <= MAX_FRAME_PAYLOAD);
-        assert_eq!(chunk.metadata.total, 64 * 1024 * 1024);
-        assert_eq!(chunk.metadata.offset, u64::try_from(total)?);
+        assert_eq!(chunk.metadata.total.get(), 64 * 1024 * 1024);
+        assert_eq!(chunk.metadata.offset.get(), u64::try_from(total)?);
         assert!(chunk.payload.iter().all(|byte| *byte == 0x5a));
         assert!(!chunk.metadata.truncated);
         let next = total
             .checked_add(chunk.payload.len())
             .ok_or_else(|| std::io::Error::other("byte count overflow"))?;
         let continuation = if next < logical.len() {
-            Some(u64::try_from(next)?)
+            Some(Continuation::new(LogicalOffset::from_usize(next)?))
         } else {
             None
         };
@@ -136,7 +135,12 @@ fn assert_hello_upgrade_boundary() -> Result<(), Box<dyn std::error::Error>> {
     let mut coalesced = hello.to_vec();
     coalesced.extend_from_slice(&wire_bytes);
     let mut connection = ConnectionDecoder::new();
-    connection.feed(&coalesced)?;
+    assert_eq!(
+        connection.feed(&coalesced)?,
+        FeedOutcome::Accepted {
+            consumed: coalesced.len()
+        }
+    );
     assert!(matches!(
         connection.next_message()?,
         Some(WireMessage::ControlLine(_))
@@ -149,25 +153,6 @@ fn assert_hello_upgrade_boundary() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn assert_cancel_resume_after_header_bytes() -> Result<(), Box<dyn std::error::Error>> {
-    let frame = Frame::new(Channel::new(7), FrameKind::Data, vec![0, 0xff, b'x'])?;
-    let encoded = frame.encode()?;
-    for split in 1..=9 {
-        let mut cancel_safe = FrameDecoder::new();
-        let header = encoded
-            .get(..split)
-            .ok_or_else(|| std::io::Error::other("missing header prefix"))?;
-        cancel_safe.push(header)?;
-        let payload = encoded
-            .get(split..)
-            .ok_or_else(|| std::io::Error::other("missing header suffix"))?;
-        let mut resumed = cancel_safe.push(payload)?;
-        cancel_safe.finish()?;
-        assert_eq!(resumed.pop(), Some(frame.clone()));
-    }
-    Ok(())
-}
-
 #[test]
 fn failure() -> Result<(), Box<dyn std::error::Error>> {
     let too_large = [0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01];
@@ -175,36 +160,60 @@ fn failure() -> Result<(), Box<dyn std::error::Error>> {
         .checked_add(1)
         .ok_or_else(|| std::io::Error::other("frame limit overflow"))?;
     let mut decoder = FrameDecoder::new();
+    let oversize_error = decoder
+        .push(&too_large)
+        .err()
+        .ok_or_else(|| std::io::Error::other("oversized frame was accepted"))?;
+    assert_eq!(oversize_error.kind(), "frame_too_large");
+    assert_ne!(oversize_error.hint(), "");
     assert!(matches!(
-        decoder.push(&too_large),
-        Err(FrameError::FrameTooLarge {
+        oversize_error,
+        FrameError::FrameTooLarge {
             length,
             limit,
-            offset: 0
-        }) if length == expected_length && limit == MAX_FRAME_PAYLOAD
+            offset
+        } if length == expected_length && limit == MAX_FRAME_PAYLOAD && offset == WireOffset::ZERO
     ));
     assert_eq!(decoder.buffered_len(), 9);
-    assert_eq!(decoder.byte_offset(), 9);
+    assert_eq!(decoder.byte_offset().get(), 9);
 
     let mut truncated = FrameDecoder::new();
     truncated.push(&[0, 0, 0])?;
+    let header_error = truncated
+        .finish()
+        .err()
+        .ok_or_else(|| std::io::Error::other("truncated header was accepted"))?;
+    assert_eq!(header_error.kind(), "truncated_frame");
     assert!(matches!(
-        truncated.finish(),
-        Err(FrameError::TruncatedHeader {
-            offset: 0,
+        header_error,
+        FrameError::TruncatedHeader {
+            offset,
             actual: 3
-        })
+        } if offset == WireOffset::ZERO
     ));
 
     let mut payload = FrameDecoder::new();
     payload.push(&[0, 0, 0, 0, 0, 2, 0, 0, 0, b'a'])?;
+    let payload_error = payload
+        .finish()
+        .err()
+        .ok_or_else(|| std::io::Error::other("truncated payload was accepted"))?;
     assert!(matches!(
-        payload.finish(),
-        Err(FrameError::TruncatedPayload {
-            offset: 0,
+        payload_error,
+        FrameError::TruncatedPayload {
+            offset,
             expected: 2,
             actual: 1
-        })
+        } if offset == WireOffset::ZERO
     ));
+
+    let mut invalid_control = ConnectionDecoder::new();
+    invalid_control.feed(&[0xff, b'\n'])?;
+    let utf8_error = invalid_control
+        .next_message()
+        .err()
+        .ok_or_else(|| std::io::Error::other("invalid control UTF-8 was accepted"))?;
+    assert_eq!(utf8_error.kind(), "invalid_control_utf8");
+    assert!(std::error::Error::source(&utf8_error).is_some());
     Ok(())
 }

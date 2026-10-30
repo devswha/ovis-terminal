@@ -79,7 +79,7 @@ impl Frame {
             return Err(FrameError::FrameTooLarge {
                 length: payload.len(),
                 limit: MAX_FRAME_PAYLOAD,
-                offset: 0,
+                offset: super::WireOffset::ZERO,
             });
         }
         Ok(Self {
@@ -98,18 +98,18 @@ impl Frame {
             return Err(FrameError::FrameTooLarge {
                 length: self.payload.len(),
                 limit: MAX_FRAME_PAYLOAD,
-                offset: 0,
+                offset: super::WireOffset::ZERO,
             });
         }
         let length = u32::try_from(self.payload.len()).map_err(|_| FrameError::FrameTooLarge {
             length: self.payload.len(),
             limit: MAX_FRAME_PAYLOAD,
-            offset: 0,
+            offset: super::WireOffset::ZERO,
         })?;
         let mut encoded =
             Vec::with_capacity(FRAME_HEADER_LEN.checked_add(self.payload.len()).ok_or(
                 FrameError::OffsetOverflow {
-                    offset: 0,
+                    offset: super::WireOffset::ZERO,
                     amount: self.payload.len(),
                 },
             )?);
