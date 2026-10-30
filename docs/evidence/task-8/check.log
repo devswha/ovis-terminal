@@ -1,0 +1,175 @@
+
+==> cargo +nightly fmt --all -- --check
+
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+    Checking ovis-terminal-store v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-store)
+    Checking workspace-hygiene v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/scripts/hygiene)
+    Checking ovis-terminal-authz v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-authz)
+    Checking ovis-terminal-core v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-core)
+    Checking ovis-terminal-agent v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-agent)
+    Checking ovis-terminal-services v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-services)
+    Checking ovis-terminal-remote v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-remote)
+    Checking ovis-terminal-bench v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/bench)
+    Checking ovis-terminal-agent-adapters v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-agent-adapters)
+    Checking ovis-terminal-server v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-server)
+    Checking ovis-terminal-cli v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.63s
+
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+   Compiling ovis-terminal-holder v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-holder)
+   Compiling ovis-terminal-vt v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-vt)
+   Compiling ovis-terminal-conformance v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/conformance)
+   Compiling ovis-terminal-protocol v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-protocol)
+   Compiling ovis-terminal-store v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-store)
+   Compiling workspace-hygiene v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/scripts/hygiene)
+   Compiling ovis-terminal-probes v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/probes)
+   Compiling ovis-terminal-authz v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-authz)
+   Compiling ovis-terminal-core v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-core)
+   Compiling ovis-terminal-agent v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-agent)
+   Compiling ovis-terminal-services v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-services)
+   Compiling ovis-terminal-remote v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-remote)
+   Compiling ovis-terminal-agent-adapters v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-agent-adapters)
+   Compiling ovis-terminal-server v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-server)
+   Compiling ovis-terminal-bench v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/bench)
+   Compiling ovis-terminal-cli v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.30s
+────────────
+ Nextest run ID 71d68dca-9b03-4273-acaa-5985ac77dd94 with nextest profile: default
+    Starting 29 tests across 24 binaries (1 test skipped)
+        PASS [   0.009s] ( 1/29) ovis-terminal-cli tests::version_line_names_binary_and_package_version
+        PASS [   0.009s] ( 2/29) ovis-terminal-cli tests::empty_and_extra_arguments_are_usage_errors
+        PASS [   0.010s] ( 3/29) ovis-terminal-cli tests::version_flag_alone_parses
+        PASS [   0.010s] ( 4/29) workspace-hygiene loc::tests::comments_blank_lines_and_docs_are_not_code
+        PASS [   0.010s] ( 5/29) workspace-hygiene loc::tests::comment_markers_inside_strings_are_code
+        PASS [   0.010s] ( 6/29) workspace-hygiene loc::tests::every_line_of_a_multiline_literal_and_group_counts
+        PASS [   0.011s] ( 7/29) workspace-hygiene::fixtures malformed_source_is_a_syntax_violation
+        PASS [   0.012s] ( 8/29) workspace-hygiene::fixtures receivers_count_as_parameters
+        PASS [   0.019s] ( 9/29) ovis-terminal-store::recovery rebuild_refuses_a_root_with_nothing_quarantined
+        PASS [   0.025s] (10/29) ovis-terminal-store::retention evicted_events_report_the_floor_instead_of_an_empty_page
+        PASS [   0.025s] (11/29) ovis-terminal-store::compare_and_swap a_conflicting_write_rolls_back_the_whole_mutation
+        PASS [   0.025s] (12/29) ovis-terminal-store::compare_and_swap events_of_one_mutation_take_consecutive_sequence_numbers
+        PASS [   0.025s] (13/29) ovis-terminal-store::recovery rebuild_leaves_a_newer_schema_in_place
+        PASS [   0.026s] (14/29) ovis-terminal-store::writer a_full_writer_queue_rejects_with_backpressure
+        PASS [   0.026s] (15/29) ovis-terminal-store::compare_and_swap a_reused_operation_id_is_rejected_without_a_second_commit
+        PASS [   0.027s] (16/29) ovis-terminal-store::writer an_oversized_value_is_rejected_before_it_is_queued
+        PASS [   0.028s] (17/29) ovis-terminal-store::retention evicted_receipts_are_reported_as_not_retained
+        PASS [   0.028s] (18/29) ovis-terminal-store::retention deleting_a_resource_leaves_a_versioned_tombstone
+        PASS [   0.028s] (19/29) ovis-terminal-store::writer a_ticket_resolves_on_an_async_runtime
+        PASS [   0.028s] (20/29) ovis-terminal-store::retention recreating_after_a_tombstone_continues_the_version
+        PASS [   0.028s] (21/29) ovis-terminal-store::transactions failure
+        PASS [   0.029s] (22/29) ovis-terminal-store::writer a_snapshot_stays_at_its_revision_while_later_commits_land
+        PASS [   0.031s] (23/29) ovis-terminal-store::recovery rebuild_carries_the_quarantine_evidence_into_the_new_database
+        PASS [   0.032s] (24/29) workspace-hygiene::fixtures violations_report_file_line_rule_and_count
+        PASS [   0.032s] (25/29) workspace-hygiene::fixtures exactly_250_pure_loc_and_three_parameters_pass
+        PASS [   0.032s] (26/29) workspace-hygiene::fixtures one_line_and_one_parameter_over_the_limit_both_fail
+        PASS [   0.158s] (27/29) ovis-terminal-store::transactions crash_before_commit_keeps_nothing
+        PASS [   0.162s] (28/29) ovis-terminal-store::compare_and_swap versions_follow_the_reference_model
+        PASS [   0.184s] (29/29) ovis-terminal-store::transactions happy
+────────────
+     Summary [   0.184s] 29 tests run: 29 passed, 1 skipped
+
+==> cargo test --doc --workspace --all-features --locked
+   Compiling ovis-terminal-probes v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/probes)
+   Compiling ovis-terminal-bench v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/bench)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.08s
+   Doc-tests ovis_terminal_agent
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_agent_adapters
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_authz
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_bench
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_cli
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_holder
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_probes
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_protocol
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_remote
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_server
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_services
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_vt
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests workspace_hygiene
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 69 file(s) checked
+
+==> bash scripts/hygiene/manifests.sh
+manifests.sh: 16 member manifest(s) checked
+
+==> bash scripts/hygiene/json.sh
+json.sh: 4 JSON file(s) checked
+
+check.sh: all steps passed

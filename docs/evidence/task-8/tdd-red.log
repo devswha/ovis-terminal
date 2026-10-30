@@ -1,0 +1,161 @@
+   Compiling rand_core v0.10.1
+   Compiling getrandom v0.4.3
+   Compiling bitflags v2.13.2
+   Compiling rustix v1.1.6
+   Compiling linux-raw-sys v0.12.1
+   Compiling autocfg v1.5.1
+   Compiling once_cell v1.21.4
+   Compiling fastrand v2.5.0
+   Compiling wait-timeout v0.2.1
+   Compiling bit-vec v0.10.1
+   Compiling cpufeatures v0.3.1
+   Compiling quick-error v1.2.3
+   Compiling fnv v1.0.7
+   Compiling core_detect v1.0.0
+   Compiling unarray v0.1.4
+   Compiling regex-syntax v0.8.11
+   Compiling chacha20 v0.10.2
+   Compiling rand_xorshift v0.5.0
+   Compiling rusqlite v0.41.1
+   Compiling bit-set v0.11.1
+   Compiling num-traits v0.2.19
+   Compiling rand v0.10.3
+   Compiling ovis-terminal-store v0.1.0 (<home>/workspace/ovis-terminal-wt/lane-t8/crates/ovis-terminal-store)
+   Compiling tempfile v3.27.0
+   Compiling rusty-fork v0.3.1
+   Compiling proptest v1.12.0
+error[E0432]: unresolved imports `ovis_terminal_store::CasWrite`, `ovis_terminal_store::EventKind`, `ovis_terminal_store::Mutation`, `ovis_terminal_store::NewEvent`, `ovis_terminal_store::OpId`, `ovis_terminal_store::Payload`, `ovis_terminal_store::ResourceKey`
+ --> crates/ovis-terminal-store/tests/support/store_fixture.rs:7:27
+  |
+7 | use ovis_terminal_store::{CasWrite, EventKind, Mutation, NewEvent, OpId, Payload, ResourceKey};
+  |                           ^^^^^^^^  ^^^^^^^^^  ^^^^^^^^  ^^^^^^^^  ^^^^  ^^^^^^^  ^^^^^^^^^^^ no `ResourceKey` in the root
+  |                           |         |          |         |         |     |
+  |                           |         |          |         |         |     no `Payload` in the root
+  |                           |         |          |         |         no `OpId` in the root
+  |                           |         |          |         no `NewEvent` in the root
+  |                           |         |          no `Mutation` in the root
+  |                           |         no `EventKind` in the root
+  |                           no `CasWrite` in the root
+
+error[E0432]: unresolved imports `ovis_terminal_store::CasWrite`, `ovis_terminal_store::Payload`, `ovis_terminal_store::RecoveryCause`, `ovis_terminal_store::Revision`, `ovis_terminal_store::Store`, `ovis_terminal_store::StoreOptions`, `ovis_terminal_store::Version`, `ovis_terminal_store::read_quarantine_evidence`
+  --> crates/ovis-terminal-store/tests/recovery.rs:10:5
+   |
+10 |     CasWrite, Payload, RecoveryCause, Revision, Store, StoreOptions, Version,
+   |     ^^^^^^^^  ^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^  ^^^^^^^^^^^^  ^^^^^^^ no `Version` in the root
+   |     |         |        |              |         |      |
+   |     |         |        |              |         |      no `StoreOptions` in the root
+   |     |         |        |              |         no `Store` in the root
+   |     |         |        |              no `Revision` in the root
+   |     |         |        no `RecoveryCause` in the root
+   |     |         no `Payload` in the root
+   |     no `CasWrite` in the root
+11 |     read_quarantine_evidence,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^ no `read_quarantine_evidence` in the root
+
+error[E0425]: cannot find value `SCHEMA_VERSION` in crate `ovis_terminal_store`
+  --> crates/ovis-terminal-store/tests/recovery.rs:65:102
+   |
+65 | ...pported: ovis_terminal_store::SCHEMA_VERSION });
+   |                                  ^^^^^^^^^^^^^^ not found in `ovis_terminal_store`
+
+error[E0432]: unresolved imports `ovis_terminal_store::CasWrite`, `ovis_terminal_store::CommitBarrier`, `ovis_terminal_store::Payload`, `ovis_terminal_store::ResourceLookup`, `ovis_terminal_store::Revision`, `ovis_terminal_store::Store`, `ovis_terminal_store::StoreLimits`, `ovis_terminal_store::StoreOptions`, `ovis_terminal_store::Version`
+  --> crates/ovis-terminal-store/tests/writer.rs:11:5
+   |
+11 |     CasWrite, CommitBarrier, Payload, ResourceLookup, Revision, Store, StoreLimits, StoreOptions,
+   |     ^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^  ^^^^^^^^^^^  ^^^^^^^^^^^^ no `StoreOptions` in the root
+   |     |         |              |        |               |         |      |
+   |     |         |              |        |               |         |      no `StoreLimits` in the root
+   |     |         |              |        |               |         no `Store` in the root
+   |     |         |              |        |               no `Revision` in the root
+   |     |         |              |        no `ResourceLookup` in the root
+   |     |         |              no `Payload` in the root
+   |     |         no `CommitBarrier` in the root
+   |     no `CasWrite` in the root
+12 |     Version,
+   |     ^^^^^^^ no `Version` in the root
+
+error[E0425]: cannot find type `Mutation` in crate `ovis_terminal_store`
+  --> crates/ovis-terminal-store/tests/writer.rs:18:55
+   |
+18 | fn create(op: &str, id: &str) -> ovis_terminal_store::Mutation {
+   |                                                       ^^^^^^^^ not found in `ovis_terminal_store`
+
+error[E0432]: unresolved imports `ovis_terminal_store::CasWrite`, `ovis_terminal_store::EventPage`, `ovis_terminal_store::OpId`, `ovis_terminal_store::Payload`, `ovis_terminal_store::ReceiptLookup`, `ovis_terminal_store::ResourceLookup`, `ovis_terminal_store::Revision`, `ovis_terminal_store::Store`, `ovis_terminal_store::StoreOptions`, `ovis_terminal_store::Version`
+  --> crates/ovis-terminal-store/tests/compare_and_swap.rs:9:5
+   |
+ 9 |     CasWrite, EventPage, OpId, Payload, ReceiptLookup, ResourceLookup, Revision, Store, StoreOptions,
+   |     ^^^^^^^^  ^^^^^^^^^  ^^^^  ^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^  ^^^^^^^^^^^^ no `StoreOptions` in the root
+   |     |         |          |     |        |              |               |         |
+   |     |         |          |     |        |              |               |         no `Store` in the root
+   |     |         |          |     |        |              |               no `Revision` in the root
+   |     |         |          |     |        |              no `ResourceLookup` in the root
+   |     |         |          |     |        no `ReceiptLookup` in the root
+   |     |         |          |     no `Payload` in the root
+   |     |         |          no `OpId` in the root
+   |     |         no `EventPage` in the root
+   |     no `CasWrite` in the root
+10 |     Version,
+   |     ^^^^^^^ no `Version` in the root
+
+error[E0432]: unresolved imports `ovis_terminal_store::CasWrite`, `ovis_terminal_store::EventPage`, `ovis_terminal_store::OpId`, `ovis_terminal_store::Payload`, `ovis_terminal_store::ReceiptLookup`, `ovis_terminal_store::ResourceLookup`, `ovis_terminal_store::Revision`, `ovis_terminal_store::Store`, `ovis_terminal_store::StoreLimits`, `ovis_terminal_store::StoreOptions`, `ovis_terminal_store::Version`
+ --> crates/ovis-terminal-store/tests/retention.rs:7:5
+  |
+7 |     CasWrite, EventPage, OpId, Payload, ReceiptLookup, ResourceLookup, Revision, Store, StoreLimits,
+  |     ^^^^^^^^  ^^^^^^^^^  ^^^^  ^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^  ^^^^^^^^^^^ no `StoreLimits` in the root
+  |     |         |          |     |        |              |               |         |
+  |     |         |          |     |        |              |               |         no `Store` in the root
+  |     |         |          |     |        |              |               no `Revision` in the root
+  |     |         |          |     |        |              no `ResourceLookup` in the root
+  |     |         |          |     |        no `ReceiptLookup` in the root
+  |     |         |          |     no `Payload` in the root
+  |     |         |          no `OpId` in the root
+  |     |         no `EventPage` in the root
+  |     no `CasWrite` in the root
+8 |     StoreOptions, Version,
+  |     ^^^^^^^^^^^^  ^^^^^^^
+  |     |
+  |     no `StoreOptions` in the root
+
+error[E0432]: unresolved imports `ovis_terminal_store::CasWrite`, `ovis_terminal_store::CommitBarrier`, `ovis_terminal_store::EventPage`, `ovis_terminal_store::MaterialDisposition`, `ovis_terminal_store::OpId`, `ovis_terminal_store::Payload`, `ovis_terminal_store::ProcessSurvival`, `ovis_terminal_store::ReceiptLookup`, `ovis_terminal_store::RecoveryCause`, `ovis_terminal_store::RelaunchPolicy`, `ovis_terminal_store::ResourceLookup`, `ovis_terminal_store::Revision`, `ovis_terminal_store::Store`, `ovis_terminal_store::StoreOptions`, `ovis_terminal_store::Version`, `ovis_terminal_store::read_quarantine_evidence`
+  --> crates/ovis-terminal-store/tests/transactions.rs:12:5
+   |
+12 |     CasWrite, CommitBarrier, EventPage, MaterialDisposition, OpId, Payload, ProcessSurvival,
+   |     ^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^  ^^^^  ^^^^^^^  ^^^^^^^^^^^^^^^ no `ProcessSurvival` in the root
+   |     |         |              |          |                    |     |
+   |     |         |              |          |                    |     no `Payload` in the root
+   |     |         |              |          |                    no `OpId` in the root
+   |     |         |              |          no `MaterialDisposition` in the root
+   |     |         |              no `EventPage` in the root
+   |     |         no `CommitBarrier` in the root
+   |     no `CasWrite` in the root
+13 |     ReceiptLookup, RecoveryCause, RelaunchPolicy, ResourceLookup, Revision, Store, StoreOptions,
+   |     ^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^  ^^^^^^^^^^^^
+   |     |              |              |
+   |     |              |              no `RelaunchPolicy` in the root
+   |     |              no `RecoveryCause` in the root
+   |     no `ReceiptLookup` in the root
+14 |     Version, read_quarantine_evidence,
+   |     ^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0425]: cannot find type `Mutation` in crate `ovis_terminal_store`
+  --> crates/ovis-terminal-store/tests/transactions.rs:22:41
+   |
+22 | fn create_doc() -> ovis_terminal_store::Mutation {
+   |                                         ^^^^^^^^ not found in `ovis_terminal_store`
+
+error[E0425]: cannot find value `SCHEMA_VERSION` in crate `ovis_terminal_store`
+   --> crates/ovis-terminal-store/tests/transactions.rs:159:96
+    |
+159 |                 RecoveryCause::UnsupportedSchema { found: 999, supported: ovis_terminal_store::SCHEMA_VERSION },
+    |                                                                                                ^^^^^^^^^^^^^^ not found in `ovis_terminal_store`
+
+Some errors have detailed explanations: E0425, E0432.
+For more information about an error, try `rustc --explain E0425`.
+error: could not compile `ovis-terminal-store` (test "recovery") due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...
+For more information about this error, try `rustc --explain E0432`.
+error: could not compile `ovis-terminal-store` (test "writer") due to 3 previous errors
+error: could not compile `ovis-terminal-store` (test "retention") due to 2 previous errors
+error: could not compile `ovis-terminal-store` (test "compare_and_swap") due to 2 previous errors
+error: could not compile `ovis-terminal-store` (test "transactions") due to 4 previous errors
+error: command `<run-root>/toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/bin/cargo '--color=auto' test --no-run '--message-format=json-render-diagnostics' '--package=ovis-terminal-store'` exited with code 101
