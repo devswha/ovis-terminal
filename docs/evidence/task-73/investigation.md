@@ -117,3 +117,59 @@ Next diagnostic change retains the original assertion and queries the master
 only when that assertion fails. If it is also back at 80x24, the resize was
 overwritten rather than merely invisible on the slave. No synchronization
 fix is present in this diagnostic revision.
+
+## Distinguishing runner evidence and fix
+
+Diagnostic run <https://github.com/devswha/ovis-terminal/actions/runs/41140598357>,
+head `7b0817d`, job 124353637950 (`macos-15, happy`), failed at the
+**master assertion**, before the second slave query:
+
+```text
+2026-10-30T22:50:48.3503180Z     thread 'happy' (53260) panicked at crates/ovis-terminal-holder/../../probes/platform/tests/unix_happy.rs:44:5:
+2026-10-30T22:50:48.3503840Z     assertion `left == right` failed
+2026-10-30T22:50:48.3504140Z       left: Grid { columns: 80, rows: 24 }
+2026-10-30T22:50:48.3505210Z      right: Grid { columns: 132, rows: 40 }
+```
+
+The synchronous resize result is therefore being overwritten; this is not
+only delayed visibility on the slave or a buffered first report. Apple
+readline's `set_winsize` provides the competing writer. The first `GRID`
+line releases the test before readline has finished preparing the next
+input. Its old-size read can precede the master resize and its old-size
+write can follow it. Extra tests alter scheduling but share no terminal.
+
+The fix gives the shell a recognizable prompt and consumes it after each
+complete slave-side grid report. In Apple's readline, terminal preparation
+(`rl_prep_term_function`) precedes `readline_internal_setup`, which prints
+the prompt:
+<https://github.com/apple-oss-distributions/bash/blob/main/bash-3.2/lib/readline/readline.c>.
+Thus resize cannot race the previous command's next-input preparation.
+The slave is still queried and must still report exactly 132x40 after
+resize. No sleeps, retry-to-green, serialization, or session/holder changes.
+
+The readiness wait has a bounded deadline and prints the last slave report
+and current master size on failure. Its adversarial test holds a real shell
+in a builtin read, changes the actual master size, and uses a zero deadline.
+It catches only the readiness assertion so setup failures cannot pass it;
+the shell is then released and joined.
+
+## Local fixed-code verification
+
+Linux x86_64, Rust 1.99.1, isolated Zig C/linker wrapper:
+
+```text
+$ cargo nextest run -p ovis-terminal-holder --test platform_probe shell_readiness_deadline --locked --nocapture
+shell readiness failed: slave Grid { columns: 80, rows: 24 }, master Ok(Grid { columns: 132, rows: 40 }): Err(Timeout { waited: 0ns })
+Summary [   0.014s] 1 test run: 1 passed, 4 skipped
+exit 0
+$ bash scripts/check.sh
+Summary [   5.020s] 194 tests run: 194 passed, 1 skipped
+check.sh: all steps passed
+exit 0
+```
+
+The printed panic is the intentionally caught deadline failure, not an
+uncaught failing test. All setup runs outside the catch.
+Full logs are in the lane's ignored attempt directory pending final promotion.
+The changed source is 185 pure lines; no new dependencies, public types,
+wire/JSON fields, unsafe code, lint suppressions, or test serialization.
