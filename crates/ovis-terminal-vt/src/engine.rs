@@ -8,6 +8,7 @@ mod error;
 mod fidelity;
 mod history;
 mod listener;
+mod mirror;
 mod modes;
 mod observer;
 mod osc;

@@ -101,14 +101,29 @@ fn parse_number(field: &[u8]) -> Result<u32, OscFault> {
 pub(super) struct RawOsc {
     pub(super) bytes: usize,
     pub(super) separators: usize,
+    /// The first field as vte stores it, enough to parse any u32 and to see
+    /// that a longer one overflows.
+    first: [u8; FIRST_FIELD_CAPACITY],
+    first_len: usize,
 }
 
+const FIRST_FIELD_CAPACITY: usize = 11;
+
 impl RawOsc {
-    pub(super) const fn push(&mut self, byte: u8) {
+    pub(super) fn push(&mut self, byte: u8) {
         self.bytes = self.bytes.saturating_add(1);
         if byte == b';' {
             self.separators = self.separators.saturating_add(1);
+        } else if self.separators == 0
+            && let Some(slot) = self.first.get_mut(self.first_len)
+        {
+            *slot = byte;
+            self.first_len = self.first_len.saturating_add(1);
         }
+    }
+
+    fn first_field(&self) -> &[u8] {
+        self.first.get(..self.first_len).unwrap_or_default()
     }
 
     fn oversize(self, number: Option<u32>) -> OscContent {
@@ -119,15 +134,10 @@ impl RawOsc {
     }
 }
 
-/// Number of an OSC cut at the parser bound, read from its open bytes
-/// (`ESC ] number ;...`); `None` when absent or emulator-owned.
-pub(super) fn truncated(open: &[u8], raw: RawOsc) -> Option<OscContent> {
-    let payload = open.get(2..).unwrap_or_default();
-    let field = payload
-        .split(|&byte| byte == b';')
-        .next()
-        .unwrap_or_default();
-    let number = parse_number(field).ok();
+/// Record for an OSC cut at the parser bound; its number comes from the
+/// bytes vte stored. `None` when the number is emulator-owned.
+pub(super) fn truncated(raw: RawOsc) -> Option<OscContent> {
+    let number = parse_number(raw.first_field()).ok();
     if number.is_some_and(|number| EMULATOR_OSC.contains(&number)) {
         return None;
     }

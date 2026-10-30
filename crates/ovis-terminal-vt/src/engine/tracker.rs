@@ -13,6 +13,7 @@ use alacritty_terminal::vte::Parser;
 use serde::{Deserialize, Serialize};
 
 use crate::engine::fidelity::InexactReason;
+use crate::engine::mirror::VteState;
 use crate::engine::observer::{Completion, Observer};
 use crate::engine::osc::{OscRecord, OscTerminator, RawOsc, truncated};
 use crate::engine::units::OutputOffset;
@@ -57,8 +58,7 @@ pub(super) struct Tracker {
     parser: Parser,
     pending: Vec<u8>,
     tainted: bool,
-    escape: bool,
-    string: Option<StringKind>,
+    state: VteState,
     raw: RawOsc,
     draining: Option<StringKind>,
 }
@@ -69,8 +69,7 @@ impl Tracker {
             parser: Parser::new(),
             pending: Vec::new(),
             tainted: false,
-            escape: false,
-            string: None,
+            state: VteState::Ground,
             raw: RawOsc::default(),
             draining: None,
         }
@@ -159,14 +158,14 @@ impl Tracker {
     }
 
     fn ends_sequence(&self, byte: u8) -> bool {
-        matches!(byte, ESC | CAN | SUB) || (byte == BEL && self.string == Some(StringKind::Osc))
+        matches!(byte, ESC | CAN | SUB) || (byte == BEL && self.state == VteState::Osc)
     }
 
     /// Aborts the open sequence with CAN in both parsers, reporting an
     /// aborted OSC as a truncated oversize record.
     fn abort(&mut self, scan: &mut Scan, at: OutputOffset) {
-        if self.string == Some(StringKind::Osc)
-            && let Some(content) = truncated(&self.pending, self.raw)
+        if self.state == VteState::Osc
+            && let Some(content) = truncated(self.raw)
         {
             let terminator = OscTerminator::Truncated;
             scan.osc.push(OscRecord {
@@ -175,7 +174,7 @@ impl Tracker {
                 content,
             });
         }
-        self.draining = self.string;
+        self.draining = self.state.string();
         scan.forward.push(CAN);
         let observer = self.step(CAN);
         scan.completions = scan.completions.saturating_add(observer.completions);
@@ -185,33 +184,21 @@ impl Tracker {
         let mut observer = Observer::new(self.raw);
         self.parser
             .advance(&mut observer, std::slice::from_ref(&byte));
-        self.track_string(observer.last, byte);
+        self.track_string(byte);
         self.track_boundary(observer.last, byte);
         observer
     }
 
-    fn track_string(&mut self, completion: Option<Completion>, byte: u8) {
-        if completion.is_some() || byte == ESC {
-            self.string = None;
+    /// Follows vte's own state; raw OSC bytes are counted exactly as vte
+    /// buffers them, so interleaved C0 controls cannot hide an OSC's size.
+    fn track_string(&mut self, byte: u8) {
+        let next = self.state.next(byte);
+        if self.state.stores_osc_byte(byte) {
+            self.raw.push(byte);
+        } else if next == VteState::Osc && self.state != VteState::Osc {
             self.raw = RawOsc::default();
-        } else {
-            match self.string {
-                Some(StringKind::Osc) => self.raw.push(byte),
-                None if self.escape => {
-                    self.string = match byte {
-                        b']' => Some(StringKind::Osc),
-                        b'P' | b'X' | b'^' | b'_' => Some(StringKind::Control),
-                        _ => None,
-                    };
-                }
-                Some(StringKind::Control) | None => {}
-            }
         }
-        self.escape = byte == ESC
-            && matches!(
-                completion,
-                None | Some(Completion::StringEnd { bell: false })
-            );
+        self.state = next;
     }
 
     fn track_boundary(&mut self, completion: Option<Completion>, byte: u8) {

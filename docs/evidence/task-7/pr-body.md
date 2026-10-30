@@ -21,11 +21,11 @@ All commands ran on Linux x86_64 with rustc/cargo 1.99.1 (local isolated toolcha
 
 | Command | Exit | Result |
 |---|---|---|
-| `bash scripts/check.sh` | 0 | fmt, workspace clippy `-D warnings`, nextest (83 tests run: 83 passed, 1 skipped), doctests, hygiene (0 violation(s) in 105 file(s) checked), manifests, json ([check.log](check.log)); run on the integration-merged branch after the gate-review fixes |
-| `cargo nextest run -p ovis-terminal-vt --locked` | 0 | 44 tests run, 44 passed ([nextest-vt.log](nextest-vt.log)) |
+| `bash scripts/check.sh` | 0 | fmt, workspace clippy `-D warnings`, nextest (88 tests run: 88 passed, 1 skipped), doctests, hygiene (0 violation(s) in 108 file(s) checked), manifests, json ([check.log](check.log)); run on the integration-merged branch after the round-2 fix |
+| `cargo nextest run -p ovis-terminal-vt --locked` | 0 | 49 tests run, 49 passed ([nextest-vt.log](nextest-vt.log)) |
 | `cargo clippy -p ovis-terminal-vt --all-targets --locked -- -D warnings` | 0 | [clippy-vt.log](clippy-vt.log) |
 | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --workspace --locked` | 0 | |
-| `PROPTEST_CASES=4000 cargo test -p ovis-terminal-vt --locked --no-fail-fast` (2 rounds, random seeds) | 0 | all 5 properties ran 4000 cases each per round: `paint_reproduces_arbitrary_streams`, `first_paint_at_any_byte_continues_like_the_live_stream`, `chunking_never_changes_state`, `checkpoint_at_any_boundary_is_exact_or_says_why`, `every_u64_round_trips` ([proptest-4000.log](proptest-4000.log)). No property hard-codes its case count, so `PROPTEST_CASES` governs every one. The earlier claim of "4000 cases" for the paint property was wrong: a hard-coded `with_cases(128)` overrode it, and gate review round 1 caught that. |
+| `PROPTEST_CASES=4000 cargo test -p ovis-terminal-vt --locked --no-fail-fast` (2 rounds, random seeds) | 0 | all 7 properties ran 4000 cases each per round: `mirror_agrees_with_every_vte_callback`, `interleaved_controls_never_change_the_records`, `paint_reproduces_arbitrary_streams`, `first_paint_at_any_byte_continues_like_the_live_stream`, `chunking_never_changes_state`, `checkpoint_at_any_boundary_is_exact_or_says_why`, `every_u64_round_trips` ([proptest-4000.log](proptest-4000.log)). No property hard-codes its case count, so `PROPTEST_CASES` governs every one. The earlier claim of "4000 cases" for the paint property was wrong: a hard-coded `with_cases(128)` overrode it, and gate review round 1 caught that. |
 | `cargo test -p ovis-terminal-vt --test checkpoint` before any implementation (TDD red) | 101 | unresolved imports ([tdd-red.log](tdd-red.log)) |
 | `target/debug/ovis-terminal --version` | 0 | `ovis-terminal 0.1.0` |
 
@@ -33,11 +33,12 @@ Test binaries:
 
 | Binary | Tests |
 |---|---|
-| unit `paint_equivalence` | 5 |
+| unit `paint_equivalence` + `mirror` | 6 |
 | `adversarial` | 11 |
 | `checkpoint` | 2 |
 | `continuation` | 7 |
 | `modes` | 3 |
+| `osc_bounds` | 4 |
 | `properties` | 3 |
 | `queries` | 5 |
 | `reads` | 4 |
@@ -98,7 +99,7 @@ Additional behavior tests:
 
 | Class | Observable |
 |---|---|
-| malformed input: truncated OSC / UTF-8 | Unterminated OSC: no record, exact pending bytes, which a first paint also carries (`continuation::first_paint_preserves_an_open_title_osc`). Split UTF-8: pending bytes, completed after import and after attach (`continuation::first_paint_preserves_a_split_utf8_character`). Malformed or oversize OSC: typed `Malformed` / `Oversize`, sized from the raw payload before vte drops fields; 17+ fields is `Malformed{too_many_fields}` (`checkpoint::failure`, `adversarial::gate_oversize_osc_after_sixteen_params_is_not_success`, `adversarial::more_fields_than_the_parser_keeps_is_malformed_not_truncated_fields`, `adversarial::osc_payload_at_the_limit_is_kept_and_one_byte_more_is_oversize`). |
+| malformed input: truncated OSC / UTF-8 | Unterminated OSC: no record, exact pending bytes, which a first paint also carries (`continuation::first_paint_preserves_an_open_title_osc`). Split UTF-8: pending bytes, completed after import and after attach (`continuation::first_paint_preserves_a_split_utf8_character`). Malformed or oversize OSC: typed `Malformed` / `Oversize`, sized from the bytes vte stores (C0 controls in the introducer or payload cannot hide the size, see `osc_bounds`); 17+ fields is `Malformed{too_many_fields}` (`checkpoint::failure`, `adversarial::gate_oversize_osc_after_sixteen_params_is_not_success`, `adversarial::more_fields_than_the_parser_keeps_is_malformed_not_truncated_fields`, `adversarial::osc_payload_at_the_limit_is_kept_and_one_byte_more_is_oversize`). |
 | prompt injection: fake working/approval text | Stays `ScreenLine` text. No OSC record, no query, no mode change (`checkpoint::failure`, `adversarial::fake_status_and_paste_text_are_only_screen_text`). The VT crate has no status concept at all; OSC 7501 is forwarded as raw fields for the Todo 33 owner. |
 | stale state: checkpoint version | `checkpoint_incompatible` for version 0 and for a foreign engine, both through `Checkpoint::from_bytes` and through the public serde `Deserialize` + `Vt::from_checkpoint` route (`continuation::gate_serde_checkpoint_cannot_bypass_version_check`, `continuation::serde_checkpoint_from_a_foreign_engine_cannot_import`). A geometry contradicting the grid gives `checkpoint_inconsistent`. One column, or a numeric u64, gives `checkpoint_malformed` (`adversarial`, `wire`). |
 | resource exhaustion | 5000 kitty pushes are refused past depth 4096, with no panic. An open sequence reaching 64 KiB is aborted with CAN in both vte parsers, so neither parser's OSC buffer grows further, and the rest of the string is discarded to its terminator. A 10 MiB unterminated OSC 7501 yields exactly one `Oversize` record with terminator `truncated`, holds no pending bytes, and the discard state survives a checkpoint exactly (`adversarial::ten_mib_unterminated_osc_is_cut_at_the_parser_bound`); a 70 KiB DCS is discarded up to its ST (`adversarial::oversized_dcs_string_is_discarded_until_its_terminator`). OSC records are capped at 4096 bytes, beyond which they are `Oversize`. |
@@ -128,6 +129,22 @@ Bounded queues and buffers:
 - **B3, identity on every import route:** `Vt::from_checkpoint` checks format, version and engine first through the same `check_identity` as `Checkpoint::from_bytes`, so a stale or foreign checkpoint decoded by any serde route is `checkpoint_incompatible`. Tests: the reviewer's probe and the foreign-engine variant.
 - **B4, bounded parser memory:** when an open sequence reaches 64 KiB, the tracker injects CAN into both vte parsers. alacritty ignores CAN and vte returns to ground, abandoning its OSC buffer. Remaining string bytes are discarded up to BEL (OSC), ST, CAN or SUB, and that discard state travels in checkpoints. An aborted OSC is reported as `Oversize` with terminator `truncated`. Test: a 10 MiB unterminated OSC plus a 70 KiB DCS.
 - **N1, honest proptest evidence:** removed `with_cases(128)` and `with_cases(192)`; the 4000-case evidence above was produced with `PROPTEST_CASES` actually governing.
+
+## Gate review round 2 fix (B2-R2)
+
+- **Cause:** the tracker cleared its escape/string state whenever a C0 control executed. vte executes `0x00..=0x17`, `0x19` and `0x1c..=0x1f` inside Escape and CSI without leaving the state, and ignores them inside OSC. So `ESC NUL ] 7501;...` opened an OSC in vte that the tracker never counted, and a 5039-byte, 17-field OSC came back as truncated `Fields`.
+- **Fix:** `engine/mirror.rs` is a coarse copy of vte 0.15's state machine:
+  - C0 controls never change the state, except CAN/SUB (to Ground) and ESC (to Escape); DEL is ignored.
+  - OSC ends only at BEL, ST, CAN or SUB.
+  - The CSI sub-states are merged; the DCS sub-states stay distinct.
+- **How the tracker uses it:** the tracker takes its string state from the mirror and counts raw OSC bytes, separators and the OSC number exactly as vte stores them, ignored C0 bytes excluded. The 4096-byte, 16-field and 64 KiB bounds therefore apply whatever controls are interleaved.
+- **Tests:**
+  - `engine::mirror::tests::mirror_agrees_with_every_vte_callback`: proptest over random bytes, biased to escape and C0 bytes. Every vte callback (print, execute, CSI/ESC/OSC dispatch, hook, put, unhook) must be possible from the state the mirror claims, and the required callbacks must occur.
+  - `osc_bounds::gate_osc_bounds_survive_control_inside_escape_introducer`: the reviewer's exact fixture.
+  - `osc_bounds::every_inert_control_in_the_introducer_keeps_the_bounds`: every inert C0 plus DEL, with exact `Oversize` raw size.
+  - `osc_bounds::interleaved_controls_never_change_the_records`: proptest injecting random inert C0 bytes into OSC introducers and payloads of 1-24 fields and up to ~9.6 KB; records must equal the clean stream's.
+  - `osc_bounds::ten_mib_osc_with_interleaved_controls_is_still_cut_at_the_bound`: NUL every 101 bytes and a SO in the introducer; still one truncated `Oversize{7501}`, no pending bytes, and the following text renders.
+- **Mutation check:** making a C0 in Escape reset the mirror to Ground (the old behavior) fails the cross-check and all four `osc_bounds` tests; the mutation was reverted.
 
 ## Upstream findings (alacritty_terminal 0.26)
 
