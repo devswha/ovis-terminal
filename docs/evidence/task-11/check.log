@@ -1,0 +1,30 @@
+OS: Linux 7.0.0-38-generic x86_64
+
+$ bash scripts/check.sh
+==> cargo +nightly fmt --all -- --check
+exit: 0
+
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+exit: 0
+
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+Summary: 17 tests run: 17 passed, 0 skipped
+exit: 0
+
+==> cargo test --doc --workspace --all-features --locked
+All workspace doc-test targets passed.
+exit: 0
+
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 57 file(s) checked
+exit: 0
+
+==> bash scripts/hygiene/manifests.sh
+manifests.sh: 16 member manifest(s) checked
+exit: 0
+
+==> bash scripts/hygiene/json.sh
+json.sh: 4 JSON file(s) checked
+exit: 0
+
+check.sh: all steps passed

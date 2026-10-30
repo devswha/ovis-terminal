@@ -46,8 +46,10 @@ pub struct TerminalTarget {
 )]
 pub struct WriteGrant {
     /// Grant epoch supplied by the authority owner.
+    #[serde(with = "crate::protocol::decimal")]
     pub grant_epoch: u64,
     /// Fence epoch observed when the core admitted the input.
+    #[serde(with = "crate::protocol::decimal")]
     pub fence_epoch: u64,
     /// Process incarnation the grant is bound to.
     pub process_incarnation: ProcessIncarnation,

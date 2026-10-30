@@ -1,0 +1,36 @@
+## mutant receipt-not-written (test happy)
+thread 'happy' (3168175) panicked at crates/ovis-terminal-store/tests/transactions.rs:90:5:
+assertion `left == right` failed
+  left: Absent
+ right: Found { revision: Revision(1), result: Payload([111, 112, 45, 49]) }
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.14s
+EXIT=101
+## mutant cas-ignores-version (test happy)
+thread 'happy' (3168714) panicked at crates/ovis-terminal-store/tests/transactions.rs:112:10:
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.14s
+EXIT=101
+## mutant barrier-after-commit-only (test crash_before_commit_keeps_nothing)
+thread 'crash_before_commit_keeps_nothing' (3169389) panicked at crates/ovis-terminal-store/tests/transactions.rs:150:5:
+assertion `left == right` failed
+  left: Revision(1)
+ right: Revision(0)
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.14s
+EXIT=101
+## mutant no-quarantine-on-header (test failure)
+thread 'failure' (3170033) panicked at crates/ovis-terminal-store/tests/transactions.rs:204:50:
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.01s
+EXIT=101
+## after restore
+ M crates/ovis-terminal-store/src/lib.rs
+?? crates/ovis-terminal-store/src/apply.rs
+?? crates/ovis-terminal-store/src/error.rs
+?? crates/ovis-terminal-store/src/evidence.rs
+?? crates/ovis-terminal-store/src/ids.rs
+?? crates/ovis-terminal-store/src/mutation.rs
+?? crates/ovis-terminal-store/src/options.rs
+?? crates/ovis-terminal-store/src/quarantine.rs
+?? crates/ovis-terminal-store/src/schema.rs
+?? crates/ovis-terminal-store/src/snapshot.rs
+?? crates/ovis-terminal-store/src/store.rs
+?? crates/ovis-terminal-store/src/writer.rs
+test result: ok. 3 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.16s

@@ -28,6 +28,7 @@ pub enum PreviousCoreState {
 )]
 pub struct Hello {
     /// Independently versioned holder protocol generation.
+    #[serde(with = "crate::protocol::decimal_u16")]
     pub generation: u16,
     /// Build the adopting core can service.
     pub core_build: CoreBuildId,
@@ -50,6 +51,7 @@ pub struct HeldTerminal {
     /// Process incarnation, present only when a process was spawned.
     pub process_incarnation: Option<ProcessIncarnation>,
     /// PID of the currently held process.
+    #[serde(default, with = "crate::protocol::optional_decimal_u32")]
     pub pid: Option<u32>,
     /// OS token preventing a reused PID from being mistaken for the process.
     pub start_token: Option<ProcessStartToken>,
@@ -72,6 +74,7 @@ pub struct HeldTerminal {
 )]
 pub struct Welcome {
     /// Negotiated holder protocol generation.
+    #[serde(with = "crate::protocol::decimal_u16")]
     pub generation: u16,
     /// Executable build identity.
     pub build: HolderBuildId,
@@ -114,6 +117,7 @@ pub struct Spawned {
     /// New process incarnation.
     pub process_incarnation: ProcessIncarnation,
     /// OS process identifier.
+    #[serde(with = "crate::protocol::decimal_u32")]
     pub pid: u32,
     /// OS token distinguishing this process from PID reuse.
     pub start_token: ProcessStartToken,

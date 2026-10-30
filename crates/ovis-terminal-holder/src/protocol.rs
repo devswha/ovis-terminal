@@ -4,11 +4,18 @@
 //! use these same messages. Holder placement is not a public v1 launch field.
 
 mod adoption;
+#[cfg(test)]
+mod adoption_sequence_tests;
+#[cfg(test)]
+mod counter_json_tests;
 mod decimal;
+mod decimal_u16;
+mod decimal_u32;
 mod frame;
 mod identity;
 mod messages;
 mod optional_decimal;
+mod optional_decimal_u32;
 #[cfg(test)]
 mod property_message_examples;
 #[cfg(test)]

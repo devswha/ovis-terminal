@@ -9,6 +9,13 @@ that the legacy runtime implemented adoption identity semantics.
 The holder crate checks passed on Linux 7.0.0-38-generic x86_64.
 
 ```text
+$ cargo generate-lockfile --offline
+Locking 81 packages to highest Rust 1.89 compatible versions
+exit: 0
+
+$ cargo metadata --locked --format-version 1 >/dev/null
+exit: 0
+
 $ cargo test -p ovis-terminal-holder --test protocol happy -- --exact --nocapture
 running 1 test
 test happy ... ok
@@ -22,16 +29,23 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out
 exit: 0
 
 $ cargo test -p ovis-terminal-holder --lib -- --nocapture
-running 5 tests
+running 7 tests
 test protocol::property_tests::frame_errors_expose_stable_kinds_hints_and_sources ... ok
 test protocol::property_tests::rejected_header_does_not_leave_a_partial_decoder_frame ... ok
+test protocol::counter_json_tests::every_message_variant_encodes_large_counters_as_exact_json_strings ... ok
 test protocol::property_tests::arbitrary_fragment_widths_round_trip ... ok
 test protocol::property_tests::all_message_kinds_round_trip_at_every_two_fragment_boundary ... ok
 test protocol::property_tests::identity_fields_round_trip_as_canonical_decimal_strings ... ok
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test protocol::adoption_sequence_tests::generated_adoption_exit_ack_sequences_match_reference_model ... ok
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 exit: 0
 
-$ cargo nextest run -p ovis-terminal-holder
+$ cargo test -p ovis-terminal-holder --all-targets -- --nocapture
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+exit: 0
+
+$ cargo nextest run -p ovis-terminal-holder --status-level all --final-status-level all --no-tests=fail
 exit: 0
 
 $ cargo clippy -p ovis-terminal-holder --all-targets -- -D warnings
@@ -39,8 +53,15 @@ exit: 0
 
 $ bash scripts/check.sh
 check.sh: all steps passed
+workspace-hygiene: 0 violation(s) in 91 file(s) checked
 exit: 0
 ```
+
+The integration branch was merged into this lane, and Cargo.lock was resolved
+from the merged manifest set with offline lockfile generation. The merged
+workspace includes bundled SQLite; because this host has no system C compiler,
+the check run set local-only `CC` and `AR` wrappers from the provided Zig
+toolchain. Those wrapper paths are not committed.
 
 The happy case adopts terminal `t-17` incarnation 4 and process incarnation 9,
 retains PID 4242 and `start_token=proc-start-abc`, and replays the
@@ -52,7 +73,14 @@ returned those bytes. The failure case checks stable
 `unsupported_generation` and `stale_target` kinds and rejects malformed
 headers and payloads larger than 16 MiB. Boundary errors use thiserror and
 expose stable `kind()` plus recovery `hint()` values; malformed JSON preserves
-its serde source.
+its serde source. Every JSON u64 protocol counter and the generation/PID fields
+are encoded as canonical decimal strings. The property test sets u64 counters
+above 2^53 in every message variant, recursively rejects unsafe JSON numbers,
+asserts generation/PID/counter fields are decimal strings, and checks exact
+decode equality. Another bounded reference-model Proptest generates
+Adopt(identity), Readopt(same/stale/wrong generation), Exit(offset), and
+Ack(offset) sequences, checking typed errors and exit retention until the final
+offset is acknowledged.
 
 ### DEFERRED VERIFICATION (runner lands in Todo 21)
 
@@ -85,7 +113,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out
 exit: 0
 
 $ cargo test -p ovis-terminal-holder --lib -- --nocapture
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 exit: 0
 ```
 
@@ -101,6 +129,10 @@ exit: 0
 - Fragmentation: every typed message variant round-trips at every two-part
   fragment boundary, with additional Proptest coverage over arbitrary fragment
   widths and identity fields.
+- Adoption state: a bounded reference-model Proptest generates Adopt,
+  Readopt(same/stale/wrong generation), Exit(offset), and Ack(offset)
+  sequences; it checks typed rejection kinds, exit replay, and retention until
+  the final offset is acknowledged.
 - Error boundaries: adoption and frame errors expose stable kinds and recovery
   hints; malformed JSON payloads preserve their serde source error.
 - No real-socket adversarial result is claimed; the Todo 21 runner is not
