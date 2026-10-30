@@ -24,6 +24,7 @@ mod input;
 #[cfg(test)]
 mod input_tests;
 mod io_error;
+mod join_report;
 mod launch;
 mod launch_error;
 mod link;
@@ -42,6 +43,7 @@ pub use detach::spawn_detached;
 pub use error::HolderError;
 pub use holder::Holder;
 pub use io_error::TerminalIoError;
+pub use join_report::{JoinOutcome, ShutdownReport, WorkerRole, WorkersJoined};
 pub use launch::{Grid, LaunchRequest, LaunchSpec};
 pub use launch_error::{LaunchError, PtySourceError};
 pub use link::{CoreLink, LinkClosed, RecvError};

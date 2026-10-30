@@ -147,5 +147,9 @@ fn accept_loop(context: &ServiceContext, listener: &UnixListener) -> Result<(), 
             break;
         }
     }
-    context.holder.shutdown()
+    let report = context.holder.shutdown()?;
+    match report.panicked() {
+        0 => Ok(()),
+        count => Err(HolderError::WorkerPanicked { count }),
+    }
 }

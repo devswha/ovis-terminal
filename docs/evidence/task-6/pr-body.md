@@ -105,7 +105,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out
 exit: 0
 
 $ cargo nextest run -p ovis-terminal-holder --status-level all --final-status-level all --no-tests=fail
-Summary [   5.412s] 34 tests run: 34 passed, 0 skipped
+Summary 40 tests run: 40 passed, 0 skipped
 exit: 0
 
 $ cargo clippy -p ovis-terminal-holder --all-targets -- -D warnings
@@ -185,22 +185,28 @@ real Unix socket with the real frame codec; it is not the `ovis-terminal` binary
   hang-up. POLLNVAL, or POLLERR without POLLHUP, becomes the typed
   `TerminalIoError::PollFlags{revents}` (kind `pty_poll_flagged`), which reaches
   `Exit.io_failure{operation: poll, poll_revents}` through the same path as read
-  faults. Poll syscall failures keep their `#[source]`. The reviewer's probe is
-  permanent as `poll_error_without_hangup_is_a_typed_failure_not_a_hangup`: a
-  pipe with its reader dropped gives POLLOUT|POLLERR and no POLLHUP, and the test
-  The rule is the pure function `classify(revents)`, which is table-tested on
-  every platform: POLLOUT|POLLERR and POLLNVAL are typed failures; POLLHUP and
-  POLLHUP|POLLERR are hang-ups; POLLOUT is ready.
+  faults. Poll syscall failures keep their `#[source]`. The reviewer's pipe
+  probe is **not** on this head: it was replaced, because on macOS a pipe whose
+  reader is gone reports POLLHUP, not POLLERR. Two tests take its place.
+  `poll_flags_classify_hangup_readiness_and_typed_failures` table-tests the pure
+  rule `classify(revents)` on every platform: POLLOUT|POLLERR and POLLNVAL are
+  typed failures; POLLHUP and POLLHUP|POLLERR are hang-ups; POLLOUT is ready.
   `kernel_poll_error_flags_are_a_typed_failure_not_a_hangup` injects a real
   kernel fault portably by polling a never-open descriptor number (POLLNVAL on
-  Linux and macOS) and asserts the typed failure. This replaces the reviewer's
-  Linux-only pipe probe: on macOS a pipe whose reader is gone reports POLLHUP,
-  not POLLERR.
-- No surviving holder threads: `no_worker_thread_survives_kill_reap_and_shutdown`.
-  With a writer blocked on a non-reader, the shared holder state has 4 handles
-  (holder, waiter, pump, writer). After kill, the observed `Exit` and
-  `shutdown()`, exactly 1 remains, which proves every worker thread ended and
-  was joined. This is deterministic and needs no `/proc` scan.
+  Linux and macOS) and asserts the typed failure.
+- Worker joins (round 3): `Holder::shutdown()` returns a typed `ShutdownReport`
+  with, per terminal, `WorkersJoined{waiter, pump, writer}`. Each value is
+  `Joined | NotRegistered | Panicked` and is built only from actual
+  `JoinHandle::join` results; a handle that was never registered is
+  `NotRegistered`, never `Joined`. `no_worker_thread_survives_kill_reap_and_shutdown`
+  blocks a writer on a non-reader, kills the program and waits for `Exit`. It
+  asserts that all three workers are `Joined`; this proves the joins. It also
+  checks the shared-state `Arc` count drops 4 -> 1, which proves only that the
+  workers released their state, not that they were joined. Mutation proof in
+  `docs/evidence/task-6/mutation-skip-waiter-join.log`: when the waiter's handle
+  is dropped instead of registered, the test fails (exit 101) with
+  `waiter: NotRegistered`. With the code restored (`git diff --exit-code` 0), it
+  passes.
 - B4, typed I/O failures:
   - `unexpected_read_failure_is_typed_not_a_hangup`: a real EISDIR read failure
     is `pty_read_failed` with its source and `PtyIoFailure{read, EISDIR}`, not

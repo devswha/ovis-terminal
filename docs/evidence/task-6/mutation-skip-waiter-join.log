@@ -1,0 +1,49 @@
+# Mutation: the waiter JoinHandle is dropped instead of registered (reviewer R3-B1)
+diff --git a/crates/ovis-terminal-holder/src/unix/holder/workers.rs b/crates/ovis-terminal-holder/src/unix/holder/workers.rs
+index fc95b05..ad5ffa0 100644
+--- a/crates/ovis-terminal-holder/src/unix/holder/workers.rs
++++ b/crates/ovis-terminal-holder/src/unix/holder/workers.rs
+@@ -83,11 +83,7 @@ pub(super) fn start(
+         drain: Arc::clone(&drain),
+     };
+     let waiter = move || wait_for_exit(waiter, &report_tx);
+-    register(
+-        shared,
+-        (terminal_id, WorkerRole::Waiter),
+-        spawn_named("ovis-holder-wait", waiter)?,
+-    );
++    drop(spawn_named("ovis-holder-wait", waiter)?);
+     let pump_shared = Arc::clone(shared);
+     let pump = Pump {
+         terminal_id: terminal_id.clone(),
+$ cargo test -p ovis-terminal-holder --lib unix::holder_tests::no_worker_thread_survives_kill_reap_and_shutdown -- --exact --nocapture
+
+running 1 test
+
+thread 'unix::holder_tests::no_worker_thread_survives_kill_reap_and_shutdown' (2851441) panicked at crates/ovis-terminal-holder/src/unix/holder_tests.rs:177:5:
+assertion `left == right` failed
+  left: WorkersJoined { waiter: NotRegistered, pump: Joined, writer: Joined }
+ right: WorkersJoined { waiter: Joined, pump: Joined, writer: Joined }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test unix::holder_tests::no_worker_thread_survives_kill_reap_and_shutdown ... FAILED
+
+failures:
+
+failures:
+    unix::holder_tests::no_worker_thread_survives_kill_reap_and_shutdown
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 30 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p ovis-terminal-holder --lib`
+exit: 101
+
+# Restored
+diff-exit: 0
+$ cargo test -p ovis-terminal-holder --lib unix::holder_tests::no_worker_thread_survives_kill_reap_and_shutdown -- --exact --nocapture
+
+running 1 test
+test unix::holder_tests::no_worker_thread_survives_kill_reap_and_shutdown ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 30 filtered out; finished in 0.01s
+
+exit: 0

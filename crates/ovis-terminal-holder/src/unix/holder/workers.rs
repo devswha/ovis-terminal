@@ -18,6 +18,7 @@ use crate::process::{ProcessId, SignalError, SignalScope, send_signal};
 use crate::protocol::{SignalKind, TerminalId};
 use crate::unix::drain::DrainSignal;
 use crate::unix::input::InputQueue;
+use crate::unix::join_report::{JoinOutcome, WorkerRole};
 use crate::unix::launch::PtyProcess;
 
 /// A launched process split into the master kept by the holder and thread-owned parts.
@@ -57,6 +58,12 @@ pub(super) fn start(
     terminal_id: &TerminalId,
     parts: ThreadParts,
 ) -> io::Result<()> {
+    shared
+        .workers
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .started
+        .insert(terminal_id.clone());
     let drain = Arc::new(DrainSignal::default());
     let (report_tx, report_rx) = mpsc::sync_channel(1);
     let ThreadParts {
@@ -76,7 +83,11 @@ pub(super) fn start(
         drain: Arc::clone(&drain),
     };
     let waiter = move || wait_for_exit(waiter, &report_tx);
-    register(shared, spawn_named("ovis-holder-wait", waiter)?);
+    register(
+        shared,
+        (terminal_id, WorkerRole::Waiter),
+        spawn_named("ovis-holder-wait", waiter)?,
+    );
     let pump_shared = Arc::clone(shared);
     let pump = Pump {
         terminal_id: terminal_id.clone(),
@@ -85,7 +96,11 @@ pub(super) fn start(
         report: report_rx,
     };
     let pump = move || pump_output(&pump_shared, pump);
-    register(shared, spawn_named("ovis-holder-pump", pump)?);
+    register(
+        shared,
+        (terminal_id, WorkerRole::Pump),
+        spawn_named("ovis-holder-pump", pump)?,
+    );
     let writer_shared = Arc::clone(shared);
     let sink = InputSink {
         terminal_id: terminal_id.clone(),
@@ -93,7 +108,11 @@ pub(super) fn start(
         file: writer,
     };
     let writer = move || write_input(&writer_shared, sink);
-    register(shared, spawn_named("ovis-holder-input", writer)?);
+    register(
+        shared,
+        (terminal_id, WorkerRole::Writer),
+        spawn_named("ovis-holder-input", writer)?,
+    );
     Ok(())
 }
 
@@ -120,20 +139,29 @@ where
     Builder::new().name(name.to_owned()).spawn(body)
 }
 
-/// Keeps `handle` for shutdown, joining any workers that already finished.
-fn register(shared: &Shared, handle: JoinHandle<()>) {
+/// Keeps `handle` for shutdown, joining any workers that already finished and
+/// recording each actual join outcome.
+fn register(shared: &Shared, worker: (&TerminalId, WorkerRole), handle: JoinHandle<()>) {
     let mut workers = shared
         .workers
         .lock()
         .unwrap_or_else(PoisonError::into_inner);
     let (finished, running): (Vec<_>, Vec<_>) = std::mem::take(&mut workers.running)
         .into_iter()
-        .partition(JoinHandle::is_finished);
+        .partition(|(_, _, handle)| handle.is_finished());
     workers.running = running;
-    for done in finished {
-        if done.join().is_err() {
-            workers.panicked = workers.panicked.saturating_add(1);
-        }
+    for (terminal_id, role, done) in finished {
+        let outcome = join_outcome(done);
+        workers.outcomes.insert((terminal_id, role), outcome);
     }
-    workers.running.push(handle);
+    let (terminal_id, role) = worker;
+    workers.running.push((terminal_id.clone(), role, handle));
+}
+
+/// Joins one worker and reports what `join` actually returned.
+pub(super) fn join_outcome(handle: JoinHandle<()>) -> JoinOutcome {
+    match handle.join() {
+        Ok(()) => JoinOutcome::Joined,
+        Err(_panic) => JoinOutcome::Panicked,
+    }
 }

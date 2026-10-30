@@ -8,12 +8,14 @@ use std::sync::{Arc, PoisonError};
 use super::Holder;
 use super::admission::admit_input;
 use super::state::HolderState;
+use super::workers::join_outcome;
 use crate::process::{ProcessId, SignalError, SignalScope, send_signal};
 use crate::protocol::{
     Forget, Input, Resize, Signal, SignalKind, Tail, TailRequest, TerminalTarget,
 };
 use crate::unix::error::HolderError;
 use crate::unix::io_error::TerminalIoError;
+use crate::unix::join_report::{JoinOutcome, ShutdownReport, WorkerRole, WorkersJoined};
 use crate::unix::launch::Grid;
 use crate::unix::link::LinkClosed;
 
@@ -162,31 +164,48 @@ impl Holder {
 
     /// Kills every live process group, closes the core link and joins all workers.
     ///
+    /// The report is built only from actual `JoinHandle::join` results: a worker
+    /// whose handle was never registered is `NotRegistered`, never `Joined`.
+    ///
     /// # Errors
     ///
     /// Returns [`HolderError::Signal`] when a live process group could not be
-    /// killed (its workers are then not joined), or
-    /// [`HolderError::WorkerPanicked`] after joining.
-    pub fn shutdown(&self) -> Result<(), HolderError> {
+    /// killed; its workers are then not joined.
+    pub fn shutdown(&self) -> Result<ShutdownReport, HolderError> {
         self.shared.with_state(kill_all)?;
-        let (running, mut panicked) = {
+        let (running, mut outcomes, started) = {
             let mut workers = self
                 .shared
                 .workers
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner);
-            (std::mem::take(&mut workers.running), workers.panicked)
+            (
+                std::mem::take(&mut workers.running),
+                std::mem::take(&mut workers.outcomes),
+                std::mem::take(&mut workers.started),
+            )
         };
-        for worker in running {
-            if worker.join().is_err() {
-                panicked = panicked.saturating_add(1);
-            }
+        for (terminal_id, role, handle) in running {
+            outcomes.insert((terminal_id, role), join_outcome(handle));
         }
-        if panicked == 0 {
-            Ok(())
-        } else {
-            Err(HolderError::WorkerPanicked { count: panicked })
+        let mut report = ShutdownReport::default();
+        for terminal_id in started {
+            let [waiter, pump, writer] = WorkerRole::ALL.map(|role| {
+                outcomes
+                    .get(&(terminal_id.clone(), role))
+                    .copied()
+                    .unwrap_or(JoinOutcome::NotRegistered)
+            });
+            report.terminals.insert(
+                terminal_id,
+                WorkersJoined {
+                    waiter,
+                    pump,
+                    writer,
+                },
+            );
         }
+        Ok(report)
     }
 }
 

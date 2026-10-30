@@ -7,6 +7,7 @@ mod state;
 mod threads;
 mod workers;
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
 use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -16,6 +17,7 @@ use self::state::{HolderState, LiveTerminal, Terminal};
 use super::config::{HolderConfig, ProcessEnvironment};
 use super::error::HolderError;
 use super::input::InputQueue;
+use super::join_report::{JoinOutcome, WorkerRole};
 use super::launch::{Grid, LaunchRequest, LaunchSpec, launch};
 use super::launch_error::LaunchError;
 use super::link::{CoreLink, Outbox};
@@ -34,8 +36,9 @@ pub(super) struct Shared {
 
 #[derive(Default)]
 struct Workers {
-    running: Vec<JoinHandle<()>>,
-    panicked: usize,
+    running: Vec<(TerminalId, WorkerRole, JoinHandle<()>)>,
+    outcomes: BTreeMap<(TerminalId, WorkerRole), JoinOutcome>,
+    started: BTreeSet<TerminalId>,
 }
 
 impl Shared {

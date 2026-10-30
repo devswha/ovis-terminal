@@ -1,7 +1,7 @@
 //! In-process holder control under a program that never reads its input.
 
 use super::test_fixtures::{WAIT, config, hello_record, input, shell, target_of};
-use super::{CoreLink, Holder};
+use super::{CoreLink, Holder, JoinOutcome, WorkersJoined};
 use crate::protocol::{
     HOLDER_PROTOCOL_GENERATION, Message, ProcessIncarnation, Resize, Signal, SignalKind,
 };
@@ -161,8 +161,19 @@ fn no_worker_thread_survives_kill_reap_and_shutdown() {
     let (target, signal) = (target_of(&spawned), SignalKind::Kill);
     holder.signal(&Signal { target, signal }).expect("kill");
     while !matches!(link.recv_timeout(WAIT).expect("exit"), Message::Exit(_)) {}
-    holder.shutdown().expect("joined");
+    let report = holder.shutdown().expect("shutdown");
 
-    // Then: every worker thread has ended and released the holder state.
+    // Then: join actually returned for the waiter, pump and writer, and every
+    // worker released the holder state.
+    let joined = report
+        .terminals
+        .get(&spawned.terminal_id)
+        .expect("terminal reported");
+    let expected = WorkersJoined {
+        waiter: JoinOutcome::Joined,
+        pump: JoinOutcome::Joined,
+        writer: JoinOutcome::Joined,
+    };
+    assert_eq!(*joined, expected);
     assert_eq!(holder.handle_count(), 1);
 }
