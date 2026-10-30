@@ -185,7 +185,11 @@ targeted fixed head `89bb89b41c48cf221249a4be0cf9b40112840210`:
 - <https://github.com/devswha/ovis-terminal/actions/runs/41141274758>
 - <https://github.com/devswha/ovis-terminal/actions/runs/41141298345>
 
-Their results are pending. Each run covers 100 single-happy and 100
+Run 41141232863 passed all four jobs, each with 100 `PASS n/100` lines,
+100 successful nextest summaries, 100 actual `happy` passes and
+`RESULT 100/100`. Its four complete logs are promoted here with names
+`stress-41141232863-*.log`; their SHA-256 digests match the downloaded artifacts.
+The other two runs also passed all four jobs at 100/100. Each run covers 100 happy-filter and 100
 whole-binary iterations on each of macOS 15 and macOS 26 (`macos-latest`).
 The redundant fixed-code push run 41141198738 was cancelled before testing;
 the diagnostic run 41140598357 was cancelled after its failing job log
@@ -194,3 +198,42 @@ The original pre-fix run 41140283121 was left running to its natural result.
 
 The temporary lane push trigger has now been removed. The retained workflow
 is manual-only, as originally required.
+
+The pre-fix run 41140283121 completed naturally with conclusion `failure`.
+Both whole-binary jobs and the macOS 15 single-happy job failed. The
+macos-latest single-happy job passed 100/100 on the same unfixed source.
+This confirms that a successful single-test loop alone would not establish
+determinism. All four artifacts and `gh run view 41140283121 --log-failed`
+output were downloaded into the ignored attempt directory.
+
+The exact requested `happy` filter now also matches the new deadline test's
+`unix_happy::` module path: it runs two tests per iteration, including the
+actual top-level `happy` test. The whole-binary variant runs all five tests
+(happy, failure, the two task 72 tests, and the new deadline test), with
+normal nextest concurrency. No selection is empty.
+
+All 12 complete logs are committed as `stress-<run-id>-<image>-<variant>.log`,
+with artifact-matching SHA-256 digests in `stress-sha256.txt`. Across the three
+consecutive dispatches: 1,200 actual happy passes, 1,200 deadline-test passes,
+600 failure-probe passes and 1,200 task 72 test passes (4,200 test executions).
+Each log has exactly 100 successful iteration markers and nextest summaries,
+100 passes of the actual top-level `happy` test, and `RESULT 100/100`.
+
+Initial PR #14 CI passed at head `3a61e56`, run 41141524634, including
+`test (macos-latest)` job 124356677607. Its platform-probes run 41141524652
+also passed all three platforms. Windows smoke retains task 12's documented
+ConPTY findings, which remain owned by Todos 53/54.
+
+Before the final push, `origin/integration` advanced to `eb9827d81286df101a8a72644d44167c7cb210ee`
+(task 72 landed). The required merge was committed as `15e5a4d`.
+Its changes relative to this lane were only task 72 evidence. A diff of
+`probes/`, `crates/`, `bench/`, `Cargo.toml` and `Cargo.lock` against the
+stress-tested source `89bb89b` was empty after the merge.
+`cargo metadata --locked --format-version 1 --no-deps` exited 0; no lockfile
+conflict or regeneration was needed.
+
+The full local gate was rerun after this integration merge:
+`bash scripts/check.sh` exited 0, with 194 tests passed, 1 pre-existing skip,
+and zero hygiene violations in 232 files. Complete output:
+`check-after-integration.log`. All 12 promoted stress-log checksums also
+passed `sha256sum -c stress-sha256.txt`.
