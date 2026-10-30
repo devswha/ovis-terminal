@@ -1,0 +1,95 @@
+{
+  "scenario": "part-a/task-7",
+  "todo": 7,
+  "title": "Build the pure Rust VT state engine",
+  "closes": [
+    "GAP-066"
+  ],
+  "delivers": [
+    "IDEAL-032",
+    "IDEAL-035",
+    "IDEAL-036",
+    "IDEAL-046",
+    "IDEAL-047"
+  ],
+  "runner": "shell",
+  "note": "Foundational lane: the engine is exercised through its crate tests until the socket conformance runner (plan todo 21) and binary assembly let this scenario drive attach.open/first_paint over the real ovis-terminal socket.",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-vt",
+            "--test",
+            "checkpoint",
+            "happy",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_line": "test happy ... ok"
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-vt",
+            "--lib",
+            "paint_equivalence"
+          ],
+          "expect": {
+            "exit": 0
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-vt",
+            "--test",
+            "checkpoint",
+            "failure",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_line": "test failure ... ok"
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-vt",
+            "--test",
+            "adversarial"
+          ],
+          "expect": {
+            "exit": 0
+          }
+        }
+      ]
+    }
+  ]
+}
