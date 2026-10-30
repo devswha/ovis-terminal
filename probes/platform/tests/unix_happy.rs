@@ -42,7 +42,12 @@ fn grid_resize_token_and_final_bytes() {
     assert_eq!(reported_grid(&mut session), Grid::new(80, 24));
     session.resize(Grid::new(132, 40)).unwrap();
     assert_eq!(session.grid().unwrap(), Grid::new(132, 40));
-    assert_eq!(reported_grid(&mut session), Grid::new(132, 40));
+    assert_eq!(
+        reported_grid(&mut session),
+        Grid::new(132, 40),
+        "master after slave report: {:?}",
+        session.grid()
+    );
     let pid = session.pid().unwrap();
     let observed = observe_process(pid).unwrap();
     assert_eq!(observed.state, ProcessState::Live);

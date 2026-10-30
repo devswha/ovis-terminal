@@ -97,3 +97,23 @@ This is not a reproduction of the resize bug. The stress matrix now includes
 both `macos-latest` (Xcode 26.6, from that image's published inventory) and
 `macos-15` (Xcode 16.4, matching the original failure environment).
 Each image runs both single-happy and full-binary 100-iteration jobs.
+
+## Pre-fix reproduction
+
+Run <https://github.com/devswha/ovis-terminal/actions/runs/41140283121>,
+head `96f22b9884bc6c42ecedf6621d2c442a0b4612f1`, reproduced the original
+failure in `stress (macos-latest, all)`, job 124352609444, iteration 2.
+
+```text
+2026-10-30T22:47:23.1677220Z ITERATION 2/100
+2026-10-30T22:47:23.7453500Z         FAIL [   0.061s] (3/4) ovis-terminal-holder::platform_probe happy
+2026-10-30T22:47:23.7459020Z     thread 'happy' (26122) panicked at crates/ovis-terminal-holder/../../probes/platform/tests/unix_happy.rs:45:5:
+2026-10-30T22:47:23.7459500Z     assertion `left == right` failed
+2026-10-30T22:47:23.7459810Z       left: Grid { columns: 80, rows: 24 }
+2026-10-30T22:47:23.7460070Z      right: Grid { columns: 132, rows: 40 }
+```
+
+Next diagnostic change retains the original assertion and queries the master
+only when that assertion fails. If it is also back at 80x24, the resize was
+overwritten rather than merely invisible on the slave. No synchronization
+fix is present in this diagnostic revision.
