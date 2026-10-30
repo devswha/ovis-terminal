@@ -14,21 +14,29 @@ env:
 
 jobs:
   stress:
-    name: stress (${{ matrix.probe }})
+    name: stress (${{ matrix.image }}, ${{ matrix.probe }})
     strategy:
       fail-fast: false
       matrix:
         probe: [happy, all]
-    runs-on: macos-latest
+        image: [macos-latest, macos-15]
+        include:
+          - image: macos-latest
+            xcode: "26.6"
+          - image: macos-15
+            xcode: "16.4"
+    runs-on: ${{ matrix.image }}
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      - name: pin C toolchain (macOS Xcode 16.4)
+      - name: pin C toolchain
         shell: bash
+        env:
+          XCODE: ${{ matrix.xcode }}
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.4.app
+          sudo xcode-select -s "/Applications/Xcode_${XCODE}.app"
           version="$(xcodebuild -version)"
-          test "${version%%$'\n'*}" = "Xcode 16.4"
+          test "${version%%$'\n'*}" = "Xcode $XCODE"
       - uses: dtolnay/rust-toolchain@1.99.1
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@nextest
@@ -63,6 +71,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: probe-stress-macos-${{ matrix.probe }}-${{ github.run_id }}
+          name: probe-stress-macos-${{ matrix.image }}-${{ matrix.probe }}-${{ github.run_id }}
           path: probe-stress-macos.log
           if-no-files-found: error

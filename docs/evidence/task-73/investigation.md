@@ -82,3 +82,18 @@ failure. Runner reproduction and a distinguishing observation remain required.
 
 After merging task 72, `bash scripts/check.sh` passed again on Linux x86_64:
 193 tests passed, 1 skipped, exit 0.
+
+## Runner setup correction
+
+Run <https://github.com/devswha/ovis-terminal/actions/runs/41140148551>
+failed before testing: `macos-latest` now selects `macos-26-arm64`,
+image `20261013.0424.1`, and Xcode 16.4 does not exist there:
+
+```text
+xcode-select: error: invalid developer directory '/Applications/Xcode_16.4.app'
+```
+
+This is not a reproduction of the resize bug. The stress matrix now includes
+both `macos-latest` (Xcode 26.6, from that image's published inventory) and
+`macos-15` (Xcode 16.4, matching the original failure environment).
+Each image runs both single-happy and full-binary 100-iteration jobs.
