@@ -1,0 +1,177 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "_runner/self-test",
+  "title": "The runner reports its own failure modes instead of passing them",
+  "todo": 21,
+  "closes": [],
+  "delivers": [],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "A wrong expectation is assertion_failed and an unanswered id is a timeout, while the true reply still passes.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "client",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "client",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "wrong",
+                "method": "doc.get",
+                "params": {
+                  "name": "alpha"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "expect_failure": {
+            "kind": "assertion_failed",
+            "step": {
+              "replies": {
+                "conn": "client",
+                "expect": {
+                  "wrong": {
+                    "/result/value": "not-this"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "expect_failure": {
+            "kind": "timeout",
+            "step": {
+              "replies": {
+                "conn": "client",
+                "expect": {
+                  "never-sent": {}
+                },
+                "within_ms": 300
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "right",
+                "method": "doc.get",
+                "params": {
+                  "name": "alpha"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "right": {
+                "/result/value": null
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "client"
+          }
+        },
+        {
+          "closed": {
+            "conn": "client"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "A wrong exit status, a step without a fixture and an unknown connection each fail with their kind.",
+      "steps": [
+        {
+          "expect_failure": {
+            "kind": "assertion_failed",
+            "step": {
+              "run": {
+                "args": [
+                  "--version"
+                ],
+                "exit": 3
+              }
+            }
+          }
+        },
+        {
+          "expect_failure": {
+            "kind": "fixture_state",
+            "step": {
+              "connect": {
+                "conn": "early",
+                "via": "socket"
+              }
+            }
+          }
+        },
+        {
+          "expect_failure": {
+            "kind": "unknown_connection",
+            "step": {
+              "hangup": {
+                "conn": "never-opened"
+              }
+            }
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--version"
+            ],
+            "exit": 0
+          }
+        }
+      ]
+    }
+  ]
+}

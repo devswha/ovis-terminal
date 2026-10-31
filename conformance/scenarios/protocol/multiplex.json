@@ -1,0 +1,404 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "protocol/multiplex",
+  "title": "One persistent connection multiplexes concurrent correlated RPCs",
+  "todo": 21,
+  "closes": [
+    "GAP-004",
+    "GAP-006"
+  ],
+  "delivers": [
+    "IDEAL-004",
+    "IDEAL-005"
+  ],
+  "excludes": [
+    "EXCL-014"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the binary's connect bridge, a held mutation stays pending while later requests on the same connection are answered by id; cancelling it settles both, and every byte is decoded.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021",
+              "/result/methods": {
+                "$contains": [
+                  "doc.set",
+                  "doc.get",
+                  "op.get",
+                  "op.cancel"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "held",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:held",
+                  "name": "held",
+                  "value": "never",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "set-alpha",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:alpha",
+                  "name": "alpha",
+                  "value": "one",
+                  "version": "0"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "notification": {
+            "conn": "bridge",
+            "method": "$/fixture/held",
+            "expect": {
+              "/params/op_id": "$op:held"
+            }
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "set-alpha": {
+                "/result/name": "alpha",
+                "/result/value": "one",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "get-alpha",
+                "method": "doc.get",
+                "params": {
+                  "name": "alpha"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "inspect-held",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:held"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "get-alpha": {
+                "/result/value": "one"
+              },
+              "inspect-held": {
+                "/result/op_id": "$op:held",
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "accepted",
+                "/result/method": "doc.set"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cancel-held",
+                "method": "op.cancel",
+                "params": {
+                  "op_id": "$op:held"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "cancel-held": {
+                "/result/outcome": "cancelled_before_commit"
+              },
+              "held": {
+                "/error/data/kind": "cancelled",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "alpha.json": "one"
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "A duplicate in-flight id and a malformed but correlatable request are answered by id while the connection stays usable; an uncorrelatable record closes it with a typed reason.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "raw",
+            "via": "socket"
+          }
+        },
+        {
+          "send": {
+            "conn": "raw",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "early",
+                "method": "doc.get",
+                "params": {
+                  "name": "alpha"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "raw",
+            "expect": {
+              "early": {
+                "/error/data/kind": {
+                  "$present": true
+                },
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "hello": {
+            "conn": "raw",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "raw",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "dup",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:dup-held",
+                  "name": "held",
+                  "value": "never",
+                  "version": "0"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "notification": {
+            "conn": "raw",
+            "method": "$/fixture/held",
+            "expect": {
+              "/params/op_id": "$op:dup-held"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "raw",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "dup",
+                "method": "doc.get",
+                "params": {
+                  "name": "alpha"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "raw",
+            "expect": {
+              "dup": {
+                "/error/data/kind": "duplicate_request_id"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "raw",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "bad",
+                "method": 5
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "raw",
+            "expect": {
+              "bad": {
+                "/error/data/kind": "invalid_request"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "raw",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cancel",
+                "method": "op.cancel",
+                "params": {
+                  "op_id": "$op:dup-held"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "raw",
+            "expect": {
+              "cancel": {
+                "/result/outcome": "cancelled_before_commit"
+              },
+              "dup": {
+                "/error/data/kind": "cancelled"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "raw",
+            "requests": [
+              "not a request object"
+            ]
+          }
+        },
+        {
+          "notification": {
+            "conn": "raw",
+            "method": "$/closing",
+            "expect": {
+              "/params/reason": {
+                "$present": true
+              }
+            }
+          }
+        },
+        {
+          "closed": {
+            "conn": "raw"
+          }
+        },
+        {
+          "effects": {
+            "entries": {}
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

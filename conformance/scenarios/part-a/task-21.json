@@ -1,0 +1,53 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "part-a/task-21",
+  "title": "Build real socket conformance runner and protocol fixtures",
+  "todo": 21,
+  "closes": [
+    "GAP-004",
+    "GAP-006",
+    "GAP-007",
+    "GAP-008"
+  ],
+  "delivers": [
+    "IDEAL-004",
+    "IDEAL-005",
+    "IDEAL-006",
+    "IDEAL-007",
+    "IDEAL-008",
+    "IDEAL-013"
+  ],
+  "excludes": [
+    "EXCL-014"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "protocol/multiplex happy: one bridge connection, multiple matching replies, every byte decoded.",
+      "steps": [
+        {
+          "include": {
+            "scenario": "protocol/multiplex",
+            "case": "happy"
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "protocol/strict-target failure: misspelled target and oversized header get invalid_params and frame_too_large with unchanged target resources.",
+      "steps": [
+        {
+          "include": {
+            "scenario": "protocol/strict-target",
+            "case": "failure"
+          }
+        }
+      ]
+    }
+  ]
+}

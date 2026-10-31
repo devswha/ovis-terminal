@@ -1,0 +1,215 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "protocol/strict-target",
+  "title": "Explicit targets only; unknown target fields and oversized frames are typed rejections",
+  "todo": 21,
+  "closes": [
+    "GAP-006",
+    "GAP-008"
+  ],
+  "delivers": [
+    "IDEAL-008",
+    "IDEAL-013"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the bridge, an explicit name and an explicit id each change only the terminal they resolve to.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "keep-solo",
+                "method": "terminal.keep",
+                "params": {
+                  "op_id": "$op:solo",
+                  "target": {
+                    "name": "solo"
+                  },
+                  "keep": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "keep-solo": {
+                "/result/terminal_id": "terminal:3",
+                "/result/keep": true
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "keep-two",
+                "method": "terminal.keep",
+                "params": {
+                  "op_id": "$op:two",
+                  "target": {
+                    "terminal_id": "terminal:2"
+                  },
+                  "keep": false
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "keep-two": {
+                "/result/terminal_id": "terminal:2",
+                "/result/keep": false
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "terminal:3.json": {
+                "terminal_id": "terminal:3",
+                "keep": true
+              },
+              "terminal:2.json": {
+                "terminal_id": "terminal:2",
+                "keep": false
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "Through the bridge on a framed connection, misspelled, legacy, missing, doubled, ambiguous and unknown targets are rejected before dispatch with no effect; an oversized frame header closes the connection with frame_too_large.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": true,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021",
+              "/result/limits/max_frame_bytes": {
+                "$present": true
+              }
+            }
+          }
+        },
+        {
+          "rejections": {
+            "conn": "bridge",
+            "fixture": "strict-rejections.json"
+          }
+        },
+        {
+          "effects": {
+            "entries": {}
+          }
+        },
+        {
+          "send_wire": {
+            "conn": "bridge",
+            "frame": "oversized-header"
+          }
+        },
+        {
+          "notification": {
+            "conn": "bridge",
+            "method": "$/closing",
+            "expect": {
+              "/params/reason": "frame_too_large"
+            }
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "effects": {
+            "entries": {}
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures/frame_too_large": "1"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

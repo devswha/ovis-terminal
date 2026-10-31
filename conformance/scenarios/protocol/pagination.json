@@ -1,0 +1,184 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "protocol/pagination",
+  "title": "A 64 MiB logical result arrives through bounded frames",
+  "todo": 21,
+  "closes": [
+    "GAP-007"
+  ],
+  "delivers": [
+    "IDEAL-007"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the bridge on a framed connection, terminal.output pages of 8 MiB reassemble 67108864 bytes whose SHA-256 matches, every reply frame within 16 MiB, ending with an empty page at next_offset.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": true,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "pages": {
+            "conn": "bridge",
+            "target": {
+              "terminal_id": "terminal:1"
+            },
+            "page_bytes": "8388608",
+            "total_bytes": "67108864",
+            "sha256": "baff87bb4cf5f638c96e9394f40d9c963234366f04c7f7b5760a857b765fea3a"
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "Asking for the whole 64 MiB in one reply is frame_too_large, an unknown terminal is not_found and a numeric offset is invalid_params.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": true,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "whole",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "terminal_id": "terminal:1"
+                  },
+                  "from_offset": "0",
+                  "limit_bytes": "67108864"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "other",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "terminal_id": "terminal:2"
+                  },
+                  "from_offset": "0",
+                  "limit_bytes": "1"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "numeric",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "terminal_id": "terminal:1"
+                  },
+                  "from_offset": 0,
+                  "limit_bytes": "1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "whole": {
+                "/error/data/kind": "frame_too_large",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "other": {
+                "/error/data/kind": "not_found"
+              },
+              "numeric": {
+                "/error/data/kind": "invalid_params",
+                "/error/data/field_path": "params.from_offset"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
