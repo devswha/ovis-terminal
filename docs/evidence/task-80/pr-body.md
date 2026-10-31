@@ -48,7 +48,7 @@ The test assumed a reply order that the product does not promise.
 | `bash scripts/check.sh` | 0 | `check.log`: fmt, clippy `-D warnings`, nextest `693 tests run: 693 passed (1 slow), 1 skipped`, doctests, hygiene |
 | `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` | 0 | `windows-check.log` |
 
-All commands ran on Linux x86_64. The macOS manual stress job `probe-stress-macos.yml` (option `connection`, 200 iterations) was dispatched on this branch: MACOS_RUN.
+All commands ran on Linux x86_64. The macOS manual stress job `probe-stress-macos.yml` (option `connection`, 200 iterations) was dispatched on this branch: https://github.com/devswha/ovis-terminal/actions/runs/41228141327 (result is posted in a PR comment when it finishes).
 
 DEFERRED VERIFICATION (runner lands in Todo 21): not applicable. This todo changes only a server integration test and adds no RPC surface, so no conformance scenario is added or declared.
 
@@ -73,6 +73,8 @@ DEFERRED VERIFICATION (runner lands in Todo 21): not applicable. This todo chang
 None.
 
 ## Risks
+
+- origin/integration moved to `b8866bf` after dispatch. `git merge-tree` reports one conflict: the shared `.github/workflows/probe-stress-macos.yml`, where integration appended `unix-service` and `docs-retention` on the same options line and at the end of the job list. Per the lane rules this lane does not merge, and the orchestrator union-merges that file. The test changes merge cleanly.
 
 - The reproduction on this host needs oversubscription: the plan's 8-busy-loop nextest loop did not fail here within 200 runs.
 - Sightings 2 and 3 had no captured output. If either was a different failure (sighting 3 failed at setup in 0.00s), it is not addressed here.
