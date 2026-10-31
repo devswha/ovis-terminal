@@ -3,6 +3,7 @@
 use thiserror::Error;
 
 use super::{ErrorData, ErrorKind, FieldPath, JsonRpcCode, OpId, TargetId};
+use crate::schema::scalar::ReportSeq;
 
 /// Error raised while parsing, validating or correlating protocol records.
 #[derive(Debug, Error)]
@@ -183,6 +184,13 @@ impl BoundaryError {
     #[must_use]
     pub fn with_hint(mut self, hint: &'static str) -> Self {
         hint.clone_into(&mut self.data_mut().hint);
+        self
+    }
+
+    /// Adds the current producer sequence a stale report fell behind.
+    #[must_use]
+    pub fn with_current_seq(mut self, current: ReportSeq) -> Self {
+        self.data_mut().current_seq = Some(current);
         self
     }
 

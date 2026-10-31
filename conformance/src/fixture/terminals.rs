@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 
 use ovis_terminal_authz::{Action, ResolvedTarget, Session, TargetResource};
-use ovis_terminal_core::ops::{OperationEvent, OperationProducer};
+use ovis_terminal_core::ops::OperationProducer;
 use ovis_terminal_core::registry::{
     MachineRuntime, ResourceName, ResourceTarget, ResourceTargetKey, RuntimeIdentity, TargetIndex,
     TargetRequest, TargetResolutionError, TerminalGeneration, TerminalId,
@@ -14,6 +14,7 @@ use ovis_terminal_protocol::schema::methods::terminal::TerminalKeepParams;
 use ovis_terminal_server::dispatch::{Access, Completed, DispatchError, Execution, Method};
 use serde_json::json;
 
+use super::handler::Event;
 use super::serve::at;
 use crate::error::RunnerError;
 
@@ -63,7 +64,7 @@ impl TerminalKeep {
     }
 }
 
-impl Method<OperationEvent, OperationProducer> for TerminalKeep {
+impl Method<Event, OperationProducer> for TerminalKeep {
     const NAME: &'static str = "terminal.keep";
     type Params = TerminalKeepParams;
 
@@ -85,7 +86,7 @@ impl Method<OperationEvent, OperationProducer> for TerminalKeep {
     async fn run(
         &self,
         params: Self::Params,
-        execution: Execution<OperationEvent, OperationProducer>,
+        execution: Execution<Event, OperationProducer>,
     ) -> Result<Completed, DispatchError> {
         let TargetResource::Terminal { terminal, .. } = execution.target().resource() else {
             return Err(DispatchError::Registration);

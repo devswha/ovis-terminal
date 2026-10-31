@@ -1213,6 +1213,21 @@
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "DecodeFailure": {
+        "description": "Why a base64 text field did not decode.",
+        "oneOf": [
+          {
+            "const": "invalid_base64",
+            "description": "The value is not standard padded base64.",
+            "type": "string"
+          },
+          {
+            "const": "invalid_utf8",
+            "description": "The decoded bytes are not UTF-8.",
+            "type": "string"
+          }
+        ]
+      },
       "Digest": {
         "description": "Opaque identity string.",
         "type": "string"
@@ -1450,6 +1465,9 @@
               "$ref": "#/components/schemas/TargetCandidate"
             },
             "type": "array"
+          },
+          "current_seq": {
+            "$ref": "#/components/schemas/ReportSeq"
           },
           "deadline_ms": {
             "$ref": "#/components/schemas/DurationMs"
@@ -2274,6 +2292,11 @@
           }
         ]
       },
+      "FinishGeneration": {
+        "description": "FinishGeneration carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
       "FinishReason": {
         "description": "Why a program finished.",
         "oneOf": [
@@ -2575,6 +2598,29 @@
         "description": "Incarnation carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
+      },
+      "IngestCounters": {
+        "description": "OSC 7501 records a terminal's ingestion dropped without changing status.",
+        "properties": {
+          "malformed": {
+            "$ref": "#/components/schemas/RecordCount",
+            "description": "Payloads whose fields could not be read as a status record."
+          },
+          "oversize": {
+            "$ref": "#/components/schemas/RecordCount",
+            "description": "Payloads above the 4 KiB record bound, including unterminated ones cut at it."
+          },
+          "stale": {
+            "$ref": "#/components/schemas/RecordCount",
+            "description": "Records refused because their program incarnation was no longer current, or\nbecause no producer sequence above the accepted one remained."
+          }
+        },
+        "required": [
+          "oversize",
+          "malformed",
+          "stale"
+        ],
+        "type": "object"
       },
       "InputBarrierParams": {
         "additionalProperties": false,
@@ -4445,6 +4491,147 @@
         ],
         "type": "object"
       },
+      "OscDecodeError": {
+        "description": "One text field that could not be decoded; its decoded value is absent.",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/DecodeFailure",
+            "description": "The failure.",
+            "x-ovis-open-enum": true
+          },
+          "field": {
+            "$ref": "#/components/schemas/OscTextField",
+            "description": "The field.",
+            "x-ovis-open-enum": true
+          }
+        },
+        "required": [
+          "field",
+          "error"
+        ],
+        "type": "object"
+      },
+      "OscDecoded": {
+        "description": "Text decoded from the base64 fields; a field that failed stays absent.",
+        "properties": {
+          "msg": {
+            "description": "Decoded message.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "description": "Decoded title.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "OscFields": {
+        "description": "Fields of one OSC 7501 record exactly as the program sent them.",
+        "properties": {
+          "app": {
+            "description": "`app=`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "`id=`, naming a child record.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "description": "`kind=`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "msg_b64": {
+            "description": "`msg=`, still base64.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "progress": {
+            "description": "`progress=`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "description": "`state=`.",
+            "type": "string"
+          },
+          "title_b64": {
+            "description": "`title=`, still base64.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "type": "object"
+      },
+      "OscProvenance": {
+        "description": "Raw payload, verbatim fields and decoding outcome of an accepted OSC 7501 report.",
+        "properties": {
+          "decode_errors": {
+            "description": "Fields that did not decode.",
+            "items": {
+              "$ref": "#/components/schemas/OscDecodeError"
+            },
+            "type": "array"
+          },
+          "decoded": {
+            "$ref": "#/components/schemas/OscDecoded",
+            "description": "Successfully decoded text."
+          },
+          "fields": {
+            "$ref": "#/components/schemas/OscFields",
+            "description": "Fields as sent."
+          },
+          "raw": {
+            "description": "The payload after `7501;`, byte for byte.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "raw",
+          "fields",
+          "decoded",
+          "decode_errors"
+        ],
+        "type": "object"
+      },
+      "OscTextField": {
+        "description": "OSC 7501 fields carried as base64 text.",
+        "oneOf": [
+          {
+            "const": "title",
+            "description": "`title=<base64>`.",
+            "type": "string"
+          },
+          {
+            "const": "msg",
+            "description": "`msg=<base64>`.",
+            "type": "string"
+          }
+        ]
+      },
       "OutputCursor": {
         "additionalProperties": false,
         "description": "Cursor into retained raw terminal output.",
@@ -5392,6 +5579,11 @@
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "RecordCount": {
+        "description": "RecordCount carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
       "RecordVersion": {
         "description": "RecordVersion carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
@@ -5462,6 +5654,11 @@
           "tombstone_seq"
         ],
         "type": "object"
+      },
+      "ReportSeq": {
+        "description": "ReportSeq carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
       },
       "RepositoryId": {
         "description": "Opaque identity string.",
@@ -6327,6 +6524,17 @@
             "description": "Where the report came from.",
             "x-ovis-open-enum": true
           },
+          "osc": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OscProvenance"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Raw fields and decoding outcome, when the origin is OSC."
+          },
           "raw": {
             "description": "Raw OSC payload, when the origin is OSC.",
             "type": [
@@ -6338,6 +6546,10 @@
             "$ref": "#/components/schemas/StatusReport",
             "description": "Reported fields."
           },
+          "report_seq": {
+            "$ref": "#/components/schemas/ReportSeq",
+            "description": "Producer status sequence that was accepted."
+          },
           "seq": {
             "$ref": "#/components/schemas/EventSeq",
             "description": "Sequence of the accepting event."
@@ -6345,6 +6557,10 @@
           "since_ms": {
             "$ref": "#/components/schemas/TimestampMs",
             "description": "Time the state was entered."
+          },
+          "turn": {
+            "$ref": "#/components/schemas/TurnNumber",
+            "description": "Turn current when the report was accepted."
           }
         },
         "required": [
@@ -6352,7 +6568,9 @@
           "origin",
           "decode_errors",
           "seq",
-          "since_ms"
+          "since_ms",
+          "report_seq",
+          "turn"
         ],
         "type": "object"
       },
@@ -6468,6 +6686,10 @@
       "StatusResult": {
         "description": "Result of status reads and reports.",
         "properties": {
+          "ingest": {
+            "$ref": "#/components/schemas/IngestCounters",
+            "description": "OSC records this terminal's ingestion dropped."
+          },
           "seq": {
             "$ref": "#/components/schemas/EventSeq",
             "description": "Sequence of the latest status event."
@@ -6479,13 +6701,40 @@
         },
         "required": [
           "status",
-          "seq"
+          "seq",
+          "ingest"
         ],
         "type": "object"
       },
       "StatusSnapshot": {
         "description": "Declared status of a terminal; `reported: false` is the only never-reported form.",
         "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Registered agent, when one is bound to this incarnation."
+          },
+          "finish_generation": {
+            "$ref": "#/components/schemas/FinishGeneration",
+            "description": "Number of turns that finished; viewing never changes it."
+          },
+          "last_turn": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TurnRecord"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The most recently finished turn."
+          },
           "process_incarnation": {
             "anyOf": [
               {
@@ -6504,6 +6753,17 @@
             "description": "Child records keyed by record identity.",
             "type": "object"
           },
+          "report_seq": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportSeq"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Highest accepted producer sequence of this incarnation."
+          },
           "reported": {
             "description": "Whether any report was ever accepted for this program incarnation.",
             "type": "boolean"
@@ -6519,6 +6779,17 @@
             ],
             "description": "Root record, when reported."
           },
+          "session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Provider session of the registered agent."
+          },
           "turn": {
             "$ref": "#/components/schemas/TurnNumber",
             "description": "Current turn number."
@@ -6527,7 +6798,8 @@
         "required": [
           "reported",
           "records",
-          "turn"
+          "turn",
+          "finish_generation"
         ],
         "type": "object"
       },
@@ -8072,12 +8344,40 @@
             "const": "timeout",
             "description": "The wait bound passed; no completion is implied.",
             "type": "string"
+          },
+          {
+            "const": "failed",
+            "description": "Ended on an error report.",
+            "type": "string"
           }
         ]
       },
       "TurnRecord": {
         "description": "Turn facts of a terminal.",
         "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Registered agent that ran the turn."
+          },
+          "ended_on": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentState",
+                "x-ovis-open-enum": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Root state the turn ended on."
+          },
           "ended_seq": {
             "anyOf": [
               {
@@ -8088,6 +8388,17 @@
               }
             ],
             "description": "Sequence that ended the turn."
+          },
+          "finish_generation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FinishGeneration"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Finish generation this turn's end produced."
           },
           "outcome": {
             "anyOf": [
@@ -8101,6 +8412,17 @@
             ],
             "description": "Outcome, once ended."
           },
+          "process_incarnation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Incarnation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Program incarnation that ran the turn."
+          },
           "send_op": {
             "anyOf": [
               {
@@ -8111,6 +8433,17 @@
               }
             ],
             "description": "Send operation the turn answers, when known."
+          },
+          "session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Provider session of that agent."
           },
           "started_seq": {
             "anyOf": [

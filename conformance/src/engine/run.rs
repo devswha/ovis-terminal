@@ -74,6 +74,9 @@ pub(crate) async fn run_case(ctx: &Context, planned: &PlannedCase) -> CaseReport
                 .await
                 .map_err(|error| (index, error))?;
         }
+        if ctx.inject.is_some() && !session.injected {
+            return Err((planned.steps.len(), RunnerError::InjectionUnplanned));
+        }
         Ok::<(), (usize, RunnerError)>(())
     };
     let outcome = tokio::time::timeout(CASE_BOUND, steps)

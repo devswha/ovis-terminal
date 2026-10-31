@@ -111,6 +111,9 @@ pub(crate) enum RunnerError {
     /// A counter in a report is not a canonical decimal string.
     #[error("a counter is not a canonical decimal string")]
     Decimal,
+    /// `--inject` names no request the selected case plans.
+    #[error("the injected request is not planned by any inject step of the case")]
+    InjectionUnplanned,
     /// The in-process fixture server failed.
     #[error("the fixture server failed to {stage}")]
     Fixture {
@@ -150,6 +153,7 @@ impl RunnerError {
             Self::UnsupportedPlatform => "unsupported_platform",
             Self::Decimal => "invalid_decimal",
             Self::Fixture { .. } => "fixture_failed",
+            Self::InjectionUnplanned => "injection_unplanned",
         }
     }
 
@@ -192,6 +196,9 @@ impl RunnerError {
             Self::Spawn { .. } | Self::Io { .. } => "check paths and permissions on this host",
             Self::UnsupportedPlatform => "run this scenario on a platform it declares",
             Self::Decimal => "encode counters as canonical decimal strings",
+            Self::InjectionUnplanned => {
+                "inject a request an inject step of the case lists, or omit --inject"
+            }
         }
     }
 }
