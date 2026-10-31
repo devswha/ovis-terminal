@@ -1,0 +1,423 @@
+
+==> cargo +nightly fmt --all -- --check
+
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.42s
+
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.24s
+────────────
+ Nextest run ID ed12e524-780d-4f50-a794-89db1c07e208 with nextest profile: default
+    Starting 833 tests across 81 binaries (1 test skipped)
+        PASS [   0.030s] (  1/833) ovis-terminal-authz identity::tests::epoch_is_a_decimal_string_and_saturates_at_the_top
+        PASS [   0.035s] (  2/833) ovis-terminal-authz authority::attest::tests::hmac_matches_the_rfc_4231_vectors
+        PASS [   0.047s] (  3/833) ovis-terminal-authz authority::attest::tests::a_proof_verifies_only_its_own_key_and_message
+        PASS [   0.095s] (  4/833) ovis-terminal-authz identity::tests::principal_rejects_empty_oversized_and_control_names
+        PASS [   0.074s] (  5/833) ovis-terminal-authz::authority reclamation::revoked_then_expired_decision_stays_revoked_after_tombstone_purge
+        PASS [   0.092s] (  6/833) ovis-terminal-authz::authority operations::operation_ownership_cannot_authorize_other_principals_or_domain_effects
+        PASS [   0.096s] (  7/833) ovis-terminal-authz::authority issuance::expiry_preserves_u64_max_exactly
+        PASS [   0.049s] (  8/833) ovis-terminal-conformance scenario::matcher::tests::unknown_or_mixed_operators_are_refused_instead_of_compared_literally
+        PASS [   0.085s] (  9/833) ovis-terminal-authz::authority reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed
+        PASS [   0.047s] ( 10/833) ovis-terminal-authz::authority revocation::machine_wide_grant_does_not_cover_another_machine
+        PASS [   0.095s] ( 11/833) ovis-terminal-authz::authority issuance::issuer_cannot_grant_beyond_its_own_authority
+        PASS [   0.102s] ( 12/833) ovis-terminal-authz::authority failure
+        PASS [   0.049s] ( 13/833) ovis-terminal-cli invocation::text::tests::nested_records_become_indented_lines
+        PASS [   0.089s] ( 14/833) ovis-terminal-authz::authority reclamation::revoked_then_expired_decision_stays_revoked_after_table_overflow
+        PASS [   0.101s] ( 15/833) ovis-terminal-authz::authority issuance::forged_bearer_tokens_are_rejected
+        PASS [   0.108s] ( 16/833) ovis-terminal-authz identity::tests::credential_id_text_round_trips_and_rejects_non_canonical_forms
+        PASS [   0.077s] ( 17/833) ovis-terminal-authz::authority revocation::credential_is_scoped_to_its_runtime_lifetime
+        PASS [   0.096s] ( 18/833) ovis-terminal-authz::authority issuance::forged_scope_documents_are_rejected_with_field_paths
+        PASS [   0.096s] ( 19/833) ovis-terminal-authz::authority issuance::issued_credential_reports_counters_as_decimal_strings
+        PASS [   0.105s] ( 20/833) ovis-terminal-authz::authority happy
+        PASS [   0.121s] ( 21/833) ovis-terminal-authz authority::secret::tests::bearer_text_round_trips_the_credential_and_secret
+        PASS [   0.101s] ( 22/833) ovis-terminal-authz::authority issuance::numeric_counter_is_rejected_with_its_field_path
+        PASS [   0.067s] ( 23/833) ovis-terminal-authz::authority revocation::commit_must_match_the_decided_action_target_and_incarnation
+        PASS [   0.104s] ( 24/833) ovis-terminal-authz::authority issuance::payload_from_an_unprivileged_principal_grants_nothing
+        PASS [   0.098s] ( 25/833) ovis-terminal-authz::authority reclamation::expired_decision_reports_expiry_after_its_record_is_purged
+        PASS [   0.098s] ( 26/833) ovis-terminal-authz::authority operations::foreign_operation_inspection_is_forbidden
+        PASS [   0.112s] ( 27/833) ovis-terminal-authz permission::tests::permission_tokens_match_their_wire_encoding
+        PASS [   0.102s] ( 28/833) ovis-terminal-authz::authority reclamation::purged_revoked_credential_cannot_queue_new_work
+        PASS [   0.114s] ( 29/833) ovis-terminal-authz::authority reclamation::credential_table_is_bounded_and_reclaims_revoked_entries
+        PASS [   0.069s] ( 30/833) ovis-terminal-authz::authority reclamation::tombstone_bound_holds_unexpired_revocations_until_one_expires
+        PASS [   0.036s] ( 31/833) ovis-terminal-cli invocation::context::tests::a_credential_never_prints_its_bearer_text
+        PASS [   0.042s] ( 32/833) ovis-terminal-authz::authority scoping::workspace_scope_covers_only_terminals_placed_in_that_workspace
+        PASS [   0.044s] ( 33/833) ovis-terminal-authz::authority scoping::plugin_and_admin_scopes_are_separate
+        PASS [   0.079s] ( 34/833) ovis-terminal-conformance fixture::wire::tests::every_fixture_decodes_as_declared_at_every_single_split_and_bytewise
+        PASS [   0.077s] ( 35/833) ovis-terminal-conformance traceability::every_ledger_id_is_mapped_exactly_once_to_known_todos
+        PASS [   0.085s] ( 36/833) ovis-terminal-authz::authority revocation::denied_revocation_leaves_the_target_credential_usable
+        PASS [   0.119s] ( 37/833) ovis-terminal-authz::authority operations::foreign_operation_cancellation_is_forbidden
+        PASS [   0.073s] ( 38/833) ovis-terminal-conformance engine::conn::tests::a_read_error_is_a_typed_io_failure_and_only_a_clean_end_is_end_of_stream
+        PASS [   0.078s] ( 39/833) ovis-terminal-cli invocation::execute::tests::uptime_is_relayed_as_the_exact_decimal_string
+        PASS [   0.104s] ( 40/833) ovis-terminal-authz permission::tests::only_the_owner_role_bundles_takeover_prompt_answer_and_raw_input
+        PASS [   0.064s] ( 41/833) ovis-terminal-authz::endpoint malformed_sid_is_invalid_params
+        PASS [   0.060s] ( 42/833) ovis-terminal-conformance scenario::labels::tests::one_label_is_one_identity_and_distinct_labels_differ
+        PASS [   0.101s] ( 43/833) ovis-terminal-cli invocation::discovery::tests::the_cli_contract_lists_the_grammar_and_every_exit_code
+        PASS [   0.173s] ( 44/833) ovis-terminal-agent status::qa::machine::turns_count_entries_to_working_and_finishes_count_exits
+        PASS [   0.070s] ( 45/833) ovis-terminal-bench harness::histogram::tests::percentiles_follow_nearest_rank_and_max_stays_exact
+        PASS [   0.172s] ( 46/833) ovis-terminal-agent status::qa::osc::a_query_and_other_osc_numbers_are_ignored
+        PASS [   0.072s] ( 47/833) ovis-terminal-cli invocation::context::tests::json_comes_from_the_flag_or_the_switch_and_never_from_the_terminal
+        PASS [   0.036s] ( 48/833) ovis-terminal-conformance scenario::matcher::tests::every_operator_holds_and_fails_on_the_values_it_names
+        PASS [   0.080s] ( 49/833) ovis-terminal-cli invocation::exit::tests::codes_are_distinct_and_every_kind_selects_exactly_its_status
+        PASS [   0.103s] ( 50/833) ovis-terminal-authz::authority revocation::decision_from_another_authority_is_rejected
+        PASS [   0.063s] ( 51/833) ovis-terminal-authz::authority revocation::revocation_reaches_a_recheck_on_another_thread
+        PASS [   0.079s] ( 52/833) ovis-terminal-authz::authority scoping::raw_frames_need_an_explicit_raw_input_grant
+        PASS [   0.088s] ( 53/833) ovis-terminal-conformance engine::inject::tests::injected_params_replace_base_keys_and_keep_the_rest
+        PASS [   0.120s] ( 54/833) ovis-terminal-cli invocation::plan::tests::a_numeric_op_id_is_refused_with_its_field_path
+        PASS [   0.091s] ( 55/833) ovis-terminal-cli invocation::exit::tests::an_unknown_kind_from_a_newer_server_is_a_plain_failure
+        PASS [   0.115s] ( 56/833) ovis-terminal-authz::endpoint socket_reachable_by_group_or_others_is_refused
+        PASS [   0.084s] ( 57/833) ovis-terminal-conformance ids::tests::scenario_ids_are_two_lowercase_segments
+        PASS [   0.085s] ( 58/833) ovis-terminal-conformance ids::tests::counters_round_trip_exactly_at_u64_max_and_reject_numbers
+        PASS [   0.108s] ( 59/833) ovis-terminal-authz::authority revocation::revoked_credential_cannot_authenticate_or_authorize_again
+        PASS [   0.101s] ( 60/833) ovis-terminal-authz::endpoint pipe_namespace_claims_the_name_again_after_every_full_close
+        PASS [   0.123s] ( 61/833) ovis-terminal-conformance fixture::wire::tests::an_entry_with_both_or_neither_outcome_and_an_unknown_key_are_refused
+        PASS [   0.106s] ( 62/833) ovis-terminal-authz::endpoint private_socket_admits_only_the_owner_peer
+        PASS [   0.215s] ( 63/833) ovis-terminal-agent status::qa::osc::fake_status_text_on_screen_never_changes_a_reported_status
+        PASS [   0.100s] ( 64/833) ovis-terminal-authz::authority scoping::endpoint_possession_without_credential_material_grants_nothing
+        PASS [   0.102s] ( 65/833) ovis-terminal-cli invocation::plan::tests::an_explicit_target_becomes_the_typed_get_request
+        PASS [   0.100s] ( 66/833) ovis-terminal-authz::authority scoping::credential_without_grants_is_denied_every_action
+        PASS [   0.190s] ( 67/833) ovis-terminal-authz::authority issuance::expiry_round_trips_every_u64_as_a_decimal_string
+        PASS [   0.219s] ( 68/833) ovis-terminal-agent status::qa::incarnation::the_exit_of_a_replaced_program_ends_no_turn_before_its_successor_reports
+        PASS [   0.106s] ( 69/833) ovis-terminal-conformance engine::run::tests::a_failed_assertion_or_a_failure_fails_the_case
+        PASS [   0.147s] ( 70/833) ovis-terminal-cli invocation::execute::tests::u64_max_round_trips_and_a_numeric_uptime_is_an_invalid_response
+        PASS [   0.226s] ( 71/833) ovis-terminal-agent status::qa::osc::base64_of_non_utf8_text_is_an_invalid_utf8_error_without_decoded_text
+        PASS [   0.127s] ( 72/833) ovis-terminal-cli invocation::discovery::tests::the_manual_names_every_command_and_every_exit_status
+        PASS [   0.113s] ( 73/833) ovis-terminal-cli invocation::plan::tests::call_refuses_hello_unknown_methods_and_non_object_params
+        PASS [   0.122s] ( 74/833) ovis-terminal-authz::authority scoping::takeover_and_prompt_answer_need_independent_grants
+        PASS [   0.152s] ( 75/833) ovis-terminal-authz::endpoint pipe_requires_owner_only_dacl_remote_rejection_and_owner_client
+        PASS [   0.239s] ( 76/833) ovis-terminal-agent status::qa::incarnation::osc_output_of_a_replaced_program_cannot_fabricate_a_row_before_its_successor_reports
+        PASS [   0.246s] ( 77/833) ovis-terminal-agent status::qa::incarnation::a_stored_row_of_a_newer_program_is_never_read_as_an_older_one
+        PASS [   0.130s] ( 78/833) ovis-terminal-conformance invocation::tests::any_failed_case_error_empty_run_or_required_skip_fails_the_run
+        PASS [   0.134s] ( 79/833) ovis-terminal-cli invocation::plan::tests::a_missing_target_plans_needs_target_and_two_targets_do_not_parse
+        PASS [   0.250s] ( 80/833) ovis-terminal-agent conversation::binding::qa::cursor::a_cursor_of_the_previous_history_names_the_rebound_identity
+        PASS [   0.252s] ( 81/833) ovis-terminal-agent conversation::binding::qa::cursor::truncation_replacement_and_a_same_size_rewrite_each_advance_the_revision
+        PASS [   0.252s] ( 82/833) ovis-terminal-agent conversation::binding::qa::binding::once_bound_a_change_without_a_reason_is_refused_and_changes_nothing
+        PASS [   0.253s] ( 83/833) ovis-terminal-agent status::qa::osc::an_osc_report_takes_the_next_sequence_and_keeps_raw_and_decoding_provenance
+        PASS [   0.154s] ( 84/833) ovis-terminal-cli invocation::context::tests::an_unrecognized_switch_value_is_refused_in_the_requested_form
+        PASS [   0.144s] ( 85/833) ovis-terminal-bench harness::histogram::tests::merging_equals_recording_into_one
+        PASS [   0.152s] ( 86/833) ovis-terminal-conformance traceability::every_registered_scenario_is_listed_under_each_id_it_declares
+        PASS [   0.142s] ( 87/833) ovis-terminal-conformance engine::exchange::tests::a_rejection_fixture_key_outside_the_schema_and_descriptors_is_refused
+        PASS [   0.146s] ( 88/833) ovis-terminal-authz::authority revocation::expiry_between_decision_and_commit_rejects_the_write
+        PASS [   0.262s] ( 89/833) ovis-terminal-agent status::qa::osc::every_split_of_the_output_yields_the_same_status_record
+        PASS [   0.271s] ( 90/833) ovis-terminal-agent conversation::binding::qa::chain::a_fork_keeps_the_abandoned_record_addressable_but_off_the_active_chain
+        PASS [   0.286s] ( 91/833) ovis-terminal-agent conversation::binding::qa::chain::every_chain_follows_parents_from_a_root_and_excludes_off_branch_leaves
+        PASS [   0.249s] ( 92/833) ovis-terminal-authz::authority operations::own_operations_remain_inspectable_under_resource_scoped_credentials
+        PASS [   0.277s] ( 93/833) ovis-terminal-agent status::qa::rpc::unknown_states_out_of_range_progress_and_bad_labels_are_refused
+        PASS [   0.292s] ( 94/833) ovis-terminal-agent conversation::binding::qa::chain::an_unfinished_line_is_not_a_record_and_a_malformed_one_is_unavailable
+        PASS [   0.293s] ( 95/833) ovis-terminal-agent conversation::binding::qa::binding::a_replaced_programs_token_and_an_unregistered_successor_are_not_owners
+        PASS [   0.295s] ( 96/833) ovis-terminal-agent status::qa::osc::oversized_and_malformed_records_are_counted_and_change_nothing
+        PASS [   0.293s] ( 97/833) ovis-terminal-agent status::qa::rpc::an_arbitrary_label_registers_and_its_report_tells_one_story_in_snapshot_and_event
+        PASS [   0.109s] ( 98/833) ovis-terminal-core::encoding keys::application_cursor_mode_changes_unmodified_arrows_only
+        PASS [   0.162s] ( 99/833) ovis-terminal-core::encoding evidence::a_raw_grant_is_rechecked_at_the_write_boundary
+        PASS [   0.105s] (100/833) ovis-terminal-core::encoding mouse::reports_that_do_not_match_the_modes_are_invalid_encoding
+        PASS [   0.166s] (101/833) ovis-terminal-core ops::context::tests::persisted_receipt_accepts_16384_bytes_and_rejects_16385
+        PASS [   0.138s] (102/833) ovis-terminal-core::encoding keys::unknown_names_and_unencodable_chords_are_typed
+        PASS [   0.324s] (103/833) ovis-terminal-agent status::qa::incarnation::an_osc_record_after_the_last_producer_sequence_is_refused
+        PASS [   0.165s] (104/833) ovis-terminal-core layout::tests::revisions_round_trip_as_canonical_decimal_strings
+        PASS [   0.102s] (105/833) ovis-terminal-core::events contracts::every_sequence_round_trips
+        PASS [   0.318s] (106/833) ovis-terminal-agent status::qa::rpc::a_clear_ends_no_turn_and_an_exit_ends_a_working_turn
+        PASS [   0.310s] (107/833) ovis-terminal-agent status::qa::rpc::only_the_current_program_of_the_target_terminal_may_report
+        PASS [   0.324s] (108/833) ovis-terminal-agent conversation::binding::qa::binding::a_branch_needs_a_known_head_and_a_head_needs_reason_branch
+        PASS [   0.151s] (109/833) ovis-terminal-core::authority_scope issuance_document_rejects_an_identity_of_another_family
+        PASS [   0.332s] (110/833) ovis-terminal-agent conversation::binding::qa::binding::sources_outside_the_stores_and_rebinding_an_identity_elsewhere_are_invalid
+        PASS [   0.189s] (111/833) ovis-terminal-core docs::qa::cas::null_deletes_but_keeps_the_version_and_absence_reads_as_null_at_zero
+        PASS [   0.344s] (112/833) ovis-terminal-agent status::qa::rpc::a_stale_or_equal_sequence_is_a_typed_rejection_that_changes_nothing
+        PASS [   0.163s] (113/833) ovis-terminal-core::encoding failure
+        PASS [   0.164s] (114/833) ovis-terminal-core::encoding evidence::the_maximal_mode_revision_round_trips_as_a_decimal_string
+        PASS [   0.196s] (115/833) ovis-terminal-core docs::qa::planning::a_bytes_limit_counts_weights_and_evicting_everything_moves_past_the_newest
+        PASS [   0.166s] (116/833) ovis-terminal-core::encoding keys::a_key_list_is_the_concatenation_of_its_keys_or_nothing
+        PASS [   0.352s] (117/833) ovis-terminal-agent conversation::binding::qa::observe::appends_rewrites_and_truncations_are_told_apart
+        PASS [   0.189s] (118/833) ovis-terminal-core::authority_scope registry_identities_resolve_into_scopes_and_back
+        PASS [   0.192s] (119/833) ovis-terminal-core registry::ids::tests::identity_serialization_preserves_u64_max
+        PASS [   0.186s] (120/833) ovis-terminal-core::encoding evidence::every_refusal_kind_is_a_published_protocol_token
+        PASS [   0.136s] (121/833) ovis-terminal-core::events contracts::queue_overflow_is_visible_and_resumes_from_durable_cursor
+        PASS [   0.248s] (122/833) ovis-terminal-conformance fixture::wire::tests::coalesced_valid_fixtures_decode_identically_under_any_segmentation
+        PASS [   0.202s] (123/833) ovis-terminal-core docs::qa::planning::eviction_is_the_minimal_oldest_prefix_and_the_floor_bounds_it
+        PASS [   0.058s] (124/833) ovis-terminal-core::input leases::releasing_interact_keeps_geometry_and_still_requires_a_lease_to_write
+        PASS [   0.170s] (125/833) ovis-terminal-core::encoding keys::keyboard_protocols_this_runtime_cannot_encode_are_refused
+        PASS [   0.167s] (126/833) ovis-terminal-core::encoding keys::names_encode_like_a_terminal_in_normal_cursor_mode
+        PASS [   0.204s] (127/833) ovis-terminal-core layout::tests::numeric_revision_is_rejected_and_u64_max_round_trips
+        PASS [   0.364s] (128/833) ovis-terminal-agent status::qa::incarnation::osc_output_of_a_replaced_program_is_counted_stale_and_changes_nothing
+        PASS [   0.078s] (129/833) ovis-terminal-core::input fencing::bytes_encoded_at_an_older_mode_revision_are_fenced
+        PASS [   0.095s] (130/833) ovis-terminal-core::input admission::moved_identities_are_typed_and_queue_nothing
+        PASS [   0.215s] (131/833) ovis-terminal-core layout::records::tests::a_boxed_rejection_keeps_the_flat_wire_shape
+        PASS [   0.233s] (132/833) ovis-terminal-core docs::qa::cas::an_expired_op_id_cannot_become_a_new_document_write
+        PASS [   0.373s] (133/833) ovis-terminal-agent conversation::binding::qa::chain::a_rewind_selection_is_followed_by_records_that_continue_it
+        PASS [   0.037s] (134/833) ovis-terminal-core::input wire::fence_reasons_publish_their_kind_token
+        PASS [   0.219s] (135/833) ovis-terminal-core docs::qa::sweeps::a_stale_tombstone_version_rolls_the_whole_sweep_back
+        PASS [   0.217s] (136/833) ovis-terminal-core registry::ids::tests::malformed_identity_inputs_have_typed_kinds
+        PASS [   0.102s] (137/833) ovis-terminal-core::input authority::lease_and_grant_rules_hold_at_admission
+        PASS [   0.065s] (138/833) ovis-terminal-core::input fencing::revoked_credentials_and_replaced_processes_fence_queued_entries
+        PASS [   0.219s] (139/833) ovis-terminal-core::encoding evidence::authorized_raw_bytes_are_never_rewritten_or_dropped
+        PASS [   0.282s] (140/833) ovis-terminal-core docs::qa::bounds::one_mebibyte_plus_one_byte_is_too_large_and_leaves_the_version_unchanged
+        PASS [   0.091s] (141/833) ovis-terminal-core::input fencing::takeover_fences_unsent_entries_and_the_unwritten_holder_entry
+        PASS [   0.190s] (142/833) ovis-terminal-core::encoding keys::kitty_disambiguation_encodes_ambiguous_keys_as_csi_u
+        PASS [   0.104s] (143/833) ovis-terminal-core::input admission::encoding_and_bound_refusals_come_before_the_queue
+        PASS [   0.169s] (144/833) ovis-terminal-core::encoding literal::paste_policy_frames_only_where_the_program_asked_for_bracketed_paste
+        PASS [   0.221s] (145/833) ovis-terminal-core registry::ids::tests::malformed_generation_and_pid_integers_preserve_sources
+        PASS [   0.229s] (146/833) ovis-terminal-core ops::request::tests::equality_compares_canonical_work_not_json_key_order
+        PASS [   0.106s] (147/833) ovis-terminal-core::input fencing::a_fence_never_claims_to_retract_bytes_the_holder_already_wrote
+        PASS [   0.178s] (148/833) ovis-terminal-core::encoding mouse::reports_in_the_negotiated_encoding_are_delivered_unchanged
+        PASS [   0.176s] (149/833) ovis-terminal-core::events contracts::unsupported_sections_never_claim_empty_completeness
+        PASS [   0.401s] (150/833) ovis-terminal-agent conversation::binding::qa::cursor::reads_without_a_transcript_binding_are_unavailable_not_synthesized
+        PASS [   0.246s] (151/833) ovis-terminal-core docs::qa::wire::the_policy_advertises_every_class_with_its_v1_bound
+        PASS [   0.332s] (152/833) ovis-terminal-core docs::qa::cas::a_conflicting_write_leaves_version_one_and_a_retry_replays_the_same_failure
+        PASS [   0.209s] (153/833) ovis-terminal-core::encoding keys::a_submit_chord_is_appended_after_the_literal_in_one_entry
+        PASS [   0.243s] (154/833) ovis-terminal-core docs::qa::wire::the_change_event_carries_name_and_version_but_never_the_value
+        PASS [   0.216s] (155/833) ovis-terminal-core::encoding literal::an_empty_payload_is_refused_but_a_bare_enter_is_a_submission
+        PASS [   0.076s] (156/833) ovis-terminal-core::input stages::agent_stages_come_only_from_a_declared_producer_after_delivery
+        PASS [   0.257s] (157/833) ovis-terminal-core registry::ids::tests::identity_serialization_roundtrips_full_width_decimal_strings
+        PASS [   0.172s] (158/833) ovis-terminal-core::events integrity::missing_final_page_is_snapshot_torn
+        PASS [   0.255s] (159/833) ovis-terminal-core registry::resolution::tests::caller_binding_rejects_a_different_runtime_lifetime
+        PASS [   0.203s] (160/833) ovis-terminal-core::encoding literal::any_control_character_is_invalid_encoding_in_every_mode_and_submit
+        PASS [   0.262s] (161/833) ovis-terminal-core docs::qa::wire::u64_max_versions_sequences_and_floors_round_trip_as_exact_decimal_strings
+        PASS [   0.229s] (162/833) ovis-terminal-core::encoding happy
+        PASS [   0.069s] (163/833) ovis-terminal-core::input recovery::interruption_at_each_barrier_leaves_one_truthful_outcome
+        PASS [   0.144s] (164/833) ovis-terminal-core::input authority::raw_bytes_need_the_raw_grant_and_pass_unchanged
+        PASS [   0.085s] (165/833) ovis-terminal-core::input wire::input_sequence_round_trips_the_largest_value_exactly
+        PASS [   0.268s] (166/833) ovis-terminal-core registry::ids::tests::malformed_resource_integer_preserves_source_and_kind
+        PASS [   0.260s] (167/833) ovis-terminal-core registry::lifecycle::terminal::persisted::tests::contradictory_live_metadata_is_rejected_instead_of_claiming_survival
+        PASS [   0.101s] (168/833) ovis-terminal-core::input leases::the_same_owner_reacquiring_cannot_write_through_its_released_lease
+        PASS [   0.283s] (169/833) ovis-terminal-core docs::qa::sweeps::a_repeat_or_older_sweep_never_moves_a_floor_back_and_commits_nothing
+        PASS [   0.432s] (170/833) ovis-terminal-agent conversation::binding::qa::cursor::unchanged_reads_keep_the_revision_and_both_continuation_forms_agree
+        PASS [   0.428s] (171/833) ovis-terminal-agent status::qa::rpc::a_shell_is_an_explicit_null_agent_with_unreported_status
+        PASS [   0.357s] (172/833) ovis-terminal-core docs::qa::bounds::the_document_bound_is_inclusive_at_exactly_one_mebibyte
+        PASS [   0.280s] (173/833) ovis-terminal-core docs::qa::wire::a_floor_reports_expired_and_gap_exactly_at_its_boundary
+        PASS [   0.085s] (174/833) ovis-terminal-core::input recovery::query_replies_are_not_held_behind_a_blocked_user_entry
+        PASS [   0.141s] (175/833) ovis-terminal-core::input recovery::barriers_follow_queue_write_and_acknowledgement
+        PASS [   0.376s] (176/833) ovis-terminal-cli::cli failure
+        PASS [   0.227s] (177/833) ovis-terminal-core::events integrity::missing_interior_page_is_snapshot_torn
+        PASS [   0.147s] (178/833) ovis-terminal-core::input recovery::holder_loss_never_resends_and_late_evidence_still_resolves
+        PASS [   0.278s] (179/833) ovis-terminal-core::events contracts::maximum_sequence_round_trips_exactly_and_numeric_forms_reject
+        PASS [   0.147s] (180/833) ovis-terminal-core::input wire::numeric_counters_and_unknown_fields_are_rejected
+        PASS [   0.218s] (181/833) ovis-terminal-core::input admission::readiness_gates_admission_but_agent_readiness_does_not
+        PASS [   0.274s] (182/833) ovis-terminal-core::events durable::paged_subscription_pins_revision_until_release_across_concurrent_mutation
+        PASS [   0.161s] (183/833) ovis-terminal-core::input wire::every_input_sequence_round_trips
+        PASS [   0.331s] (184/833) ovis-terminal-core registry::ids::tests::malformed_machine_uuid_preserves_source_and_kind
+        PASS [   0.497s] (185/833) ovis-terminal-agent conversation::binding::qa::binding::a_first_binding_and_a_resume_each_commit_one_explicit_event
+        PASS [   0.336s] (186/833) ovis-terminal-core registry::lifecycle::terminal::persisted::tests::lifecycle_store_round_trips_preserve_live_and_ended_evidence
+        PASS [   0.259s] (187/833) ovis-terminal-core::events integrity::corrupted_interior_byte_is_snapshot_torn
+        PASS [   0.262s] (188/833) ovis-terminal-core::events happy
+        PASS [   0.340s] (189/833) ovis-terminal-core registry::resolution::tests::target_resolution_returns_candidates_and_preserves_scoped_identity
+        PASS [   0.228s] (190/833) ovis-terminal-core::events integrity::page_metadata_uses_decimal_strings_and_rejects_numbers
+        PASS [   0.336s] (191/833) ovis-terminal-core registry::reservation::tests::reservation_is_durable_before_return_and_survives_store_reopen
+        PASS [   0.352s] (192/833) ovis-terminal-core docs::qa::cas::two_writers_racing_version_zero_commit_exactly_one_version_and_one_event
+        PASS [   0.339s] (193/833) ovis-terminal-core terminals::snapshot::tests::lifecycle_union_preserves_the_existing_operation_event_wire_shape
+        PASS [   0.279s] (194/833) ovis-terminal-core::events durable::disconnect_replays_commits_across_core_restart_without_renumbering_origin
+        PASS [   0.497s] (195/833) ovis-terminal-agent status::qa::incarnation::the_exit_of_a_replaced_program_is_refused_and_changes_nothing
+        PASS [   0.156s] (196/833) ovis-terminal-core::input wire::receipts_carry_counters_as_decimal_strings_and_round_trip
+        PASS [   0.285s] (197/833) ovis-terminal-core::events durable::expired_cursor_gets_fresh_state_instead_of_a_truncated_replay
+        PASS [   0.351s] (198/833) ovis-terminal-core docs::qa::wire::numeric_counters_are_rejected
+        PASS [   0.240s] (199/833) ovis-terminal-core::input admission::text_and_submission_are_one_queued_entry_answered_before_any_write
+        PASS [   0.296s] (200/833) ovis-terminal-core::encoding literal::line_breaks_without_bracketed_paste_are_refused_whatever_the_submit
+        PASS [   0.106s] (201/833) ovis-terminal-core::leases ownership::lease_free_writes_need_input_scope_and_stop_once_any_lease_exists
+        PASS [   0.227s] (202/833) ovis-terminal-core::input happy
+        PASS [   0.368s] (203/833) ovis-terminal-core docs::qa::sweeps::advancing_virtual_expiry_moves_all_five_floors_with_a_tombstone_and_one_event_each
+        PASS [   0.369s] (204/833) ovis-terminal-core docs::qa::sweeps::a_pinned_snapshot_keeps_its_floors_while_a_later_sweep_compacts
+        PASS [   0.257s] (205/833) ovis-terminal-core::events integrity::reordered_pages_are_snapshot_torn
+        PASS [   0.545s] (206/833) ovis-terminal-agent conversation::binding::qa::cursor::an_append_refuses_the_old_cursor_with_the_current_revision_and_records_it
+        PASS [   0.468s] (207/833) ovis-terminal-core docs::qa::bounds::malformed_names_fail_typed_without_writing
+        PASS [   0.288s] (208/833) ovis-terminal-core::input failure
+        PASS [   0.344s] (209/833) ovis-terminal-core::events failure
+        PASS [   0.362s] (210/833) ovis-terminal-core::encoding literal::bracketed_text_round_trips_with_submit_outside_the_frame
+        PASS [   0.365s] (211/833) ovis-terminal-core::events contracts::disconnected_queues_release_the_aggregate_byte_budget
+        PASS [   0.254s] (212/833) ovis-terminal-core::events integrity::truncated_final_page_is_snapshot_torn
+        PASS [   0.155s] (213/833) ovis-terminal-core::ops inspection::maximum_sequence_round_trips_and_numeric_form_is_invalid_params
+        PASS [   0.086s] (214/833) ovis-terminal-core::screen adversarial::query_replies_overflow_visibly_and_are_taken_once
+        PASS [   0.353s] (215/833) ovis-terminal-core::events contracts::independent_subscriptions_and_filters_survive_second_installation
+        PASS [   0.287s] (216/833) ovis-terminal-core::events unit::unit_builder_failure_publishes_nothing
+        PASS [   0.181s] (217/833) ovis-terminal-core::leases model::interleaved_operations_keep_one_owner_per_slot
+        PASS [   0.321s] (218/833) ovis-terminal-core::input blocked::a_reader_that_never_reads_blocks_only_its_own_entry
+        PASS [   0.160s] (219/833) ovis-terminal-core::screen adversarial::screen_text_and_osc_bytes_never_drive_transitions_or_status
+        PASS [   0.160s] (220/833) ovis-terminal-core::screen adversarial::output_from_another_incarnation_is_refused
+        PASS [   0.188s] (221/833) ovis-terminal-core::ops inspection::receipt_round_trip_preserves_arbitrary_decimal_sequences
+        PASS [   0.191s] (222/833) ovis-terminal-core::leases geometry::interact_and_geometry_epochs_move_independently
+        PASS [   0.364s] (223/833) ovis-terminal-core::events integrity::duplicated_page_is_snapshot_torn
+        PASS [   0.192s] (224/833) ovis-terminal-core::leases ownership::repeated_acquire_and_takeover_change_nothing_the_second_time
+        PASS [   0.193s] (225/833) ovis-terminal-core::leases ownership::observe_leases_never_resize_or_write
+        PASS [   0.171s] (226/833) ovis-terminal-core::registry failure
+        PASS [   0.172s] (227/833) ovis-terminal-core::registry happy
+        PASS [   0.192s] (228/833) ovis-terminal-core::ops adversarial::principal_scope_isolated_and_retention_expiration_prevents_reexecution
+        PASS [   0.196s] (229/833) ovis-terminal-core::ops inspection::inspection_enforces_the_snapshot_lease_byte_budget
+        PASS [   0.170s] (230/833) ovis-terminal-core::screen adversarial::alternate_screen_history_is_unavailable_until_the_named_transition
+        PASS [   0.174s] (231/833) ovis-terminal-core::registry host_reboot_and_relaunch_identity_domains
+        PASS [   0.172s] (232/833) ovis-terminal-core::screen failure
+        PASS [   0.122s] (233/833) ovis-terminal-core::screen wire::emitted_reads_carry_counters_as_strings
+        PASS [   0.201s] (234/833) ovis-terminal-core::ops inspection::inspection_requires_an_available_snapshot_lease
+        PASS [   0.200s] (235/833) ovis-terminal-core::leases happy
+        PASS [   0.201s] (236/833) ovis-terminal-core::ops holder::unknown_write_never_becomes_a_committed_success
+        PASS [   0.461s] (237/833) ovis-terminal-core docs::qa::sweeps::store_trim_floors_surface_for_events_and_receipts_and_old_cursors_miss
+        PASS [   0.222s] (238/833) ovis-terminal-core::ops ownership::owner_resolution_survives_reopen_and_preserves_principal_scoped_ids
+        PASS [   0.230s] (239/833) ovis-terminal-core::leases failure
+        PASS [   0.217s] (240/833) ovis-terminal-core::screen adversarial::reflow_keeps_pinned_pages_and_rejects_unpinned_revisions
+        PASS [   0.372s] (241/833) ovis-terminal-core::events unit::unit_failure_rolls_back_every_write_and_event
+        PASS [   0.239s] (242/833) ovis-terminal-core::leases ownership::release_needs_the_owning_principal_not_the_lease_address
+        PASS [   0.242s] (243/833) ovis-terminal-core::ops adversarial::cancelling_acceptance_prevents_the_effect_after_reopen
+        PASS [   0.240s] (244/833) ovis-terminal-core::leases geometry::an_observer_cannot_queue_for_geometry
+        PASS [   0.244s] (245/833) ovis-terminal-core::layout malformed_requests_are_rejected_before_any_effect
+        PASS [   0.240s] (246/833) ovis-terminal-core::leases ownership::disconnect_revokes_every_lease_of_that_owner_in_slot_order
+        PASS [   0.218s] (247/833) ovis-terminal-core::screen adversarial::reads_complete_while_a_producer_keeps_feeding
+        PASS [   0.240s] (248/833) ovis-terminal-core::leases wire::lease_events_round_trip_the_maximal_epoch_and_reject_numeric_counters
+        PASS [   0.240s] (249/833) ovis-terminal-core::layout replay_converges_and_reuse_is_refused
+        PASS [   0.231s] (250/833) ovis-terminal-core::screen adversarial::ending_in_the_alternate_screen_is_a_permanent_reason
+        PASS [   0.254s] (251/833) ovis-terminal-core::ops adversarial::canonical_params_reuse_but_arrays_and_methods_cannot_change
+        PASS [   0.259s] (252/833) ovis-terminal-core::leases geometry::geometry_passes_in_acquisition_order_never_to_the_most_active_client
+        PASS [   0.261s] (253/833) ovis-terminal-core::ops adversarial::running_failure_is_durable_and_cancellation_reports_no_effect
+        PASS [   0.058s] (254/833) ovis-terminal-core::telemetry happy
+        PASS [   0.283s] (255/833) ovis-terminal-core::ops happy
+        PASS [   0.084s] (256/833) ovis-terminal-core::telemetry maximum_sequence_round_trips_as_decimal_string
+        PASS [   0.066s] (257/833) ovis-terminal-core::waits expired_cursor_is_rejected_as_output_gap
+        PASS [   0.153s] (258/833) ovis-terminal-holder process::signal::tests::ordinary_targets_reach_kill_once_with_group_negation
+        PASS [   0.155s] (259/833) ovis-terminal-core::waits marker_printed_before_arming_is_matched_from_the_cursor
+        PASS [   0.387s] (260/833) ovis-terminal-core::leases wire::takeover_epochs_are_canonical_nonzero_decimal_strings
+        PASS [   0.181s] (261/833) ovis-terminal-core::subscriptions wire::unusable_filters_and_cursors_are_typed_rejections
+        PASS [   0.178s] (262/833) ovis-terminal-core::subscriptions wire::loss_markers_reject_numeric_and_unknown_fields
+        PASS [   0.171s] (263/833) ovis-terminal-core::terminals qa::counters::process_identity_requests_round_trip
+        PASS [   0.381s] (264/833) ovis-terminal-core::ops pending::late_delivery_to_a_retained_identity_reports_what_was_actually_cancelled
+        PASS [   0.182s] (265/833) ovis-terminal-core::telemetry counter_values_saturate_at_their_bound
+        PASS [   0.389s] (266/833) ovis-terminal-core::ops adversarial::acceptance_floor_survives_pruning_reopen_and_clock_rollback
+        PASS [   0.392s] (267/833) ovis-terminal-core::layout session_snapshot_holds_layout_and_terminals_at_one_revision
+        PASS [   0.391s] (268/833) ovis-terminal-core::leases wire::every_nonzero_epoch_and_lease_id_round_trips
+        PASS [   0.178s] (269/833) ovis-terminal-core::subscriptions wire::subscribe_parameters_decode_to_one_start_and_selector
+        PASS [   0.394s] (270/833) ovis-terminal-core::ops inspection::inspection_exposes_only_a_committed_revision
+        PASS [   0.392s] (271/833) ovis-terminal-core::layout launch_binds_terminal_to_created_pane
+        PASS [   0.181s] (272/833) ovis-terminal-core::telemetry failure
+        PASS [   0.194s] (273/833) ovis-terminal-core::screen wire::u64_max_counters_round_trip_as_decimal_strings
+        PASS [   0.394s] (274/833) ovis-terminal-core::ops failure
+        PASS [   0.161s] (275/833) ovis-terminal-core::waits exit_and_cancel_end_output_waits_distinctly
+        PASS [   0.181s] (276/833) ovis-terminal-core::subscriptions independence::heartbeat_bounds_never_exceed_fifteen_seconds
+        PASS [   0.391s] (277/833) ovis-terminal-core::ops bounds::canonical_parameters_accept_262144_bytes_and_reject_262145
+        PASS [   0.384s] (278/833) ovis-terminal-core::ops pending::pre_accept_cancel_commits_acceptance_and_cancellation_together_and_survives_restart
+        PASS [   0.161s] (279/833) ovis-terminal-core::waits exit_stops_and_cancel_does_not
+        PASS [   0.586s] (280/833) ovis-terminal-core::encoding mouse::sgr_reports_round_trip_and_a_cut_report_is_refused
+        PASS [   0.393s] (281/833) ovis-terminal-core::ops holder::acknowledged_write_survives_crash_before_method_completion
+        PASS [   0.458s] (282/833) ovis-terminal-core::layout failure
+        PASS [   0.138s] (283/833) ovis-terminal-holder protocol::property_tests::frame_errors_expose_stable_kinds_hints_and_sources
+        PASS [   0.397s] (284/833) ovis-terminal-core::layout layout_never_mutates_a_checkout
+        FAIL [   0.183s] (285/833) ovis-terminal-core::subscriptions stall::a_stalled_fanout_worker_loses_every_subscription_and_each_recovers
+  stdout ───
+
+    running 1 test
+    test stall::a_stalled_fanout_worker_loses_every_subscription_and_each_recovers ... FAILED
+
+    failures:
+
+    failures:
+        stall::a_stalled_fanout_worker_loses_every_subscription_and_each_recovers
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.04s
+
+  stderr ───
+    Error: "scan to 7 ended with Missed(Recovery { loss: LossRecord { subscription_id: SubscriptionId(\"01a1937b-b549-76a0-87b8-26e43d765ca3\"), from_seq: EventSeq(DecimalU64(5)), cause: FanoutOverflow }, snapshot: StateSnapshot { cursor: Cursor { machine_id: MachineId(00000000-0000-0000-0000-000000000007), runtime_id: RuntimeId(1), seq: EventSeq(DecimalU64(9)) }, sections: {1: \"w\", 2: \"z\"} } })"
+
+  Cancelling due to test failure: 104 tests still running
+        PASS [   0.101s] (286/833) ovis-terminal-core::screen wire::numeric_and_non_canonical_counters_are_invalid_params
+        PASS [   0.174s] (287/833) ovis-terminal-core::terminals generation_two_ignores_optional_envelope_evidence
+        PASS [   0.174s] (288/833) ovis-terminal-core::terminals generation_two_rejects_nested_lifecycle_extension
+        PASS [   0.177s] (289/833) ovis-terminal-core::waits text_and_earlier_status_never_claim_a_stop
+        PASS [   0.166s] (290/833) ovis-terminal-holder protocol::property_tests::all_message_kinds_round_trip_at_every_two_fragment_boundary
+        PASS [   0.168s] (291/833) ovis-terminal-holder protocol::hangup_tests::legacy_generation_two_reader_ignores_hangup_without_losing_output
+        PASS [   0.173s] (292/833) ovis-terminal-core::waits cancel_scope_ends_and_detaches_its_waits
+        PASS [   0.174s] (293/833) ovis-terminal-core::waits unknown_and_stale_turns_are_rejected
+        PASS [   0.177s] (294/833) ovis-terminal-core::waits declared_stop_after_arming_is_stop_evidence
+        PASS [   0.171s] (295/833) ovis-terminal-holder process::signal::tests::reserved_pids_are_refused_before_kill_is_reached
+        PASS [   0.178s] (296/833) ovis-terminal-core::waits stale_and_late_reports_are_rejected
+        PASS [   0.170s] (297/833) ovis-terminal-holder process::signal::tests::unrepresentable_pid_is_refused_before_kill_is_reached
+        PASS [   0.181s] (298/833) ovis-terminal-core::waits outcomes_round_trip_decimal_offsets
+        PASS [   0.173s] (299/833) ovis-terminal-core::telemetry oversized_field_is_bounded
+        PASS [   0.204s] (300/833) ovis-terminal-core::telemetry invalid_sink_returns_typed_error
+        PASS [   0.172s] (301/833) ovis-terminal-holder protocol::hangup_tests::hangup_rejects_numeric_pid_at_the_frame_boundary
+        PASS [   0.420s] (302/833) ovis-terminal-core::ops admission::concurrent_changed_payloads_return_the_winner_and_seven_reuse_errors
+        PASS [   0.139s] (303/833) ovis-terminal-core::waits armed_state_wait_ends_by_report_exit_loss_or_timeout
+        PASS [   0.204s] (304/833) ovis-terminal-core::terminals qa::authority::revocation_after_admission_prevents_spawn_and_commits_typed_failure
+        PASS [   0.187s] (305/833) ovis-terminal-holder protocol::counter_json_tests::every_message_variant_encodes_large_counters_as_exact_json_strings
+        PASS [   0.355s] (306/833) ovis-terminal-core::screen happy
+        PASS [   0.194s] (307/833) ovis-terminal-holder process::start_token::tests::reaped_process_reports_process_gone
+        PASS [   0.226s] (308/833) ovis-terminal-core::subscriptions independence::unsubscribing_one_subscription_leaves_the_others_delivering
+        PASS [   0.434s] (309/833) ovis-terminal-core::ops adversarial::failure_and_completion_remain_queryable_and_cancellation_never_undoes_them
+        PASS [   0.439s] (310/833) ovis-terminal-core::ops concurrency::competing_starts_grant_exactly_one_external_effect
+        PASS [   0.439s] (311/833) ovis-terminal-core::ops holder::holder_receipt_and_evidence_survive_identical_retry_and_reopen
+        PASS [   0.201s] (312/833) ovis-terminal-core::waits timeout_exit_and_cancel_never_complete_a_turn
+        PASS [   0.236s] (313/833) ovis-terminal-core::subscriptions independence::an_idle_subscription_heartbeats_within_its_interval_whatever_the_caller_waits
+        PASS [   0.217s] (314/833) ovis-terminal-core::waits output::marker_is_found_under_every_split
+        PASS [   0.213s] (315/833) ovis-terminal-holder protocol::hangup_tests::maximum_offset_hangup_survives_every_fragment_boundary
+        PASS [   0.225s] (316/833) ovis-terminal-core::waits armed_wait_wakes_on_a_marker_split_across_chunks
+        PASS [   0.221s] (317/833) ovis-terminal-core::waits already_satisfied_state_returns_immediately
+        PASS [   0.238s] (318/833) ovis-terminal-core::terminals qa::counters::maximum_counter_round_trip_rejects_numeric_json
+        PASS [   0.258s] (319/833) ovis-terminal-core::subscriptions wire::loss_markers_round_trip_every_sequence_as_a_decimal_string
+        PASS [   0.258s] (320/833) ovis-terminal-core::subscriptions loss::a_withheld_consumer_recovers_from_its_durable_marker_and_continues
+        PASS [   0.222s] (321/833) ovis-terminal-holder process::start_token::tests::token_is_stable_while_the_process_lives
+        PASS [   0.256s] (322/833) ovis-terminal-core::subscriptions replay::a_cursor_ahead_of_the_head_installs_nothing
+        PASS [   0.210s] (323/833) ovis-terminal-holder protocol::property_tests::arbitrary_fragment_widths_round_trip
+        PASS [   0.865s] (324/833) ovis-terminal-agent status::qa::rpc::turns_finish_only_when_the_root_leaves_working_and_reads_never_change_them
+        PASS [   0.530s] (325/833) ovis-terminal-core::input model::writes_follow_admission_order_once
+        PASS [   0.071s] (326/833) ovis-terminal-holder service::unix::definition::tests::a_unit_quotes_every_argument_names_its_owner_and_never_restarts
+        PASS [   0.072s] (327/833) ovis-terminal-holder service::unix::definition::tests::an_agent_escapes_xml_names_its_owner_and_is_not_kept_alive
+        PASS [   0.478s] (328/833) ovis-terminal-core::ops adversarial::running_cancel_is_pending_and_completion_retains_its_receipt
+        PASS [   0.480s] (329/833) ovis-terminal-core::ops atomic::failed_unit_preserves_running_receipt_and_reserves_no_identity
+        PASS [   0.215s] (330/833) ovis-terminal-core::waits only_the_turn_after_the_send_completes_its_wait
+        PASS [   0.487s] (331/833) ovis-terminal-core::ops admission::concurrent_identical_accepts_return_one_record_and_grant_one_effect
+        PASS [   0.486s] (332/833) ovis-terminal-core::ops concurrency::repeated_core_interruptions_never_grant_uncertain_work_again
+        PASS [   0.090s] (333/833) ovis-terminal-holder service::unix::lifecycle_tests::a_stale_endpoint_refuses_stop_and_is_replaced_only_by_an_explicit_start
+        PASS [   0.090s] (334/833) ovis-terminal-holder service::unix::launch::tests::a_losing_holder_refusal_becomes_typed_already_running_with_the_winner_proof
+        PASS [   0.258s] (335/833) ovis-terminal-core::terminals holder_publishes_hangup_before_exit
+        PASS [   0.292s] (336/833) ovis-terminal-core::subscriptions independence::an_idle_filtered_subscription_heartbeats_its_scan_cursor_and_identity
+        PASS [   0.116s] (337/833) ovis-terminal-holder protocol::property_tests::rejected_header_does_not_leave_a_partial_decoder_frame
+        PASS [   0.285s] (338/833) ovis-terminal-core::waits happy
+        PASS [   0.084s] (339/833) ovis-terminal-holder service::unix::manager::tests::exit_status_and_diagnostics_are_reported_not_guessed
+        PASS [   0.101s] (340/833) ovis-terminal-holder service::unix::lifecycle_tests::stop_refuses_a_holder_that_is_not_the_recorded_incarnation_and_leaves_it_serving
+        PASS [   0.098s] (341/833) ovis-terminal-holder service::unix::lifecycle_tests::a_started_holder_is_running_until_stopped_and_stopping_enumerates_and_withdraws_it
+        PASS [   0.328s] (342/833) ovis-terminal-core::subscriptions loss::the_session_budget_evicts_the_largest_queue_not_the_draining_one
+        PASS [   0.331s] (343/833) ovis-terminal-core::subscriptions failure
+        PASS [   0.301s] (344/833) ovis-terminal-core::subscriptions independence::the_subscription_limit_refuses_without_disturbing_installed_ones
+        PASS [   0.330s] (345/833) ovis-terminal-core::subscriptions replay::an_expired_cursor_misses_with_a_fresh_snapshot_and_the_floor_still_resumes
+        PASS [   0.337s] (346/833) ovis-terminal-core::subscriptions durability::missed_is_returned_only_after_its_marker_is_durable
+        PASS [   0.146s] (347/833) ovis-terminal-holder protocol::property_tests::identity_fields_round_trip_as_canonical_decimal_strings
+        PASS [   0.339s] (348/833) ovis-terminal-core::subscriptions happy
+        PASS [   0.319s] (349/833) ovis-terminal-core::subscriptions loss::a_forced_close_marker_names_the_first_undelivered_event_and_reconnect_replays_it
+        PASS [   0.354s] (350/833) ovis-terminal-core::subscriptions loss::a_dropped_consumer_still_leaves_a_durable_marker
+        PASS [   0.370s] (351/833) ovis-terminal-core::terminals qa::recovery::pending_launch_is_adopted_without_repeating_the_external_effect
+        PASS [   0.949s] (352/833) ovis-terminal-conformance::runner a_run_without_isolation_is_a_usage_error_before_anything_starts
+        PASS [   0.688s] (353/833) ovis-terminal-core::layout happy
+        PASS [   0.375s] (354/833) ovis-terminal-holder protocol::adoption_sequence_tests::generated_adoption_exit_ack_sequences_match_reference_model
+        PASS [   0.429s] (355/833) ovis-terminal-core::subscriptions durability::close_forced_returns_only_after_its_marker_is_durable
+        PASS [   0.433s] (356/833) ovis-terminal-core::terminals qa::recovery::holder_loss_recovery_requires_absence_of_the_old_process
+        PASS [   0.408s] (357/833) ovis-terminal-core::terminals qa::adversarial::metadata_removal_sends_no_signal_to_a_live_sibling
+        PASS [   0.412s] (358/833) ovis-terminal-core::terminals qa::adversarial::restored_metadata_never_inherits_live_process_or_agent_authority
+        PASS [   0.463s] (359/833) ovis-terminal-core::terminals qa::administration::native_process_roles_have_start_tokens_without_shell_or_agent_guessing
+        PASS [   0.285s] (360/833) ovis-terminal-holder service::unix::manager::tests::a_hung_manager_is_killed_at_the_bound_and_reported_as_unknown_outcome
+        PASS [   0.481s] (361/833) ovis-terminal-core::terminals failure
+        PASS [   0.496s] (362/833) ovis-terminal-core::waits interrupt_that_ends_the_program_is_stopped_by_exit_evidence
+        PASS [   0.577s] (363/833) ovis-terminal-core::subscriptions replay::a_snapshot_racing_commits_is_followed_by_exactly_the_later_commits
+        PASS [   0.586s] (364/833) ovis-terminal-core::terminals qa::adversarial::repeated_kill_and_recover_never_retarget_the_replacement
+        PASS [   0.919s] (365/833) ovis-terminal-core::ops atomic::crash_after_unit_commit_replays_all_parts_before_any_publication
+        PASS [   1.181s] (366/833) ovis-terminal-core layout::tests::edit_sequences_keep_identities_trees_and_exact_tiling
+        PASS [   0.735s] (367/833) ovis-terminal-core::terminals happy
+        PASS [   0.742s] (368/833) ovis-terminal-core::terminals qa::administration::child_agent_exit_invalidates_authority_without_marking_the_shell_exited
+        PASS [   0.750s] (369/833) ovis-terminal-core::waits failure
+        PASS [   0.781s] (370/833) ovis-terminal-core::terminals qa::adversarial::control_restart_preserves_the_process_and_metadata_operations_are_independent
+        PASS [   0.785s] (371/833) ovis-terminal-core::terminals qa::administration::program_stop_names_every_reaped_incarnation_and_leaves_control_available
+        PASS [   1.408s] (372/833) ovis-terminal-core docs::qa::bounds::versions_advance_by_one_per_commit_and_conflicts_change_nothing
+        PASS [   1.570s] (373/833) ovis-terminal-cli::cli happy
+        PASS [   1.905s] (374/833) ovis-terminal-conformance fixture::output::tests::the_largest_allowed_page_fits_one_frame_and_one_more_byte_is_refused
+        PASS [   1.516s] (375/833) ovis-terminal-core::screen wire::every_split_yields_identical_reads
+        PASS [   1.676s] (376/833) ovis-terminal-core::ops inspection::store_round_trip_preserves_canonical_retry
+        PASS [   3.964s] (377/833) ovis-terminal-core::events integrity::any_removed_page_is_snapshot_torn
+        PASS [   4.237s] (378/833) ovis-terminal-core::events integrity::any_same_length_interior_corruption_is_digest_mismatch
+        PASS [   5.225s] (379/833) ovis-terminal-core::events contracts::durable_records_round_trip
+        PASS [   5.863s] (380/833) ovis-terminal-conformance::runner suite::invalid_unlisted_and_stale_files_fail_the_suite
+        PASS [   6.016s] (381/833) ovis-terminal-conformance::runner happy
+        PASS [   6.040s] (382/833) ovis-terminal-conformance::runner failure
+        PASS [   6.919s] (383/833) ovis-terminal-conformance::runner runner_self_test_detects_its_own_failure_modes
+        PASS [   6.970s] (384/833) ovis-terminal-core::events durable::snapshot_larger_than_one_frame_reconstructs_from_bounded_pages
+        PASS [  10.948s] (385/833) ovis-terminal-conformance::runner suite::a_failing_case_fails_the_process
+        PASS [  11.020s] (386/833) ovis-terminal-conformance::runner a_missing_scenario_fails_and_a_declaration_is_not_executable
+        PASS [  32.049s] (387/833) ovis-terminal-conformance::runner suite::require_no_skips_fails_while_declarations_remain
+        PASS [  32.356s] (388/833) ovis-terminal-conformance::runner suite::every_scenario_file_is_executed_or_a_listed_declaration
+        SLOW [> 60.000s] (───────) ovis-terminal-core::ops bounds::capacity_accepts_1024_and_rejects_1025_without_eviction
+        PASS [ 118.507s] (389/833) ovis-terminal-core::ops bounds::capacity_accepts_1024_and_rejects_1025_without_eviction
+────────────
+     Summary [ 118.925s] 389/833 tests run: 388 passed (1 slow), 1 failed, 1 skipped
+        FAIL [   0.183s] (285/833) ovis-terminal-core::subscriptions stall::a_stalled_fanout_worker_loses_every_subscription_and_each_recovers
+warning: 444/833 tests were not run due to test failure (run with --no-fail-fast to run all tests, or run with --max-fail)
+error: test run failed
+CHECK_EXIT=100
