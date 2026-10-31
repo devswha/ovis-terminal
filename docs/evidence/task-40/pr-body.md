@@ -18,7 +18,7 @@ This adds no second prompt state machine. Versions, answers and receipts stay wi
 
 ## Before
 
-`absent`. There was no comparable baseline capability, and this is not an executed failing test. Gap baseline: GAP-085. Before this PR, an extension-mechanism answer committed with `delivery: extension` and nothing ever delivered it. A `prompt.open` presenting a foreign token with a partial prompt was refused as `invalid_params` by the strict decoder, which leaked the request shape, instead of `forbidden`.
+`absent`. There was no comparable baseline capability, and this is not an executed failing test. Gap baseline: GAP-085. Before this PR, an extension-mechanism answer committed with `delivery: extension` and nothing ever delivered it. A `prompt.open` presenting a foreign token with a partial prompt reached the strict decoder, which rejects a definition without `text` (inferred from the closed `PromptOpenParams` type; not executed as a baseline run), instead of being refused as `forbidden`.
 
 ## After
 
