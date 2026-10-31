@@ -1,8 +1,8 @@
 //! Hangup is attributed from retained incarnation evidence, never from a reap barrier.
 //!
 //! A same-group descendant keeps the PTY slave open after the leader exits, so
-//! the waiter reaps long before EOF. Hangup must still name the spawned
-//! incarnation and still precede Exit.
+//! the waiter reaps before the descendant is gone. Hangup must still name the
+//! spawned incarnation and still precede Exit.
 
 use std::time::{Duration, Instant};
 
@@ -56,16 +56,29 @@ fn lifecycle(messages: Vec<Message>) -> Vec<Result<(Hangup, u64), Exit>> {
         .collect()
 }
 
+/// When the master reports EOF depends on the platform. Linux keeps the master
+/// open until the last slave descriptor closes, so nothing can be published
+/// while the descendant lives. Darwin reports EOF as soon as the session leader
+/// exits, even while a same-group descendant still holds the slave, so one
+/// Hangup may already be queued at the reap. Either way exactly one Hangup names
+/// the spawned incarnation and precedes a final Exit.
 #[test]
 fn hangup_after_reap_carries_spawned_incarnation_and_precedes_exit() {
-    // Given: the leader is reaped while a descendant still holds the PTY slave,
-    // so no EOF (and hence no Hangup or Exit) can have been published yet.
+    // Given: the leader is reaped while a descendant still holds the PTY slave.
     let (holder, link, spawned) = reaped_leader("t-reap-first");
-    let early = lifecycle(queued(&link));
-    assert!(
-        matches!(early.as_slice(), []),
-        "published before EOF: {early:?}"
-    );
+    let mut messages = queued(&link);
+    let early = lifecycle(messages.clone());
+    if cfg!(target_os = "linux") {
+        assert!(
+            matches!(early.as_slice(), []),
+            "published before EOF: {early:?}"
+        );
+    } else {
+        assert!(
+            matches!(early.as_slice(), [] | [Ok(_)]),
+            "Exit published while the descendant lives: {early:?}"
+        );
+    }
 
     // When: the descendant's group is killed, closing the last slave reference.
     holder
@@ -74,7 +87,6 @@ fn hangup_after_reap_carries_spawned_incarnation_and_precedes_exit() {
             signal: SignalKind::Kill,
         })
         .expect("the reaped leader's group is still addressable");
-    let mut messages = Vec::new();
     loop {
         let message = link.recv_timeout(WAIT).expect("lifecycle event");
         let exited = matches!(message, Message::Exit(_));
@@ -84,8 +96,9 @@ fn hangup_after_reap_carries_spawned_incarnation_and_precedes_exit() {
         }
     }
 
-    // Then: one Hangup names the spawned PID and start token at the final offset,
-    // it precedes the Exit carrying the leader's status, and Exit is last.
+    // Then: across both phases, one Hangup names the spawned PID and start token
+    // at the final offset, it precedes the Exit carrying the leader's status, and
+    // Exit is last.
     let events = lifecycle(messages);
     let [Ok((hangup, offset)), Err(exit)] = events.as_slice() else {
         panic!("expected exactly Hangup then Exit, got {events:?}");

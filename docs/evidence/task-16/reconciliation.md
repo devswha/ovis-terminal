@@ -71,6 +71,26 @@ This reproduces the CI interleaving deterministically. With the old decision
 line restored, the test fails ("queued final bytes were dropped as a hang-up").
 With the fix it returns `Data("final")` and then `Hangup`.
 
+## Platform fact: when the PTY master reports EOF (CI on 3a70728)
+
+On Linux the master reports EOF/EIO only after the last slave descriptor
+closes, so a same-group descendant holding the slave postpones Hangup until
+it exits. On Darwin the master reported EOF as soon as the session leader
+exited, while a same-group descendant still held the slave. macOS CI job
+124498647420 received `[Hangup { pid: 5858, start_token: "lstart:..." }, offset 16]`
+before the descendant was killed. The product behaved correctly there: the
+Hangup carried the spawned incarnation, it preceded Exit, and Exit was last.
+Only the test's Linux-only premise ("nothing published before the kill") was
+wrong.
+
+`reap_tests::hangup_after_reap_carries_spawned_incarnation_and_precedes_exit`
+keeps that premise on Linux only. Elsewhere it accepts at most one Hangup
+before the kill. Across both phases it requires exactly one Hangup with the
+spawned pid + start token at `final_offset`, followed by a final Exit. The
+product has no platform branch. Later todos (53/55) must not read Hangup as
+"every descendant released the PTY" on Darwin: there it only means the session
+leader's terminal hung up.
+
 ## Which test guards which invariant
 
 | Test | Invariant |
