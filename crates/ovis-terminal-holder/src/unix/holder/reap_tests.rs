@@ -44,7 +44,7 @@ fn child_is_unreaped_at_the_real_pty_hangup_barrier() {
 
     // When: the master actually reaches EOF, before releasing the pump barrier.
     while let ReadOutcome::Data(count) =
-        read_chunk(&mut process.reader, &mut buffer).expect("PTY read")
+        read_chunk(&mut process.reader, &mut buffer, &process.pump_wake).expect("PTY read")
     {
         bytes.extend_from_slice(buffer.get(..count).expect("read bounds"));
         drain.advance();

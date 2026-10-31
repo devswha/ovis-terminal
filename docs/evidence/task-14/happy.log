@@ -1,0 +1,26 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t14/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.54s
+     Running tests/dispatch.rs (target/debug/deps/dispatch-c42f9e89dd7d8f77)
+
+running 1 test
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793421588998","version":"0.1.0"}}
+
+-> {"id":"slow","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19041-ba07-75d9-b509-8f1bea4c2c3c","value":"payload","version":"0"}}
+-> {"id":"status","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19041-ba07-75d9-b509-8f1bea4c2c3c"}}
+<- {"jsonrpc":"2.0","id":"status","result":{"error":null,"method":"doc.set","op_id":"01a19041-ba07-75d9-b509-8f1bea4c2c3c","result":null,"state":"accepted","updated_seq":"1"}}
+
+<- {"jsonrpc":"2.0","id":"slow","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19041-ba07-75d9-b509-8f1bea4c2c3c","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+-> {"id":"inspect","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19041-ba07-75d9-b509-8f1bea4c2c3c"}}
+<- {"jsonrpc":"2.0","id":"inspect","result":{"error":null,"method":"doc.set","op_id":"01a19041-ba07-75d9-b509-8f1bea4c2c3c","result":{"value":"payload","version":"0"},"state":"committed","updated_seq":"3"}}
+
+test happy ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 10.02s
+
+
+EXIT_CODE=0

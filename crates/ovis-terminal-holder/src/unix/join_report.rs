@@ -61,6 +61,8 @@ impl WorkersJoined {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct ShutdownReport {
+    /// Retained targets already exited when shutdown considered signalling them.
+    pub already_exited: usize,
     /// Outcomes by terminal identity.
     pub terminals: BTreeMap<TerminalId, WorkersJoined>,
 }

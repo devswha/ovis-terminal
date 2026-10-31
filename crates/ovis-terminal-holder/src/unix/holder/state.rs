@@ -16,12 +16,21 @@ use crate::protocol::{
     AdoptionError, AdoptionTable, Hangup, HeldTerminal, InputWritten, Message, Output,
     ProcessIncarnation, PtyIoFailure, TerminalId, TerminalTarget,
 };
+use crate::unix::pty_io::PumpStop;
 
 /// The running side of a terminal; dropped once its exit is recorded.
 pub(super) struct LiveTerminal {
     pub(super) master: Box<dyn MasterPty + Send>,
     pub(super) input: Arc<InputQueue>,
     pub(super) pid: ProcessId,
+    pub(super) pump_stop: Option<PumpStop>,
+}
+
+/// Process evidence is independent of the PTY/output completion barrier.
+#[derive(Clone, Copy)]
+pub(super) enum WaiterState {
+    Waiting,
+    Reaped,
 }
 
 pub(super) struct Terminal {
@@ -35,6 +44,7 @@ pub(super) struct Terminal {
     /// Wire form of the first failure before exit, carried by the exit record.
     pub(super) first_io_failure: Option<PtyIoFailure>,
     pub(super) completion: Completion,
+    pub(super) waiter: WaiterState,
 }
 
 impl Terminal {

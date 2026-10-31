@@ -7,9 +7,10 @@ use std::sync::{Arc, PoisonError};
 
 use super::Holder;
 use super::admission::admit_input;
+use super::signalling::{SignalOutcome, signal};
 use super::state::HolderState;
 use super::workers::join_outcome;
-use crate::process::{ProcessId, SignalError, SignalScope, send_signal};
+use crate::process::{ProcessId, SignalScope};
 use crate::protocol::{
     Forget, Input, Resize, Signal, SignalKind, Tail, TailRequest, TerminalTarget,
 };
@@ -110,8 +111,10 @@ impl Holder {
                     .map_or(live.pid, ProcessId::new),
                 SignalKind::Terminate | SignalKind::Kill => live.pid,
             };
-            send_signal(SignalScope::ProcessGroup(group), request.signal)?;
-            Ok(())
+            match signal(terminal, SignalScope::ProcessGroup(group), request.signal)? {
+                SignalOutcome::Delivered { .. } => Ok(()),
+                SignalOutcome::AlreadyExited => Err(HolderError::ProcessExited),
+            }
         })
     }
 
@@ -166,13 +169,15 @@ impl Holder {
     ///
     /// The report is built only from actual `JoinHandle::join` results: a worker
     /// whose handle was never registered is `NotRegistered`, never `Joined`.
+    /// Already-exited targets are counted separately and are never signalled.
     ///
     /// # Errors
     ///
     /// Returns [`HolderError::Signal`] when a live process group could not be
-    /// killed; its workers are then not joined.
+    /// killed, or a process-observation error when incarnation/exit evidence
+    /// could not be read; its workers are then not joined.
     pub fn shutdown(&self) -> Result<ShutdownReport, HolderError> {
-        self.shared.with_state(kill_all)?;
+        let already_exited = self.shared.with_state(kill_all)?;
         let (running, mut outcomes, started) = {
             let mut workers = self
                 .shared
@@ -188,7 +193,10 @@ impl Holder {
         for (terminal_id, role, handle) in running {
             outcomes.insert((terminal_id, role), join_outcome(handle));
         }
-        let mut report = ShutdownReport::default();
+        let mut report = ShutdownReport {
+            already_exited,
+            ..ShutdownReport::default()
+        };
         for terminal_id in started {
             let [waiter, pump, writer] = WorkerRole::ALL.map(|role| {
                 outcomes
@@ -209,20 +217,29 @@ impl Holder {
     }
 }
 
-fn kill_all(state: &mut HolderState) -> Result<(), HolderError> {
+fn kill_all(state: &mut HolderState) -> Result<usize, HolderError> {
     state.draining = true;
     state.detach(LinkClosed::HolderStopped);
-    for live in state
-        .terminals
-        .values()
-        .filter_map(|terminal| terminal.live.as_ref())
-    {
-        match send_signal(SignalScope::ProcessGroup(live.pid), SignalKind::Kill) {
-            Ok(()) => {}
-            Err(SignalError::Delivery { source }) if source.raw_os_error() == Some(libc::ESRCH) => {
+    let mut already_exited = 0_usize;
+    for terminal in state.terminals.values_mut() {
+        let Some(live) = &terminal.live else {
+            already_exited = already_exited.saturating_add(1);
+            continue;
+        };
+        let pid = live.pid;
+        match signal(terminal, SignalScope::ProcessGroup(pid), SignalKind::Kill)? {
+            SignalOutcome::Delivered { leader_exited } => {
+                if leader_exited {
+                    already_exited = already_exited.saturating_add(1);
+                }
             }
-            Err(error) => return Err(error.into()),
+            SignalOutcome::AlreadyExited => {
+                already_exited = already_exited.saturating_add(1);
+                if let Some(live) = terminal.live.as_mut() {
+                    live.pump_stop.take();
+                }
+            }
         }
     }
-    Ok(())
+    Ok(already_exited)
 }

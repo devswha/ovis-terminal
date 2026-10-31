@@ -51,7 +51,13 @@ pub(super) async fn write_loop<W: AsyncWrite + Unpin>(
             Some(Outbound::Closing(closing)) => (record("$/closing", &closing)?, true),
         };
         let reserved = if last { 0 } else { encoded_size(&json) };
-        let bytes = encode(json, framed)?;
+        let bytes = match encode(json, framed) {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                budget.record_connection_end();
+                return Err(error);
+            }
+        };
         let written = tokio::select! {
             biased;
             hit = overflowed(&mut overflow) => {
@@ -61,13 +67,22 @@ pub(super) async fn write_loop<W: AsyncWrite + Unpin>(
             written = writer.write_all(&bytes) => written,
         };
         budget.release(reserved);
-        written?;
+        if let Err(error) = written {
+            budget.record_connection_end();
+            return Err(error.into());
+        }
         if last {
             break Stop::Drained;
         }
     };
     match stop {
-        Stop::Drained => Ok(writer.shutdown().await?),
+        Stop::Drained => match writer.shutdown().await {
+            Ok(()) => Ok(()),
+            Err(error) => {
+                budget.record_connection_end();
+                Err(error.into())
+            }
+        },
         Stop::Overflowed { hit, mid_record } => {
             abandon(&mut queue, &budget);
             // After a partly written record the stream is mid-frame, so `$/closing`

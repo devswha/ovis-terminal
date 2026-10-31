@@ -20,10 +20,12 @@ use crate::unix::drain::DrainSignal;
 use crate::unix::input::InputQueue;
 use crate::unix::join_report::{JoinOutcome, WorkerRole};
 use crate::unix::launch::PtyProcess;
+use crate::unix::pty_io::{PumpStop, PumpWake};
 
 /// A launched process split into the master kept by the holder and thread-owned parts.
 pub(super) struct Parts {
     pub(super) master: Box<dyn MasterPty + Send>,
+    pub(super) pump_stop: PumpStop,
     pub(super) threads: ThreadParts,
 }
 
@@ -34,12 +36,14 @@ pub(super) struct ThreadParts {
     reader: File,
     writer: File,
     input: Arc<InputQueue>,
+    pump_wake: PumpWake,
 }
 
 impl Parts {
     pub(super) fn split(process: PtyProcess, input: Arc<InputQueue>) -> Self {
         Self {
             master: process.master,
+            pump_stop: process.pump_stop,
             threads: ThreadParts {
                 child: process.child,
                 slave: process.slave,
@@ -47,6 +51,7 @@ impl Parts {
                 reader: process.reader,
                 writer: process.writer,
                 input,
+                pump_wake: process.pump_wake,
             },
         }
     }
@@ -73,6 +78,7 @@ pub(super) fn start(
         reader,
         writer,
         input,
+        pump_wake,
     } = parts;
     let waiter = Waiter {
         shared: Arc::clone(shared),
@@ -94,6 +100,7 @@ pub(super) fn start(
         reader,
         finish: FinishOnDrop(drain),
         report: report_rx,
+        wake: pump_wake,
     };
     let pump = move || pump_output(&pump_shared, pump);
     register(

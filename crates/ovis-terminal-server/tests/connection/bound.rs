@@ -106,7 +106,11 @@ async fn a_peer_that_never_reads_is_closed_and_released_without_shutdown() -> Te
     assert_eq!(at(&other.expect_next().await?, "/result/name"), "b");
     drop((other, stalled));
     let report = server.shutdown().await?;
-    assert_eq!(report.failures().get("backpressure"), Some(&1));
+    assert_eq!(
+        report.failures().get("backpressure"),
+        Some(&1),
+        "{report:?}"
+    );
     assert_eq!(report.aborted(), 0);
     Ok(())
 }
@@ -134,7 +138,11 @@ async fn an_overflow_at_a_record_boundary_sends_a_readable_closing() -> TestResu
         "the socket closes after $/closing"
     );
     let report = server.shutdown().await?;
-    assert_eq!(report.failures().get("backpressure"), Some(&1));
+    assert_eq!(
+        report.failures().get("backpressure"),
+        Some(&1),
+        "{report:?}"
+    );
     assert_eq!(report.aborted(), 0);
     Ok(())
 }

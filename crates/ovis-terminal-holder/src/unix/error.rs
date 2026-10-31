@@ -7,7 +7,7 @@ use thiserror::Error;
 use super::config::QueueLimits;
 use super::launch_error::{LaunchError, PtySourceError};
 use super::link::LinkClosed;
-use crate::process::SignalError;
+use crate::process::{SignalError, StartTokenError};
 use crate::protocol::{AdoptionError, TerminalId};
 
 /// A holder control request was rejected or could not take effect.
@@ -97,6 +97,20 @@ pub enum HolderError {
         #[from]
         source: SignalError,
     },
+    /// Process start evidence could not be checked before signalling.
+    #[error("the process start record could not be checked")]
+    ProcessStart {
+        /// Operating-system observation failure.
+        #[source]
+        source: StartTokenError,
+    },
+    /// Process exit readiness could not be checked before signalling.
+    #[error("the process exit state could not be checked")]
+    ProcessWait {
+        /// Operating-system observation failure.
+        #[source]
+        source: io::Error,
+    },
     /// The requested output offset is beyond the produced output.
     #[error("offset {requested} is beyond output head {head}")]
     OffsetBeyondHead {
@@ -155,6 +169,8 @@ impl HolderError {
             Self::StaleGeometry { .. } => "stale_geometry",
             Self::Resize { .. } => "resize_failed",
             Self::Signal { .. } => "signal_failed",
+            Self::ProcessStart { .. } => "process_start_unavailable",
+            Self::ProcessWait { .. } => "process_wait_unavailable",
             Self::OffsetBeyondHead { .. } => "offset_beyond_head",
             Self::CounterExhausted => "counter_exhausted",
             Self::Adoption { source } => source.kind(),
@@ -183,6 +199,8 @@ impl HolderError {
             Self::StaleGeometry { .. } => "Resize with the current geometry epoch.",
             Self::Resize { .. } => "Re-read the terminal record and retry the resize.",
             Self::Signal { .. } => "Re-read the terminal record; the process may have exited.",
+            Self::ProcessStart { source } => source.hint(),
+            Self::ProcessWait { .. } => "Inspect process ownership before retrying shutdown.",
             Self::OffsetBeyondHead { .. } => "Request an offset at or below the output head.",
             Self::CounterExhausted => "Drain this holder and launch new terminals elsewhere.",
             Self::Adoption { source } => source.hint(),

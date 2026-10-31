@@ -18,12 +18,12 @@ use rustix::process::{Pid, WaitId, WaitIdOptions, waitid};
 
 use super::Shared;
 use super::ending::{Ending, ExitEvidence, WaiterReport};
-use super::state::WriteAck;
+use super::state::{WaiterState, WriteAck};
 use crate::protocol::TerminalId;
 use crate::unix::drain::DrainSignal;
 use crate::unix::input::{Dequeued, InputQueue};
 use crate::unix::io_error::TerminalIoError;
-use crate::unix::pty_io::{ReadOutcome, read_chunk, write_prefix};
+use crate::unix::pty_io::{PumpWake, ReadOutcome, read_chunk, write_prefix};
 
 /// Output is read in chunks no larger than the stream chunk size.
 const OUTPUT_CHUNK: usize = 16 * 1024;
@@ -56,7 +56,8 @@ pub(super) fn wait_for_exit(waiter: Waiter, report: &SyncSender<WaiterReport>) {
         drain,
     } = waiter;
     // WNOWAIT preserves both the PID and the exit status while the master drains.
-    // Reaping first would make a later PTY EOF an unprovable pre-reap stage.
+    // Reaping first would make a later PTY EOF an unprovable pre-reap stage, and
+    // the zombie keeps the PID reserved until the reap below.
     let observed = loop {
         match waitid(
             WaitId::Pid(Pid::from_child(&child)),
@@ -80,8 +81,19 @@ pub(super) fn wait_for_exit(waiter: Waiter, report: &SyncSender<WaiterReport>) {
     let drained = drain.wait_until_drained(&probe);
     drop(slave);
     drain.wait_until_finished();
-    shared.lock().begin_reap(&terminal_id);
-    let evidence = match child.wait() {
+    // The only reap happens under the same mutex that signal delivery holds, so
+    // shutdown can never address a PID this waiter has already released.
+    let status = {
+        let mut state = shared.lock();
+        state.begin_reap(&terminal_id);
+        let status = child.wait();
+        if let Some(terminal) = state.terminals.get_mut(&terminal_id) {
+            terminal.waiter = WaiterState::Reaped;
+        }
+        shared.reaped.notify_all();
+        status
+    };
+    let evidence = match status {
         Ok(status) => ExitEvidence::Status {
             code: status.code(),
             signal: status.signal(),
@@ -107,6 +119,7 @@ pub(super) struct Pump {
     pub(super) reader: File,
     pub(super) finish: FinishOnDrop,
     pub(super) report: Receiver<WaiterReport>,
+    pub(super) wake: PumpWake,
 }
 
 pub(super) fn pump_output(shared: &Shared, pump: Pump) {
@@ -115,10 +128,11 @@ pub(super) fn pump_output(shared: &Shared, pump: Pump) {
         mut reader,
         finish,
         report,
+        wake,
     } = pump;
     let mut buffer = vec![0_u8; OUTPUT_CHUNK];
     loop {
-        let failure = match read_chunk(&mut reader, &mut buffer) {
+        let failure = match read_chunk(&mut reader, &mut buffer, &wake) {
             Ok(ReadOutcome::Hangup) => {
                 shared.lock().record_hangup(&terminal_id);
                 break;

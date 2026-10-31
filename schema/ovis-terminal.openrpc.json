@@ -1445,6 +1445,18 @@
       "ErrorData": {
         "description": "Machine-readable context of a JSON-RPC error.",
         "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/TargetCandidate"
+            },
+            "type": "array"
+          },
+          "deadline_ms": {
+            "$ref": "#/components/schemas/DurationMs"
+          },
+          "elapsed_ms": {
+            "$ref": "#/components/schemas/DurationMs"
+          },
           "field_path": {
             "$ref": "#/components/schemas/FieldPath"
           },
@@ -6780,6 +6792,29 @@
             "type": "object"
           }
         ]
+      },
+      "TargetCandidate": {
+        "description": "One stable terminal identity, including the machine and lifetime that own it.",
+        "properties": {
+          "machine_id": {
+            "$ref": "#/components/schemas/MachineId",
+            "description": "Owning machine."
+          },
+          "runtime_lifetime": {
+            "$ref": "#/components/schemas/RuntimeLifetimeId",
+            "description": "Owning runtime lifetime."
+          },
+          "terminal_id": {
+            "$ref": "#/components/schemas/TerminalId",
+            "description": "Stable terminal identity."
+          }
+        },
+        "required": [
+          "machine_id",
+          "runtime_lifetime",
+          "terminal_id"
+        ],
+        "type": "object"
       },
       "TargetId": {
         "description": "Stable identity of the resource an error refers to.",

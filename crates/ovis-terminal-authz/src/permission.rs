@@ -89,6 +89,10 @@ impl Role {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum Action {
+    /// Inspect an operation belonging to the authenticated principal.
+    InspectOperation,
+    /// Request cancellation of the principal's own operation, not a new domain effect.
+    CancelOperation,
     /// Read state, a screen, history or a document.
     Read,
     /// Subscribe to events or attach an observing stream.
@@ -126,12 +130,13 @@ impl Action {
     #[must_use]
     pub const fn required(self) -> Permission {
         match self {
-            Self::Read | Self::Subscribe => Permission::Observe,
+            Self::Read | Self::Subscribe | Self::InspectOperation => Permission::Observe,
             Self::Input
             | Self::Resize
             | Self::Launch
             | Self::LayoutChange
-            | Self::DocumentWrite => Permission::Interact,
+            | Self::DocumentWrite
+            | Self::CancelOperation => Permission::Interact,
             Self::RawInput => Permission::RawInput,
             Self::Takeover => Permission::Takeover,
             Self::PromptAnswer => Permission::PromptAnswer,
@@ -145,6 +150,8 @@ impl Action {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::InspectOperation => "inspect_operation",
+            Self::CancelOperation => "cancel_operation",
             Self::Read => "read",
             Self::Subscribe => "subscribe",
             Self::Input => "input",

@@ -14,7 +14,8 @@ use crate::config::AuthorityLimits;
 use crate::error::{AuthzError, Limit};
 use crate::family::IdentityFamily;
 use crate::identity::{CredentialEpoch, CredentialId, PrincipalId};
-use crate::scope::Grant;
+use crate::permission::Action;
+use crate::scope::{Grant, TargetResource};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Standing {
@@ -181,11 +182,25 @@ impl<F: IdentityFamily> CredentialTable<F> {
     ) -> Result<Decision<F>, AuthzError> {
         let record = self.check_claim(&session.claim, request.at)?;
         let required = request.action.required();
-        if !record
-            .grants
-            .iter()
-            .any(|grant| grant.allows(required, &request.target))
-        {
+        let allowed = match (request.target.resource(), request.action) {
+            (
+                TargetResource::Operation { principal, .. },
+                Action::InspectOperation | Action::CancelOperation,
+            ) => {
+                principal == &session.principal
+                    && record.grants.iter().any(|grant| {
+                        grant.machine() == request.target.machine()
+                            && grant.permission() == required
+                    })
+            }
+            (TargetResource::Operation { .. }, _)
+            | (_, Action::InspectOperation | Action::CancelOperation) => false,
+            _ => record
+                .grants
+                .iter()
+                .any(|grant| grant.allows(required, &request.target)),
+        };
+        if !allowed {
             return Err(AuthzError::Forbidden {
                 principal: session.principal.clone(),
                 action: request.action,

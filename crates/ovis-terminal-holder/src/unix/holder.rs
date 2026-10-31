@@ -6,6 +6,9 @@ mod ending;
 mod hangup;
 #[cfg(test)]
 mod reap_tests;
+#[cfg(test)]
+mod shutdown_tests;
+mod signalling;
 mod state;
 mod threads;
 mod workers;
@@ -13,11 +16,11 @@ mod workers;
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
 use std::fmt;
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
 
 use self::ending::Completion;
-use self::state::{HolderState, LiveTerminal, Terminal};
+use self::state::{HolderState, LiveTerminal, Terminal, WaiterState};
 use super::config::{HolderConfig, ProcessEnvironment};
 use super::error::HolderError;
 use super::input::InputQueue;
@@ -34,6 +37,7 @@ use crate::protocol::{
 pub(super) struct Shared {
     config: HolderConfig,
     state: Mutex<HolderState>,
+    reaped: Condvar,
     spawning: Mutex<()>,
     workers: Mutex<Workers>,
 }
@@ -87,6 +91,7 @@ impl Holder {
             shared: Arc::new(Shared {
                 config,
                 state: Mutex::new(HolderState::default()),
+                reaped: Condvar::new(),
                 spawning: Mutex::new(()),
                 workers: Mutex::new(Workers::default()),
             }),
@@ -188,12 +193,14 @@ impl Holder {
                     master: parts.master,
                     input,
                     pid,
+                    pump_stop: Some(parts.pump_stop),
                 }),
                 geometry_epoch: None,
                 admitted_sequence: None,
                 io_errors: Vec::new(),
                 first_io_failure: None,
                 completion: Completion::Running,
+                waiter: WaiterState::Waiting,
             },
         );
         if let Err(source) = workers::start(&self.shared, &request.terminal_id, parts.threads) {

@@ -151,6 +151,13 @@ impl<F: IdentityFamily> Placement<F> {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum TargetResource<F: IdentityFamily> {
+    /// One operation in a principal's ledger; it grants no authority over domain resources.
+    Operation {
+        /// Principal that owns the receipt.
+        principal: crate::identity::PrincipalId,
+        /// Exact operation identity being inspected or cancelled.
+        op_id: ovis_terminal_protocol::errors::OpId,
+    },
     /// The machine itself.
     Machine,
     /// A workspace.
@@ -192,7 +199,8 @@ impl<F: IdentityFamily> TargetResource<F> {
             | Self::Machine
             | Self::Workspace { .. }
             | Self::Document { .. }
-            | Self::Plugin { .. } => None,
+            | Self::Plugin { .. }
+            | Self::Operation { .. } => None,
         }
     }
 }

@@ -1,0 +1,53 @@
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t14/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.30s
+     Running tests/dispatch.rs (target/debug/deps/dispatch-c42f9e89dd7d8f77)
+
+running 1 test
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793423900526","version":"0.1.0"}}
+
+-> {"id":"duplicate-0","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19064-ff6e-7097-8af5-cff94572130c","value":"payload","version":"0"}}
+-> {"id":"duplicate-1","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19064-ff6e-7097-8af5-cff94572130c","value":"payload","version":"0"}}
+-> {"id":"duplicate-2","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19064-ff6e-7097-8af5-cff94572130c","value":"payload","version":"0"}}
+-> {"id":"duplicate-3","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19064-ff6e-7097-8af5-cff94572130c","value":"payload","version":"0"}}
+-> {"id":"duplicate-4","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19064-ff6e-7097-8af5-cff94572130c","value":"payload","version":"0"}}
+-> {"id":"duplicate-5","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19064-ff6e-7097-8af5-cff94572130c","value":"payload","version":"0"}}
+-> {"id":"duplicate-6","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19064-ff6e-7097-8af5-cff94572130c","value":"payload","version":"0"}}
+-> {"id":"duplicate-7","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19064-ff6e-7097-8af5-cff94572130c","value":"payload","version":"0"}}
+-> {"id":"accepted","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19064-ff6e-7097-8af5-cff94572130c"}}
+<- {"jsonrpc":"2.0","id":"accepted","result":{"error":null,"method":"doc.set","op_id":"01a19064-ff6e-7097-8af5-cff94572130c","result":null,"state":"accepted","updated_seq":"1"}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-0","result":{"op_id":"01a19064-ff6e-7097-8af5-cff94572130c","value":"payload","version":"0"}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-1","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19064-ff6e-7097-8af5-cff94572130c","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-2","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19064-ff6e-7097-8af5-cff94572130c","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-3","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19064-ff6e-7097-8af5-cff94572130c","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-4","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19064-ff6e-7097-8af5-cff94572130c","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-5","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19064-ff6e-7097-8af5-cff94572130c","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-6","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19064-ff6e-7097-8af5-cff94572130c","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-7","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19064-ff6e-7097-8af5-cff94572130c","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+-> {"id":"retained","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19064-ff6e-7097-8af5-cff94572130c"}}
+<- {"jsonrpc":"2.0","id":"retained","result":{"error":null,"method":"doc.set","op_id":"01a19064-ff6e-7097-8af5-cff94572130c","result":{"op_id":"01a19064-ff6e-7097-8af5-cff94572130c","value":"payload","version":"0"},"state":"committed","updated_seq":"3"}}
+
+
+thread 'convergence::eight_identical_dispatches_converge_on_one_execution_and_outcome' (1181859) panicked at crates/ovis-terminal-server/tests/../src/dispatch/qa/convergence.rs:42:9:
+duplicate did not converge: {"error":{"code":-32000,"data":{"deadline_ms":"10000","elapsed_ms":"10000","hint":"inspect or cancel the operation by op_id","kind":"deadline_exceeded","op_id":"01a19064-ff6e-7097-8af5-cff94572130c","retryable":false},"message":"operation failed"},"id":"duplicate-1","jsonrpc":"2.0"}
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test convergence::eight_identical_dispatches_converge_on_one_execution_and_outcome ... FAILED
+
+failures:
+
+failures:
+    convergence::eight_identical_dispatches_converge_on_one_execution_and_outcome
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12 filtered out; finished in 10.06s
+
+error: test failed, to rerun pass `-p ovis-terminal-server --test dispatch`
+
+EXIT_CODE=101

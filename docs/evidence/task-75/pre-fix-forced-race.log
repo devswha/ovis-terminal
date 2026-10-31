@@ -1,0 +1,29 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+────────────
+ Nextest run ID 53e99904-7419-4807-b549-42764dff5d61 with nextest profile: default
+    Starting 1 test across 2 binaries (33 tests skipped)
+       START [         ] (1/1) ovis-terminal-server listen::server::shutdown_race::shutdown_joins_and_counts_an_overflow_before_the_driver_can_finish
+
+running 1 test
+FORCED_RACE_REPORT=ServeReport { accepted: 1, failures: {"connection_io": 1}, panicked: 0, aborted: 0 }
+
+thread 'listen::server::shutdown_race::shutdown_joins_and_counts_an_overflow_before_the_driver_can_finish' (294775) panicked at crates/ovis-terminal-server/src/listen/server/shutdown_race.rs:191:5:
+assertion `left == right` failed: ServeReport { accepted: 1, failures: {"connection_io": 1}, panicked: 0, aborted: 0 }
+  left: None
+ right: Some(1)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test listen::server::shutdown_race::shutdown_joins_and_counts_an_overflow_before_the_driver_can_finish ... FAILED
+
+failures:
+
+failures:
+    listen::server::shutdown_race::shutdown_joins_and_counts_an_overflow_before_the_driver_can_finish
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 3.37s
+
+        FAIL [   3.375s] (1/1) ovis-terminal-server listen::server::shutdown_race::shutdown_joins_and_counts_an_overflow_before_the_driver_can_finish
+  Cancelling due to test failure
+────────────
+     Summary [   3.375s] 1 test run: 0 passed, 1 failed, 33 skipped
+        FAIL [   3.375s] (1/1) ovis-terminal-server listen::server::shutdown_race::shutdown_joins_and_counts_an_overflow_before_the_driver_can_finish
+error: test run failed
