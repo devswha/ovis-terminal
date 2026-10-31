@@ -3,6 +3,9 @@
 mod admission;
 mod control;
 mod ending;
+#[cfg(test)]
+mod shutdown_tests;
+mod signalling;
 mod state;
 mod threads;
 mod workers;
@@ -14,7 +17,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
 
 use self::ending::Completion;
-use self::state::{HolderState, LiveTerminal, Terminal};
+use self::state::{HolderState, LiveTerminal, Terminal, WaiterState};
 use super::config::{HolderConfig, ProcessEnvironment};
 use super::error::HolderError;
 use super::input::InputQueue;
@@ -191,6 +194,7 @@ impl Holder {
                 io_errors: Vec::new(),
                 first_io_failure: None,
                 completion: Completion::Running,
+                waiter: WaiterState::Waiting,
             },
         );
         if let Err(source) = workers::start(&self.shared, &request.terminal_id, parts.threads) {

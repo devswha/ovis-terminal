@@ -14,10 +14,11 @@ use std::sync::Arc;
 use std::sync::mpsc::{Receiver, SyncSender};
 
 use portable_pty::SlavePty;
+use rustix::process::{Pid, WaitId, WaitIdOptions, waitid};
 
 use super::Shared;
 use super::ending::{Ending, ExitEvidence, WaiterReport};
-use super::state::WriteAck;
+use super::state::{WaiterState, WriteAck};
 use crate::protocol::TerminalId;
 use crate::unix::drain::DrainSignal;
 use crate::unix::input::{Dequeued, InputQueue};
@@ -54,17 +55,28 @@ pub(super) fn wait_for_exit(waiter: Waiter, report: &SyncSender<WaiterReport>) {
         probe,
         drain,
     } = waiter;
-    let evidence = match child.wait() {
+    // NOWAIT leaves the zombie/PID reserved while we wait without the state lock.
+    // The only reap happens under the same mutex held through signal delivery.
+    let ready = waitid(
+        WaitId::Pid(Pid::from_child(&child)),
+        WaitIdOptions::EXITED | WaitIdOptions::NOWAIT,
+    );
+    let status = ready.map_err(std::io::Error::from).and_then(|_| {
+        let mut state = shared.lock();
+        let status = child.wait()?;
+        if let Some(terminal) = state.terminals.get_mut(&terminal_id) {
+            terminal.waiter = WaiterState::Reaped;
+        }
+        drop(state);
+        Ok(status)
+    });
+    let evidence = match status {
         Ok(status) => ExitEvidence::Status {
             code: status.code(),
             signal: status.signal(),
         },
         Err(source) => ExitEvidence::Unknown(TerminalIoError::Wait { source }),
     };
-    #[cfg(test)]
-    {
-        eprintln!("TASK76 waiter pid={} evidence={evidence:?}", child.id());
-    }
     // A failed pending-byte query must not hold the exit forever: the slave is
     // closed anyway, the pump records what the kernel still returns, and the
     // failure is reported with the exit.

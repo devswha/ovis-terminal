@@ -24,6 +24,13 @@ pub(super) struct LiveTerminal {
     pub(super) pid: ProcessId,
 }
 
+/// Process evidence is independent of the PTY/output completion barrier.
+#[derive(Clone, Copy)]
+pub(super) enum WaiterState {
+    Waiting,
+    Reaped,
+}
+
 pub(super) struct Terminal {
     pub(super) held: HeldTerminal,
     pub(super) tail: RetainedTail,
@@ -35,6 +42,7 @@ pub(super) struct Terminal {
     /// Wire form of the first failure before exit, carried by the exit record.
     pub(super) first_io_failure: Option<PtyIoFailure>,
     pub(super) completion: Completion,
+    pub(super) waiter: WaiterState,
 }
 
 impl Terminal {
