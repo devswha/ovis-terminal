@@ -17,7 +17,9 @@ pub(super) fn replace(path: &Path, bytes: &[u8]) -> Result<(), Failed> {
     file.sync_all().map_err(|error| ("synced", error))?;
     drop(file);
     std::fs::rename(&staged, path).map_err(|error| ("published", error))?;
-    sync_directory(path)
+    #[cfg(unix)]
+    sync_directory(path)?;
+    Ok(())
 }
 
 /// Moves `path` into `dir/quarantine/` under a name that never overwrites earlier
@@ -31,6 +33,7 @@ pub(super) fn quarantine(path: &Path, dir: &Path) -> Result<PathBuf, Failed> {
         .unwrap_or_default();
     let kept = quarantine.join(format!("{name}.{}", uuid::Uuid::now_v7()));
     std::fs::rename(path, &kept).map_err(|error| ("quarantined", error))?;
+    #[cfg(unix)]
     sync_directory(&kept)?;
     Ok(kept)
 }
@@ -42,9 +45,4 @@ fn sync_directory(path: &Path) -> Result<(), Failed> {
     std::fs::File::open(directory)
         .and_then(|directory| directory.sync_all())
         .map_err(|error| ("made durable in its directory", error))
-}
-
-#[cfg(not(unix))]
-const fn sync_directory(_: &Path) -> Result<(), Failed> {
-    Ok(())
 }
