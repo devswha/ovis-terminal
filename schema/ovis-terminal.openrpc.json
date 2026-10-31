@@ -1622,7 +1622,12 @@
           "no_staged_update",
           "rollback_failed",
           "service_unsupported",
-          "service_exists"
+          "service_exists",
+          "credential_revoked",
+          "decision_mismatch",
+          "grant_exceeds_issuer",
+          "endpoint_insecure",
+          "peer_rejected"
         ],
         "type": "string",
         "x-ovis-open-enum": true
@@ -3512,6 +3517,10 @@
       "Limits": {
         "description": "Per-object and session-wide bounds; admission budgets, not preallocations.",
         "properties": {
+          "connection_unwritten_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Encoded bytes queued for one connection but not yet written; past it the\nconnection closes with `$/closing{reason: backpressure}`."
+          },
           "credit_initial_bytes": {
             "$ref": "#/components/schemas/ByteCount",
             "description": "Output credit granted when a stream opens."
@@ -3619,6 +3628,7 @@
           "history_lines",
           "output_ring_bytes",
           "max_in_flight_requests",
+          "connection_unwritten_bytes",
           "session_rss_bytes",
           "session_retained_bytes",
           "session_input_bytes",
@@ -8635,6 +8645,18 @@
         {
           "code": -32000,
           "message": "credential_expired"
+        },
+        {
+          "code": -32000,
+          "message": "credential_revoked"
+        },
+        {
+          "code": -32000,
+          "message": "peer_rejected"
+        },
+        {
+          "code": -32000,
+          "message": "endpoint_insecure"
         }
       ],
       "name": "hello",
@@ -19228,6 +19250,31 @@
       "code": -32000,
       "description": "A service registration with this label already exists.",
       "kind": "service_exists"
+    },
+    {
+      "code": -32000,
+      "description": "The credential was revoked after the session or decision was made.",
+      "kind": "credential_revoked"
+    },
+    {
+      "code": -32000,
+      "description": "An authorization decision was presented for another action, target or authority.",
+      "kind": "decision_mismatch"
+    },
+    {
+      "code": -32000,
+      "description": "An issuance asks for more authority than the issuer holds.",
+      "kind": "grant_exceeds_issuer"
+    },
+    {
+      "code": -32000,
+      "description": "The serving endpoint is reachable by accounts other than its owner.",
+      "kind": "endpoint_insecure"
+    },
+    {
+      "code": -32000,
+      "description": "The connecting peer is not the account that owns the endpoint.",
+      "kind": "peer_rejected"
     }
   ],
   "x-events": [
@@ -19500,6 +19547,7 @@
   ],
   "x-limits": {
     "defaults": {
+      "connection_unwritten_bytes": "67108864",
       "credit_initial_bytes": "262144",
       "credit_max_bytes": "1048576",
       "doc_max_bytes": "1048576",

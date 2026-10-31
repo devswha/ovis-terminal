@@ -129,3 +129,21 @@ fn maps_typed_internal_error_to_json_rpc_internal_code() {
     assert_eq!(error.kind(), "internal");
     assert_eq!(error.hint(), ErrorKind::Internal.hint());
 }
+
+#[test]
+fn boundary_hint_replaces_only_the_wire_hint() {
+    let kind = ErrorKind::from("peer_rejected".to_owned());
+    let error = BoundaryError::domain(kind, false).with_hint("connect as the owning account");
+    let encoded = serde_json::to_value(RpcFailure::new(RequestId::new("h".to_owned()), &error))
+        .expect("encodes");
+
+    assert_eq!(
+        encoded
+            .pointer("/error/data/hint")
+            .cloned()
+            .unwrap_or(Value::Null),
+        "connect as the owning account"
+    );
+    assert_eq!(error.kind(), "peer_rejected");
+    assert_eq!(JsonRpcCode::from(&error).value(), -32000);
+}

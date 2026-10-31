@@ -179,6 +179,13 @@ impl BoundaryError {
         self
     }
 
+    /// Replaces the kind's published hint with the guidance of the failing boundary.
+    #[must_use]
+    pub fn with_hint(mut self, hint: &'static str) -> Self {
+        hint.clone_into(&mut self.data_mut().hint);
+        self
+    }
+
     /// Adds an operation identity when effects may have begun.
     #[must_use]
     pub fn with_op_id(mut self, op_id: OpId) -> Self {

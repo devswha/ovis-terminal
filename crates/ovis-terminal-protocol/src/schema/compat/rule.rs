@@ -42,6 +42,8 @@ pub enum BreakRule {
     EventRemoved,
     /// A released notification is gone.
     NotificationRemoved,
+    /// A released error kind is gone from the published catalog.
+    ErrorKindRemoved,
 }
 
 impl BreakRule {
@@ -68,6 +70,7 @@ impl BreakRule {
             Self::ClosedOutputEnumGrew => "closed_output_enum_grew",
             Self::EventRemoved => "event_removed",
             Self::NotificationRemoved => "notification_removed",
+            Self::ErrorKindRemoved => "error_kind_removed",
         }
     }
 }

@@ -234,4 +234,14 @@ pub enum DomainErrorKind {
     ServiceUnsupported,
     /// A service registration with this label already exists.
     ServiceExists,
+    /// The credential was revoked after the session or decision was made.
+    CredentialRevoked,
+    /// An authorization decision was presented for another action, target or authority.
+    DecisionMismatch,
+    /// An issuance asks for more authority than the issuer holds.
+    GrantExceedsIssuer,
+    /// The serving endpoint is reachable by accounts other than its owner.
+    EndpointInsecure,
+    /// The connecting peer is not the account that owns the endpoint.
+    PeerRejected,
 }

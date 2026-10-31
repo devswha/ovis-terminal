@@ -1,0 +1,41 @@
+$ cargo nextest run -p ovis-terminal-server --locked
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+────────────
+ Nextest run ID 7b52f131-6d4f-4ccd-9960-8a9a3083cb94 with nextest profile: default
+    Starting 33 tests across 2 binaries
+        PASS [   0.008s] ( 1/33) ovis-terminal-server conn::budget::tests::accounting_never_wraps_at_u64_max
+        PASS [   0.008s] ( 2/33) ovis-terminal-server conn::core::tests::refused_generation_does_not_upgrade_the_bytes_behind_it
+        PASS [   0.008s] ( 3/33) ovis-terminal-server conn::core::tests::generation_is_an_exact_decimal_string
+        PASS [   0.008s] ( 4/33) ovis-terminal-server conn::budget::tests::reservations_stop_exactly_at_the_bound
+        PASS [   0.009s] ( 5/33) ovis-terminal-server conn::budget::tests::only_the_first_refusal_is_published
+        PASS [   0.009s] ( 6/33) ovis-terminal-server conn::core::tests::foreign_peer_is_answered_with_its_refusal_and_closed
+        PASS [   0.008s] ( 7/33) ovis-terminal-server::connection descriptor::unix_defaults_fall_back_from_runtime_to_state_to_home
+        PASS [   0.033s] ( 8/33) ovis-terminal-server listen::tests::the_owner_account_read_from_the_socket_is_admitted
+        PASS [   0.033s] ( 9/33) ovis-terminal-server conn::core::tests::partial_hello_establishes_nothing_until_its_line_completes
+        PASS [   0.034s] (10/33) ovis-terminal-server listen::tests::a_peer_whose_account_is_not_the_owner_is_refused_at_hello
+        PASS [   0.034s] (11/33) ovis-terminal-server::connection adversarial::unknown_frame_kind_after_upgrade_closes_with_its_kind
+        PASS [   0.034s] (12/33) ovis-terminal-server::connection adversarial::correlatable_bad_requests_are_answered_and_the_rest_close
+        PASS [   0.035s] (13/33) ovis-terminal-server::connection adversarial::credentials_are_checked_before_hello_exposes_identity
+        PASS [   0.035s] (14/33) ovis-terminal-server::connection adversarial::a_second_hello_and_a_duplicate_in_flight_id_are_refused
+        PASS [   0.037s] (15/33) ovis-terminal-server::connection adversarial::requests_beyond_the_in_flight_bound_get_backpressure_and_cancel_on_shutdown
+        PASS [   0.037s] (16/33) ovis-terminal-server::connection happy
+        PASS [   0.027s] (17/33) ovis-terminal-server::connection descriptor::unsafe_values_are_refused_before_anything_is_touched
+        PASS [   0.028s] (18/33) ovis-terminal-server::connection endpoint::every_kind_the_hello_boundary_emits_is_published
+        PASS [   0.028s] (19/33) ovis-terminal-server::connection endpoint::a_bound_socket_and_its_directory_are_private
+        PASS [   0.029s] (20/33) ovis-terminal-server::connection endpoint::a_stale_socket_is_replaced_and_a_plain_file_never_is
+        PASS [   0.029s] (21/33) ovis-terminal-server::connection endpoint::a_rejected_probe_reports_the_typed_refusal
+        PASS [   0.029s] (22/33) ovis-terminal-server::connection descriptor::windows_names_a_local_pipe_per_user_and_session
+        PASS [   0.029s] (23/33) ovis-terminal-server::connection descriptor::the_override_wins_and_is_reported_as_such
+        PASS [   0.029s] (24/33) ovis-terminal-server::connection endpoint::a_directory_other_accounts_can_enter_is_refused
+        PASS [   0.030s] (25/33) ovis-terminal-server::connection endpoint::a_server_that_hangs_up_mid_hello_is_unreachable
+        PASS [   0.030s] (26/33) ovis-terminal-server::connection endpoint::a_socket_that_never_answers_hello_is_unreachable
+        PASS [   0.031s] (27/33) ovis-terminal-server::connection endpoint::a_live_socket_is_never_taken_over
+        PASS [   0.065s] (28/33) ovis-terminal-server conn::core::tests::framed_upgrade_parses_identically_under_every_split
+        PASS [   0.055s] (29/33) ovis-terminal-server::connection descriptor::every_valid_session_names_its_own_socket
+        PASS [   0.080s] (30/33) ovis-terminal-server::connection descriptor::session_names_follow_the_published_rule
+        PASS [   0.387s] (31/33) ovis-terminal-server::connection failure
+        PASS [   3.496s] (32/33) ovis-terminal-server::connection bound::a_peer_that_never_reads_is_closed_and_released_without_shutdown
+        PASS [   3.533s] (33/33) ovis-terminal-server::connection bound::an_overflow_at_a_record_boundary_sends_a_readable_closing
+────────────
+     Summary [   3.558s] 33 tests run: 33 passed, 0 skipped
+EXIT=0

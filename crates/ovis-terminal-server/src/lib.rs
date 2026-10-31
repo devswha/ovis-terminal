@@ -9,6 +9,17 @@ pub mod listen;
 pub mod streams;
 pub mod ws;
 
+/// Whether a transport error only says the peer hung up, the normal end of a connection.
+fn peer_gone(error: &std::io::Error) -> bool {
+    matches!(
+        error.kind(),
+        std::io::ErrorKind::BrokenPipe
+            | std::io::ErrorKind::ConnectionReset
+            | std::io::ErrorKind::ConnectionAborted
+            | std::io::ErrorKind::NotConnected
+    )
+}
+
 /// Cargo package name of this crate, used by the workspace layering record.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 

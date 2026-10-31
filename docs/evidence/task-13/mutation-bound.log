@@ -1,0 +1,17 @@
+MUTATION (E1): conn/budget.rs reserve ignores the unwritten-byte limit
+$ cargo nextest run -p ovis-terminal-server --locked --no-fail-fast
+        FAIL [   0.008s] ( 1/32) ovis-terminal-server conn::budget::tests::accounting_never_wraps_at_u64_max
+        FAIL [   0.008s] ( 3/32) ovis-terminal-server conn::budget::tests::only_the_first_refusal_is_published
+        FAIL [   0.009s] ( 4/32) ovis-terminal-server conn::budget::tests::reservations_stop_exactly_at_the_bound
+        FAIL [  54.263s] (32/32) ovis-terminal-server::connection bound::a_peer_that_stops_reading_is_closed_at_the_unwritten_byte_bound
+     Summary [  54.263s] 32 tests run: 28 passed, 4 failed, 0 skipped
+    test bound::a_peer_that_stops_reading_is_closed_at_the_unwritten_byte_bound ... FAILED
+    test conn::budget::tests::accounting_never_wraps_at_u64_max ... FAILED
+    test conn::budget::tests::only_the_first_refusal_is_published ... FAILED
+    test conn::budget::tests::reservations_stop_exactly_at_the_bound ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 21 filtered out; finished in 54.24s
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+EXIT=100
+RESTORED
+     Summary [   3.346s] 32 tests run: 32 passed, 0 skipped
+EXIT=0

@@ -121,10 +121,47 @@ fn compare_signals(
     Ok(())
 }
 
+/// Tokens of the `x-error-kinds` catalog; a document without the section publishes none.
+fn error_kinds<'a>(document: &'a Value, owner: &str) -> Result<Vec<&'a str>, SchemaError> {
+    let Some(catalog) = document.get("x-error-kinds") else {
+        return Ok(Vec::new());
+    };
+    let malformed = |location: String| SchemaError::MalformedBaseline { location };
+    let entries = catalog
+        .as_array()
+        .ok_or_else(|| malformed(format!("{owner}x-error-kinds")))?;
+    entries
+        .iter()
+        .enumerate()
+        .map(|(index, entry)| {
+            let kind = entry.get("kind").and_then(Value::as_str);
+            kind.ok_or_else(|| malformed(format!("{owner}x-error-kinds[{index}].kind")))
+        })
+        .collect()
+}
+
+/// A released error kind clients may branch on must stay published.
+fn compare_error_kinds(
+    released: &Value,
+    current: &Value,
+    out: &mut Vec<Break>,
+) -> Result<(), SchemaError> {
+    let published = error_kinds(current, "current ")?;
+    for kind in error_kinds(released, "")? {
+        if !published.contains(&kind) {
+            out.push(Break {
+                path: format!("x-error-kinds({kind})"),
+                rule: BreakRule::ErrorKindRemoved,
+            });
+        }
+    }
+    Ok(())
+}
+
 /// Lists every change from `released` to `current` that breaks a released client.
 ///
-/// Methods, events and notifications are all compared; inputs may only widen
-/// and outputs may only grow.
+/// Methods, events, notifications and the error-kind catalog are all compared; inputs
+/// may only widen, outputs may only grow and published error kinds may not disappear.
 ///
 /// # Errors
 ///
@@ -136,6 +173,7 @@ pub fn breaking_changes(released: &Value, current: &Value) -> Result<Vec<Break>,
     let documents = SchemaPair::documents(released, current);
     compare_signals(documents, Section::Events, &mut out)?;
     compare_signals(documents, Section::Notifications, &mut out)?;
+    compare_error_kinds(released, current, &mut out)?;
     Ok(out)
 }
 
