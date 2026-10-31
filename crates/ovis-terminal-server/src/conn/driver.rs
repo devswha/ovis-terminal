@@ -13,6 +13,7 @@ use tokio::sync::{Semaphore, mpsc, watch};
 use tokio::task::{self, JoinError, JoinSet};
 
 use super::budget::Budget;
+use super::cause::resolve_connection;
 use super::core::{ConnectionCore, Step};
 use super::outbound::{Closing, NotifyError, OUTBOUND_CAPACITY, Outbound, Outlet};
 use super::writer::write_loop;
@@ -63,43 +64,52 @@ where
     writers.spawn(write_loop(writer, receiver, Arc::clone(&budget)));
     let mut requests = Requests {
         handler: Arc::clone(&context.handler),
-        outlet: Outlet { queue, budget },
+        outlet: Outlet {
+            queue,
+            budget: Arc::clone(&budget),
+        },
         tasks: JoinSet::new(),
         ids: HashMap::new(),
         in_flight: InFlightRequests::default(),
         permits: Arc::new(Semaphore::new(context.max_in_flight)),
     };
     let mut buffer = vec![0_u8; READ_CHUNK];
+    let terminal = |end| {
+        if matches!(&end, End::Failed(_)) {
+            budget.record_connection_end();
+        }
+        end
+    };
     let end = loop {
         tokio::select! {
             biased;
-            _ = context.shutdown.changed() => break End::Shutdown,
+            _ = context.shutdown.changed() => break terminal(End::Shutdown),
             Ok(()) = overflow.changed() => {
                 let hit = *overflow.borrow_and_update();
                 if let Some(hit) = hit {
                     let (limit, queued) = (hit.limit, hit.queued);
-                    break End::Failed(ConnectionError::Backpressure { limit, queued });
+                    break terminal(End::Failed(ConnectionError::Backpressure { limit, queued }));
                 }
             }
             Some(joined) = requests.tasks.join_next_with_id(), if !requests.tasks.is_empty() => {
                 if let Err(error) = requests.settle(joined).await {
-                    break End::Failed(error);
+                    break terminal(End::Failed(error));
                 }
             }
             read = reader.read(&mut buffer) => {
                 let bytes = match read {
-                    Ok(0) => break End::PeerClosed,
+                    Ok(0) => break terminal(End::PeerClosed),
                     Ok(count) => match buffer.get(..count) {
                         Some(bytes) => bytes,
-                        None => break End::Failed(ConnectionError::Io(
+                        None => break terminal(End::Failed(ConnectionError::Io(
                             std::io::ErrorKind::InvalidData.into(),
-                        )),
+                        ))),
                     },
-                    Err(error) if peer_gone(&error) => break End::PeerClosed,
-                    Err(error) => break End::Failed(error.into()),
+                    Err(error) if peer_gone(&error) => break terminal(End::PeerClosed),
+                    Err(error) => break terminal(End::Failed(error.into())),
                 };
                 if let Some(end) = requests.apply(core.feed(bytes)).await {
-                    break end;
+                    break terminal(end);
                 }
             }
         }
@@ -111,13 +121,7 @@ where
         Ok(()) | Err(_) => {}
     }
     drop(requests);
-    let written = match writers.join_next().await {
-        Some(Ok(Err(ConnectionError::Io(error)))) if peer_gone(&error) => Ok(()),
-        Some(Ok(written)) => written,
-        Some(Err(error)) => Err(ConnectionError::Io(std::io::Error::other(error))),
-        None => Ok(()),
-    };
-    result.and(written)
+    resolve_connection(&budget, &mut writers, result).await
 }
 
 impl<H: RequestHandler> Requests<H> {

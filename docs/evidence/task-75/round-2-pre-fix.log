@@ -1,0 +1,32 @@
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t75/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.27s
+────────────
+ Nextest run ID 84101805-9e06-408d-95df-97f327e008c6 with nextest profile: default
+    Starting 1 test across 2 binaries (34 tests skipped)
+       START [         ] (1/1) ovis-terminal-server conn::driver::terminal_order::io_before_overflow_keeps_its_terminal_cause
+
+running 1 test
+EARLIER_IO_CLOSE={"jsonrpc":"2.0","method":"$/closing","params":{"hint":"reconnect","reason":"connection_io"}}
+EARLIER_IO_FINAL_ERROR=Backpressure { limit: 67108864, queued: 0 }
+
+thread 'conn::driver::terminal_order::io_before_overflow_keeps_its_terminal_cause' (730142) panicked at crates/ovis-terminal-server/src/conn/driver/terminal_order.rs:171:9:
+assertion `left == right` failed: an earlier transport failure must not be replaced by a later overflow
+  left: "backpressure"
+ right: "connection_io"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test conn::driver::terminal_order::io_before_overflow_keeps_its_terminal_cause ... FAILED
+
+failures:
+
+failures:
+    conn::driver::terminal_order::io_before_overflow_keeps_its_terminal_cause
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 11 filtered out; finished in 3.21s
+
+        FAIL [   3.220s] (1/1) ovis-terminal-server conn::driver::terminal_order::io_before_overflow_keeps_its_terminal_cause
+  Cancelling due to test failure
+────────────
+     Summary [   3.220s] 1 test run: 0 passed, 1 failed, 34 skipped
+        FAIL [   3.220s] (1/1) ovis-terminal-server conn::driver::terminal_order::io_before_overflow_keeps_its_terminal_cause
+error: test run failed
+ROUND_2_PRE_FIX_EXIT=100
