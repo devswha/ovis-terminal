@@ -145,14 +145,16 @@ fn a_resize_and_a_keypress_reach_the_program_through_separate_paths() {
         .terminal
         .resize(ConptyGrid::new(132, 40).expect("grid"))
         .expect("resize");
+    // Mode 9001 is on, so the key travels in win32-input form (Vk;Sc;Uc;Kd;Cs;Rc _),
+    // down then up, as the core's encoder writes it.
     driver
         .terminal
-        .input(b"x".to_vec())
+        .input(b"\x1b[88;45;120;1;0;1_\x1b[88;45;120;0;0;1_".to_vec())
         .expect("keypress admitted");
     let (ended, bytes, _) = driver.finish();
     let text = String::from_utf8_lossy(&bytes);
     assert!(
-        text.contains("132") && text.contains("40"),
+        contains(&bytes, b"\x1b[8;40;132t") && text.contains("132") && text.contains("40"),
         "mode con reports the new grid: {text}"
     );
     assert_eq!(ended.exit, ProgramExit::Code(3));
