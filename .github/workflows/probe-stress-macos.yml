@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, geometry]
 
 permissions:
   contents: read
@@ -626,4 +626,34 @@ jobs:
         with:
           name: conpty-windows-${{ github.run_id }}
           path: conpty-windows.log
+          if-no-files-found: error
+  geometry:
+    if: inputs.probe == 'geometry'
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat geometry transition tests (real bash PTY) 100 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 100); do
+              printf '\nITERATION %s/100\n' "$iteration"
+              cargo nextest run -p ovis-terminal-core --test geometry --locked --no-tests=fail
+              printf 'PASS %s/100\n' "$iteration"
+            done
+            printf 'RESULT 100/100\n'
+          } 2>&1 | tee geometry-stress.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: geometry-stress-${{ github.run_id }}
+          path: geometry-stress.log
           if-no-files-found: error
