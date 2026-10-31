@@ -58,9 +58,9 @@ async fn execute(plan: Plan, mode: OutputMode, context: &Context) -> Result<Repo
         Plan::Status => execute::status(context).await?,
         Plan::Call(request) => execute::call(context, &request).await?,
         Plan::NeedsTarget => return Err(execute::needs_target(context).await),
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         Plan::Service(command) => {
-            match crate::service::unix::execute(&command).map_err(CliError::Service)? {
+            match crate::service::execute(&command).map_err(CliError::Service)? {
                 Some(value) => value,
                 None => return Ok(Report::raw(String::new())),
             }
