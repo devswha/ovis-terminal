@@ -137,6 +137,11 @@
       "reason": "The ConPTY terminal (ovis-terminal-holder windows::ConptyTerminal) and terminal.run admission (lanes::conpty::admit/spawn) exist, but no served binary routes terminal.run to them: todo 54 serves named pipes and the Windows service host that owns ConPTY holders, todo 31 assembles the served terminal.run, and the todo-21 runner's fixture serves only a Unix socket, so a windows-only case would be skipped on every runner it has. Covered meanwhile by the native Windows tests listed in the descriptor, run by ci.yml on windows-2025; todo 60 runs this scenario in Windows smoke CI."
     },
     {
+      "file": "recovery/restart.json",
+      "owner_todo": "48",
+      "reason": "server.restart and server.stop are routed by dispatch::lanes::restart over ovis_terminal_core::restart::Control, but no served binary registers the lane or replaces its listener at the restart boundary until todo 31 assembles it, and the runner's only fixture (todo 21) holds no holder-owned program and asserts server.stop is unserved. Covered meanwhile by the real-holder core tests (restart) and the real-socket lane tests (lanes::restart)."
+    },
+    {
       "file": "remote/identity.json",
       "owner_todo": "43",
       "reason": "machine.add/get/rename are served only by dispatchers assembled in the todo-43 lane tests: no served binary registers the lane until todo 31 assembles it, and the scenario needs two private runtimes joined by a stdio transport plus the plan's --inject/--append runner flags, which the todo-21 runner (one fixture per case) does not have; todo 52 composes remote dispatch across two private runtimes over real endpoints."
