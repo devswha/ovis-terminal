@@ -15,6 +15,17 @@ use portable_pty::CommandBuilder;
 
 use crate::{BOUND, ScratchDir, record, terminal, through_holder_frame};
 
+const SHELL_READY: &str = "OVIS-PROBE-READY> ";
+
+fn await_shell_ready(session: &mut PtySession, reported: Grid, bound: Duration) {
+    let ready = session.read_until(SHELL_READY.as_bytes(), bound);
+    assert!(
+        ready.is_ok(),
+        "shell readiness failed: slave {reported:?}, master {:?}: {ready:?}",
+        session.grid()
+    );
+}
+
 /// Asks the shell in `session` for `stty size`; the marker is split in the
 /// typed command so the terminal's echo of the command cannot match it.
 fn reported_grid(session: &mut PtySession) -> Grid {
@@ -28,13 +39,39 @@ fn reported_grid(session: &mut PtySession) -> Grid {
         .split_whitespace()
         .map(|number| number.parse::<u16>().unwrap());
     let rows = numbers.next().unwrap();
-    Grid::new(numbers.next().unwrap(), rows)
+    let grid = Grid::new(numbers.next().unwrap(), rows);
+    // Apple's readline prepares the next input by reading and writing the
+    // winsize. Its prompt follows that preparation; the GRID line does not.
+    await_shell_ready(session, grid, BOUND);
+    grid
 }
 
 fn shell_session() -> PtySession {
     let mut command = CommandBuilder::new("sh");
-    command.env("PS1", "");
+    command.env("PS1", SHELL_READY);
     PtySession::spawn(command, Grid::new(80, 24)).unwrap()
+}
+
+#[test]
+fn shell_readiness_deadline_fails_with_both_observed_sizes() {
+    // Given a shell held in read, with no next prompt available.
+    let mut session = shell_session();
+    let reported = reported_grid(&mut session);
+    session
+        .write(b"printf 'HE''LD\\n'; read -r release\n")
+        .unwrap();
+    session.read_until(b"HELD\r\n", BOUND).unwrap();
+    session.resize(Grid::new(132, 40)).unwrap();
+
+    // When the readiness deadline has already expired.
+    let expired = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        await_shell_ready(&mut session, reported, Duration::ZERO);
+    }));
+
+    // Then the probe fails rather than accepting an unfinished shell command.
+    assert!(expired.is_err());
+    session.write(b"release\nexit\n").unwrap();
+    session.finish(BOUND).unwrap();
 }
 
 fn grid_resize_token_and_final_bytes() {
@@ -42,7 +79,12 @@ fn grid_resize_token_and_final_bytes() {
     assert_eq!(reported_grid(&mut session), Grid::new(80, 24));
     session.resize(Grid::new(132, 40)).unwrap();
     assert_eq!(session.grid().unwrap(), Grid::new(132, 40));
-    assert_eq!(reported_grid(&mut session), Grid::new(132, 40));
+    assert_eq!(
+        reported_grid(&mut session),
+        Grid::new(132, 40),
+        "master after slave report: {:?}",
+        session.grid()
+    );
     let pid = session.pid().unwrap();
     let observed = observe_process(pid).unwrap();
     assert_eq!(observed.state, ProcessState::Live);
@@ -81,6 +123,8 @@ fn grid_resize_token_and_final_bytes() {
         target,
         code: Some(7),
         signal: None,
+        exit_unknown: None,
+        io_failure: None,
         final_offset,
     });
     assert_eq!(through_holder_frame(&spawned), spawned);

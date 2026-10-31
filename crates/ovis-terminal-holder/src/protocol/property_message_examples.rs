@@ -2,7 +2,7 @@
 
 use super::*;
 
-pub(super) const MESSAGE_CASES: usize = 16;
+pub(super) const MESSAGE_CASES: usize = 17;
 
 #[expect(
     clippy::too_many_lines,
@@ -20,8 +20,17 @@ pub(super) fn message_examples() -> Vec<Message> {
     };
     let exit = Exit {
         target: target.clone(),
-        code: Some(0),
+        code: None,
         signal: None,
+        exit_unknown: Some(ExitUnknown {
+            reason: ExitUnknownReason::WaitFailed,
+            os_error: Some(10),
+        }),
+        io_failure: Some(PtyIoFailure {
+            operation: PtyOperation::Poll,
+            os_error: None,
+            poll_revents: Some(0x0008),
+        }),
         final_offset: 8,
     };
     let held = HeldTerminal {
@@ -41,12 +50,12 @@ pub(super) fn message_examples() -> Vec<Message> {
     };
     vec![
         Message::Hello(Hello {
-            generation: 1,
+            generation: HOLDER_PROTOCOL_GENERATION,
             core_build: CoreBuildId::new("core-build-a".to_owned()),
             previous: PreviousCoreState::Crash,
         }),
         Message::Welcome(Welcome {
-            generation: 1,
+            generation: HOLDER_PROTOCOL_GENERATION,
             build: HolderBuildId::new("holder-build-a".to_owned()),
             instance: HolderInstanceId::new("holder-instance-a".to_owned()),
             terminals: vec![held],
@@ -55,6 +64,8 @@ pub(super) fn message_examples() -> Vec<Message> {
             terminal_id: terminal_id.clone(),
             terminal_incarnation,
             argv: vec!["sh".to_owned()],
+            cwd: "/tmp/work".into(),
+            env: [("PATH".to_owned(), "/usr/bin".to_owned())].into(),
             geometry: (80, 24),
         }),
         Message::Spawned(Spawned {
@@ -67,7 +78,10 @@ pub(super) fn message_examples() -> Vec<Message> {
         Message::SpawnFailed(SpawnFailed {
             terminal_id,
             terminal_incarnation,
-            kind: SpawnFailureKind::Unavailable,
+            kind: SpawnFailureKind::InvalidRequest,
+            reason: SpawnFailureReason::CwdUnavailable,
+            hint: "Pass an existing directory.".to_owned(),
+            os_error: Some(2),
         }),
         Message::Output(Output {
             target: target.clone(),
@@ -109,6 +123,16 @@ pub(super) fn message_examples() -> Vec<Message> {
             through_offset: 4,
             bytes: b"head".to_vec(),
             gap: false,
+        }),
+        Message::InputRejected(InputRejected {
+            target: target.clone(),
+            sequence: 18,
+            reason: InputRejection::InputOverflow,
+            hint: "Wait for acknowledgements.".to_owned(),
+            queued_bytes: 16,
+            queued_entries: 1,
+            limit_bytes: 16,
+            limit_entries: 4096,
         }),
         Message::Forget(Forget {
             target,

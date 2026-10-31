@@ -1,7 +1,7 @@
 //! PTY holder protocol and process ownership that survives control-server restarts.
 //!
-//! Scaffold crate: it compiles and records its place in the workspace layering;
-//! runtime behavior arrives with the plan todos named on each module.
+//! [`protocol`] is the frozen holder wire contract, [`process`] gathers process
+//! incarnation evidence, and [`unix`] owns PTYs and their programs on Unix.
 
 pub mod process;
 pub mod protocol;

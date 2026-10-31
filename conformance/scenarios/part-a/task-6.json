@@ -1,0 +1,333 @@
+{
+  "scenario": "part-a/task-6",
+  "todo": 6,
+  "title": "Implement Unix PTY holders and bounded pumps",
+  "closes": [
+    "GAP-038",
+    "GAP-062",
+    "GAP-063"
+  ],
+  "delivers": [
+    "IDEAL-042",
+    "IDEAL-043",
+    "IDEAL-044",
+    "IDEAL-093"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "protocol": {
+    "name": "ovis-terminal-holder",
+    "generation": "2",
+    "transport": "unix-socket",
+    "limits": {
+      "input_queue_bytes": "16777216",
+      "retained_tail_bytes": "1048576",
+      "output_chunk_bytes": "16384",
+      "input_queue_entries": "4096"
+    }
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "connect": "core-1",
+          "send": {
+            "kind": "Hello",
+            "generation": "2",
+            "core_build": "core-build-1",
+            "previous": "crash"
+          }
+        },
+        {
+          "receive": {
+            "kind": "Welcome",
+            "generation": "2",
+            "terminals": []
+          }
+        },
+        {
+          "send": {
+            "kind": "Spawn",
+            "terminal_id": "t-happy",
+            "terminal_incarnation": "1",
+            "argv": [
+              "/bin/sh",
+              "-c",
+              "stty -echo; printf '\\303'; read gate; printf '\\251\\n'; exit 7"
+            ],
+            "geometry": [
+              "80",
+              "24"
+            ],
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin",
+              "TERM": "xterm"
+            }
+          }
+        },
+        {
+          "receive": {
+            "kind": "Spawned",
+            "terminal_id": "t-happy",
+            "terminal_incarnation": "1",
+            "capture": [
+              "process_incarnation",
+              "pid",
+              "start_token"
+            ]
+          }
+        },
+        {
+          "receive": {
+            "kind": "Output",
+            "terminal_id": "t-happy",
+            "offset": "0",
+            "bytes": [
+              195
+            ]
+          }
+        },
+        {
+          "disconnect": "core-1"
+        },
+        {
+          "connect": "core-2",
+          "send": {
+            "kind": "Hello",
+            "generation": "2",
+            "core_build": "core-build-1",
+            "previous": "crash"
+          }
+        },
+        {
+          "receive": {
+            "kind": "Welcome",
+            "terminals": [
+              {
+                "terminal_id": "t-happy",
+                "pid": "$captured.pid",
+                "start_token": "$captured.start_token",
+                "output_offset": "1",
+                "exit": null
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "kind": "Input",
+            "terminal_id": "t-happy",
+            "sequence": "1",
+            "grant": {
+              "grant_epoch": "1",
+              "fence_epoch": "1",
+              "process_incarnation": "$captured.process_incarnation"
+            },
+            "bytes_utf8": "go\n"
+          }
+        },
+        {
+          "receive_in_order": [
+            {
+              "kind": "Output",
+              "offset": "1",
+              "bytes": [
+                169,
+                13,
+                10
+              ]
+            },
+            {
+              "kind": "Exit",
+              "code": 7,
+              "signal": null,
+              "final_offset": "4"
+            }
+          ],
+          "also_receive": {
+            "kind": "InputWritten",
+            "sequence": "1",
+            "written_bytes": "3"
+          }
+        },
+        {
+          "send": {
+            "kind": "TailRequest",
+            "terminal_id": "t-happy",
+            "from_offset": "0"
+          }
+        },
+        {
+          "receive": {
+            "kind": "Tail",
+            "from_offset": "0",
+            "through_offset": "4",
+            "bytes_utf8": "\u00e9\r\n",
+            "gap": false
+          }
+        },
+        {
+          "assert": {
+            "exit_after_final_output": true,
+            "pid_unchanged_across_disconnect": true,
+            "start_token_unchanged_across_disconnect": true
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "connect": "core-1",
+          "send": {
+            "kind": "Hello",
+            "generation": "2",
+            "core_build": "core-build-1",
+            "previous": "crash"
+          }
+        },
+        {
+          "receive": {
+            "kind": "Welcome",
+            "terminals": []
+          }
+        },
+        {
+          "send": {
+            "kind": "Spawn",
+            "terminal_id": "t-missing",
+            "terminal_incarnation": "1",
+            "argv": [
+              "/nonexistent/ovis-fixture"
+            ],
+            "geometry": [
+              "80",
+              "24"
+            ],
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin",
+              "TERM": "xterm"
+            }
+          }
+        },
+        {
+          "receive": {
+            "kind": "SpawnFailed",
+            "terminal_id": "t-missing",
+            "kind_value": "invalid_request",
+            "reason": "executable_unavailable",
+            "os_error": "ENOENT",
+            "hint": "non-empty"
+          }
+        },
+        {
+          "send": {
+            "kind": "Spawn",
+            "terminal_id": "t-absent-cwd",
+            "terminal_incarnation": "1",
+            "argv": [
+              "/bin/sh",
+              "-c",
+              "true"
+            ],
+            "cwd": "$isolated_root/absent",
+            "env": {
+              "PATH": "/usr/bin:/bin",
+              "TERM": "xterm"
+            },
+            "geometry": [
+              "80",
+              "24"
+            ]
+          }
+        },
+        {
+          "receive": {
+            "kind": "SpawnFailed",
+            "terminal_id": "t-absent-cwd",
+            "reason": "cwd_unavailable",
+            "os_error": "ENOENT"
+          }
+        },
+        {
+          "send": {
+            "kind": "Spawn",
+            "terminal_id": "t-full",
+            "terminal_incarnation": "1",
+            "argv": [
+              "/bin/sh",
+              "-c",
+              "stty raw -echo; echo ready; exec sleep 600"
+            ],
+            "geometry": [
+              "80",
+              "24"
+            ],
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin",
+              "TERM": "xterm"
+            }
+          }
+        },
+        {
+          "repeat_send_until": {
+            "kind": "Input",
+            "terminal_id": "t-full",
+            "bytes_len": 1048576,
+            "sends": 20,
+            "until": {
+              "kind": "InputRejected",
+              "reason": "input_overflow",
+              "hint": "non-empty",
+              "limit_bytes": "16777216",
+              "limit_entries": "4096",
+              "max_sequence": "18"
+            }
+          }
+        },
+        {
+          "send": {
+            "kind": "Resize",
+            "terminal_id": "t-full",
+            "geometry": [
+              "120",
+              "40"
+            ],
+            "geometry_epoch": "1"
+          }
+        },
+        {
+          "send": {
+            "kind": "Signal",
+            "terminal_id": "t-full",
+            "signal": "kill"
+          }
+        },
+        {
+          "receive": {
+            "kind": "Exit",
+            "terminal_id": "t-full",
+            "code": null,
+            "signal": 9
+          }
+        },
+        {
+          "assert": {
+            "first_input_written_bytes_partial": true,
+            "later_sequences_rejected_not_written": true,
+            "connection_alive_after_overflow": true,
+            "exit_unknown": null,
+            "io_failure": null
+          }
+        }
+      ]
+    }
+  ]
+}

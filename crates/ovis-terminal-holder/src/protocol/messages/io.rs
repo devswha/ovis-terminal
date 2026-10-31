@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::outcome::{ExitUnknown, PtyIoFailure};
 use crate::protocol::{ProcessIncarnation, TerminalId, TerminalIncarnation};
 
 /// Contiguous raw PTY output bytes.
@@ -162,6 +163,10 @@ pub struct Exit {
     pub code: Option<i32>,
     /// Optional platform signal number.
     pub signal: Option<i32>,
+    /// Why no status was observed; `code` and `signal` are then absent.
+    pub exit_unknown: Option<ExitUnknown>,
+    /// Unexpected PTY failure that may have ended output early.
+    pub io_failure: Option<PtyIoFailure>,
     /// Last output byte offset produced before exit.
     #[serde(with = "crate::protocol::decimal")]
     pub final_offset: u64,

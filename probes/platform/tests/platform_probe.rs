@@ -17,8 +17,8 @@ pub mod unix_happy;
 pub mod windows_smoke;
 
 use ovis_terminal_holder::protocol::{
-    Message, ProcessIncarnation, SpawnFailed, SpawnFailureKind, TerminalId, TerminalIncarnation,
-    decode_message, encode_message,
+    Message, ProcessIncarnation, SpawnFailed, SpawnFailureKind, SpawnFailureReason, TerminalId,
+    TerminalIncarnation, decode_message, encode_message,
 };
 use ovis_terminal_probes::platform::{ByteOrder, HostFacts, ProbeError};
 use serde::Serialize;
@@ -59,6 +59,9 @@ fn assert_spawn_failure_is_typed(error: &ProbeError) {
         terminal_id,
         terminal_incarnation,
         kind,
+        reason: SpawnFailureReason::ExecutableRejected,
+        hint: error.hint().to_owned(),
+        os_error: None,
     });
     assert_eq!(through_holder_frame(&message), message);
     record(

@@ -45,7 +45,7 @@ proptest! {
             HolderInstanceId::new("holder-instance".to_owned()),
         );
         let supported = Hello {
-            generation: 1,
+            generation: HOLDER_PROTOCOL_GENERATION,
             core_build: CoreBuildId::new("core-build".to_owned()),
             previous: PreviousCoreState::Crash,
         };
@@ -74,6 +74,8 @@ proptest! {
                             target,
                             code: Some(0),
                             signal: None,
+                            exit_unknown: None,
+                            io_failure: None,
                             final_offset: offset,
                         }),
                     };
@@ -133,6 +135,8 @@ proptest! {
                             target,
                             code: Some(0),
                             signal: None,
+                            exit_unknown: None,
+                            io_failure: None,
                             final_offset: next_final_offset,
                         }),
                     };
