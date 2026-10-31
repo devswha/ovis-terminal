@@ -4,6 +4,9 @@ use std::sync::Arc;
 
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::schema::decode_params;
+use ovis_terminal_protocol::schema::methods::input::{
+    InputKeysParams, InputPasteParams, InputRawParams, InputSendParams,
+};
 use ovis_terminal_protocol::schema::methods::terminal::{
     TerminalGetParams, TerminalKeepParams, TerminalKillParams, TerminalLabelParams,
     TerminalMutateParams, TerminalRenameParams,
@@ -24,6 +27,37 @@ fn decode<P: DeserializeOwned>(call: &Call) -> Result<P, BoundaryError> {
 }
 
 impl Served {
+    /// Admits one `input.*` write on the actor thread.
+    pub(super) async fn write(&self, call: Call) -> Result<Value, BoundaryError> {
+        let session = Arc::clone(&call.session);
+        match call.request.method() {
+            "input.raw" => {
+                let params: InputRawParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.input_raw(&session, &params))
+                    .await
+            }
+            "input.send" => {
+                let params: InputSendParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.input_send(&session, &params))
+                    .await
+            }
+            "input.keys" => {
+                let params: InputKeysParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.input_keys(&session, &params))
+                    .await
+            }
+            _ => {
+                let params: InputPasteParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.input_paste(&session, &params))
+                    .await
+            }
+        }
+    }
+
     /// Serves a screen, output or output-wait read; a wait blocks off the actor thread.
     pub(super) async fn read(&self, call: Call) -> Result<Value, BoundaryError> {
         match call.request.method() {

@@ -11,7 +11,6 @@ use ovis_terminal_protocol::schema::decode_params;
 use ovis_terminal_protocol::schema::methods::attach::{
     AttachLeasesParams, AttachOpenParams, AttachResizeParams,
 };
-use ovis_terminal_protocol::schema::methods::input::InputRawParams;
 use ovis_terminal_protocol::schema::methods::server::OpRefParams;
 use ovis_terminal_protocol::schema::methods::terminal::{TerminalGetParams, TerminalRunParams};
 use ovis_terminal_protocol::schema::records::LeaseRole;
@@ -26,7 +25,7 @@ use super::directory::Directory;
 use super::error::{refusal, worker_gone};
 
 /// Methods served by the runtime actor and the lease table, besides the attach streams.
-pub(super) const ROUTED: [&str; 18] = [
+pub(super) const ROUTED: [&str; 21] = [
     "server.status",
     "terminal.run",
     "terminal.list",
@@ -43,6 +42,9 @@ pub(super) const ROUTED: [&str; 18] = [
     "terminal.wait_output",
     "op.get",
     "input.raw",
+    "input.send",
+    "input.keys",
+    "input.paste",
     "attach.resize",
     "attach.leases",
 ];
@@ -106,12 +108,7 @@ impl RequestHandler for Served {
                     .call(move |runtime| runtime.operation(&session, &params.op_id))
                     .await
             }
-            "input.raw" => {
-                let params: InputRawParams = decode(&call)?;
-                self.actor
-                    .call(move |runtime| runtime.input_raw(&session, &params))
-                    .await
-            }
+            "input.raw" | "input.send" | "input.keys" | "input.paste" => self.write(call).await,
             "attach.resize" => {
                 let params: AttachResizeParams = decode(&call)?;
                 self.actor
