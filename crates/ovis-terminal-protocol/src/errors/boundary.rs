@@ -194,6 +194,13 @@ impl BoundaryError {
         self
     }
 
+    /// Enumerates the resources a refusal protects or a partial effect committed.
+    #[must_use]
+    pub fn with_affected(mut self, affected: Vec<TargetId>) -> Self {
+        self.data_mut().affected = affected.into_boxed_slice();
+        self
+    }
+
     /// Adds an operation identity when effects may have begun.
     #[must_use]
     pub fn with_op_id(mut self, op_id: OpId) -> Self {

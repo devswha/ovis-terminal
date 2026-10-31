@@ -4,6 +4,7 @@
 //! runtime behavior arrives with the plan todos named on each module.
 
 pub mod plugins;
+pub mod worktrees;
 
 /// Cargo package name of this crate, used by the workspace layering record.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");

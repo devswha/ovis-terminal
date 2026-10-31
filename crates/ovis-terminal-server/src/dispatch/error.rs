@@ -3,9 +3,11 @@
 use ovis_terminal_authz::AuthzError;
 use ovis_terminal_core::ops::OperationError;
 use ovis_terminal_core::registry::TargetResolutionError;
+use ovis_terminal_protocol::domain::worktrees::AffectedResource;
 use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind, TargetCandidate};
 use ovis_terminal_protocol::schema::ParamsError;
 use ovis_terminal_protocol::schema::ids::{MachineId, RuntimeLifetimeId, TerminalId};
+use ovis_terminal_services::worktrees::WorktreeError;
 
 /// A dispatch failure; inner diagnostics are retained as sources, not sent as raw prose.
 #[derive(Debug, thiserror::Error)]
@@ -47,6 +49,9 @@ pub enum DispatchError {
     /// A platform counter cannot represent the requested quantity.
     #[error("the counter does not fit the platform representation")]
     Range(#[from] std::num::TryFromIntError),
+    /// A worktree request was refused, failed or stopped part way.
+    #[error("the worktree request did not complete")]
+    Worktree(#[from] WorktreeError),
     /// The monotonic clock cannot represent the deadline.
     #[error("the monotonic clock cannot represent the dispatch deadline")]
     DeadlineOverflow,
@@ -71,6 +76,7 @@ impl DispatchError {
             Self::Target(error) => error.kind(),
             Self::Authority(error) => error.kind(),
             Self::Operation(error) => error.kind(),
+            Self::Worktree(error) => error.kind(),
             Self::Encode(_)
             | Self::Join(_)
             | Self::Clock(_)
@@ -91,6 +97,7 @@ impl DispatchError {
             Self::Target(error) => error.hint(),
             Self::Authority(error) => error.hint(),
             Self::Operation(error) => error.hint(),
+            Self::Worktree(error) => error.hint(),
             Self::Encode(_) | Self::Join(_) | Self::Io(_) => {
                 "inspect the operation before retrying"
             }
@@ -120,11 +127,17 @@ impl DispatchError {
         ) {
             return BoundaryError::invalid_params(Some("params.op_id"));
         }
-        let mut error = BoundaryError::domain(
-            ErrorKind::from(self.kind().to_owned()),
-            matches!(self, Self::Backpressure),
-        )
-        .with_hint(self.hint());
+        let retryable = match self {
+            Self::Backpressure => true,
+            Self::Worktree(source) => source.retryable(),
+            _ => false,
+        };
+        let mut error = BoundaryError::domain(ErrorKind::from(self.kind().to_owned()), retryable)
+            .with_hint(self.hint());
+        if let Self::Worktree(source) = self {
+            let affected = source.affected().iter().map(AffectedResource::target_id);
+            error = error.with_affected(affected.collect());
+        }
         if let Self::Target(source) = self
             && let Some(candidates) = source.candidates()
         {

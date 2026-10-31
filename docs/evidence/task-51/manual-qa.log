@@ -1,0 +1,64 @@
+Linux x86_64
+$ ovis-terminal --json service status --session t51qa74428
+{"label":"ovis-terminal-holder-t51qa74428","missing_prerequisites":["service_manager"],"registered":null,"state":"stopped"}
+exit=0
+$ ovis-terminal --json service install --manager systemd-user --session t51qa74428
+{"definition":"/home/devswha/.config/systemd/user/ovis-terminal-holder-t51qa74428.service","label":"ovis-terminal-holder-t51qa74428","manager":"systemd_user","missing_prerequisites":[]}
+exit=0
+[Unit]
+Description=ovis-terminal PTY holder for session t51qa74428
+X-OvisTerminalLabel=ovis-terminal-holder-t51qa74428
+
+[Service]
+Type=notify
+NotifyAccess=main
+Restart=no
+ExecStart="/home/devswha/workspace/ovis-terminal-wt/lane-t51/target/debug/ovis-terminal" "service" "run" "--session" "t51qa74428" "--manager" "systemd-user"
+Environment="XDG_RUNTIME_DIR=/run/user/1000"
+Environment="HOME=/home/devswha"
+$ ovis-terminal --json service start --manager systemd-user --session t51qa74428
+{"label":"ovis-terminal-holder-t51qa74428","missing_prerequisites":[],"record":{"address":"/run/user/1000/ovis-terminal/holder-t51qa74428.sock","boot_proof":{"pid":2656928,"start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:31753584"},"format":"ovis-terminal-holder-endpoint/1","label":"ovis-terminal-holder-t51qa74428","manager":"systemd_user","transport":"unix"},"registered":"systemd_user","state":"running"}
+exit=0
+ActiveState=active
+MainPID=2656928
+ControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/ovis-terminal-holder-t51qa74428.service
+$ ovis-terminal --json service status --session t51qa74428
+{"label":"ovis-terminal-holder-t51qa74428","missing_prerequisites":[],"record":{"address":"/run/user/1000/ovis-terminal/holder-t51qa74428.sock","boot_proof":{"pid":2656928,"start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:31753584"},"format":"ovis-terminal-holder-endpoint/1","label":"ovis-terminal-holder-t51qa74428","manager":"systemd_user","transport":"unix"},"registered":"systemd_user","state":"running"}
+exit=0
+$ ovis-terminal --json server status
+{"holder_count":0,"live_terminals":0,"runtime_lifetime":null,"server_boot_id":null,"state":"stopped","uptime_ms":null}
+exit=0
+$ ovis-terminal --json service stop --session t51qa74428
+{"ended_holder":{"pid":2656928,"start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:31753584"},"ended_terminals":[],"label":"ovis-terminal-holder-t51qa74428"}
+exit=0
+ActiveState=inactive
+$ ovis-terminal --json service status --session t51qa74428
+{"label":"ovis-terminal-holder-t51qa74428","missing_prerequisites":[],"registered":"systemd_user","state":"stopped"}
+exit=0
+$ ovis-terminal --json service uninstall --manager systemd-user --session t51qa74428
+{"label":"ovis-terminal-holder-t51qa74428","manager":"systemd_user","removed_definition":"/home/devswha/.config/systemd/user/ovis-terminal-holder-t51qa74428.service"}
+exit=0
+0
+=== stale descriptor (detached holder, SIGKILL of the pid this run started)
+{"label":"ovis-terminal-holder-default","missing_prerequisites":["service_manager"],"record":{"address":"/tmp/ovs-qa-stale/ovis-terminal/holder-default.sock","boot_proof":{"pid":2657112,"start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:31753636"},"format":"ovis-terminal-holder-endpoint/1","label":"ovis-terminal-holder-default","manager":null,"transport":"unix"},"registered":null,"state":"running"}
+holder pid=2657112
+pid 2657112 gone
+{"label":"ovis-terminal-holder-default","missing_prerequisites":["service_manager"],"reason":"process_gone","record":{"address":"/tmp/ovs-qa-stale/ovis-terminal/holder-default.sock","boot_proof":{"pid":2657112,"start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:31753636"},"format":"ovis-terminal-holder-endpoint/1","label":"ovis-terminal-holder-default","manager":null,"transport":"unix"},"registered":null,"state":"stale_endpoint"}
+exit=0
+{"label":"ovis-terminal-holder-default","missing_prerequisites":["service_manager"],"reason":"process_gone","record":{"address":"/tmp/ovs-qa-stale/ovis-terminal/holder-default.sock","boot_proof":{"pid":2657112,"start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:31753636"},"format":"ovis-terminal-holder-endpoint/1","label":"ovis-terminal-holder-default","manager":null,"transport":"unix"},"registered":null,"state":"stale_endpoint"}
+exit=0
+{"label":"ovis-terminal-holder-default","missing_prerequisites":["service_manager"],"reason":"process_gone","record":{"address":"/tmp/ovs-qa-stale/ovis-terminal/holder-default.sock","boot_proof":{"pid":2657112,"start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:31753636"},"format":"ovis-terminal-holder-endpoint/1","label":"ovis-terminal-holder-default","manager":null,"transport":"unix"},"registered":null,"state":"stale_endpoint"}
+exit=0
+{"error":{"exit_code":4,"hint":"start the service again; start replaces a proven-dead endpoint","kind":"stale_endpoint","message":"the service endpoint is stale (ProcessGone)","origin":"cli","reason":"process_gone","state":"stale_endpoint"}}
+exit=4
+service-run processes before=2 after=2
+total 4
+drwx------ 2 devswha devswha  80 Oct 31 23:34 .
+drwx------ 3 devswha devswha  60 Oct 31 23:34 ..
+-rw------- 1 devswha devswha 278 Oct 31 23:34 holder-default.json
+srwxrwxr-x 1 devswha devswha   0 Oct 31 23:34 holder-default.sock
+=== explicit start replaces the proven-dead endpoint
+{"label":"ovis-terminal-holder-default","missing_prerequisites":["service_manager"],"record":{"address":"/tmp/ovs-qa-stale/ovis-terminal/holder-default.sock","boot_proof":{"pid":2657175,"start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:31753708"},"format":"ovis-terminal-holder-endpoint/1","label":"ovis-terminal-holder-default","manager":null,"transport":"unix"},"registered":null,"state":"running"}
+exit=0
+{"ended_holder":{"pid":2657175,"start_token":"linux:44213f41-39db-4eed-a62b-f5e5992ca358:31753708"},"ended_terminals":[],"label":"ovis-terminal-holder-default"}
+exit=0

@@ -1,0 +1,38 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "platform/unix-service",
+  "title": "Unix holder service lifetime is separate from the client that started it, and status never starts or registers anything",
+  "todo": 51,
+  "closes": ["GAP-001", "GAP-016", "GAP-017", "GAP-121"],
+  "delivers": ["IDEAL-001", "IDEAL-014", "IDEAL-093", "IDEAL-099"],
+  "excludes": ["EXCL-001", "EXCL-004", "EXCL-027"],
+  "platforms": ["linux", "macos"],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "A detached holder started by one invocation keeps serving after that invocation exits; later invocations observe it running from its record and boot proof, the control server stays stopped, and an explicit stop ends it with a receipt and leaves it stopped.",
+      "steps": [
+        {"run": {"args": ["--json", "service", "status"], "exit": 0, "stdout": {"/state": "stopped", "/registered": null, "/record": {"$present": false}, "/missing_prerequisites": ["service_manager"]}}},
+        {"run": {"args": ["--json", "service", "start", "--manager", "detached"], "exit": 0, "stdout": {"/state": "running", "/label": "ovis-terminal-holder-default", "/record/format": "ovis-terminal-holder-endpoint/1", "/record/transport": "unix", "/record/manager": null, "/record/boot_proof/pid": {"$present": true}, "/record/boot_proof/start_token": {"$present": true}, "/missing_prerequisites": ["service_manager"]}}},
+        {"run": {"args": ["--json", "service", "status"], "exit": 0, "stdout": {"/state": "running", "/record/manager": null, "/record/boot_proof/pid": {"$present": true}}}},
+        {"run": {"args": ["--json", "service", "status"], "exit": 0, "stdout": {"/state": "running", "/stale": {"$present": false}}}},
+        {"run": {"args": ["--json", "server", "status"], "exit": 0, "stdout": {"/state": "stopped", "/holder_count": 0}}},
+        {"run": {"args": ["--json", "service", "stop"], "exit": 0, "stdout": {"/label": "ovis-terminal-holder-default", "/ended_holder/pid": {"$present": true}, "/ended_holder/start_token": {"$present": true}, "/ended_terminals": []}}},
+        {"run": {"args": ["--json", "service", "status"], "exit": 0, "stdout": {"/state": "stopped", "/record": {"$present": false}}}}
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "Inspecting a stopped service leaves it stopped (a later stop is already_stopped), malformed sessions are refused before anything is touched, and the control-server status of the same root stays stopped.",
+      "steps": [
+        {"run": {"args": ["--json", "service", "status"], "exit": 0, "stdout": {"/state": "stopped"}}},
+        {"run": {"args": ["--json", "service", "status"], "exit": 0, "stdout": {"/state": "stopped"}}},
+        {"run": {"args": ["--json", "service", "stop"], "exit": 11, "stderr": {"/error/kind": "already_stopped", "/error/exit_code": 11}}},
+        {"run": {"args": ["--json", "service", "start", "--manager", "detached", "--session", "../escape"], "exit": 2, "stderr": {"/error/kind": "invalid_session"}}},
+        {"run": {"args": ["--json", "service", "start"], "exit": 2, "stderr": {"/error/kind": "usage"}}},
+        {"run": {"args": ["--json", "server", "status"], "exit": 0, "stdout": {"/state": "stopped"}}},
+        {"run": {"args": ["--json", "service", "status"], "exit": 0, "stdout": {"/state": "stopped", "/registered": null}}}
+      ]
+    }
+  ]
+}

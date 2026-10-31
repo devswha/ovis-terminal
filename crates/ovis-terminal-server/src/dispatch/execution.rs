@@ -81,6 +81,13 @@ impl<D, P> Execution<D, P> {
         }
     }
 
+    /// The cancellation flag for effects that must stop cooperatively inside [`Execution::commit`].
+    ///
+    /// It turns `true` when cancellation is requested; a closed channel means dispatch has gone.
+    pub fn cancellation(&self) -> watch::Receiver<bool> {
+        self.cancellation.clone()
+    }
+
     /// The operation's inspectable identity.
     pub const fn op_id(&self) -> &OpId {
         &self.op_id

@@ -26,6 +26,7 @@ pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 /// Workspace crates this crate builds on; every entry is a declared Cargo dependency.
 pub const DEPENDS_ON: &[&str] = &[
     ovis_terminal_protocol::CRATE_NAME,
+    ovis_terminal_holder::CRATE_NAME,
     ovis_terminal_core::CRATE_NAME,
     ovis_terminal_authz::CRATE_NAME,
     ovis_terminal_agent::CRATE_NAME,
