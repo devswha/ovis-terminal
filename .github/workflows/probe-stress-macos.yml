@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, leases]
+        options: [platform, holder-shutdown, screen, leases]
 
 permissions:
   contents: read
@@ -78,6 +78,36 @@ jobs:
         with:
           name: probe-stress-macos-${{ matrix.image }}-${{ matrix.probe }}-${{ github.run_id }}
           path: probe-stress-macos.log
+          if-no-files-found: error
+  screen:
+    if: inputs.probe == 'screen'
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat screen tests 100 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 100); do
+              printf '\nITERATION %s/100\n' "$iteration"
+              cargo nextest run -p ovis-terminal-core --test screen --locked --no-tests=fail
+              printf 'PASS %s/100\n' "$iteration"
+            done
+            printf 'RESULT 100/100\n'
+          } 2>&1 | tee screen-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screen-stress-${{ github.run_id }}
+          path: screen-stress-macos.log
           if-no-files-found: error
   leases:
     if: inputs.probe == 'leases'
