@@ -8,6 +8,7 @@ mod job;
 pub mod lanes;
 mod read;
 mod registry;
+mod reservation;
 mod runtime;
 mod tasks;
 

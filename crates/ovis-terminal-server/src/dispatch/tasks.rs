@@ -5,19 +5,21 @@ use std::sync::{Arc, Weak};
 
 use ovis_terminal_authz::{PrincipalId, Session};
 use ovis_terminal_core::ops::Request;
-use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind};
+use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind, OpId};
 use ovis_terminal_protocol::schema::limits::Limits;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore, watch};
 use tokio::task::{Id, JoinSet};
 
 use super::DispatchError;
 use super::deadline::Response;
+use super::reservation::Reservation;
 
 pub(super) struct Active {
     pub principal: PrincipalId,
     pub request: Arc<Request>,
     pub cancel: watch::Sender<bool>,
     pub response: Response,
+    pub reservation: Arc<Reservation>,
 }
 
 #[derive(Default)]
@@ -50,6 +52,14 @@ impl Tasks {
                     .with_op_id(request.op_id().clone()),
             ),
             None => Ok(None),
+        }
+    }
+
+    pub(super) fn signal(&self, principal: &PrincipalId, op_id: &OpId) {
+        for active in self.active.values() {
+            if &active.principal == principal && active.request.op_id() == op_id {
+                active.cancel.send_replace(true);
+            }
         }
     }
 
@@ -100,7 +110,7 @@ impl Tasks {
         if self.closed {
             return Err(DispatchError::Closed);
         }
-        let limit = usize::try_from(Limits::v1().max_in_flight_requests)?;
+        let limit = usize::try_from(Limits::v1().max_in_flight_requests.get())?;
         self.connections.retain(|(session, permits)| {
             session.strong_count() > 0 || permits.available_permits() < limit
         });

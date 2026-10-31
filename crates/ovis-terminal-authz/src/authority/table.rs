@@ -91,6 +91,11 @@ impl<F: IdentityFamily> CredentialRecord<F> {
         Ok(())
     }
 
+    /// The bearer text this record was issued as, the key of its attestations.
+    pub(super) fn bearer_text(&self, credential: CredentialId) -> String {
+        self.secret.bearer(credential)
+    }
+
     pub(super) fn proves(&self, presented: &CredentialSecret) -> bool {
         self.secret.matches(presented)
     }

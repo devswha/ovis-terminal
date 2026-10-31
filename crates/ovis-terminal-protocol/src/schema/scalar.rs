@@ -79,6 +79,10 @@ decimal_newtype!(
     ByteCount
 );
 decimal_newtype!(
+    /// Number of items such as retained events, history lines or in-flight requests.
+    Count
+);
+decimal_newtype!(
     /// Epoch of an interact or geometry lease; bumps on every ownership change.
     LeaseEpoch
 );

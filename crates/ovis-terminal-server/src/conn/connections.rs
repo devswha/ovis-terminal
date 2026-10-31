@@ -37,11 +37,9 @@ impl<H: RequestHandler> Connections<H> {
         handler: Arc<H>,
     ) -> Result<Self, EndpointError> {
         let identity = ServerIdentity::new(runtime, &handler.methods())?;
-        let max_in_flight =
-            usize::try_from(identity.limits().max_in_flight_requests).map_err(|_| {
-                EndpointError::Unrepresentable {
-                    limit: "max_in_flight_requests",
-                }
+        let max_in_flight = usize::try_from(identity.limits().max_in_flight_requests.get())
+            .map_err(|_| EndpointError::Unrepresentable {
+                limit: "max_in_flight_requests",
             })?;
         let unwritten_bytes = identity.limits().connection_unwritten_bytes.get();
         let (signal, _) = watch::channel(false);

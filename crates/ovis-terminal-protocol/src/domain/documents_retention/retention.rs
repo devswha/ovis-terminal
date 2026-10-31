@@ -156,7 +156,7 @@ impl RetentionPolicy {
                 RetentionLimit::new(
                     RetentionClass::Events,
                     RetentionUnit::Records,
-                    u64::from(limits.event_replay_events),
+                    limits.event_replay_events.get(),
                 ),
                 RetentionLimit::new(RetentionClass::Receipts, RetentionUnit::Records, 100_000)
                     .max_age(limits.op_retention_ms),

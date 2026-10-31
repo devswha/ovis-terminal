@@ -39,9 +39,10 @@ async fn requests_beyond_the_in_flight_bound_get_backpressure_and_cancel_on_shut
     let server = fixture.serve(1, Arc::clone(&recorder)).await?;
     let mut client = fixture.connect().await?;
     let hello = client.hello_framed("1", &fixture.bearer).await?;
-    let bound = at(&hello, "/result/limits/max_in_flight_requests")
-        .as_u64()
-        .ok_or("bound")?;
+    let bound: u64 = at(&hello, "/result/limits/max_in_flight_requests")
+        .as_str()
+        .ok_or("bound is a decimal string")?
+        .parse()?;
     for index in 0..bound {
         let id = format!("hold-{index}");
         client

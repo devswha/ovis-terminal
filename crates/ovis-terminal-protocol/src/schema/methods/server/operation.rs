@@ -174,6 +174,9 @@ pub enum CancelOutcome {
     AlreadyCommitted,
     /// Work may have begun; inspect the operation rather than replaying it.
     Pending,
+    /// Cancellation reached the request before its durable accept, which then committed
+    /// as cancelled; no effect was permitted and the request itself settles `cancelled`.
+    CancelPending,
 }
 
 /// Cancellation adds a typed outcome while preserving every released `OpRecord` field.

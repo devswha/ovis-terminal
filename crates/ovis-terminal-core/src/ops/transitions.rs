@@ -9,7 +9,10 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-use super::{OperationError, OperationEvent, OperationSnapshot, Operations, RunningOperation};
+use super::admission::{Admission, Admitted};
+use super::{
+    OperationError, OperationEvent, OperationSnapshot, Operations, Request, RunningOperation,
+};
 use crate::events::{EventData, SnapshotProducer};
 
 impl<D, P> Operations<'_, D, P>
@@ -139,6 +142,22 @@ where
             OpenEnum::Known(_) | OpenEnum::Unknown(_) => return Err(OperationError::InvalidLedger),
         };
         Ok(OpCancelResult::new(row.entry.record, outcome))
+    }
+
+    /// Accepts a request whose cancellation arrived before its durable accept.
+    ///
+    /// A new identity commits `op.accepted` and `op.cancelled` in one transaction, so no
+    /// restart or replay can observe it as runnable. An equivalent retained identity is
+    /// cancelled exactly as [`Operations::cancel`] would.
+    ///
+    /// # Errors
+    ///
+    /// Returns the acceptance errors of [`Operations::accept`] or the cancellation errors.
+    pub fn accept_cancelled(&self, request: &Request) -> Result<OpCancelResult, OperationError> {
+        match self.admit(request, Admission::Cancelled)? {
+            Admitted::New(record) => Ok(OpCancelResult::new(*record, CancelOutcome::CancelPending)),
+            Admitted::Retained => self.cancel(request.op_id()),
+        }
     }
 
     fn store_failure(

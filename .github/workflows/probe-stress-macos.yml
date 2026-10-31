@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, docs-retention]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, docs-retention]
 
 permissions:
   contents: read
@@ -385,6 +385,97 @@ jobs:
         with:
           name: agent-status-stress-macos-${{ github.run_id }}
           path: agent-status-stress-macos.log
+          if-no-files-found: error
+  subscriptions:
+    if: inputs.probe == 'subscriptions'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat subscription tests 100 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 100); do
+              printf '\nITERATION %s/100\n' "$iteration"
+              cargo nextest run -p ovis-terminal-core --test subscriptions --locked --no-tests=fail
+              printf 'PASS %s/100\n' "$iteration"
+            done
+            printf 'RESULT 100/100\n'
+          } 2>&1 | tee subscriptions-stress.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: subscriptions-stress-${{ github.run_id }}
+          path: subscriptions-stress.log
+          if-no-files-found: error
+  machine-identity:
+    if: inputs.probe == 'machine-identity'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat machine identity and transport tests 100 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 100); do
+              printf '\nITERATION %s/100\n' "$iteration"
+              cargo nextest run -p ovis-terminal-remote --lib --locked --no-tests=fail -E 'test(/identity|transport::/)'
+              cargo nextest run -p ovis-terminal-server --lib --locked --no-tests=fail --no-capture -E 'test(/machine_identity::qa/)'
+              printf 'PASS %s/100\n' "$iteration"
+            done
+            printf 'RESULT 100/100\n'
+          } 2>&1 | tee machine-identity-stress.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: machine-identity-stress-${{ github.run_id }}
+          path: machine-identity-stress.log
+          if-no-files-found: error
+  ops-cancel:
+    if: inputs.probe == 'ops-cancel'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat op.cancel race tests 25 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              cargo nextest run -p ovis-terminal-server --test ops_cancel --locked --no-tests=fail --no-capture
+              printf 'PASS %s/25\n' "$iteration"
+            done
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee ops-cancel-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ops-cancel-stress-macos-${{ github.run_id }}
+          path: ops-cancel-stress-macos.log
           if-no-files-found: error
   docs-retention:
     if: inputs.probe == 'docs-retention'

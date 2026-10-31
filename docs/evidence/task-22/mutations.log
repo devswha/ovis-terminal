@@ -1,0 +1,30 @@
+# Mutation runs for todo 22 round 2 (gate review B1)
+# Base: 2e6c8b9 + round-2 tests (qa/durability.rs). Each mutant was applied to the
+# working tree, the subscription suite run with --no-fail-fast, and the sources restored.
+# Host: Linux 7.0.0-38-generic x86_64. A mutant is killed when exit != 0.
+
+## M4: delete the synchronous persist_pending() in Feed::close_forced
+$ cargo nextest run -p ovis-terminal-core --test subscriptions --no-fail-fast
+assertion `left == right` failed: marker not durable at close_forced return
+        FAIL [   0.042s] ( 4/21) ovis-terminal-core::subscriptions durability::close_forced_returns_only_after_its_marker_is_durable
+     Summary [   0.172s] 21 tests run: 20 passed, 1 failed, 0 skipped
+exit=100
+
+## M11 (reviewer form): awaiting_restart accepts any Lost; Feed::next Lost branch drops persist_pending()
+$ cargo nextest run -p ovis-terminal-core --test subscriptions --no-fail-fast
+FAIL [   5.266s] (21/21) ovis-terminal-core::subscriptions durability::missed_is_returned_only_after_its_marker_is_durable
+     Summary [   5.267s] 21 tests run: 20 passed, 1 failed, 0 skipped
+exit=100
+
+## M11 (complete form): as above plus Table::restart accepts an unpersisted loss
+$ cargo nextest run -p ovis-terminal-core --test subscriptions --no-fail-fast
+assertion `left == right` failed: marker not durable when Missed returned
+        FAIL [   0.064s] ( 7/21) ovis-terminal-core::subscriptions durability::missed_is_returned_only_after_its_marker_is_durable
+        FAIL [   0.075s] ( 8/21) ovis-terminal-core::subscriptions stall::a_stalled_fanout_worker_loses_every_subscription_and_each_recovers
+     Summary [   0.170s] 21 tests run: 19 passed, 2 failed, 0 skipped
+exit=100
+
+## Unmutated source (round-2 head)
+$ cargo nextest run -p ovis-terminal-core --test subscriptions
+     Summary 21 tests run: 21 passed, 0 skipped
+exit=0

@@ -200,6 +200,16 @@ pub enum DomainErrorKind {
     RemoteIncompatible,
     /// The remote install was refused.
     InstallRefused,
+    /// No expected machine identity was configured for the remote runtime.
+    TrustRequired,
+    /// The remote runtime proved a machine identity other than the expected one.
+    TrustMismatch,
+    /// The boot proof does not answer this connection's fresh challenge.
+    BootProofStale,
+    /// The remote runtime did not complete the handshake within its bound.
+    HandshakeTimeout,
+    /// The machine is already added under another name.
+    MachineExists,
     /// The operation needs an interactive terminal.
     NeedsTty,
     /// An integrity check failed.
