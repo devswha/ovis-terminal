@@ -18,6 +18,7 @@ use tokio::sync::watch;
 
 use super::execution::{State, now};
 use super::registry::Prepared;
+use super::reservation::Reservation;
 use super::{DispatchError, Execution};
 
 pub(super) struct Job<D, P> {
@@ -25,6 +26,7 @@ pub(super) struct Job<D, P> {
     pub session: Arc<Session>,
     pub decision: Decision<RegistryIdentities>,
     pub notifier: crate::conn::Notifier,
+    pub reservation: Arc<Reservation>,
 }
 
 impl<D, P> Job<D, P>
@@ -56,8 +58,31 @@ where
         );
         let state = Arc::clone(&self.state);
         let accepted_context = context.clone();
+        let reservation = Arc::clone(&self.reservation);
+        let request = Arc::clone(&prepared.request);
         let record = tokio::task::spawn_blocking(move || {
-            Operations::new(&state.core, accepted_context).accept(&prepared.request)
+            let operations = Operations::new(&state.core, accepted_context);
+            let acceptance = reservation.accept();
+            let accepted =
+                if acceptance.cancel_requested() {
+                    match operations.accept_cancelled(&request) {
+                        Ok(cancelled) => {
+                            acceptance.deliver(serde_json::to_value(&cancelled).map_err(|error| {
+                                DispatchError::from(error).boundary().data().clone()
+                            }));
+                            Ok(cancelled.operation)
+                        }
+                        Err(error) => {
+                            let error = DispatchError::from(error);
+                            acceptance.deliver(Err(error.boundary().data().clone()));
+                            Err(error)
+                        }
+                    }
+                } else {
+                    operations.accept(&request).map_err(DispatchError::from)
+                };
+            drop(acceptance);
+            accepted
         })
         .await??;
         match record.state {

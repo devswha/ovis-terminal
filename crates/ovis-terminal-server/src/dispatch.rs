@@ -7,6 +7,7 @@ mod execution;
 mod job;
 pub mod lanes;
 mod registry;
+mod reservation;
 mod runtime;
 mod tasks;
 

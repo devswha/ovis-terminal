@@ -1,5 +1,6 @@
 //! Authentication, authorization and the commit-time recheck of decisions.
 
+mod attest;
 mod cell;
 mod issuance;
 mod issued;
@@ -9,6 +10,7 @@ mod tombstone;
 
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
+pub use attest::{AttestRequest, Attestation};
 pub use issued::IssuedCredential;
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use secret::PresentedBearer;

@@ -3,6 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::machine_identity::{BootChallenge, BootProof};
 use crate::errors::OpId;
 use crate::schema::common::{NoParams, PageInfo, PageRequest};
 use crate::schema::ids::{
@@ -48,6 +49,8 @@ pub struct HelloParams {
     pub framed: Option<bool>,
     /// Credential for remote or WebSocket transports.
     pub credential: Option<String>,
+    /// Fresh challenge the result must answer with a boot proof keyed by the credential.
+    pub challenge: Option<BootChallenge>,
 }
 
 /// Result of `hello`.
@@ -74,6 +77,8 @@ pub struct HelloResult {
     pub server_time_ms: TimestampMs,
     /// Transport of this connection.
     pub endpoint_kind: OpenEnum<TransportKind>,
+    /// Answer to the request's challenge; absent when no challenge was sent.
+    pub boot_proof: Option<BootProof>,
 }
 
 /// Observed state of a control server.

@@ -1,7 +1,11 @@
 //! Authenticated remote machines over byte-transparent transports.
 //!
-//! Scaffold crate: it compiles and records its place in the workspace layering;
-//! runtime behavior arrives with the plan todos named on each module.
+//! Machines are keyed by the identity their runtime proves over a fresh challenge
+//! ([`identity`]) and reached over transports that carry protocol bytes unchanged
+//! ([`transport`]). Actors and event mirroring arrive with plan todo 44.
+
+pub mod identity;
+pub mod transport;
 
 /// Cargo package name of this crate, used by the workspace layering record.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");

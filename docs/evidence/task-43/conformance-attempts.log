@@ -1,0 +1,24 @@
+        PASS [  29.548s] (23/24) ovis-terminal-conformance::runner suite::require_no_skips_fails_while_declarations_remain
+        PASS [  29.617s] (24/24) ovis-terminal-conformance::runner suite::every_scenario_file_is_executed_or_a_listed_declaration
+────────────
+     Summary [  29.617s] 24 tests run: 24 passed, 0 skipped
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 14.50s
+BUILD_EXIT=0
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario remote/identity --isolated --case all --evidence "$ATTEMPT_DIR/task-43-ovis-terminal-v1.json"
+{"case":"all","error":{"detail":"remote/identity is a declaration, not a registered executable scenario","hint":"register the scenario with \"format\": \"ovis-conformance/1\" and typed steps","kind":"scenario_not_executable","step":null},"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t43/.omo/evidence/ovis-terminal-v1/task-43/task-43-ovis-terminal-v1.json","evidence_written":null,"result":"failed","scenario":"remote/identity","totals":{"assertions":"0","cases":"0","declared_only":"0","failed":"0","passed":"0","skipped":"0"}}
+EXIT=1
+$ ... --case happy
+{"case":"happy","error":{"detail":"remote/identity is a declaration, not a registered executable scenario","hint":"register the scenario with \"format\": \"ovis-conformance/1\" and typed steps","kind":"scenario_not_executable","step":null},"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t43/.omo/evidence/ovis-terminal-v1/task-43/task-43-ovis-terminal-v1.json","evidence_written":null,"result":"failed","scenario":"remote/identity","totals":{"assertions":"0","cases":"0","declared_only":"0","failed":"0","passed":"0","skipped":"0"}}
+EXIT=1
+$ ... --case failure --inject ... --append
+error: unexpected argument '--inject' found
+
+Usage: conformance --binary <BINARY> --scenario <SCENARIO> --isolated --case <CASE>
+
+For more information, try '--help'.
+EXIT=2
+$ ... --scenario all/all --case all
+ALL_EXIT=0
+
+Linux x86_64
+1530fb97d153617d4a7c5fbb1a3cae19e04b3eff20d4d4af32988085a26226d3  target/debug/ovis-terminal

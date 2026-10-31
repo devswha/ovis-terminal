@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::OpId;
 use crate::schema::common::MachineRef;
-use crate::schema::ids::{BuildVersion, MachineId, MachineName, RuntimeLifetimeId};
+use crate::schema::ids::{BuildVersion, MachineId, MachineName, RuntimeLifetimeId, ServerBootId};
 use crate::schema::method::{MethodSpec, method};
 use crate::schema::scalar::{ByteCount, ByteOffset, DurationMs, EventSeq, OpenEnum, Revision};
 
@@ -38,6 +38,8 @@ pub struct MachineRecord {
     pub state: OpenEnum<MachineState>,
     /// Remote runtime lifetime, when known.
     pub remote_lifetime: Option<RuntimeLifetimeId>,
+    /// Remote control-server boot proven by the last fresh challenge, when known.
+    pub remote_boot_id: Option<ServerBootId>,
     /// Last remote sequence mirrored locally.
     pub last_seen_seq: Option<EventSeq>,
     /// Remote runtime version, when known.
@@ -70,6 +72,8 @@ pub struct MachineAddParams {
     pub transport: MachineTransport,
     /// Credential that authorizes the remote runtime.
     pub credential: String,
+    /// Machine identity the remote runtime must prove; the add is refused without it.
+    pub expected_machine_id: Option<MachineId>,
 }
 
 /// Parameters of machine reads and removals.
@@ -196,7 +200,7 @@ pub struct MachineFileResult {
 /// Methods of this namespace.
 pub(crate) const METHODS: &[MethodSpec] = &[
     method! {"machine.add", Mutation, Untargeted, MachineAddParams => MachineRecord,
-    "Add a machine with explicit transport and trust.", [DuplicateName, InvalidName, TransportFailed, AuthFailed, HostKeyUnknown, RemoteIncompatible, InstallRefused]},
+    "Add a machine with explicit transport and trust.", [DuplicateName, InvalidName, TransportFailed, AuthFailed, HostKeyUnknown, RemoteIncompatible, InstallRefused, TrustRequired, TrustMismatch, BootProofStale, HandshakeTimeout, MachineExists]},
     method! {"machine.list", Query, Untargeted, crate::schema::common::NoParams => MachineListResult,
     "List machines.", []},
     method! {"machine.get", Query, Lookup, MachineRefParams => MachineRecord,
