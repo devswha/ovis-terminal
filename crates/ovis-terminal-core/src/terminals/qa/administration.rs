@@ -1,6 +1,8 @@
 //! Explicit program-stop scope and Linux foreground/background observations.
 
-use ovis_terminal_core::terminals::{ControlReceipt, Field};
+use ovis_terminal_core::terminals::ControlReceipt;
+#[cfg(target_os = "linux")]
+use ovis_terminal_core::terminals::Field;
 
 use super::*;
 
