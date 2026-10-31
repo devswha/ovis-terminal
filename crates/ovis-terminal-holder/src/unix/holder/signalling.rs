@@ -89,7 +89,7 @@ fn failed_delivery(terminal: &Terminal, error: SignalError) -> Result<SignalOutc
             }
             Some(_) | None => {}
         },
-        SignalError::PidOutOfRange { .. } => {}
+        SignalError::PidOutOfRange { .. } | SignalError::ReservedPid { .. } => {}
     }
     Err(error.into())
 }
