@@ -3,6 +3,7 @@
 //! Scaffold crate: it compiles and records its place in the workspace layering;
 //! runtime behavior arrives with the plan todos named on each module.
 
+pub mod bridge;
 pub mod conversation;
 pub mod prompts;
 pub mod status;

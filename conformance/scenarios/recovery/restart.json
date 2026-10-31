@@ -1,0 +1,41 @@
+{
+  "scenario": "recovery/restart",
+  "todo": 48,
+  "title": "Planned control restart keeps program incarnations and reports interrupted work",
+  "closes": ["GAP-065", "GAP-122", "GAP-126"],
+  "delivers": ["IDEAL-045", "IDEAL-094", "IDEAL-099", "IDEAL-117"],
+  "excludes": ["EXCL-016", "EXCL-021", "EXCL-026", "EXCL-027"],
+  "platforms": ["linux", "macos"],
+  "verification": {
+    "status": "declared_until_routable",
+    "blocked_by": {
+      "31": "assembles the served binary that registers dispatch::lanes::restart (ServerRestart, ServerStop) over ovis_terminal_core::restart::Control and replaces its listener under the successor boot identity",
+      "21": "the runner's only fixture ('protocol') registers doc.set, doc.get, terminal.keep and the agent lanes, holds no holder-owned program, and its discovery scenario asserts server.stop is unserved"
+    },
+    "covered_meanwhile_by": [
+      "cargo test -p ovis-terminal-core --lib restart (real holder PTY, SQLite store and authority: restart, crash at every barrier, repeated interruption, host reboot, rollback, interrupted launch, both stop scopes)",
+      "cargo test -p ovis-terminal-server --lib lanes::restart (real Unix socket, Dispatcher and SQLite ledger: server.restart then hello on the successor boot; server.stop scope refusal and control_only)",
+      "cargo test -p ovis-terminal-protocol --lib domain::restart (records, decimal strings, identity transition table equals docs/identity-transitions.md)"
+    ]
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {"hold": "a live child '/bin/sh -c \"printf ARMED; read gate\"' and an output wait armed on its terminal"},
+        {"rpc": "server.restart", "params": {"op_id": "$uuidv7.restart"},
+         "expect": {"/server_boot_id_old": "boot:1", "/server_boot_id_new": "boot:2", "/preserved_incarnations": ["1"], "/ended_incarnations": []}},
+        {"reconnect": "hello", "expect": {"/runtime_lifetime": "unchanged", "/server_boot_id": "boot:2"}},
+        {"assert": "the child keeps its PID and start token; the wait ended cancelled with its resume cursor; seq_after > seq_before"}
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {"inject": {"method": "server.stop", "params": {"scope": "everything-implicitly"}},
+         "expect": {"/error/data/kind": "invalid_params", "/error/data/field_path": "params.scope"}},
+        {"assert": "no process ended: the child keeps its PID and start token and control still serves"}
+      ]
+    }
+  ]
+}

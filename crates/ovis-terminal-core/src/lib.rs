@@ -12,6 +12,7 @@ pub mod layout;
 pub mod leases;
 pub mod ops;
 pub mod registry;
+pub mod restart;
 pub mod retention;
 pub mod screen;
 pub mod subscriptions;

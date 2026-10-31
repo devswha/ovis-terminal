@@ -1,7 +1,8 @@
 //! The fixture's request handler: the real dispatcher plus methods served directly.
 //!
 //! Those are the read-only protocol methods `rpc.discover` and paged `terminal.output`,
-//! the fixture-only `fixture.transcript` provider write and `fixture.pty` input byte count.
+//! the fixture-only `fixture.transcript` provider write, `fixture.pty` input byte count
+//! and `fixture.bridge` extension driver.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -17,6 +18,7 @@ use ovis_terminal_server::dispatch::Dispatcher;
 use serde_json::Value;
 
 use super::agents::Directory;
+use super::bridge::Extension;
 use super::output;
 use super::prompts::Gate;
 use super::serve::at;
@@ -34,23 +36,30 @@ const PROVIDER_WRITE: &str = "fixture.transcript";
 /// The PTY stand-in's byte count; served but never advertised.
 const PTY_READ: &str = "fixture.pty";
 
+/// The in-process extension stand-in's driver; served but never advertised.
+const EXTENSION: &str = "fixture.bridge";
+
+/// Fixture-only stand-ins answered beside the dispatcher.
+#[derive(Debug)]
+pub(crate) struct Probes {
+    pub(crate) gate: Arc<Gate>,
+    pub(crate) directory: Arc<Directory>,
+    pub(crate) extension: Arc<Extension>,
+}
+
 #[derive(Debug)]
 pub(crate) struct FixtureHandler {
     dispatch: Arc<Dispatch>,
     root: PathBuf,
-    pty: (Arc<Gate>, Arc<Directory>),
+    probes: Probes,
 }
 
 impl FixtureHandler {
-    pub(crate) const fn new(
-        dispatch: Arc<Dispatch>,
-        root: PathBuf,
-        pty: (Arc<Gate>, Arc<Directory>),
-    ) -> Self {
+    pub(crate) const fn new(dispatch: Arc<Dispatch>, root: PathBuf, probes: Probes) -> Self {
         Self {
             dispatch,
             root,
-            pty,
+            probes,
         }
     }
 
@@ -83,7 +92,11 @@ impl RequestHandler for FixtureHandler {
             "rpc.discover" => discover(&call.request),
             "terminal.output" => output::page(&call.request),
             PROVIDER_WRITE => super::transcripts::write(&self.root, &call.request),
-            PTY_READ => super::prompts::pty((&self.pty.0, &self.pty.1), &call.request),
+            PTY_READ => {
+                let probes = (&*self.probes.gate, &*self.probes.directory);
+                super::prompts::pty(probes, &call.request)
+            }
+            EXTENSION => self.probes.extension.call(&call.request).await,
             _ => self.dispatch.call(call).await,
         }
     }

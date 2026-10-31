@@ -25,4 +25,4 @@ pub use connections::Connections;
 pub use error::{ConnectionError, HelloError};
 pub use handler::{Call, RequestHandler};
 pub use identity::ServerIdentity;
-pub use outbound::{Notifier, NotifyError};
+pub use outbound::{Ending, Notifier, NotifyError};
