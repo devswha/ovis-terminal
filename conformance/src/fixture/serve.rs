@@ -5,6 +5,7 @@ use std::io::Write as _;
 use std::path::Path;
 use std::sync::Arc;
 
+use ovis_terminal_agent::bridge::PromptBridge;
 use ovis_terminal_authz::{
     Authority, AuthorityConfig, EndpointPolicy, Grant, Issuance, IssueRequest, LocalAccount,
     OwnerSpec, PeerEvidence, Permission, Presentation, PrincipalId, RemoteTransport, ResourceScope,
@@ -17,13 +18,15 @@ use ovis_terminal_core::registry::{
     ServerBootId,
 };
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
+use ovis_terminal_server::dispatch::lanes::prompt_bridge::{Gated, PromptBridgeGate};
 use ovis_terminal_server::listen::{ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
 use tokio::io::AsyncReadExt as _;
 
+use super::bridge::{Extension, QUEUE_LIMIT};
 use super::documents::{DocGet, DocSet};
-use super::handler::{Dispatch, FixtureHandler};
+use super::handler::{Dispatch, FixtureHandler, Probes};
 use super::terminals::TerminalKeep;
 use crate::error::RunnerError;
 
@@ -85,21 +88,32 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .register(TerminalKeep::new(&effects, runtime)?)
         .map_err(at("register terminal.keep"))?;
     let (agents, gate) = super::agents::register(&mut dispatch, runtime, Arc::clone(&core))?;
-    let directory = Arc::clone(&agents.1);
+    let (status, directory) = (Arc::clone(&agents.0), Arc::clone(&agents.1));
     super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
     let observer = observer(&authority, issued.bearer())?;
+    let prompts = Arc::clone(&gate.prompts);
+    let bridge = PromptBridge::new(Arc::clone(&status), Arc::clone(&prompts), QUEUE_LIMIT);
+    let probes = Probes {
+        gate,
+        directory: Arc::clone(&directory),
+        extension: Extension::new(bridge, Arc::clone(&core)),
+    };
     let handler = Arc::new(FixtureHandler::new(
         Arc::new(dispatch),
         root.to_path_buf(),
-        (gate, directory),
+        probes,
     ));
+    let gated = Gated::new(
+        PromptBridgeGate::new(directory, (status, prompts)),
+        Arc::clone(&handler),
+    );
     let socket = root.join("run").join("s.sock");
     let endpoint = UnixEndpoint::bind(&socket)
         .await
         .map_err(at("bind the socket"))?;
     let config = ServerConfig::new(authority, runtime);
-    let server = serve_unix(endpoint, config, Arc::clone(&handler)).map_err(at("serve"))?;
+    let server = serve_unix(endpoint, config, Arc::new(gated)).map_err(at("serve"))?;
     announce(&json!({"ready": {
         "socket": socket, "bearer": issued.bearer(), "observer": observer,
     }}))?;
