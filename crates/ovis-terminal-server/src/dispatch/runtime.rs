@@ -23,6 +23,7 @@ use super::deadline::{receive, wait};
 use super::execution::{State, now};
 use super::job::Job;
 use super::registry::{Registered, Route};
+use super::reservation::Reservation;
 use super::tasks::{Active, Tasks};
 use super::{DispatchError, Method};
 use crate::conn::{Call, RequestHandler};
@@ -35,7 +36,7 @@ use crate::conn::{Call, RequestHandler};
 pub struct Dispatcher<D, P> {
     state: Arc<State<D, P>>,
     routes: BTreeMap<&'static str, Box<dyn Route<D, P>>>,
-    tasks: Mutex<Tasks>,
+    tasks: Arc<Mutex<Tasks>>,
     work: Arc<Semaphore>,
     control: Arc<Semaphore>,
 }
@@ -67,7 +68,7 @@ where
                 core,
             }),
             routes: BTreeMap::new(),
-            tasks: Mutex::new(Tasks::default()),
+            tasks: Arc::new(Mutex::new(Tasks::default())),
             work: Arc::new(Semaphore::new(128)),
             control: Arc::new(Semaphore::new(16)),
         }
@@ -166,17 +167,20 @@ where
             .map_err(|error| error.boundary())?;
         let (cancel, cancellation) = watch::channel(false);
         let (reply, received) = watch::channel(None);
+        let reservation = Arc::new(Reservation::new());
         let active = Active {
             principal: call.session.principal().clone(),
             request: Arc::clone(&prepared.request),
             cancel,
             response: received.clone(),
+            reservation: Arc::clone(&reservation),
         };
         let job = Job {
             state: Arc::clone(&self.state),
             session: call.session,
             decision,
             notifier: call.notifier,
+            reservation,
         };
         let task = tasks.set.spawn(async move {
             let result = job.run(prepared, cancellation).await;
@@ -200,25 +204,30 @@ where
         if tasks.closed {
             return Err(DispatchError::Closed.boundary());
         }
-        let signals = tasks
+        let (own, foreign): (Vec<&Active>, Vec<&Active>) = tasks
             .active
             .values()
-            .filter(|active| {
-                active.principal == *call.session.principal()
-                    && active.request.op_id() == &params.op_id
-            })
-            .map(|active| active.cancel.clone())
-            .collect();
+            .filter(|active| active.request.op_id() == &params.op_id)
+            .partition(|active| active.principal == *call.session.principal());
         let op_id = params.op_id;
         let control = Control {
             op_id: op_id.clone(),
             cancel,
-            signals,
+            reservation: own.first().map(|active| Arc::clone(&active.reservation)),
+            foreign: foreign.first().map(|active| active.principal.clone()),
         };
         let (reply, received) = watch::channel(None);
         let state = Arc::clone(&self.state);
+        let owned = Arc::clone(&self.tasks);
+        let principal = call.session.principal().clone();
+        let target = op_id.clone();
         tasks.set.spawn(async move {
             let result = control::run(state, call.session, control).await;
+            // Signal only after the ledger answered: a request reserved while this
+            // cancellation was in flight is still owned here and must observe it.
+            if cancel && result.is_ok() {
+                owned.lock().await.signal(&principal, &target);
+            }
             reply.send_replace(Some(result.map_err(|error| error.data().clone())));
             drop(permit);
         });

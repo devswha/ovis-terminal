@@ -1,0 +1,34 @@
+$ cargo test -p ovis-terminal-server --test ops_cancel happy -- --exact --nocapture
+   Compiling ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t77/crates/ovis-terminal-core)
+   Compiling ovis-terminal-agent v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t77/crates/ovis-terminal-agent)
+   Compiling ovis-terminal-remote v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t77/crates/ovis-terminal-remote)
+   Compiling ovis-terminal-services v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t77/crates/ovis-terminal-services)
+   Compiling ovis-terminal-agent-adapters v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t77/crates/ovis-terminal-agent-adapters)
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t77/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.80s
+     Running tests/ops_cancel.rs (target/debug/deps/ops_cancel-cd8525bd7df4654c)
+
+running 1 test
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793457618572","version":"0.1.0"}}
+
+-> {"id":"set","jsonrpc":"2.0","method":"doc.set","params":{"name":"held-0","op_id":"01a19267-7e8d-77f5-a6d3-3558dd61a447","value":"v","version":"0"}}
+-> {"id":"probe","jsonrpc":"2.0","method":"doc.set","params":{"name":"held-0","op_id":"01a19267-7e8d-77f5-a6d3-3558dd61a447","value":"other","version":"0"}}
+<- {"jsonrpc":"2.0","id":"probe","error":{"code":-32000,"message":"operation failed","data":{"kind":"op_reused","hint":"inspect the original operation; use a new identity only for new work","retryable":false,"op_id":"01a19267-7e8d-77f5-a6d3-3558dd61a447"}}}
+
+-> {"id":"cancel","jsonrpc":"2.0","method":"op.cancel","params":{"op_id":"01a19267-7e8d-77f5-a6d3-3558dd61a447"}}
+-> {"id":"after","jsonrpc":"2.0","method":"doc.set","params":{"name":"held-0","op_id":"01a19267-7e8d-77f5-a6d3-3558dd61a447","value":"third","version":"0"}}
+<- {"jsonrpc":"2.0","id":"after","error":{"code":-32000,"message":"operation failed","data":{"kind":"op_reused","hint":"inspect the original operation; use a new identity only for new work","retryable":false,"op_id":"01a19267-7e8d-77f5-a6d3-3558dd61a447"}}}
+
+<- {"jsonrpc":"2.0","id":"cancel","result":{"error":null,"method":"doc.set","op_id":"01a19267-7e8d-77f5-a6d3-3558dd61a447","outcome":"cancel_pending","result":null,"state":"cancelled","updated_seq":"2"}}
+
+<- {"jsonrpc":"2.0","id":"set","error":{"code":-32000,"message":"operation failed","data":{"kind":"cancelled","hint":"inspect the retained outcome; never automatically replay uncertain effects","retryable":false,"op_id":"01a19267-7e8d-77f5-a6d3-3558dd61a447"}}}
+
+-> {"id":"inspect","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19267-7e8d-77f5-a6d3-3558dd61a447"}}
+<- {"jsonrpc":"2.0","id":"inspect","result":{"error":null,"method":"doc.set","op_id":"01a19267-7e8d-77f5-a6d3-3558dd61a447","result":null,"state":"cancelled","updated_seq":"2"}}
+
+outcomes=["cancel_pending"]
+test happy ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.02s
+
+EXIT 0

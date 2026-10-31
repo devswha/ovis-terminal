@@ -1,9 +1,11 @@
-//! Negotiating `hello`: generation first, then the credential, then the identity result.
+//! Negotiating `hello`: generation first, then the credential, then the identity result,
+//! with a boot proof keyed by that credential when the client sent a fresh challenge.
 
 use std::sync::Arc;
 
-use ovis_terminal_authz::{Authority, PeerAdmission, Presentation, Session};
+use ovis_terminal_authz::{AttestRequest, Authority, PeerAdmission, Presentation, Session};
 use ovis_terminal_core::registry::RegistryIdentities;
+use ovis_terminal_protocol::domain::machine_identity::{BootProof, BootStatement, ProofMac};
 use ovis_terminal_protocol::rpc::RpcRequest;
 use ovis_terminal_protocol::schema::methods::server::{HelloParams, HelloResult};
 use ovis_terminal_protocol::schema::{PROTOCOL_GENERATION, decode_params};
@@ -46,7 +48,18 @@ pub(super) fn negotiate(
         .authority
         .authenticate(&admission, Presentation::new(bearer, at))
         .map_err(HelloError::Credential)?;
-    let result = shared.identity.hello_result(session.transport(), at);
+    let mut result = shared.identity.hello_result(session.transport(), at);
+    if let Some(challenge) = params.challenge {
+        let statement = BootStatement::answering(challenge, &result);
+        let mac = shared
+            .authority
+            .attest(&session, AttestRequest::new(&statement.signed_bytes(), at))
+            .map_err(HelloError::Credential)?;
+        result.boot_proof = Some(BootProof::new(
+            statement,
+            ProofMac::from_bytes(mac.to_bytes()),
+        ));
+    }
     Ok(Negotiated {
         result,
         session,
