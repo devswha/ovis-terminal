@@ -45,6 +45,7 @@ struct Driver {
     vt: Vt,
     at: OutputOffset,
     bytes: Vec<u8>,
+    win32_seen: bool,
 }
 
 impl Driver {
@@ -55,6 +56,7 @@ impl Driver {
             vt: Vt::new(VtConfig::new(geometry, HistoryLimit::new(50))),
             at: OutputOffset::ZERO,
             bytes: Vec::new(),
+            win32_seen: false,
         }
     }
 
@@ -77,6 +79,7 @@ impl Driver {
                             self.terminal.input(reply).expect("query reply admitted");
                         }
                     }
+                    self.win32_seen |= self.vt.modes().keyboard.win32_input;
                     self.bytes.extend(bytes);
                 }
                 OutputRead::Pending => {}
@@ -86,10 +89,10 @@ impl Driver {
         None
     }
 
-    fn finish(mut self) -> (Ended, Vec<u8>, Vt) {
+    fn finish(mut self) -> (Ended, Vec<u8>, bool) {
         let ended = self.until(|_| false).expect("the exit arrives");
         self.terminal.close().expect("workers joined");
-        (ended, self.bytes, self.vt)
+        (ended, self.bytes, self.win32_seen)
     }
 }
 
@@ -105,7 +108,7 @@ fn utf8_output_and_win32_input_mode_precede_an_exit_carrying_the_final_offset() 
         &cmd("echo OVIS-\u{e9}-53& exit /b 7"),
         TerminalLimits::DEFAULT,
     );
-    let (ended, bytes, vt) = driver.finish();
+    let (ended, bytes, win32_seen) = driver.finish();
     assert!(
         contains(&bytes, "OVIS-\u{e9}-53".as_bytes()),
         "{:?}",
@@ -122,16 +125,21 @@ fn utf8_output_and_win32_input_mode_precede_an_exit_carrying_the_final_offset() 
         "ConPTY's win32-input request reaches the core"
     );
     assert!(
-        vt.modes().keyboard.win32_input,
-        "the VT engine records mode 9001"
+        win32_seen,
+        "the VT engine reports mode 9001 while the program runs"
     );
 }
 
 #[test]
 fn a_resize_and_a_keypress_reach_the_program_through_separate_paths() {
-    let driver = Driver::spawn(
+    let mut driver = Driver::spawn(
         &cmd("pause >NUL & mode con & exit /b 3"),
         TerminalLimits::DEFAULT,
+    );
+    let started = driver.until(|bytes| contains(bytes, b"\x1b]0;"));
+    assert!(
+        started.is_none(),
+        "cmd sets its title once the cursor handshake is answered"
     );
     driver
         .terminal
