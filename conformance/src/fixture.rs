@@ -14,6 +14,8 @@ pub mod launch;
 #[cfg(unix)]
 pub mod output;
 #[cfg(unix)]
+pub mod processes;
+#[cfg(unix)]
 pub mod serve;
 #[cfg(unix)]
 pub mod terminals;

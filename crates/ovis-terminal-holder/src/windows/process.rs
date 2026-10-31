@@ -8,8 +8,7 @@ use std::io;
 use std::os::windows::io::{AsHandle as _, AsRawHandle as _, BorrowedHandle, OwnedHandle};
 
 use portable_pty::Child;
-use windows_sys::Win32::Foundation::FILETIME;
-use windows_sys::Win32::System::Threading::{GetProcessId, GetProcessTimes};
+use windows_sys::Win32::System::Threading::GetProcessId;
 
 use crate::protocol::ProcessStartToken;
 
@@ -50,19 +49,9 @@ impl ProcessHandle {
         Ok(pid)
     }
 
-    /// `windows-created:<FILETIME>`: the creation time in 100 ns units since 1601.
+    /// `windows-created:<FILETIME>`, in the form `process::read_start_token` reads.
     pub(super) fn start_token(&self) -> io::Result<ProcessStartToken> {
-        let mut times = [FILETIME::default(); 4];
-        let [created, exited, kernel, user] = &mut times;
-        // SAFETY: the process handle is open, and each pointer names a distinct live
-        // local FILETIME the call writes once.
-        let succeeded =
-            unsafe { GetProcessTimes(self.handle.as_raw_handle(), created, exited, kernel, user) };
-        if succeeded == 0 {
-            return Err(io::Error::last_os_error());
-        }
-        let ticks = (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime);
-        Ok(ProcessStartToken::new(format!("windows-created:{ticks}")))
+        crate::process::creation_token(self.handle.as_raw_handle())
     }
 }
 

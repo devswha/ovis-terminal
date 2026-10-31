@@ -11,7 +11,9 @@ use ovis_terminal_core::ops::OperationProducer;
 use ovis_terminal_core::registry::{
     HostBootId, HostIdentity, MachineId, RuntimeId, RuntimeIdentity, ServerBootId,
 };
+use ovis_terminal_core::terminals::process_info::NativeTable;
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
+use ovis_terminal_server::dispatch::lanes::process_info::ProcessInfoRead;
 use ovis_terminal_server::listen::{ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
@@ -19,6 +21,7 @@ use tokio::io::AsyncReadExt as _;
 
 use super::documents::{DocGet, DocSet};
 use super::handler::{Dispatch, FixtureHandler};
+use super::processes::{ProcessDirectoryFixture, Programs};
 use super::terminals::TerminalKeep;
 use crate::error::RunnerError;
 
@@ -80,8 +83,29 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .register(TerminalKeep::new(&effects, runtime)?)
         .map_err(at("register terminal.keep"))?;
     let agents = super::agents::register(&mut dispatch, runtime, Arc::clone(&core))?;
+    let (owned_root, shared, service) = (
+        root.to_path_buf(),
+        Arc::clone(&authority),
+        Arc::clone(&agents.0),
+    );
+    let bearer = issued.bearer().to_owned();
+    let programs = tokio::task::spawn_blocking(move || {
+        Programs::start(&owned_root, (runtime, shared, bearer), service)
+    })
+    .await
+    .map_err(at("join the program launch"))??;
+    dispatch
+        .register_read(ProcessInfoRead::new(
+            ProcessDirectoryFixture::new(Arc::clone(&programs), runtime)?,
+            Arc::new(NativeTable::default()),
+        ))
+        .map_err(at("register terminal.process_info"))?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
-    let handler = Arc::new(FixtureHandler::new(Arc::new(dispatch), root.to_path_buf()));
+    let handler = Arc::new(FixtureHandler::new(
+        Arc::new(dispatch),
+        root.to_path_buf(),
+        programs,
+    ));
     let socket = root.join("run").join("s.sock");
     let endpoint = UnixEndpoint::bind(&socket)
         .await

@@ -1,0 +1,154 @@
+//! The process-table seam: the native operating-system table, or a scripted one in tests.
+
+use std::path::PathBuf;
+
+use ovis_terminal_holder::process::{self as native, Membership, ProbeError, ProcessId};
+
+use crate::registry::{ProcessHandle, ProcessPid, ProcessStartToken};
+use crate::terminals::{Field, Unavailable};
+
+/// The controlling-terminal facts of one process.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct Session {
+    /// Process group of the process.
+    pub group: u32,
+    /// Device number of its controlling terminal.
+    pub tty: u64,
+    /// Foreground process group of that terminal.
+    pub foreground_group: u32,
+}
+
+impl Session {
+    /// Membership of process group `group` on terminal `tty` whose foreground is `foreground_group`.
+    #[must_use]
+    pub const fn new(group: u32, tty: u64, foreground_group: u32) -> Self {
+        Self {
+            group,
+            tty,
+            foreground_group,
+        }
+    }
+}
+
+/// Whether a process belongs to a controlling terminal, as far as the OS can tell.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Terminal {
+    /// The process has this controlling terminal.
+    Controlling(Session),
+    /// The process has no controlling terminal.
+    Detached,
+    /// The operating system does not expose terminal membership.
+    Unsupported,
+}
+
+/// One process-table record: PID and start token read together, run state, membership.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct NativeProcess {
+    /// PID and start token.
+    pub process: ProcessHandle,
+    /// False once the process exited, even while its record remains.
+    pub running: bool,
+    /// Controlling-terminal membership.
+    pub terminal: Terminal,
+}
+
+impl NativeProcess {
+    /// A record of `process` with its run state and membership.
+    #[must_use]
+    pub const fn new(process: ProcessHandle, running: bool, terminal: Terminal) -> Self {
+        Self {
+            process,
+            running,
+            terminal,
+        }
+    }
+}
+
+/// Read access to a process table; every failure names why a field is unavailable.
+pub trait ProcessTable {
+    /// Reads one record; a PID that names no process is `process_unavailable`.
+    ///
+    /// # Errors
+    ///
+    /// Returns the reason the record could not be read.
+    fn read(&self, pid: ProcessPid) -> Result<NativeProcess, Unavailable>;
+
+    /// Lists every PID in the table.
+    ///
+    /// # Errors
+    ///
+    /// Returns the reason the table could not be enumerated.
+    fn pids(&self) -> Result<Vec<ProcessPid>, Unavailable>;
+
+    /// Reads the current argument vector.
+    fn argv(&self, pid: ProcessPid) -> Field<Vec<String>>;
+
+    /// Reads the current working directory.
+    fn cwd(&self, pid: ProcessPid) -> Field<PathBuf>;
+}
+
+/// The operating system's own process table.
+#[derive(Debug, Clone, Copy, Default)]
+#[non_exhaustive]
+pub struct NativeTable;
+
+const fn reason(error: &ProbeError) -> Unavailable {
+    match error {
+        ProbeError::Gone { .. } => Unavailable::ProcessUnavailable,
+        ProbeError::Permission { .. } => Unavailable::Permission,
+        ProbeError::Unsupported => Unavailable::Platform,
+        ProbeError::Malformed => Unavailable::Encoding,
+        _ => Unavailable::Raced,
+    }
+}
+
+fn os_pid(pid: ProcessPid) -> Result<ProcessId, Unavailable> {
+    u32::try_from(pid.get())
+        .map(ProcessId::new)
+        .map_err(|_| Unavailable::ProcessUnavailable)
+}
+
+fn field<T>(read: Result<T, ProbeError>) -> Field<T> {
+    read.map_or_else(|error| Field::Unsupported(reason(&error)), Field::Known)
+}
+
+impl ProcessTable for NativeTable {
+    fn read(&self, pid: ProcessPid) -> Result<NativeProcess, Unavailable> {
+        let entry = native::read_entry(os_pid(pid)?).map_err(|error| reason(&error))?;
+        let token = ProcessStartToken::new(entry.start_token.as_str())
+            .map_err(|_| Unavailable::Encoding)?;
+        let terminal = match entry.terminal {
+            Membership::Controlling(member) => Terminal::Controlling(Session::new(
+                member.group,
+                member.tty,
+                member.foreground_group,
+            )),
+            Membership::Detached => Terminal::Detached,
+            _ => Terminal::Unsupported,
+        };
+        Ok(NativeProcess::new(
+            ProcessHandle::new(pid, token),
+            entry.running,
+            terminal,
+        ))
+    }
+
+    fn pids(&self) -> Result<Vec<ProcessPid>, Unavailable> {
+        let listed = native::list_pids().map_err(|error| reason(&error))?;
+        Ok(listed
+            .into_iter()
+            .filter_map(|pid| ProcessPid::try_from(u64::from(pid.get())).ok())
+            .collect())
+    }
+
+    fn argv(&self, pid: ProcessPid) -> Field<Vec<String>> {
+        os_pid(pid).map_or_else(Field::Unsupported, |pid| field(native::read_argv(pid)))
+    }
+
+    fn cwd(&self, pid: ProcessPid) -> Field<PathBuf> {
+        os_pid(pid).map_or_else(Field::Unsupported, |pid| field(native::read_cwd(pid)))
+    }
+}

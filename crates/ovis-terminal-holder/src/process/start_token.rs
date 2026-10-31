@@ -1,9 +1,9 @@
 //! Operating-system start tokens that distinguish a process from a reused PID.
 //!
 //! Linux reads the kernel start time (clock ticks since boot) from
-//! `/proc/<pid>/stat` and binds it to the current boot ID. Other Unix systems
-//! read the kernel start time through `ps -o lstart=` (one-second resolution);
-//! plan todo 55 owns cross-platform consistency of this evidence.
+//! `/proc/<pid>/stat` and binds it to the current boot ID; macOS reads the
+//! microsecond start time from `proc_pidinfo`; Windows reads the process creation
+//! time, in the same `windows-created:` form the ConPTY holder records at spawn.
 
 use std::io;
 
@@ -63,47 +63,7 @@ impl StartTokenError {
 /// Returns [`StartTokenError::ProcessGone`] when the PID names no process, and
 /// a read or layout error when the operating-system record is unusable.
 pub fn read_start_token(pid: ProcessId) -> Result<ProcessStartToken, StartTokenError> {
-    os_start_token(pid).map(ProcessStartToken::new)
-}
-
-#[cfg(target_os = "linux")]
-fn os_start_token(pid: ProcessId) -> Result<String, StartTokenError> {
-    let stat = std::fs::read_to_string(format!("/proc/{}/stat", pid.get())).map_err(|source| {
-        if source.kind() == io::ErrorKind::NotFound {
-            StartTokenError::ProcessGone { pid: pid.get() }
-        } else {
-            StartTokenError::Unreadable { source }
-        }
-    })?;
-    // The command name may contain spaces or parentheses; fields resume after the last ')'.
-    // `starttime` is field 22 overall, the 20th field after the name.
-    let (_, fields) = stat.rsplit_once(')').ok_or(StartTokenError::Malformed)?;
-    let start_ticks = fields
-        .split_whitespace()
-        .nth(19)
-        .and_then(|raw| raw.parse::<u64>().ok())
-        .ok_or(StartTokenError::Malformed)?;
-    let boot_id = std::fs::read_to_string("/proc/sys/kernel/random/boot_id")
-        .map_err(|source| StartTokenError::Unreadable { source })?;
-    Ok(format!("linux:{}:{start_ticks}", boot_id.trim()))
-}
-
-#[cfg(not(target_os = "linux"))]
-fn os_start_token(pid: ProcessId) -> Result<String, StartTokenError> {
-    let output = std::process::Command::new("/bin/ps")
-        .args(["-o", "lstart=", "-p", &pid.get().to_string()])
-        .env("LC_ALL", "C")
-        .output()
-        .map_err(|source| StartTokenError::Unreadable { source })?;
-    if !output.status.success() {
-        return Err(StartTokenError::ProcessGone { pid: pid.get() });
-    }
-    let text = String::from_utf8(output.stdout).map_err(|_| StartTokenError::Malformed)?;
-    let started = text.split_whitespace().collect::<Vec<_>>().join(" ");
-    if started.is_empty() {
-        return Err(StartTokenError::Malformed);
-    }
-    Ok(format!("lstart:{started}"))
+    super::os::start_token(pid)
 }
 
 #[cfg(test)]

@@ -3,6 +3,7 @@
 mod error;
 mod inspection;
 mod labels;
+pub mod process_info;
 mod receipts;
 mod records;
 #[cfg(unix)]

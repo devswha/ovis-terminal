@@ -259,6 +259,28 @@ pub struct TerminalMutateResult {
     pub seq: EventSeq,
 }
 
+/// Incarnations `terminal.process_info` must still find; a mismatch reports nothing.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct ProcessExpect {
+    /// Expected terminal incarnation; a mismatch is `stale_target`.
+    pub terminal_incarnation: Option<Incarnation>,
+    /// Expected program incarnation; a mismatch is `process_replaced`.
+    pub process_incarnation: Option<Incarnation>,
+}
+
+/// Parameters of `terminal.process_info`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct TerminalProcessInfoParams {
+    /// Terminal to inspect; there is no focused-terminal fallback.
+    pub target: Target,
+    /// Incarnations the caller holds.
+    pub expect: Option<ProcessExpect>,
+}
+
 /// Result of `terminal.process_info`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
@@ -267,10 +289,14 @@ pub struct TerminalProcessInfoResult {
     pub terminal_id: TerminalId,
     /// Program the terminal launched.
     pub launcher: ProcessRecord,
-    /// Foreground process, when the platform reports it.
+    /// The launcher record while the launcher holds the foreground; `roles.foreground`
+    /// lists every foreground process.
     pub foreground: Option<ProcessRecord>,
     /// Fields this platform can report.
     pub supported_fields: Vec<String>,
+    /// Shell, launcher, foreground and background processes, each observed or
+    /// explicitly unsupported.
+    pub roles: crate::domain::process_info::ProcessRoles,
 }
 
 /// Methods of this namespace.
@@ -293,6 +319,6 @@ pub(crate) const METHODS: &[MethodSpec] = &[
     "Set or remove terminal labels.", [LimitExceeded]},
     method! {"terminal.rename", Mutation, Terminal, TerminalRenameParams => TerminalMutateResult,
     "Set or clear a terminal's unique name.", [DuplicateName, InvalidName]},
-    method! {"terminal.process_info", Query, Terminal, TerminalGetParams => TerminalProcessInfoResult,
-    "Read launcher and foreground process facts.", [UnsupportedField]},
+    method! {"terminal.process_info", Query, Terminal, TerminalProcessInfoParams => TerminalProcessInfoResult,
+    "Read shell, launcher, foreground and background process facts.", [UnsupportedField, ProcessReplaced]},
 ];

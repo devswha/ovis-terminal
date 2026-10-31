@@ -1,7 +1,8 @@
 //! The agent status lane over two fixture terminals and their programs' output path.
 //!
 //! `agent` (terminal:4) and `shell` (terminal:5) each run program incarnation 1 whose
-//! spawn token is known to the scenarios.
+//! spawn token is known to the scenarios; `proc` (terminal:1) is the real PTY program of
+//! the process fixture, which hands each later incarnation its own token.
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
@@ -31,8 +32,9 @@ use super::handler::{Dispatch, Event};
 use super::serve::at;
 use crate::error::RunnerError;
 
-/// Spawn tokens of the two fixture programs.
-const TERMINALS: [(u64, &str, &str); 2] = [
+/// Spawn tokens of the fixture programs' first incarnations.
+const TERMINALS: [(u64, &str, &str); 3] = [
+    (1, "proc", "fixture-process-token-proc-1"),
     (4, "agent", "fixture-process-token-agent"),
     (5, "shell", "fixture-process-token-shell"),
 ];
