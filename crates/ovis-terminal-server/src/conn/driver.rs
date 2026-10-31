@@ -14,7 +14,8 @@ use tokio::task::{self, JoinError, JoinSet};
 
 use super::budget::Budget;
 use super::core::{ConnectionCore, Step};
-use super::outbound::{Closing, NotifyError, OUTBOUND_CAPACITY, Outbound, Outlet, write_loop};
+use super::outbound::{Closing, NotifyError, OUTBOUND_CAPACITY, Outbound, Outlet};
+use super::writer::write_loop;
 use super::{Call, ConnectionError, Notifier, RequestHandler};
 use crate::peer_gone;
 

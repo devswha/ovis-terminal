@@ -100,10 +100,17 @@ impl ServeReport {
 #[derive(Debug)]
 pub struct ServerHandle {
     signal: watch::Sender<bool>,
+    progress: watch::Receiver<ServeReport>,
     task: JoinHandle<Result<ServeReport, EndpointError>>,
 }
 
 impl ServerHandle {
+    /// How the connections that already ended ended, updated as each one is joined.
+    #[must_use]
+    pub fn progress(&self) -> watch::Receiver<ServeReport> {
+        self.progress.clone()
+    }
+
     /// Stops accepting, closes every connection with `$/closing` and joins them.
     ///
     /// # Errors
@@ -125,6 +132,7 @@ impl Drop for ServerHandle {
 struct Serving<H> {
     connections: Connections<H>,
     shutdown: watch::Receiver<bool>,
+    progress: watch::Sender<ServeReport>,
     max_connections: usize,
     grace: Duration,
 }
@@ -141,14 +149,20 @@ pub fn serve_unix<H: RequestHandler>(
 ) -> Result<ServerHandle, EndpointError> {
     let connections = Connections::new(config.authority, config.runtime, handler)?;
     let (signal, shutdown) = watch::channel(false);
+    let (progress, observed) = watch::channel(ServeReport::default());
     let serving = Serving {
         connections,
         shutdown,
+        progress,
         max_connections: config.max_connections,
         grace: config.shutdown_grace,
     };
     let task = tokio::spawn(accept_loop(endpoint, serving));
-    Ok(ServerHandle { signal, task })
+    Ok(ServerHandle {
+        signal,
+        progress: observed,
+        task,
+    })
 }
 
 async fn accept_loop<H: RequestHandler>(
@@ -161,7 +175,10 @@ async fn accept_loop<H: RequestHandler>(
         tokio::select! {
             biased;
             _ = serving.shutdown.changed() => break Ok(()),
-            Some(ended) = running.join_next(), if !running.is_empty() => report.record(ended),
+            Some(ended) = running.join_next(), if !running.is_empty() => {
+                report.record(ended);
+                serving.progress.send_replace(report.clone());
+            }
             accepted = endpoint.accept(), if running.len() < serving.max_connections => {
                 let (stream, evidence) = match accepted {
                     Ok(accepted) => accepted,
@@ -190,6 +207,7 @@ async fn accept_loop<H: RequestHandler>(
             report.record(ended);
         }
     }
+    serving.progress.send_replace(report.clone());
     let removed = endpoint.remove();
     stopped?;
     removed?;

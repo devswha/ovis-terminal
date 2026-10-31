@@ -76,6 +76,24 @@
       "argv": "cargo nextest run -p ovis-terminal-protocol --test schema_error_kinds; openrpc check; openrpc compat schema/released.openrpc.json",
       "exit": 0,
       "log": "schema-gate.log"
+    },
+    {
+      "argv": "bash scripts/check.sh (gate round 2)",
+      "exit": 0,
+      "result": "336 tests run: 336 passed, 1 skipped",
+      "log": "check-gate2.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-server --locked (gate round 2)",
+      "exit": 0,
+      "result": "33 tests run: 33 passed",
+      "log": "nextest.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-server --no-fail-fast (blocked write not raced against overflow)",
+      "exit": 100,
+      "result": "bound::a_peer_that_never_reads_is_closed_and_released_without_shutdown fails; restored 33/33",
+      "log": "mutation-overflow-close.log"
     }
   ]
 }

@@ -56,7 +56,16 @@ impl Fixture {
     /// Fails when the authority cannot be bootstrapped.
     pub fn expiring(expires_at: TimestampMs) -> TestResult<Self> {
         let unique = NEXT_DIR.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!("ovt13-{}-{unique}", std::process::id()));
+        let root = std::env::temp_dir().join(format!(
+            "ovt13-{}-{:x}-{unique}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_nanos()
+        ));
+        // Exclusive creation: a reused name fails here instead of sharing another run's files.
+        std::os::unix::fs::DirBuilderExt::mode(&mut std::fs::DirBuilder::new(), 0o700)
+            .create(&root)?;
         let runtime = runtime(1)?;
         let binding = RuntimeBinding::new(runtime.machine_id(), runtime.runtime_id());
         let owner = OwnerSpec::new(PrincipalId::parse("owner")?, expires_at);
@@ -229,6 +238,16 @@ impl Client {
         self.next()
             .await?
             .ok_or_else(|| "the server closed before replying to hello".into())
+    }
+
+    /// Resolves once the server has sent bytes this client has not read, without reading.
+    ///
+    /// # Errors
+    ///
+    /// Fails when nothing arrives within [`WAIT`] or the socket fails.
+    pub async fn readable(&self) -> TestResult {
+        tokio::time::timeout(WAIT, self.stream.readable()).await??;
+        Ok(())
     }
 
     /// The next record from the server, or `None` once it closed the stream.

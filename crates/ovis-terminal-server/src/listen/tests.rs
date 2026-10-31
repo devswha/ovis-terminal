@@ -52,7 +52,15 @@ struct Outcome {
 /// connection core, with peer accounts from `source` when one is given.
 async fn hello_from(source: Option<fn(&UnixStream) -> std::io::Result<UnixUid>>) -> Outcome {
     let unique = NEXT_DIR.fetch_add(1, Ordering::Relaxed);
-    let root = std::env::temp_dir().join(format!("ovt13u-{}-{unique}", std::process::id()));
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let name = format!("ovt13u-{}-{nanos:x}-{unique}", std::process::id());
+    let root = std::env::temp_dir().join(name);
+    std::os::unix::fs::DirBuilderExt::mode(&mut std::fs::DirBuilder::new(), 0o700)
+        .create(&root)
+        .unwrap();
     let path: PathBuf = root.join("run").join("s.sock");
     let machine = "machine:0191f1a2-0000-7000-8000-0000000000e2"
         .parse()

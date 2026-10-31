@@ -1,3 +1,19 @@
+## Fix after gate round 2 (F1-F2)
+
+- **F1: closing an overflowing connection no longer waits on the peer or on server shutdown.** The writer moved to `conn/writer.rs`, and every write now races the budget's overflow signal. On the first refused reservation:
+  - **Blocked write abandoned.** A `write_all` blocked on a peer that is not reading is cancelled, so the record in progress is freed and its budget released.
+  - **Backlog freed.** The writer closes its queue and drops every record still in it, releasing their budget. Later producers get `NotifyError::Closed` or `Backpressure` at once.
+  - **`$/closing`.** It is offered once, with a single non-blocking `poll_write`, and only when no record was partly written. If the transport would block, or a record was mid-frame (where it would be garbage), it is skipped.
+  - **Socket closed.** The write side gets one non-blocking `poll_shutdown`. The driver, which saw the same signal, cancels and joins the connection's requests and drops the read half, so the socket closes.
+  - **What is retained.** After the connection task is joined, nothing of the connection remains: no queued record, no record in progress and no socket. The close is counted as `backpressure` in `ServeReport`; server shutdown and the peer are not involved.
+- **Live report.** `ServerHandle::progress()` is a `watch` of `ServeReport`, updated as each connection is joined, so closure is observable without stopping the server.
+- **Test: blocked write.** `bound::a_peer_that_never_reads_is_closed_and_released_without_shutdown`.
+  - The handler queues one 8 MiB record. The test waits until the stalled socket is readable without reading, which proves bytes of that record arrived and its write is blocked midway, since 8 MiB exceeds the socket buffer. Only then is the flood released.
+  - It waits on `progress()` for `backpressure: 1` (the connection task was joined) while the client never reads, checks that another connection still answers, and finds `backpressure: 1, aborted: 0` at shutdown.
+  - Mutation: if the blocked write is not raced against the overflow signal, this test fails (`docs/evidence/task-13/mutation-overflow-close.log`).
+- **Test: record boundary.** `bound::an_overflow_at_a_record_boundary_sends_a_readable_closing`: one notification larger than the bound is refused while the writer is idle, and the reading peer gets `$/closing{reason:"backpressure", limit_bytes:"67108864", queued_bytes:"0"}` then EOF.
+- **Test fixtures.** Fixture directories now carry a time-derived component and are created exclusively (mode 0700). One full-suite run showed `happy` failing at setup (`finished in 0.00s`) and was not reproduced in 25 sequential suite runs or 80 parallel runs of the test binary. A name collision between reused pids is the likely cause, and exclusive creation now turns any collision into an explicit error.
+
 ## Fix after gate round 1 (E1-E3)
 
 - **E1, the 64 MiB unwritten-byte bound (spec section 6).** Each connection has a `conn::budget::Budget`.
@@ -123,7 +139,12 @@ EXIT=2
 
 `conformance/scenarios/part-a/task-13.json` lists the component steps and the adversarial cases for that later run.
 
-Gates on the tree merged with `origin/integration` (97c8d00), after gate round 1:
+Gates on the tree merged with `origin/integration` (97c8d00), after gate round 2:
+
+- `bash scripts/check.sh` exits 0, with nextest at 336 passed, 1 skipped (`check-gate2.log`).
+- `cargo nextest run -p ovis-terminal-server`: 33 passed (`nextest.log`).
+
+After gate round 1:
 
 - `bash scripts/check.sh` exits 0, with nextest at 335 passed, 1 skipped (`check-gate1.log`).
 - `cargo nextest run -p ovis-terminal-protocol --test schema_error_kinds`: 3 passed; `openrpc check` reports fresh and `openrpc compat schema/released.openrpc.json` reports compatible (`schema-gate.log`).
@@ -131,7 +152,7 @@ Gates on the tree merged with `origin/integration` (97c8d00), after gate round 1
 Earlier rounds:
 
 - `bash scripts/check.sh` exits 0, with nextest at 325 passed, 1 skipped (`check-merged.log`).
-- `cargo nextest run -p ovis-terminal-server`: 32 passed after gate round 1 (`nextest.log`).
+- `cargo nextest run -p ovis-terminal-server`: 32 passed after gate round 1.
 - `cargo clippy -p ovis-terminal-server --all-targets -- -D warnings`: exit 0 (`clippy.log`).
 - `openrpc check` and `openrpc compat schema/released.openrpc.json` both exit 0 (`schema-gate.log`).
 
@@ -184,5 +205,5 @@ Logs: `docs/evidence/task-13/adversarial.log` (12 integration + 5 core unit test
 - **Windows.** This PR ships the pipe descriptor (name, override, user/session naming) but no named-pipe listener: creating a pipe with an owner-only DACL and collecting its `PipeInstanceEvidence` needs Win32 security calls. That is todo 54 (Serve named pipes with Windows service isolation), which can hand accepted pipes to `conn::Connections::serve`. On Windows the crate compiles the descriptor, continuity and connection core; the Unix listener and probe are `cfg(unix)`.
 - **Credential delivery.** Nothing here writes the owner bearer for local clients; assembly (todo 31) decides where the bootstrapped credential lives. `Probe` therefore requires a bearer to report a live identity.
 - **Interim handler.** Until todo 14 lands, nothing registers production handlers, so a running server advertises only what its handler serves.
-- **Peer that never reads.** At the bound the connection stops accepting work and frees its queued records, but a record already being written (at most one frame, 16 MiB) is only released when the peer reads or the server shuts down; the 5 s shutdown grace then aborts it. The `$/closing` can only be delivered once the peer reads.
+- **Peer that never reads.** At the bound the connection is torn down at once, independent of the peer and of server shutdown: the blocked write is abandoned, queued records are freed, and the socket closes. The peer then sees `$/closing` only if it could be written without blocking at a record boundary; otherwise it sees a truncated stream followed by EOF. That is the documented signal that it fell behind by more than 64 MiB.
 - **Peer hang-up.** BrokenPipe, ConnectionReset, ConnectionAborted and NotConnected after a peer hangs up are treated as a normal close, not a server failure.

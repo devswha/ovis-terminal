@@ -1,0 +1,10 @@
+MUTATION (F1): conn/writer.rs no longer races a blocked write against the overflow signal
+$ cargo nextest run -p ovis-terminal-server --locked --no-fail-fast
+        FAIL [  13.468s] (33/33) ovis-terminal-server::connection bound::a_peer_that_never_reads_is_closed_and_released_without_shutdown
+     Summary [  13.470s] 33 tests run: 32 passed, 1 failed, 0 skipped
+    test bound::a_peer_that_never_reads_is_closed_and_released_without_shutdown ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 22 filtered out; finished in 13.44s
+EXIT=100
+RESTORED
+     Summary [   3.559s] 33 tests run: 33 passed, 0 skipped
+EXIT=0

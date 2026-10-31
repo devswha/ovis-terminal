@@ -1,13 +1,11 @@
-//! The single writer of a connection: replies, notifications, the upgrade and `$/closing`.
+//! What a connection queues for its writer: replies, notifications, the upgrade and `$/closing`.
 
 use std::sync::Arc;
 
 use ovis_terminal_protocol::rpc::{DecimalU64, RpcReply};
-use ovis_terminal_protocol::wire::{Channel, Frame, FrameKind};
 use serde::Serialize;
 use serde_json::Value;
 use thiserror::Error;
-use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::sync::mpsc;
 
 use super::ConnectionError;
@@ -170,56 +168,13 @@ impl Notifier {
     }
 }
 
-/// Writes queued records in order until the queue closes or `$/closing` is written.
-///
-/// After the budget overflowed, records still queued are discarded unwritten so the
-/// `$/closing` behind them goes out as soon as the record in progress finishes.
-pub(super) async fn write_loop<W: AsyncWrite + Unpin>(
-    mut writer: W,
-    mut queue: mpsc::Receiver<Outbound>,
-    budget: Arc<Budget>,
-) -> Result<(), ConnectionError> {
-    let mut framed = false;
-    while let Some(item) = queue.recv().await {
-        let (json, last) = match item {
-            Outbound::Upgrade => {
-                framed = true;
-                continue;
-            }
-            Outbound::End => break,
-            Outbound::Record(json) => (json, false),
-            Outbound::Closing(closing) => (record("$/closing", &closing)?, true),
-        };
-        let reserved = if last { 0 } else { encoded_size(&json) };
-        if !last && budget.overflowed().is_some() {
-            budget.release(reserved);
-            continue;
-        }
-        let bytes = if framed {
-            Frame::new(Channel::CONTROL, FrameKind::Data, json)?.encode()?
-        } else {
-            let mut line = json;
-            line.push(b'\n');
-            line
-        };
-        let written = writer.write_all(&bytes).await;
-        budget.release(reserved);
-        written?;
-        if last {
-            break;
-        }
-    }
-    writer.shutdown().await?;
-    Ok(())
-}
-
 /// The budgeted size of one encoded record. A length beyond `u64` exceeds every bound,
 /// so it saturates and the reservation is refused rather than wrapping.
-fn encoded_size(json: &[u8]) -> u64 {
+pub(super) fn encoded_size(json: &[u8]) -> u64 {
     u64::try_from(json.len()).unwrap_or(u64::MAX)
 }
 
-fn record<P: Serialize>(method: &str, params: &P) -> Result<Vec<u8>, serde_json::Error> {
+pub(super) fn record<P: Serialize>(method: &str, params: &P) -> Result<Vec<u8>, serde_json::Error> {
     serde_json::to_vec(&NotificationRecord {
         jsonrpc: "2.0",
         method,

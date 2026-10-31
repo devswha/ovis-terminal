@@ -77,7 +77,8 @@ impl Budget {
     }
 
     /// The first refused reservation, if any.
-    pub(super) fn overflowed(&self) -> Option<Overflow> {
+    #[cfg(test)]
+    fn overflowed(&self) -> Option<Overflow> {
         *self.overflow.borrow()
     }
 

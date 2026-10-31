@@ -13,6 +13,7 @@ mod handler;
 mod hello;
 mod identity;
 mod outbound;
+mod writer;
 
 pub use connections::Connections;
 pub use error::{ConnectionError, HelloError};
