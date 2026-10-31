@@ -132,11 +132,11 @@ The holder wire stays at protocol generation 2, and the contract checklist items
 `gh workflow run probe-stress-macos.yml --ref lane/t17-holder-screen-history -f probe=screen` started run https://github.com/devswha/ovis-terminal/actions/runs/41194300652, which concluded `success`. Its `screen` job repeated `cargo nextest run -p ovis-terminal-core --test screen --locked --no-tests=fail` 100 times on macos-latest. Log excerpt:
 
 ```text
-2026-10-31T10:52:52.2100180Z   1.99.1-aarch64-apple-darwin installed - rustc 1.99.1 (58cf8f9c3 2026-10-13)
-2026-10-31T10:52:52.3944900Z   1.99.1-aarch64-apple-darwin unchanged - rustc 1.99.1 (58cf8f9c3 2026-10-13)
-2026-10-31T10:52:52.9584720Z rustc 1.99.1 (58cf8f9c3 2026-10-13)
-2026-10-31T10:52:56.3443720Z     v0-rust-screen-Darwin-arm64-5b752a74
-2026-10-31T10:52:56.3444130Z     v0-rust-screen-Darwin-arm64-5b752a74-f2b0ec02
+     Summary [   0.780s] 13 tests run: 13 passed, 0 skipped
+     Summary [   0.547s] 13 tests run: 13 passed, 0 skipped
+     Summary [   0.569s] 13 tests run: 13 passed, 0 skipped
+PASS 100/100
+RESULT 100/100
 ```
 
 PR CI on head 446baee: every check passes, including test (ubuntu/macos/windows), probe (ubuntu/macos/windows), scripts/check.sh, msrv 1.89, rustdoc, cargo deny and cargo-machete.
