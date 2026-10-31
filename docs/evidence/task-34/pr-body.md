@@ -86,6 +86,9 @@ Observable outcomes the scenario asserts (raw request/response transcripts are i
 - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` → exit 0 (`windows.log`).
 - `openrpc check schema/ovis-terminal.openrpc.json` → fresh; `openrpc compat schema/released.openrpc.json` → compatible (additive only).
 
+- macOS stress (manual `workflow_dispatch`, probe `prompts`, macos-latest Darwin arm64): https://github.com/devswha/ovis-terminal/actions/runs/41236322259. The `prompts` job succeeded with `PASS 25/25` / `RESULT 25/25` (agent `prompts::` + server `prompts::` nextest + `agent/prompts --case all`, 25 iterations).
+- PR CI: none reported, because the PR is CONFLICTING against b1c68ef (see Risks); the merged tree was verified locally.
+
 ## Adversarial
 
 - **stale state / competing answers**: true concurrency is a crate test (barrier-released threads; the coordinator builds one unit at a time, so exactly one finds the version open). Sequential on the wire is the failure case.
