@@ -1,0 +1,103 @@
+{
+  "scenario": "part-a/task-20",
+  "todo": 20,
+  "title": "Explicit JSON CLI and side-effect-free discovery",
+  "closes": ["GAP-016", "GAP-137", "GAP-138", "GAP-141"],
+  "delivers": ["IDEAL-014", "IDEAL-110", "IDEAL-111", "IDEAL-114"],
+  "excludes": ["EXCL-001", "EXCL-002", "EXCL-003", "EXCL-013", "EXCL-027"],
+  "platforms": ["linux", "macos"],
+  "verification": {
+    "status": "deferred_by_plan",
+    "runner_todo": 21,
+    "requires_actual_cli_socket_transcript": true
+  },
+  "note": "Process tests run the real ovis-terminal binary against an isolated runtime directory and a real authenticated Unix-socket fixture server. The conformance-runner transcript is deferred until todo 21 lands; this scenario does not claim that run.",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "binary": ["ovis-terminal", "--json", "server", "status"],
+          "isolated": true,
+          "repeat": 5,
+          "expect": {
+            "exit": 0,
+            "stderr_bytes": 0,
+            "stdout_json": {"state": "stopped", "holder_count": 0, "live_terminals": 0},
+            "isolated_root_entries_changed": 0,
+            "owned_processes_after": 0
+          }
+        },
+        {
+          "binary": ["ovis-terminal", "--json", "schema"],
+          "isolated": true,
+          "expect": {"exit": 0, "stdout_json_equals_file": "schema/ovis-terminal.openrpc.json"}
+        },
+        {
+          "binary": ["ovis-terminal", "--json", "--skill"],
+          "isolated": true,
+          "expect": {"exit": 0, "stdout_json": {"version": "$build_version"}}
+        },
+        {
+          "argv": ["cargo", "test", "--locked", "-p", "ovis-terminal-cli", "--test", "cli", "happy", "--", "--exact", "--nocapture"],
+          "expect": {"exit": 0, "stdout_contains": ["test happy ... ok", "test result: ok. 1 passed; 0 failed"]}
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "binary": ["ovis-terminal", "--json", "terminal", "get"],
+          "server": "fixture_with_two_terminals",
+          "expect": {
+            "exit": 7,
+            "stdout_bytes": 0,
+            "stderr_json": {"error": {"kind": "needs_target", "exit_code": 7, "candidates_listed": true}},
+            "candidate_terminal_ids": ["term-a", "term-b"]
+          }
+        },
+        {
+          "binary": ["ovis-terminal", "--json", "--unknown-flag", "server", "status"],
+          "endpoint": "listening_socket_that_must_not_be_dialled",
+          "expect": {"exit": 2, "stdout_bytes": 0, "stderr_json": {"error": {"kind": "usage"}}, "connections_accepted": 0}
+        },
+        {
+          "binary": ["ovis-terminal", "--json", "terminal", "get"],
+          "isolated": true,
+          "expect": {"exit": 7, "stderr_json": {"error": {"kind": "needs_target", "candidates": [], "candidates_listed": false}}}
+        },
+        {
+          "argv": ["cargo", "test", "--locked", "-p", "ovis-terminal-cli", "--test", "cli", "failure", "--", "--exact", "--nocapture"],
+          "expect": {"exit": 0, "stdout_contains": ["test failure ... ok", "test result: ok. 1 passed; 0 failed"]}
+        }
+      ]
+    }
+  ],
+  "adversarial_cases": [
+    {
+      "class": "malformed input",
+      "name": "unknown flag, two targets, non-object --params and call hello",
+      "test": "failure",
+      "expected": {"exit": 2, "connections_accepted": 0}
+    },
+    {
+      "class": "misleading success",
+      "name": "stdout empty on every failure, stderr empty on success, exit code from the published table",
+      "test": "happy + failure + exit::tests::codes_are_distinct_and_every_kind_selects_exactly_its_status",
+      "expected": {"success_stderr_bytes": 0, "failure_stdout_bytes": 0}
+    },
+    {
+      "class": "repeated interruptions",
+      "name": "five consecutive status reads of a stopped runtime",
+      "test": "happy",
+      "expected": {"state": "stopped", "files_created": 0, "processes_left": 0}
+    },
+    {
+      "class": "precision",
+      "name": "u64 uptime relayed as an exact decimal string; a numeric uptime is invalid_response",
+      "test": "invocation::execute::tests::u64_max_round_trips_and_a_numeric_uptime_is_an_invalid_response",
+      "expected": {"uptime_ms": "18446744073709551615"}
+    }
+  ]
+}

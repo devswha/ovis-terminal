@@ -4,18 +4,27 @@ use std::ffi::OsString;
 use std::io::{self, Write as _};
 use std::process::ExitCode;
 
-use ovis_terminal_cli::{Invocation, USAGE_EXIT_CODE, version_line};
+use ovis_terminal_cli::{Context, ExitStatus, run};
 
 fn main() -> ExitCode {
     let args: Vec<OsString> = std::env::args_os().skip(1).collect();
-    match Invocation::parse(&args) {
-        Ok(Invocation::Version) => match writeln!(io::stdout().lock(), "{}", version_line()) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(_) => ExitCode::FAILURE,
-        },
-        Err(error) => match writeln!(io::stderr().lock(), "ovis-terminal: {error}") {
-            Ok(()) => ExitCode::from(USAGE_EXIT_CODE),
-            Err(_) => ExitCode::FAILURE,
-        },
-    }
+    let context = Context::from_process();
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            return match writeln!(
+                io::stderr().lock(),
+                "ovis-terminal: no async runtime: {error}"
+            ) {
+                Ok(()) | Err(_) => ExitStatus::Failure.into(),
+            };
+        }
+    };
+    let report = runtime.block_on(run(args, &context));
+    // A blocking stdin read from `connect` must not hold the process open after the reply.
+    runtime.shutdown_background();
+    report.emit()
 }

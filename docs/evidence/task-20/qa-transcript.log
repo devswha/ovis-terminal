@@ -1,0 +1,74 @@
+## host
+Linux 7.0.0-38-generic x86_64
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+770ec27b0a10e8e55e029a0055d49776b3ac2887
+
+## QA happy: cargo test -p ovis-terminal-cli --test cli happy -- --exact --nocapture
+running 1 test
+test happy ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.34s
+EXIT=0
+
+## QA failure: cargo test -p ovis-terminal-cli --test cli failure -- --exact --nocapture
+running 1 test
+test failure ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.02s
+EXIT=0
+
+## After: real binary in an isolated runtime dir
+$ target/debug/ovis-terminal --json server status
+stdout: {"holder_count":0,"live_terminals":0,"runtime_lifetime":null,"server_boot_id":null,"state":"stopped","uptime_ms":null}
+stderr: 
+exit: 0
+
+$ target/debug/ovis-terminal --json server status
+stdout: {"holder_count":0,"live_terminals":0,"runtime_lifetime":null,"server_boot_id":null,"state":"stopped","uptime_ms":null}
+stderr: 
+exit: 0
+
+$ target/debug/ovis-terminal --json endpoint
+stdout: {"address":"/tmp/tmp.sEvPMAw0td/ovis-terminal/default.sock","env_override":"OVIS_TERMINAL_SOCKET","kind":"unix","session":"default","source":"default"}
+stderr: 
+exit: 0
+
+files under isolated root after status: 0
+ovis-terminal processes before=7 after=2
+
+$ target/debug/ovis-terminal --json schema | sha256sum ; sha256sum schema/ovis-terminal.openrpc.json
+6fab81ee2026cf83eeba1f830aa82863feb1edce206e19a8136ce0cbc3ad3e96  -
+exit: 0
+6fab81ee2026cf83eeba1f830aa82863feb1edce206e19a8136ce0cbc3ad3e96  schema/ovis-terminal.openrpc.json
+
+$ target/debug/ovis-terminal --json --skill | head -c 200
+{"generation":"1","manual":"# ovis-terminal agent manual\n\n`ovis-terminal` is the agent-facing client of the ovis-terminal runtime. It draws\nnothing and never prompts. This manual ships inside the b
+exit: 0
+
+$ target/debug/ovis-terminal --json terminal get
+stdout: 
+stderr: {"error":{"candidates":[],"candidates_listed":false,"exit_code":7,"hint":"repeat with --terminal-id, --address or --name naming one candidate","kind":"needs_target","message":"the command needs an explicit target","origin":"cli"}}
+exit: 7
+
+$ target/debug/ovis-terminal --json --unknown-flag server status
+stdout: 
+stderr: {"error":{"exit_code":2,"hint":"run `ovis-terminal --json schema cli` for every command and flag","kind":"usage","message":"the command line does not parse: unexpected argument '--unknown-flag' found","origin":"cli"}}
+exit: 2
+
+$ target/debug/ovis-terminal --json --skill server status
+stdout: 
+stderr: {"error":{"exit_code":2,"hint":"run `ovis-terminal --json schema cli` for every command and flag","kind":"usage","message":"--skill takes no command","origin":"cli"}}
+exit: 2
+
+$ env OVIS_JSON=maybe target/debug/ovis-terminal schema
+stdout: 
+stderr: ovis-terminal: OVIS_JSON must be 0, 1 or unset [invalid_json_switch]
+hint: set OVIS_JSON=1 for JSON, 0 or unset for text
+exit: 2
+
+## Conformance attempt (runner lands in todo 21)
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-20 --isolated --case happy --evidence "/home/devswha/workspace/ovis-terminal-wt/lane-t20/.omo/evidence/ovis-terminal-v1/task-20/task-20-ovis-terminal-v1.json"
+   Compiling ovis-terminal-protocol v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t20/crates/ovis-terminal-protocol)
+   Compiling ovis-terminal-conformance v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t20/conformance)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 13.10s
+     Running `target/debug/conformance --binary target/debug/ovis-terminal --scenario part-a/task-20 --isolated --case happy --evidence /home/devswha/workspace/ovis-terminal-wt/lane-t20/.omo/evidence/ovis-terminal-v1/task-20/task-20-ovis-terminal-v1.json`
+conformance: no scenarios are registered in this build (protocol crate ovis-terminal-protocol)
+EXIT=2
