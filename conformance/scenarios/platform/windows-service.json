@@ -1,0 +1,37 @@
+{
+  "todo": 54,
+  "scenario": "platform/windows-service",
+  "title": "The Windows holder runs as a service the service control manager owns: an owner-only named pipe discovered as a pipe address, hello with the same contract as a Unix socket, and programs that outlive the job of the client that asked for them",
+  "closes": ["GAP-001", "GAP-002", "GAP-048", "GAP-050", "GAP-121", "GAP-129"],
+  "delivers": ["IDEAL-001", "IDEAL-002", "IDEAL-034", "IDEAL-093", "IDEAL-102"],
+  "excludes": ["EXCL-014", "EXCL-016", "EXCL-027"],
+  "platforms": ["windows"],
+  "declared_cases": [
+    {
+      "case": "happy",
+      "summary": "service status is stopped and installs nothing; service install and start run the holder under the manager as the fixture account; the record names a \\\\.\\pipe\\ address; a launcher in a kill-on-close job starts a ConPTY program through the holder pipe and is terminated; a new core adopts the same pid and start token and reads the marker; hello over the control pipe answers and pipelined requests share one connection; service stop ends the holder and uninstall removes the service.",
+      "native_tests": [
+        "ovis-terminal-cli service::windows::fixture_tests::the_service_holder_outlives_its_launch_job_and_serves_only_its_owner",
+        "ovis-terminal-holder service::windows::host_tests::a_core_restart_re_adopts_the_same_incarnation_and_its_output_survives",
+        "ovis-terminal-holder service::windows::host_tests::a_dedicated_holder_owns_one_terminal_and_refuses_another",
+        "ovis-terminal-server listen::pipe::tests::hello_and_pipelined_requests_share_one_owner_only_pipe_connection",
+        "ovis-terminal-server listen::pipe::tests::cancelled_pending_accepts_leave_the_endpoint_serving"
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "hello with another runtime's credential is invalid_credential or unauthenticated and nothing runs; another account and the anonymous token cannot open the pipe; a second listener never joins a claimed name; a record whose holder is gone is stale_endpoint and is left in place; a null or foreign DACL is refused at admission.",
+      "planned_injections": [
+        {"request": {"method": "hello", "params": {"credential": "other-runtime-token"}}, "expect": {"/error/data/kind": ["invalid_credential", "unauthenticated"]}}
+      ],
+      "native_tests": [
+        "ovis-terminal-server listen::pipe::tests::a_credential_of_another_runtime_is_refused_at_hello_and_nothing_runs",
+        "ovis-terminal-server listen::pipe::tests::an_anonymous_token_cannot_open_the_pipe",
+        "ovis-terminal-server listen::pipe::tests::a_second_listener_never_joins_a_claimed_name",
+        "ovis-terminal-server listen::pipe::evidence::tests::a_null_global_or_foreign_owned_descriptor_is_never_trusted",
+        "ovis-terminal-holder service::windows::host_tests::a_claimed_pipe_is_never_joined_and_a_dead_holder_record_is_stale",
+        "ovis-terminal-holder service::windows::observe::tests::a_marker_without_its_process_is_stale_even_with_no_pipe_left"
+      ]
+    }
+  ]
+}

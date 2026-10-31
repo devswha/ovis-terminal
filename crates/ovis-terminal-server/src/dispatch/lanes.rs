@@ -11,4 +11,5 @@ pub mod prompts;
 pub mod session_binding;
 #[cfg(unix)]
 pub mod unix_service;
+pub mod windows_service;
 pub mod worktrees;

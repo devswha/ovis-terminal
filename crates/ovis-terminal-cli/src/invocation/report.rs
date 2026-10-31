@@ -123,10 +123,28 @@ fn cli_record(error: &CliError) -> Map<String, Value> {
         | CliError::UnsupportedTransport
         | CliError::Schema(_)
         | CliError::Encode(_) => {}
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         CliError::Service(error) => service_detail(error, &mut record),
     }
     record
+}
+
+/// The typed facts a Windows service failure carries beyond its kind.
+#[cfg(windows)]
+fn service_detail(error: &crate::service::ServiceError, record: &mut Map<String, Value>) {
+    use crate::service::ServiceError;
+    match error {
+        ServiceError::Stale { reason } => {
+            record.insert("state".to_owned(), json!("stale_endpoint"));
+            record.insert("reason".to_owned(), json!(reason));
+        }
+        ServiceError::AlreadyRunning {
+            holder: Some(holder),
+        } => {
+            record.insert("holder".to_owned(), json!(holder));
+        }
+        _ => {}
+    }
 }
 
 /// The typed facts a service failure carries beyond its kind.

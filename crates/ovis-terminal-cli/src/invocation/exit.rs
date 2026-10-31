@@ -107,6 +107,10 @@ impl ExitStatus {
                 "invalid_user",
                 "socket_path_too_long",
                 "unsupported_path",
+                "invalid_pipe_name",
+                "invalid_account",
+                "privileged_account",
+                "password_required",
             ],
             Self::NotFound => &[
                 "not_found",
@@ -143,6 +147,7 @@ impl ExitStatus {
                 "stale_target",
                 "foreign_registration",
                 "identity_mismatch",
+                "service_exists",
             ],
             Self::Forbidden => &[
                 "forbidden",
