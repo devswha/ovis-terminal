@@ -45,10 +45,12 @@ thiserror = { workspace = true }
 libc = "0.2"
 rustix = { version = "1.1.6", features = ["event", "fs", "net", "process"] }
 
-# Job objects and process times for ConPTY ownership (plan todo 53); the version
-# portable-pty's dependency tree already resolves.
+# Job objects and process times for ConPTY ownership (plan todo 53); pipes, pipe
+# security, service control and account rights for the service host (plan todo 54).
+# The version portable-pty's dependency tree already resolves.
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
+tokio = { workspace = true }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authentication_Identity", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_JobObjects", "Win32_System_Pipes", "Win32_System_Services", "Win32_System_Threading"] }
 
 [features]
 # Exposes the platform-neutral ConPTY ownership model (`windows::model`) off Windows,
