@@ -2,4 +2,5 @@
 
 pub mod agent_status;
 pub mod plugins;
+#[cfg(unix)]
 pub mod unix_service;
