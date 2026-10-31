@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart, recovery]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart]
 
 permissions:
   contents: read
@@ -879,36 +879,4 @@ jobs:
         with:
           name: restart-stress-macos-${{ github.run_id }}
           path: restart-stress-macos.log
-          if-no-files-found: error
-  recovery:
-    if: inputs.probe == 'recovery'
-    runs-on: macos-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.99.1
-      - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@nextest
-      - name: repeat crash recovery tests 25 times
-        shell: bash
-        run: |
-          set -euo pipefail
-          {
-            uname -a
-            rustc --version
-            git rev-parse HEAD
-            for iteration in $(seq 1 25); do
-              printf '\nITERATION %s/25\n' "$iteration"
-              cargo nextest run -p ovis-terminal-core --lib --locked --no-tests=fail -E 'test(recovery::)'
-              cargo nextest run -p ovis-terminal-server --lib --locked --no-tests=fail -E 'test(lanes::recovery)'
-              cargo nextest run -p ovis-terminal-protocol --lib --locked --no-tests=fail -E 'test(domain::recovery)'
-              printf 'PASS %s/25\n' "$iteration"
-            done
-            printf 'RESULT 25/25\n'
-          } 2>&1 | tee recovery-stress-macos.log
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: recovery-stress-macos-${{ github.run_id }}
-          path: recovery-stress-macos.log
           if-no-files-found: error
