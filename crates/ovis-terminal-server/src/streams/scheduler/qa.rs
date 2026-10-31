@@ -1,21 +1,29 @@
-//! Scheduler QA: the 16-PTY latency profile, typed overflow before admission with a
-//! program that never reads stdin, shared fanout, and owned-thread shutdown.
+//! Scheduler QA: count-based control-first ordering, typed overflow before admission with
+//! a program that never reads stdin, session caps, disk history, shared fanout and
+//! slow-subscriber loss counts, owned-thread shutdown, and the 16-PTY latency profile.
+//!
+//! Every assertion waits on product replies or events. Wall-clock latency is reported;
+//! only the profile asserts it, with a CI margin, since the plan names that bound.
 
+mod caps;
 mod failure;
 mod fanout;
+mod history;
+mod ordering;
 mod profile;
 mod threads;
 
 use std::time::Duration;
 
 use ovis_terminal_protocol::schema::limits::Limits;
-use ovis_terminal_vt::{Geometry, HistoryLimit, Vt, VtConfig};
+use ovis_terminal_vt::{Geometry, HistoryLimit, OutputOffset, Vt, VtConfig};
 use tokio::sync::broadcast;
+use tokio::sync::broadcast::error::RecvError;
 
-use super::{ActorConfig, TerminalSetup};
-
-/// The control contract: every admitted send and committed event within 100 ms.
-const CONTROL_BOUND: Duration = Duration::from_millis(100);
+use super::{
+    ActorConfig, ActorTask, Engine, OutputEvent, OutputFeed, TerminalHandle, TerminalSetup,
+    spawn_terminal,
+};
 
 /// Upper bound on any single wait for a product signal; reaching it fails the test.
 const WAIT: Duration = Duration::from_secs(20);
@@ -28,6 +36,11 @@ fn vt() -> Vt {
 fn setup() -> TerminalSetup {
     let limits = Limits::v1();
     TerminalSetup::advertised(ActorConfig::advertised(&limits), &limits)
+}
+
+/// A terminal whose program discards its input.
+fn spawn(setup: &TerminalSetup) -> (TerminalHandle, OutputFeed, ActorTask) {
+    spawn_terminal(Engine::new(vt()), tokio::io::sink(), setup).expect("spawns")
 }
 
 /// Dense, colored terminal output: SGR runs, cursor moves and line breaks.
@@ -63,4 +76,25 @@ async fn await_event<E: Clone, T>(
     })
     .await;
     found.expect("the event arrives within the bound")
+}
+
+/// Reads output events until the screen reflects `end`; returns the events lost to lag.
+///
+/// The final `Parsed` event is the newest one the actor publishes, so a receiver that
+/// lags still receives it: the broadcast keeps the newest events.
+async fn parsed_through(mut output: broadcast::Receiver<OutputEvent>, end: OutputOffset) -> u64 {
+    let mut lost = 0_u64;
+    let reached = tokio::time::timeout(WAIT, async {
+        loop {
+            match output.recv().await {
+                Ok(OutputEvent::Parsed { offset }) if offset == end => return,
+                Ok(_) => {}
+                Err(RecvError::Lagged(missed)) => lost = lost.saturating_add(missed),
+                Err(RecvError::Closed) => panic!("output closed before offset {end}"),
+            }
+        }
+    })
+    .await;
+    reached.expect("the output is parsed within the bound");
+    lost
 }

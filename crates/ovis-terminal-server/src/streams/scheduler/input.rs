@@ -35,7 +35,7 @@ impl Reserved {
     #[must_use]
     pub const fn bytes(&self) -> u64 {
         let [terminal, _] = &self.holds;
-        terminal.bytes()
+        terminal.units()
     }
 }
 

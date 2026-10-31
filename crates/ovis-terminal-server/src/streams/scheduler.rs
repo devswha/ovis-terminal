@@ -7,7 +7,10 @@
 //! allocated and is written by a separate task, so a program that does not read stdin
 //! stays controllable. Program output arrives from owned pump threads through a bounded
 //! feed and fans out as one shared chunk per event. Synchronous database work runs on a
-//! dedicated bounded writer thread or through a bounded blocking gate.
+//! dedicated bounded writer thread or through a bounded blocking gate. Session-wide
+//! budgets bound accepted input, queued control requests, output waiting to be parsed and
+//! event retention; each terminal can keep a disk-backed output history with a retention
+//! floor.
 //!
 //! [`ParseBudget`]: ovis_terminal_vt::ParseBudget
 
@@ -19,6 +22,7 @@ mod db;
 mod error;
 mod event;
 mod handle;
+mod history;
 mod input;
 mod pump;
 mod writer;
@@ -28,12 +32,13 @@ mod qa;
 
 pub use actor::{ActorReport, ActorTask, spawn_terminal};
 pub use blocking::BlockingGate;
-pub use budget::{ByteBudget, Reservation};
-pub use config::{ActorConfig, TerminalSetup};
+pub use budget::{Budget, Reservation};
+pub use config::{ActorConfig, Engine, SessionBudgets, TerminalSetup};
 pub use db::DbWriter;
 pub use error::{BudgetScope, SchedulerError};
 pub use event::{OutputEvent, TerminalEvent};
 pub use handle::{OutputFeed, Receipt, TerminalHandle};
+pub use history::{HistoryConfig, HistoryError, HistoryRead, HistoryStats, HistoryStore};
 pub use input::{CancelOutcome, Reserved, Ticket};
 pub use pump::{PumpEnd, PumpReport, PumpThread};
 pub use writer::WriterReport;

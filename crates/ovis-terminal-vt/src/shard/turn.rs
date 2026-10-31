@@ -109,6 +109,12 @@ impl Shard {
         }
     }
 
+    /// Bytes allowed to wait for a turn.
+    #[must_use]
+    pub const fn cap(&self) -> PendingCap {
+        self.cap
+    }
+
     /// Bytes waiting for a turn.
     #[must_use]
     pub const fn pending_bytes(&self) -> usize {

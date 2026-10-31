@@ -16,57 +16,71 @@ Measured "before" for the parse budget (`docs/evidence/task-56/tuning/parse-budg
 
 ## What changed
 
-- `crates/ovis-terminal-vt/src/shard/`: `Shard` feeds queued output chunks (shared `Arc<[u8]>`, never copied) to a `Vt` in turns of at most `ParseBudget` bytes; `push` refuses past `PendingCap` with `ShardError::Full` (kind `backpressure`) before queuing. Defaults: 16 KiB per turn (chosen from the measurement below) and 1 MiB pending, so 50 terminals stay inside the 64 MiB session backlog.
+- `crates/ovis-terminal-vt/src/shard/`: `Shard` feeds queued output chunks (shared `Arc<[u8]>`, never copied) to a `Vt` in turns of at most `ParseBudget` bytes; `push` refuses past `PendingCap` with `ShardError::Full` (kind `backpressure`) before queuing; `cap()` exposes the bound. Defaults: 16 KiB per turn (from the measurement below), 1 MiB pending.
 - `crates/ovis-terminal-server/src/streams/scheduler/` (new child of `streams`; viewer/pump untouched):
-  - `spawn_terminal`: one actor per terminal on the multi-thread runtime. Its `select!` is biased: control queue (cancel/resize/stop, its own 16-slot reserved queue), then admissions, then output intake, then one parse turn followed by `yield_now`.
-  - Input: `TerminalHandle::reserve(len)` reserves against the per-terminal (`input_queue_bytes`, 16 MiB) and session (`session_input_bytes`, 64 MiB) `ByteBudget`s **before** the caller allocates the bytes. A refusal is `SchedulerError::Exhausted` (kind `input_overflow`, retryable) naming the scope and holding nothing. A session refusal returns the terminal reservation.
-  - A separate writer task drains the queue into the program's stdin, so a program that never reads stdin stalls only that task; `cancel` withdraws queued entries (`Withdrawn`) or reports `InFlight`; stop aborts a writer stuck mid-write and reports `unsent` entries and the `cut_off` ticket (outcome unknown).
-  - Committed control events (`Admitted`/`Writing`/`Written`/`Withdrawn`/`Resized`) and output fanout (`OutputEvent::Chunk` sharing one `Arc` per chunk, `Parsed`) are separate bounded broadcast channels. A lagging subscriber gets an explicit `Lagged(n)` loss count; output volume cannot push out control events.
-  - `PumpThread`: owned named thread per blocking reader (portable-pty master), bounded feed (a full feed blocks the pump and so the program), EOF/EIO end, joined.
-  - `DbWriter<S>`: dedicated named thread draining a bounded `sync_channel`; a full queue is `WriterBusy` (`backpressure`) before acceptance; `shutdown` joins and returns the state; a panicking job is reported as `internal`.
-  - `BlockingGate`: bounded `spawn_blocking` admission (semaphore `try_acquire`), one past the limit is `BlockingSaturated`, never queued.
-- `bench/tuning/` (`fairness-tuning` binary; library module via `#[path]` like `bench/harness`): `parse`, `load <terminals> <viewers> <bytes/s> <seconds> [parse-budget [workers]]` over real portable-pty terminals, and `emit`.
+  - `spawn_terminal(Engine, sink, &TerminalSetup) -> Result<…>`: one actor per terminal on the multi-thread runtime. Its `biased` `select!` order is: control queue (cancel/resize/read_history/stop), admissions, output intake, then one parse turn followed by `yield_now`. Control events (`Admitted`/`Withdrawn`/`Resized`) carry `after_turns`, the parse turns run before they committed.
+  - **Session caps** (`SessionBudgets`, one `Budget` type, typed `SchedulerError::Exhausted{scope,…}` before anything is queued or allocated):
+    - input: terminal 16 MiB plus session 64 MiB (`input_overflow`);
+    - control: 1024 queued requests per session (`backpressure`). Each control request holds a slot until served; `stop` needs no slot;
+    - output: session 64 MiB of output waiting to be parsed. A chunk without room is stashed and retried on release, and the pump/PTY is held back; nothing is dropped;
+    - events: each terminal reserves its retention (64 output slots × 16 KiB chunk + 1024 control slots) against the 64 MiB session event budget at spawn. A refusal is `backpressure`, and the reservation is returned at stop.
+  - **Disk-backed history** (`history/`): append-only segment files named by the 20-digit offset of their first byte. The index is in memory, rebuilt from the directory on open, and bounded by retention. Once the retained bytes pass the bound (advertised: `output_ring_bytes` 64 MiB in 16 segments), the oldest segments are deleted and the floor advances.
+    - `read(offset, max)` below the floor is `history_gap` (with the floor), past the end is `invalid_params`, and a gap between segment files on open is `history_unavailable`.
+    - A failed append stops recording with a typed fault.
+    - The actor queues every accepted chunk to the terminal's **`DbWriter<HistoryStore>`** (owned thread, bounded queue; busy → the chunk waits) before parsing it. `TerminalHandle::read_history` reads on that thread via the control lane.
+  - Input: reserve-before-allocate, separate writer task (stdin non-reader cannot stall the actor), cancel → `Withdrawn`/`InFlight`, stop aborts a stuck write and reports `unsent`/`cut_off` (unchanged from round 1).
+  - Fanout: control events and output events are separate bounded broadcasts; output shares one `Arc` per chunk; a lagging subscriber gets `Lagged(n)`.
+  - `PumpThread` (owned, joined), `DbWriter<S>` (owned thread, bounded queue, joined; now used by the history path), `BlockingGate` (bounded `spawn_blocking`).
+- `bench/tuning/` (`fairness-tuning`): `parse`, `load … [parse-budget [workers]]` over real portable-pty terminals; each load terminal keeps an advertised disk history, and the report gives the **measured** history footprint (`history_disk_bytes`, a walk of the files) in place of round 1's computed bound.
 - `conformance/scenarios/performance/fairness.json` + `declared.json` entry (owner 56).
-- macOS stress job `fairness` (option + job appended at the end of `.github/workflows/probe-stress-macos.yml`) was committed in ba9f3e4 and dispatched on this branch: https://github.com/devswha/ovis-terminal/actions/runs/41236348670. The file was then restored to base in the follow-up commit, because the shared options line conflicts with integration 436506e; the orchestrator union-merges the job block from ba9f3e4.
+
+## Round 2 (gate review 2026-11-01)
+
+- **B1:** `an_owned_pump_carries_output_until_eof_and_is_joined` now reads the output broadcast **concurrently** with the pump in a lag-tolerant reader (`qa::parsed_through`), and asserts the pump's counters and the actor's `parsed_bytes`. The final `Parsed` event is the newest one published, so lag cannot hide it. Capacity is unchanged. 25/25 runs of the full server lib binary pinned to 2 CPUs pass (`docs/evidence/task-56/stress-lib-2cpu.log`).
+- **B2:** new `qa::ordering` (current-thread runtime, so observed turns equal actual turns):
+  - `a_resize_waits_behind_at_most_one_parse_turn`: 32 one-KiB turns pending; asserts `Resized.after_turns <= turns_seen + 1` and `< 32`.
+  - `admissions_and_cancels_overtake_pending_parse_turns_while_stdin_is_stuck`: the writer is stuck on a never-read pipe; asserts admission/withdrawal `after_turns` within one turn, and the outcomes `Withdrawn`/`InFlight`/`cut_off`.
+  - Mutant M1 (parse arm moved ahead of control) fails both: "resize committed after 16 turns; 1 had run when it was sent" (`docs/evidence/task-56/mutant-parse-before-control.log`, exit 101).
+  - Wall-clock bounds are now reported, not asserted, in `failure.rs`. The profile test, where the plan names the 100 ms bound, prints `within_contract` and asserts a 1 s CI margin.
+- **B3:** session caps for control/output/events and disk-backed history as above, with tests in `qa::caps`, `qa::history`, `history::tests` (retention eviction and floor, reopen rebuild, discontinuity refusal, typed fault, proptest over chunking/segment size/read windows).
+- Slow subscriber: `a_slow_subscriber_is_told_exactly_how_many_events_it_lost` asserts `Lagged(2·100 − 64)` exactly, and that the newest 64 events are still delivered.
+- Unused API removed: `ActorConfig::with_terminal_input`, `with_events`, `TerminalSetup::session`, `ByteBudget::limit` (and `ByteBudget` is renamed `Budget`). Every remaining public item has a caller in tests or bench.
 
 ## Seams
 
-- New public API: `ovis_terminal_vt::{ParseBudget, PendingCap, Shard, ShardError, Turn}`; `ovis_terminal_server::streams::scheduler::*` (new `pub mod`).
+- New public API: `ovis_terminal_vt::{ParseBudget, PendingCap, Shard, ShardError, Turn}` (+ `Shard::cap`); `ovis_terminal_server::streams::scheduler::*` (new `pub mod`).
 - No landed public API changed. Holder wire generation stays 2.
-- `bench` gains dependencies on `ovis-terminal-protocol`, `ovis-terminal-server`, `tokio` (`DEPENDS_ON` updated).
+- `bench` depends on `ovis-terminal-protocol`, `ovis-terminal-server`, `tokio` (`DEPENDS_ON` updated).
+- **Disclosed, not changed:** existing synchronous DB work outside this lane still uses raw, unbounded `tokio::task::spawn_blocking`: `dispatch/execution.rs:128,159`, `dispatch/job.rs:63,114`, `streams/pump.rs:119,128`. Routing them through `BlockingGate`/`DbWriter` is outside this lane's write scope and belongs to assembly (todo 31/42). `BlockingGate` is therefore exercised only by its tests. The actor's own stop joins the history thread through one `spawn_blocking` per terminal stop.
 
 ## After
 
-Native host: Linux 7.0.0-38-generic x86_64, AMD Ryzen Threadripper PRO 3995WX (128 cores, shared host, load average ~31), rustc 1.99.1 (`docs/evidence/task-56/tuning/host.log`).
+Native host: Linux 7.0.0-38-generic x86_64, AMD Ryzen Threadripper PRO 3995WX (128 cores, shared host), rustc 1.99.1 (`docs/evidence/task-56/tuning/host.log`).
 
 ```
 $ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal                                  exit=0
-$ cargo test -p ovis-terminal-vt -p ovis-terminal-server --all-targets                           exit=0 (161 passed)
-$ cargo clippy -p ovis-terminal-vt -p ovis-terminal-server --all-targets -- -D warnings          exit=0
-$ bash scripts/check.sh                                                                          exit=0 (nextest 828 passed, 1 skipped; hygiene 0 violations)
+$ cargo test -p ovis-terminal-vt -p ovis-terminal-server --all-targets                           exit=0 (177 passed)
+$ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings                  exit=0
+$ bash scripts/check.sh                                                                          exit=0 (nextest 844 passed, 1 skipped; hygiene 0 violations in 852 files)
 $ RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked   exit=0
 ```
 
-In-crate profile (`docs/evidence/task-56/scheduler-qa.log`, debug build, 4 workers, 4 KiB test parse budget):
+In-crate profile (debug, 4 workers, 4 KiB test budget): `admission_max_ms 1.543, control_max_ms 1.464, event_max_ms 2.923, events_lost 0, within_contract true`.
 
-```
-{"profile":"16-pty/8-client/16-inflight/1MiB-s","requests":6560,"commits":4928,"admissions":3280,"controls":3280,"admission_max_ms":2.063,"control_max_ms":1.868,"events":39424,"event_max_ms":3.050,"events_lost":0,"rejected":0,"output_bytes":4216832,"parsed_bytes":4216832,"parse_turns":4118,"max_turn_ms":2.453}
-```
+Real PTYs, release, bench pinned to CPUs 2-127 (`docs/evidence/task-56/tuning/*.json` + `.log` with command and exit). The latency columns are the max over every sample:
 
-Real PTYs, release (`docs/evidence/task-56/tuning/*.json`, each with its `.log` holding the command and exit status):
-
-| run | workers | turn budget | admissions | admission max | control max | event max | events lost | max turn | RSS peak |
+| run | workers | turn | admissions | admission max | control max | event max | lost | RSS peak | history on disk (measured) |
 |---|---|---|---|---|---|---|---|---|---|
-| 16 PTYs, 1 MiB/s (profile) | 4 | 16 KiB | 8016 | 1.29 ms | 5.78 ms | 9.29 ms | 0 | 4.31 ms | 247 MB |
-| 16 PTYs, 64 MiB/s overload — **before** (8 MiB turns) | 4 | 8 MiB | 3912 | **319.7 ms** | 368.5 ms | 276.0 ms | 0 | 99.8 ms | 234 MB |
-| 16 PTYs, 64 MiB/s overload — **after** | 4 | 16 KiB | 7985 | **62.1 ms** | 70.6 ms | 50.8 ms | 0 | 16.4 ms | 265 MB |
-| 50 PTYs, 400 viewers, 1 MiB/s | 4 | 16 KiB | 8000 | 51.8 ms | 54.1 ms | 52.8 ms | 0 | 41.5 ms | 700 MB |
-| 50 PTYs, 400 viewers, 1 MiB/s | 8 | 16 KiB | 8016 | 32.3 ms | 63.4 ms | 27.7 ms | 0 | 192.2 ms | 701 MB |
+| 16 PTYs, 1 MiB/s (profile) | 4 | 16 KiB | 8016 | 4.4 ms | 16.1 ms | 21.4 ms | 0 | 247 MB | 10.7 MB |
+| 16 PTYs, 64 MiB/s — **before** (8 MiB turns) | 4 | 8 MiB | 4086 | **100.7 ms** | 97.6 ms | 64.2 ms | 0 | 237 MB | 683 MB |
+| 16 PTYs, 64 MiB/s — **after** | 4 | 16 KiB | 8000 | **21.6 ms** | 23.7 ms | 23.4 ms | 0 | 280 MB | 682 MB |
+| 16 PTYs, 64 MiB/s for 20 s (retention) | 4 | 16 KiB | 16000 | 98.9 ms | **108.0 ms** | 78.9 ms | 0 | 288 MB | 1,030 MB of 1,365 MB recorded; 80 segments evicted |
+| 50 PTYs, 400 viewers, 1 MiB/s | 4 | 16 KiB | 8016 | 0.44 ms | 10.8 ms | 10.8 ms | 0 | 704 MB | 10.7 MB |
+| 50 PTYs, 400 viewers, 1 MiB/s | 8 | 16 KiB | 8016 | 0.08 ms | 11.0 ms | 4.3 ms | 0 | 726 MB | 10.7 MB |
 
-- Every run uses 16 lanes firing together every 10 ms (16 requests in flight) and eight control-event clients per terminal. `admission_max`/`event_max` are the maximum over **every** sample, not a percentile; sample counts are in the JSON (`admissions`, `controls`, `events`), and `rejected` is 0 in every run.
-- 50×400: RSS peak (harness + 50 emitter processes) 700 MB < 1 GiB. The retained-data bound reported as `data_bound_bytes` is 382 MB < 4 GiB. One viewer per terminal never reads; those 50 stalled viewers were told of 87,055 / 88,133 lost output events (explicit `Lagged` floor) instead of growing memory.
-- `max_turn_ms` is wall time and includes OS preemption on this shared host: a 16 KiB turn costs about 1 ms of CPU (`parse-budgets.json`), and the 192 ms outlier in the 8-worker stress run is a preempted worker. Control requests still stayed at or below 63 ms because other workers served them.
-- Overload before/after is the latency evidence: the same 64 MiB/s on 4 workers breaks the 100 ms contract with 8 MiB turns (320 ms) and holds it with 16 KiB turns (62 ms, with 31,001 output-backpressure waits instead).
+- The 1 MiB/s profile and the 50×400 stress stay within 100 ms. Their RSS stays below 1 GiB, and history on disk is far below the 4 GiB data budget. The 50 never-reading viewers were told of 96,810 / 97,106 lost events.
+- In the 20 s overload run (64× the profile rate, 16 terminals writing history at 4 MiB/s each), control max reached 108 ms. That run is reported as overload evidence, not as the profile. History stayed bounded by retention: 1.03 GB on disk for 16 × 64 MiB = 1.07 GB allowed.
+- `max_turn_ms` is wall time including preemption; a 16 KiB turn costs about 1 ms of CPU (`parse-budgets.json`).
 
 ## DEFERRED VERIFICATION (runner lands in Todo 21)
 
@@ -84,29 +98,36 @@ So there is no materialized `ovis-terminal` CLI/socket invocation for this todo 
 
 ## QA
 
-- happy: `scheduler::qa::profile::sixteen_ptys_eight_clients_keep_every_control_within_100_ms`. 16 actors, 8 clients × 2 lanes, output paced at 1 KiB per terminal every 16 ms (1 MiB/s aggregate) until at least 4 MiB was sent. It asserts the max of every admission, control and committed-event sample is ≤ 100 ms, every client saw every commit (`events == commits × 8`), 0 lagged, and parsed ≥ 4 MiB.
-- failure: `scheduler::qa::failure::overflow_is_refused_before_admission_and_cancel_stays_serviceable`. A 1 KiB pipe nobody reads is the program's stdin. `reserve(16 MiB + 1)` → `input_overflow`, scope `TerminalInput`, `held: 0`, `input_held() == 0`, no receipt. Then 3 × 4 KiB entries are admitted (each ≤ 100 ms). After the product's `Writing{first}` event, `cancel(second) == Withdrawn`, `cancel(first) == InFlight` and a resize are served together within 100 ms, and the withdrawn bytes are released. Stop joins with `admitted 3, withdrawn 1, unsent 1, cut_off first, writer None`.
-- Also: `the_session_bound_refuses_and_returns_the_terminal_reservation` (scope `SessionInput`, terminal reservation returned, over-reservation `invalid_params` releases), `every_refusal_maps_to_a_typed_retryable_wire_kind` (wire `kind`/`retryable` via `BoundaryError::data`, Display never repeats the kind), `every_viewer_receives_the_same_shared_chunk` (8 viewers, `Arc::ptr_eq`), DB writer busy/join/panic, blocking gate saturation, pump EOF/actor-stopped, budget proptest (held never passes the limit, a refusal holds nothing), shard proptest (budgeted turns over any chunking equal one whole feed: offset, screen, cursor, modes, query offsets, OSC; every turn ≤ budget; turn count = ⌈len/budget⌉).
+- Ordering (B2): `qa::ordering::*` as above; mutant M1 log committed.
+- failure: `qa::failure::overflow_is_refused_before_admission_and_cancel_stays_serviceable`. `reserve(16 MiB + 1)` → `input_overflow`, scope `TerminalInput`, `held 0`, no receipt. With stdin never read: `Withdrawn`/`InFlight`, resize served, withdrawn bytes released. Stop joins with `unsent 1, cut_off stuck, writer None`. Elapsed time is printed, not asserted.
+- caps: `qa::caps::*`:
+  - exhausted control slots → `backpressure` (scope `SessionControl`), served once a slot frees, stop accepted without a slot;
+  - output held by another terminal → nothing accepted (no `Chunk` event), accepted and parsed after release, `output_waits 1`, budget back to 0;
+  - a third terminal's event retention refused, and accepted after one stops.
+- history: `qa::history::*` (actor records to disk; tail read equals the bytes; read at 0 → `history_gap`; floor readable; `report.history.disk_bytes == end − floor`; evicted > 0; no fault; a terminal without history → `invalid_params`) and `history::tests::*`.
+- fanout: 8 viewers share one allocation (`Arc::ptr_eq`); slow subscriber exact lost count.
+- threads: DB writer busy/join/panic; blocking gate saturation; pump EOF (concurrent lag-tolerant reader) / actor-stopped.
+- profile: 16 actors × 8 clients × 16 lanes at 1 MiB/s until 4 MiB; every client sees every commit, 0 lost, ≤ 1 s CI margin, `within_contract` reported.
 
 ## Adversarial
 
-- Hung commands / stdin non-reader: the failure test (never-read pipe) and the real-PTY runs (emitters run `stty -echo` and never read stdin) keep cancel/resize within bound. Stop never waits on a stuck write.
-- Misleading success: every report carries sample counts, `rejected`, `events_lost`, `output_waits`, `unsent`/`cut_off`. Output still queued at stop is reported as not parsed (`parsed <= output`), never claimed.
-- Stale state / impossible credit: the stream credit refusal for acknowledgements beyond sent or regressed is the landed `streams::credit` (todo 23), which this PR does not change. Scheduler tickets are never revived after `NotQueued`.
-- No timing sleeps for synchronization: tests wait on product replies or events with a 20 s bound. The two `interval`s in the profile test pace the declared workload (1 MiB/s, 16 requests per tick); they are not synchronization.
+- stdin non-reader: the failure and ordering tests (never-read pipes) and the real-PTY runs (emitters with `stty -echo` never read).
+- misleading success: reports carry sample counts, `rejected`, `events_lost`, `output_waits`, `unsent`, `cut_off`, and history `fault`/`evicted_segments`. A read below the floor is `history_gap`, never empty success.
+- stale state / impossible credit: the stream credit refusal is the landed `streams::credit` (unchanged). Session slots are returned exactly once (budget proptest).
+- no sync sleeps: tests wait on replies or events with a 20 s bound. The ordering tests use the current-thread runtime instead of timing. The profile's intervals pace its workload only.
 
 ## Contract checklist
 
 1. u64 on the wire: this PR adds no wire fields (scheduler events are in-process). `Ticket` is a newtype not yet serialized; its decimal-string encoding is for todo 31 to add when routed.
-2. Boundary errors: `SchedulerError`, `ShardError`, `TuningError` are `thiserror` enums with `kind()`/`hint()`, `#[source]` on inner errors, and Display without the kind token (asserted).
-3. Identities: `Ticket` newtype; `OutputOffset` reused from the VT crate.
-4. Behavior tests incl. two proptests; no read-back of locally assigned literals.
+2. Boundary errors: `SchedulerError`, `ShardError`, `HistoryError`, `TuningError` are `thiserror` enums with `kind()`/`hint()`, `#[source]` on inner errors, and Display without the kind token (asserted).
+3. Identities: `Ticket` newtype; `OutputOffset` reused from the VT crate (history offsets and floors included).
+4. Behavior tests incl. four proptests (shard turns, budget holds, history windows) and a committed mutant run; no read-back of locally assigned literals.
 5. No `#[allow]`/`#[expect]`, no TODOs.
 6. Holder wire generation stays 2; checklist items unchanged.
 
 ## Risks
 
-- `origin/integration` moved after dispatch (81cb6bf → 436506e); per lane rules this branch does not merge it. `git merge-tree` against 436506e conflicted only in the shared stress workflow, which is now restored to base; the re-check is clean.
-- The scheduler is not yet wired into served routes or into `TerminalStreams` (todo 31 assembles). The in-crate tests prove the component, not the served binary.
-- Disk-backed history is not part of this PR: retention here is bounded memory with explicit loss counts (`Lagged`, `unsent`, `cut_off`). Disk spill of history remains with the checkpoint/history owners (todo 49).
-- The debug-build profile test asserts a hard 100 ms max on shared CI runners. Locally on 2 pinned cores it stayed ≤ 77 ms in 12 of 13 runs. One closed-loop variant hit 113 ms before lanes were paced, and one 1-core run hit 161 ms. The macOS `fairness` stress run https://github.com/devswha/ovis-terminal/actions/runs/41236348670 (Apple M1 virtual, 3 vCPU) passed iterations 1–9 (admission max ≤ 22.5 ms, event max ≤ 14.8 ms) and failed iteration 10. In that iteration admission was 279.5 ms, control 298.7 ms and event 247.3 ms, with the longest 4 KiB parse turn at 217.0 ms of wall time. That turn costs well under 1 ms of CPU, so the VM descheduled the workers: every metric moved together, and turns and events were not lost or misordered. The contract was not loosened; the assertion messages now print these figures so a failing CI log explains itself. PR CI (ubuntu/macos/windows test, check.sh) passed.
+- `origin/integration` is at 1c21d63; per lane rules this branch does not merge it (the orchestrator union-merges).
+- The scheduler is a component; served routes and `TerminalStreams` do not use it until todo 31. Conformance `performance/fairness` stays declared.
+- Raw `spawn_blocking` in dispatch/streams pump (listed under Seams) is not bounded by this PR.
+- Under sustained 64× overload with history, control max reached 108 ms (reported above). The profile and stress runs stay below 100 ms.

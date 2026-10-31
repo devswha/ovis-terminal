@@ -2,13 +2,14 @@
 
 use std::sync::Arc;
 
-use ovis_terminal_vt::Geometry;
+use ovis_terminal_vt::{Geometry, OutputOffset};
 use tokio::sync::mpsc::error::TrySendError;
 use tokio::sync::{broadcast, mpsc, oneshot};
 
-use super::budget::ByteBudget;
+use super::budget::{Budget, Reservation};
 use super::error::SchedulerError;
 use super::event::{OutputEvent, TerminalEvent};
+use super::history::{HistoryError, HistoryRead};
 use super::input::{CancelOutcome, Reserved, Ticket};
 
 /// An admitted input entry.
@@ -31,7 +32,21 @@ pub(super) enum Control {
         geometry: Geometry,
         reply: oneshot::Sender<()>,
     },
+    ReadHistory {
+        offset: OutputOffset,
+        max: usize,
+        reply: oneshot::Sender<Result<HistoryReply, SchedulerError>>,
+    },
     Stop,
+}
+
+pub(super) type HistoryReply = oneshot::Receiver<Result<HistoryRead, HistoryError>>;
+
+/// A control request with the session control slot it holds until served.
+#[derive(Debug)]
+pub(super) struct Queued {
+    pub control: Control,
+    pub slot: Option<Reservation>,
 }
 
 #[derive(Debug)]
@@ -54,9 +69,10 @@ fn refused<T>(
 /// Requests to one terminal actor; control requests have their own reserved queue.
 #[derive(Debug, Clone)]
 pub struct TerminalHandle {
-    pub(super) controls: mpsc::Sender<Control>,
+    pub(super) controls: mpsc::Sender<Queued>,
     pub(super) admits: mpsc::Sender<Admit>,
-    pub(super) budgets: [Arc<ByteBudget>; 2],
+    pub(super) budgets: [Arc<Budget>; 2],
+    pub(super) control_slots: Arc<Budget>,
     pub(super) events: broadcast::Sender<TerminalEvent>,
     pub(super) output: broadcast::Sender<OutputEvent>,
 }
@@ -122,13 +138,40 @@ impl TerminalHandle {
         done.await.map_err(|_| SchedulerError::ActorStopped)
     }
 
-    /// Asks the actor to stop; join its task for the report.
+    /// Reads up to `max` bytes of disk history from `offset`, on the history thread.
     ///
     /// # Errors
     ///
-    /// As [`TerminalHandle::cancel`].
+    /// As [`TerminalHandle::cancel`], plus `invalid_params` when the terminal keeps no
+    /// history or the history's own refusal (`history_gap` below the floor).
+    pub async fn read_history(
+        &self,
+        offset: OutputOffset,
+        max: usize,
+    ) -> Result<HistoryRead, SchedulerError> {
+        let (reply, queued) = oneshot::channel();
+        self.control(Control::ReadHistory { offset, max, reply })?;
+        let read = queued.await.map_err(|_| SchedulerError::ActorStopped)??;
+        Ok(read.await.map_err(|_| SchedulerError::WriterStopped)??)
+    }
+
+    /// Asks the actor to stop; join its task for the report.
+    ///
+    /// Stop holds no session control slot, so it is accepted even when the session's
+    /// control budget is exhausted.
+    ///
+    /// # Errors
+    ///
+    /// Returns `backpressure` when this terminal's control queue is full, `unavailable`
+    /// when the actor stopped.
     pub fn stop(&self) -> Result<(), SchedulerError> {
-        self.control(Control::Stop)
+        let queued = Queued {
+            control: Control::Stop,
+            slot: None,
+        };
+        self.controls
+            .try_send(queued)
+            .map_err(refused("control", self.controls.max_capacity()))
     }
 
     /// Committed control events from now on.
@@ -150,9 +193,11 @@ impl TerminalHandle {
         terminal.held()
     }
 
+    /// Queues `control` holding one session control slot.
     fn control(&self, control: Control) -> Result<(), SchedulerError> {
+        let slot = Some(self.control_slots.reserve(1)?);
         self.controls
-            .try_send(control)
+            .try_send(Queued { control, slot })
             .map_err(refused("control", self.controls.max_capacity()))
     }
 }

@@ -3,10 +3,8 @@ use std::sync::mpsc;
 
 use ovis_terminal_vt::OutputOffset;
 
-use super::super::{
-    BlockingGate, DbWriter, OutputEvent, PumpEnd, PumpThread, SchedulerError, spawn_terminal,
-};
-use super::{WAIT, await_event, setup, vt};
+use super::super::{BlockingGate, DbWriter, PumpEnd, PumpThread, SchedulerError};
+use super::{WAIT, parsed_through, setup, spawn};
 
 #[test]
 fn the_db_writer_refuses_past_its_queue_and_joins_with_every_accepted_job() {
@@ -98,11 +96,16 @@ async fn the_blocking_gate_refuses_one_past_its_slots() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_owned_pump_carries_output_until_eof_and_is_joined() {
-    let (handle, feed, task) = spawn_terminal(vt(), tokio::io::sink(), &setup());
-    let mut events = handle.subscribe_output();
+    let (handle, feed, task) = spawn(&setup());
+    let line = b"hello from the program\r\n";
+    let total = u64::try_from(line.len() * 1000).expect("fits");
+    // Given a viewer that reads concurrently with the pump, tolerating lag.
+    let viewer = tokio::spawn(parsed_through(
+        handle.subscribe_output(),
+        OutputOffset::new(total),
+    ));
     let (reader, mut writer) = std::io::pipe().expect("pipe");
     let pump = PumpThread::spawn("t56-pump", reader, feed).expect("thread starts");
-    let line = b"hello from the program\r\n";
     for _ in 0..1000 {
         writer.write_all(line).expect("pipe write");
     }
@@ -111,21 +114,21 @@ async fn an_owned_pump_carries_output_until_eof_and_is_joined() {
         .await
         .expect("join task")
         .expect("pump joined");
-    let total = u64::try_from(line.len() * 1000).expect("fits");
     assert_eq!((report.bytes, report.end), (total, PumpEnd::Eof));
-    await_event(&mut events, |event| match event {
-        OutputEvent::Parsed { offset } if *offset == OutputOffset::new(total) => Some(()),
-        _ => None,
-    })
-    .await;
+    let lost = viewer.await.expect("viewer joined");
+    println!(
+        "{{\"pump_reads\":{},\"viewer_events_lost\":{lost}}}",
+        report.reads
+    );
 
     handle.stop().expect("stop queued");
-    task.join().await.expect("actor joined");
+    let actor = task.join().await.expect("actor joined");
+    assert_eq!(actor.parsed_bytes, total, "every pumped byte was parsed");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_pump_stops_when_its_actor_has_stopped() {
-    let (handle, feed, task) = spawn_terminal(vt(), tokio::io::sink(), &setup());
+    let (handle, feed, task) = spawn(&setup());
     handle.stop().expect("stop queued");
     task.join().await.expect("actor joined");
     let (reader, mut writer) = std::io::pipe().expect("pipe");

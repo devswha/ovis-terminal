@@ -5,7 +5,6 @@ use std::num::NonZeroUsize;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use ovis_terminal_probes::platform::{ByteCount, Pid, resident_memory};
 use ovis_terminal_protocol::schema::limits::Limits;
 use ovis_terminal_server::streams::scheduler::{
     ActorConfig, ActorTask, OutputEvent, TerminalHandle, TerminalSetup,
@@ -18,6 +17,7 @@ use tokio::task::JoinSet;
 use super::clients::{self, LaneSamples};
 use super::error::TuningError;
 use super::fleet::{Fleet, spawn_fleet};
+use super::measure::{disk_bytes, rss};
 use super::pty::Emit;
 
 const LANES: usize = 16;
@@ -67,27 +67,10 @@ pub(super) struct LoadReport {
     rss_before_bytes: u64,
     rss_peak_bytes: u64,
     rss_after_bytes: u64,
-    data_bound_bytes: u64,
-}
-
-fn rss(pids: &[Pid]) -> Result<u64, TuningError> {
-    let mut total = resident_memory(Pid::new(std::process::id()))?.get();
-    for pid in pids {
-        total = total.saturating_add(resident_memory(*pid).map_or(0, ByteCount::get));
-    }
-    Ok(total)
-}
-
-/// Retained-data bound of the run: session input, waiting output, output events.
-fn data_bound(terminals: usize, limits: &Limits) -> u64 {
-    let per_terminal = (1_u64 << 20)
-        .saturating_add(64 * 16 * 1024)
-        .saturating_add(256 * 16 * 1024);
-    let terminals = u64::try_from(terminals).unwrap_or(u64::MAX);
-    limits
-        .session_input_bytes
-        .get()
-        .saturating_add(per_terminal.saturating_mul(terminals))
+    history_disk_bytes: u64,
+    history_recorded_bytes: u64,
+    history_evicted_segments: u64,
+    history_faults: u64,
 }
 
 pub(super) fn run(exe: &Path, load: Load) -> Result<LoadReport, TuningError> {
@@ -128,7 +111,6 @@ async fn drive(
         aggregate_bytes_per_second: load.bytes_per_second,
         seconds: load.seconds,
         parse_budget_bytes: budget.bytes(),
-        data_bound_bytes: data_bound(load.terminals, &limits),
         rss_before_bytes: rss(&[])?,
         ..LoadReport::default()
     };
@@ -146,6 +128,7 @@ async fn drive(
         pids,
         viewers,
         stalled,
+        history_root,
     } = spawn_fleet(exe, (load, emit, &setup), &runtime)?;
     let mut watchers = JoinSet::new();
     for _ in 0..CLIENTS {
@@ -189,6 +172,8 @@ async fn drive(
     for forwarder in forwarders {
         forwarder.join();
     }
+    report.history_disk_bytes = disk_bytes(&history_root)?;
+    std::fs::remove_dir_all(&history_root)?;
     report.admissions = samples.admission.len();
     report.controls = samples.control.len();
     report.rejected = samples.rejected;
@@ -221,6 +206,19 @@ async fn finish(
         report.parse_turns = report.parse_turns.saturating_add(actor.parse_turns);
         report.output_waits = report.output_waits.saturating_add(actor.output_waits);
         report.input_unsent_entries = report.input_unsent_entries.saturating_add(actor.unsent);
+        match actor.history {
+            Some(history) => {
+                report.history_recorded_bytes =
+                    report.history_recorded_bytes.saturating_add(history.end);
+                report.history_evicted_segments = report
+                    .history_evicted_segments
+                    .saturating_add(history.evicted_segments);
+                if history.fault.is_some() {
+                    report.history_faults = report.history_faults.saturating_add(1);
+                }
+            }
+            None => report.history_faults = report.history_faults.saturating_add(1),
+        }
         let turn = actor.max_turn.as_secs_f64() * 1e3;
         report.max_turn_ms = report.max_turn_ms.max(turn);
     }

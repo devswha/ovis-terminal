@@ -1,7 +1,7 @@
 //! The tuning harness boundary error.
 
 use ovis_terminal_probes::platform::ProbeError;
-use ovis_terminal_server::streams::scheduler::SchedulerError;
+use ovis_terminal_server::streams::scheduler::{HistoryError, SchedulerError};
 use ovis_terminal_vt::VtError;
 use thiserror::Error;
 
@@ -31,6 +31,9 @@ pub enum TuningError {
     /// The scheduler refused or failed.
     #[error("the scheduler failed")]
     Scheduler(#[from] SchedulerError),
+    /// A disk history could not be opened.
+    #[error("a disk history could not be opened")]
+    History(#[from] HistoryError),
     /// A memory probe failed.
     #[error("a platform probe failed")]
     Probe(#[from] ProbeError),
@@ -58,6 +61,7 @@ impl TuningError {
             Self::Pty { .. } => "pty_failed",
             Self::Io(_) => "io_failed",
             Self::Scheduler(source) => source.kind(),
+            Self::History(source) => source.kind(),
             Self::Probe(source) => source.kind(),
             Self::Geometry(_) => "invalid_geometry",
             Self::Encode(_) => "encode_failed",
@@ -72,6 +76,7 @@ impl TuningError {
             Self::Pty { .. } => "check that the host can open pseudo-terminals",
             Self::Io(_) | Self::Encode(_) => "check stdout and the process limits",
             Self::Scheduler(source) => source.hint(),
+            Self::History(source) => source.hint(),
             Self::Probe(source) => source.hint(),
             Self::Geometry(_) => "use at least the minimum column count",
         }

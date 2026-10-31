@@ -21,6 +21,8 @@ pub enum TerminalEvent {
         ticket: Ticket,
         /// When the actor committed it.
         at: Instant,
+        /// Parse turns the actor had run when it committed this.
+        after_turns: u64,
     },
     /// The writer started an entry; from now on it can no longer be withdrawn.
     Writing {
@@ -40,6 +42,8 @@ pub enum TerminalEvent {
         ticket: Ticket,
         /// When the actor committed it.
         at: Instant,
+        /// Parse turns the actor had run when it committed this.
+        after_turns: u64,
     },
     /// The grid changed size.
     Resized {
@@ -47,6 +51,8 @@ pub enum TerminalEvent {
         geometry: Geometry,
         /// When the actor committed it.
         at: Instant,
+        /// Parse turns the actor had run when it committed this.
+        after_turns: u64,
     },
 }
 

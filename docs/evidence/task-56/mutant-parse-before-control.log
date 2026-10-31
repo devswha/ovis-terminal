@@ -1,0 +1,63 @@
+# Mutant M1: the parse-turn arm moved ahead of the control arm in the biased select.
+# Applied to the round-2 tree, run, then reverted (file content restored byte for byte).
+
+--- a/crates/ovis-terminal-server/src/streams/scheduler/actor.rs
++++ b/crates/ovis-terminal-server/src/streams/scheduler/actor.rs
+@@ -177,6 +177,10 @@
+             let take_output = self.output_open && !waiting;
+             tokio::select! {
+                 biased;
++                () = std::future::ready(()), if parse => {
++                    self.turn();
++                    tokio::task::yield_now().await;
++                }
+                 queued = self.controls.recv() => match queued {
+                     Some(Queued { control: Control::Stop, .. }) | None => break,
+                     Some(queued) => self.control(queued),
+@@ -189,10 +193,6 @@
+                     Some(chunk) => self.accept(chunk),
+                     None => self.output_open = false,
+                 },
+-                () = std::future::ready(()), if parse => {
+-                    self.turn();
+-                    tokio::task::yield_now().await;
+-                }
+                 () = released, if waiting && !parse => {}
+                 () = room.notified(), if waiting && !parse => {}
+             }
+
+$ cargo test -p ovis-terminal-server --lib scheduler::
+test streams::scheduler::budget::tests::a_refusal_holds_nothing_and_a_drop_returns_the_units ... ok
+test streams::scheduler::budget::tests::a_release_wakes_a_waiter_registered_before_it ... ok
+test streams::scheduler::budget::tests::merged_and_shrunk_holds_return_exactly_what_they_hold ... ok
+test streams::scheduler::history::tests::a_segment_larger_than_the_bound_is_an_invalid_config ... ok
+test streams::scheduler::history::tests::a_failed_append_stops_recording_with_a_typed_fault ... ok
+test streams::scheduler::history::tests::a_gap_between_segment_files_is_refused_on_open ... ok
+test streams::scheduler::history::tests::reopening_rebuilds_the_index_and_continues_the_stream ... ok
+test streams::scheduler::history::tests::retention_evicts_the_oldest_segments_and_advances_the_floor ... ok
+test streams::scheduler::qa::failure::every_refusal_maps_to_a_typed_retryable_wire_kind ... ok
+test streams::scheduler::qa::caps::event_retention_is_reserved_per_terminal_against_the_session ... ok
+test streams::scheduler::qa::history::a_terminal_without_history_refuses_history_reads ... ok
+test streams::scheduler::qa::failure::the_session_bound_refuses_and_returns_the_terminal_reservation ... ok
+test streams::scheduler::qa::threads::a_panicking_db_job_is_reported_at_shutdown ... ok
+test streams::scheduler::qa::fanout::every_viewer_receives_the_same_shared_chunk ... ok
+test streams::scheduler::qa::threads::the_db_writer_refuses_past_its_queue_and_joins_with_every_accepted_job ... ok
+test streams::scheduler::qa::threads::the_blocking_gate_refuses_one_past_its_slots ... ok
+test streams::scheduler::qa::threads::a_pump_stops_when_its_actor_has_stopped ... ok
+test streams::scheduler::budget::tests::held_units_never_pass_the_limit ... ok
+test streams::scheduler::qa::caps::an_exhausted_session_control_budget_refuses_but_never_refuses_stop ... ok
+test streams::scheduler::qa::caps::output_waits_for_the_session_output_budget_without_loss ... ok
+test streams::scheduler::qa::failure::overflow_is_refused_before_admission_and_cancel_stays_serviceable ... ok
+test streams::scheduler::qa::ordering::a_resize_waits_behind_at_most_one_parse_turn ... FAILED
+test streams::scheduler::qa::threads::an_owned_pump_carries_output_until_eof_and_is_joined ... ok
+test streams::scheduler::qa::ordering::admissions_and_cancels_overtake_pending_parse_turns_while_stdin_is_stuck ... FAILED
+test streams::scheduler::qa::history::accepted_output_is_readable_from_disk_until_retention_evicts_it ... ok
+test streams::scheduler::history::tests::reads_inside_the_window_return_the_appended_bytes ... ok
+test streams::scheduler::qa::fanout::a_slow_subscriber_is_told_exactly_how_many_events_it_lost ... ok
+test streams::scheduler::qa::profile::sixteen_ptys_eight_clients_keep_every_control_within_100_ms ... ok
+thread 'streams::scheduler::qa::ordering::a_resize_waits_behind_at_most_one_parse_turn' (2327089) panicked at crates/ovis-terminal-server/src/streams/scheduler/qa/ordering.rs:66:5:
+resize committed after 16 turns; 1 had run when it was sent
+thread 'streams::scheduler::qa::ordering::admissions_and_cancels_overtake_pending_parse_turns_while_stdin_is_stuck' (2327091) panicked at crates/ovis-terminal-server/src/streams/scheduler/qa/ordering.rs:118:5:
+admitted after 16 turns, sent after 1
+test result: FAILED. 26 passed; 2 failed; 0 ignored; 0 measured; 39 filtered out; finished in 4.14s
+exit=101

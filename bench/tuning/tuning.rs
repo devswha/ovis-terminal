@@ -13,6 +13,7 @@ mod corpus;
 mod error;
 mod fleet;
 mod load;
+mod measure;
 mod parse;
 mod pty;
 

@@ -1,26 +1,33 @@
 //! The terminal actor: control first, then admissions, then output, then one parse turn.
 //!
 //! Every loop iteration serves the highest-priority ready lane. A parse turn feeds at most
-//! one budget of output and then yields, so a burst of output delays a cancel or resize by
-//! at most one turn. Input is written by a separate task, so a program that never reads
-//! stdin cannot hold the actor.
+//! one budget of output and then yields, so a control request queued behind a burst of
+//! output waits for at most one parse turn of its actor. Control events carry the number
+//! of parse turns run before they committed, which is how tests pin this ordering. Input
+//! is written by a separate task, so a program that never reads stdin cannot hold the
+//! actor; output waits for room in the parse queue, the session output budget and the
+//! history writer queue before it is accepted.
+
+mod intake;
+mod serve;
 
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use ovis_terminal_vt::{OutputOffset, Shard, Vt};
+use ovis_terminal_vt::{OutputOffset, Shard};
 use tokio::io::AsyncWrite;
 use tokio::sync::{Notify, broadcast, mpsc};
 use tokio::task::JoinHandle;
 
-use super::config::TerminalSetup;
-use super::error::SchedulerError;
-use super::event::{OutputEvent, TerminalEvent, publish};
-use super::handle::{Admit, Control, OutputFeed, Receipt, TerminalHandle};
-use super::input::{CancelOutcome, InputQueue, Ticket};
+use super::budget::{Budget, Reservation};
+use super::config::{Engine, TerminalSetup};
+use super::db::DbWriter;
+use super::error::{BudgetScope, SchedulerError};
+use super::event::{OutputEvent, TerminalEvent};
+use super::handle::{Admit, Control, OutputFeed, Queued, TerminalHandle};
+use super::history::{HistoryStats, HistoryStore};
+use super::input::{InputQueue, Ticket};
 use super::writer::{Shared, WriterReport, drain};
-use crate::streams::scheduler::budget::ByteBudget;
-use crate::streams::scheduler::error::BudgetScope;
 
 /// What one actor did before it stopped.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -38,9 +45,9 @@ pub struct ActorReport {
     pub parse_turns: u64,
     /// Output bytes parsed.
     pub parsed_bytes: u64,
-    /// The longest parse turn.
+    /// The longest parse turn, wall time.
     pub max_turn: Duration,
-    /// Times output waited because the parse queue was full.
+    /// Times output waited for room in the parse queue, session budget or history queue.
     pub output_waits: u64,
     /// Terminal queries the screen completed; their replies belong to the stream hub.
     pub queries: u64,
@@ -50,6 +57,8 @@ pub struct ActorReport {
     pub cut_off: Option<Ticket>,
     /// The input writer's account, absent when it was cut off mid-write.
     pub writer: Option<WriterReport>,
+    /// The disk history at stop, when the terminal kept one.
+    pub history: Option<HistoryStats>,
 }
 
 /// The running actor; join it after [`TerminalHandle::stop`].
@@ -57,7 +66,7 @@ pub struct ActorReport {
 pub struct ActorTask(JoinHandle<ActorReport>);
 
 impl ActorTask {
-    /// Waits for the actor and its writer to end.
+    /// Waits for the actor, its writer and its history thread to end.
     ///
     /// # Errors
     ///
@@ -70,15 +79,25 @@ impl ActorTask {
 /// Starts the actor of one terminal on the current Tokio runtime.
 ///
 /// `sink` is the program's input; output enters through the returned feed.
+///
+/// # Errors
+///
+/// Returns `backpressure` when the session event budget cannot hold this terminal's
+/// event retention, and `internal` when the history thread cannot start.
 pub fn spawn_terminal<W>(
-    vt: Vt,
+    engine: Engine,
     sink: W,
     setup: &TerminalSetup,
-) -> (TerminalHandle, OutputFeed, ActorTask)
+) -> Result<(TerminalHandle, OutputFeed, ActorTask), SchedulerError>
 where
     W: AsyncWrite + Unpin + Send + 'static,
 {
     let config = setup.config;
+    let retention = setup.session.events.reserve(config.retention_bytes())?;
+    let history = engine
+        .history
+        .map(|store| DbWriter::spawn("terminal-history", store, config.history_jobs))
+        .transpose()?;
     let (controls, control_rx) = mpsc::channel(config.controls.max(1));
     let (admits, admit_rx) = mpsc::channel(config.admits.max(1));
     let (chunks, output_rx) = mpsc::channel(config.output_chunks.max(1));
@@ -90,7 +109,7 @@ where
     });
     let writer = tokio::spawn(drain(Arc::clone(&shared), sink, events.clone()));
     let actor = Actor {
-        shard: Shard::new(vt, config.parse, config.pending),
+        shard: Shard::new(engine.vt, config.parse, config.pending),
         controls: control_rx,
         admits: admit_rx,
         output: output_rx,
@@ -100,28 +119,34 @@ where
         shared,
         events: events.clone(),
         fanout: output.clone(),
+        output_budget: Arc::clone(&setup.session.output),
+        output_held: None,
+        history,
+        room: Arc::new(Notify::new()),
+        retention,
         report: ActorReport::default(),
     };
     let handle = TerminalHandle {
         controls,
         admits,
         budgets: [
-            ByteBudget::new(BudgetScope::TerminalInput, config.terminal_input),
-            Arc::clone(&setup.session),
+            Budget::new(BudgetScope::TerminalInput, config.terminal_input),
+            Arc::clone(&setup.session.input),
         ],
+        control_slots: Arc::clone(&setup.session.control),
         events,
         output,
     };
     let feed = OutputFeed {
         chunks,
-        max_chunk: config.pending.bytes().max(1),
+        max_chunk: config.chunk_bytes.max(1),
     };
-    (handle, feed, ActorTask(tokio::spawn(actor.run(writer))))
+    Ok((handle, feed, ActorTask(tokio::spawn(actor.run(writer)))))
 }
 
 struct Actor {
     shard: Shard,
-    controls: mpsc::Receiver<Control>,
+    controls: mpsc::Receiver<Queued>,
     admits: mpsc::Receiver<Admit>,
     output: mpsc::Receiver<Arc<[u8]>>,
     output_open: bool,
@@ -130,132 +155,48 @@ struct Actor {
     shared: Arc<Shared>,
     events: broadcast::Sender<TerminalEvent>,
     fanout: broadcast::Sender<OutputEvent>,
+    output_budget: Arc<Budget>,
+    output_held: Option<Reservation>,
+    history: Option<DbWriter<HistoryStore>>,
+    room: Arc<Notify>,
+    retention: Reservation,
     report: ActorReport,
 }
 
 impl Actor {
     async fn run(mut self, writer: JoinHandle<WriterReport>) -> ActorReport {
+        let budget = Arc::clone(&self.output_budget);
+        let room = Arc::clone(&self.room);
         loop {
+            let released = budget.released();
             if let Some(chunk) = self.stash.take() {
-                self.accept(chunk);
+                self.retry(chunk);
             }
             let parse = self.shard.pending_bytes() > 0;
-            let take_output = self.output_open && self.stash.is_none();
+            let waiting = self.stash.is_some();
+            let take_output = self.output_open && !waiting;
             tokio::select! {
                 biased;
-                control = self.controls.recv() => match control {
-                    Some(Control::Stop) | None => break,
-                    Some(control) => self.control(control),
+                queued = self.controls.recv() => match queued {
+                    Some(Queued { control: Control::Stop, .. }) | None => break,
+                    Some(queued) => self.control(queued),
                 },
                 admit = self.admits.recv() => match admit {
                     Some(admit) => self.admit(admit),
                     None => break,
                 },
                 chunk = self.output.recv(), if take_output => match chunk {
-                    Some(chunk) => {
-                        if !self.accept(chunk) {
-                            self.report.output_waits = self.report.output_waits.saturating_add(1);
-                        }
-                    }
+                    Some(chunk) => self.accept(chunk),
                     None => self.output_open = false,
                 },
                 () = std::future::ready(()), if parse => {
                     self.turn();
                     tokio::task::yield_now().await;
                 }
+                () = released, if waiting && !parse => {}
+                () = room.notified(), if waiting && !parse => {}
             }
         }
         self.stop(writer).await
-    }
-
-    fn control(&mut self, control: Control) {
-        self.report.controls = self.report.controls.saturating_add(1);
-        match control {
-            Control::Cancel { ticket, reply } => {
-                let outcome = self
-                    .shared
-                    .queue
-                    .lock()
-                    .map_or(CancelOutcome::NotQueued, |mut queue| queue.cancel(ticket));
-                if outcome == CancelOutcome::Withdrawn {
-                    self.report.withdrawn = self.report.withdrawn.saturating_add(1);
-                    let at = Instant::now();
-                    publish(&self.events, TerminalEvent::Withdrawn { ticket, at });
-                }
-                reply.send(outcome).ok();
-            }
-            Control::Resize { geometry, reply } => {
-                self.shard.vt_mut().resize(geometry);
-                self.report.resized = self.report.resized.saturating_add(1);
-                let at = Instant::now();
-                publish(&self.events, TerminalEvent::Resized { geometry, at });
-                reply.send(()).ok();
-            }
-            Control::Stop => {}
-        }
-    }
-
-    fn admit(&mut self, admit: Admit) {
-        let Admit { bytes, held, reply } = admit;
-        let Ok(mut queue) = self.shared.queue.lock() else {
-            return;
-        };
-        let ticket = queue.admit(bytes, held);
-        let queued = queue.queued();
-        drop(queue);
-        self.shared.wake.notify_one();
-        self.report.admitted = self.report.admitted.saturating_add(1);
-        let at = Instant::now();
-        publish(&self.events, TerminalEvent::Admitted { ticket, at });
-        reply.send(Receipt { ticket, queued }).ok();
-    }
-
-    /// Queues a chunk for parsing, or keeps it until a turn makes room.
-    fn accept(&mut self, chunk: Arc<[u8]>) -> bool {
-        if self.shard.push(Arc::clone(&chunk)).is_err() {
-            self.stash = Some(chunk);
-            return false;
-        }
-        let offset = self.accepted;
-        let len = u64::try_from(chunk.len()).unwrap_or(u64::MAX);
-        self.accepted = OutputOffset::new(offset.get().saturating_add(len));
-        publish(
-            &self.fanout,
-            OutputEvent::Chunk {
-                offset,
-                bytes: chunk,
-            },
-        );
-        true
-    }
-
-    fn turn(&mut self) {
-        let turn = self.shard.turn();
-        let report = &mut self.report;
-        report.parse_turns = report.parse_turns.saturating_add(1);
-        let fed = u64::try_from(turn.fed).unwrap_or(u64::MAX);
-        report.parsed_bytes = report.parsed_bytes.saturating_add(fed);
-        report.max_turn = report.max_turn.max(turn.elapsed);
-        let queries = u64::try_from(turn.outcome.queries.len()).unwrap_or(u64::MAX);
-        report.queries = report.queries.saturating_add(queries);
-        let offset = self.shard.vt().offset();
-        publish(&self.fanout, OutputEvent::Parsed { offset });
-    }
-
-    /// Closes the input queue and joins the writer; a writer stuck mid-write is aborted.
-    async fn stop(mut self, writer: JoinHandle<WriterReport>) -> ActorReport {
-        let (unsent, cut_off) = self
-            .shared
-            .queue
-            .lock()
-            .map_or((0, None), |mut queue| queue.close());
-        self.report.unsent = unsent;
-        self.report.cut_off = cut_off;
-        if cut_off.is_some() {
-            writer.abort();
-        }
-        self.shared.wake.notify_one();
-        self.report.writer = writer.await.ok();
-        self.report
     }
 }
