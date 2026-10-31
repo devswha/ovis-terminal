@@ -121,6 +121,19 @@ Verification:
 - The Windows `x86_64-pc-windows-gnu` pre-check exits 0.
 - `bash scripts/check.sh` → exit 0 (nextest 604 run / 604 passed / 1 skipped). Log: `docs/evidence/task-45/check.log`.
 
+## Round 4 (merged-tree clippy)
+On the merged tree 2c23d6a, `ErrorData` had grown across lanes: todo 33's `current_seq`, todo 43's fields, and this PR's `affected`. That growth tripped `clippy::large_enum_variant` in two places: `RpcReply` (Failure was 296 B, Success 80 B) and core `layout::LaunchOutcome`.
+
+Structural fix, with no `#[allow]` or `#[expect]`:
+- `RpcErrorObject.data` is now `Box<ErrorData>`. The only construction site is `RpcFailure::new`; every other use is a field read.
+- `LaunchOutcome::Rejected.error` is now `Box<ErrorData>`. The only construction site is `layout/launch.rs`. This is todo 18's code, changed only to box the field.
+
+`Box<T>` serializes like `T`, so the wire format is unchanged. Two new tests confirm it:
+- the proptest `rpc_errors::a_failure_keeps_its_flat_wire_shape`, which compares the reply JSON against a hand-built flat envelope and decodes it back;
+- `layout::records::tests::a_boxed_rejection_keeps_the_flat_wire_shape`.
+
+Verification: workspace clippy `-D warnings` → exit 0. The Windows pre-check → exit 0. `bash scripts/check.sh` → exit 0 (nextest 653 run / 653 passed / 1 skipped).
+
 ## Risks
 - Todos 43 and 46 add `DispatchError::Domain` and the `domain`/`lanes` module roots too. This PR adds `DispatchError::Worktree` and inline `pub mod domain { … }` / `pub mod lanes { … }` blocks. Expect a union merge.
 - Checkout ids and source relationships are durable in the Git admin markers. Workspace links and revisions stay in memory (recovery is todo 49).
