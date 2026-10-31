@@ -18,13 +18,15 @@ use super::*;
 ///
 /// Panics when an observed lifecycle fact violates the acceptance contract.
 pub fn happy() -> TestResult {
-    // Given: a real holder and a fixture with explicit cwd, environment, argv and grid.
+    // Given: a real holder and a symlinked cwd with explicit environment, argv and grid.
     let mut fixture = Fixture::new()?;
-    let launch = fixture.launch([
+    let requested_cwd = fixture.root.join("cwd-alias");
+    std::os::unix::fs::symlink(&fixture.root, &requested_cwd)?;
+    let launch = Fixture::launch_in([
         "/bin/sh", "-c",
         "printf 'cwd=%s\\nenv=%s\\narg=%s\\n' \"$PWD\" \"$OVIS_FIXTURE\" \"$1\"; stty size; printf '\\303\\251'; exit 7",
         "fixture", "literal ; argument",
-    ].map(str::to_owned).to_vec())?;
+    ].map(str::to_owned).to_vec(), requested_cwd)?;
 
     // When: the launch is admitted and actual holder evidence is consumed.
     let runtime = fixture.runtime.as_mut().ok_or("runtime")?;
@@ -40,11 +42,18 @@ pub fn happy() -> TestResult {
         .bytes;
 
     // Then: the program, rather than locally assigned metadata, proves the launch inputs.
+    let canonical_cwd = std::fs::canonicalize(&fixture.root)?;
     let expected = format!(
         "cwd={}\r\nenv=explicit-environment\r\narg=literal ; argument\r\n37 103\r\né",
-        fixture.root.display(),
+        canonical_cwd.display(),
     );
     assert_eq!(bytes, expected.as_bytes());
+    assert_eq!(
+        serde_json::to_value(&ended)?
+            .pointer("/launch/program/cwd")
+            .and_then(serde_json::Value::as_str),
+        canonical_cwd.to_str()
+    );
     let exit = ended.exit.as_ref().ok_or("exit evidence")?;
     assert_eq!(exit.code, Some(7));
     assert_eq!(exit.final_offset, u64::try_from(bytes.len())?);

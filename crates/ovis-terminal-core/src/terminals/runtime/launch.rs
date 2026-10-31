@@ -49,9 +49,11 @@ impl Terminals {
         self.record(record.id())
     }
 
-    fn admit_launch(&self, call: Call<'_>, launch: Launch) -> Result<Admission, TerminalError> {
+    fn admit_launch(&self, call: Call<'_>, mut launch: Launch) -> Result<Admission, TerminalError> {
         self.ensure_running()?;
         launch.validate()?;
+        launch.program.cwd =
+            std::fs::canonicalize(&launch.program.cwd).map_err(TerminalError::Cwd)?;
         let params = serde_json::to_value(&launch)?;
         let decision = self.host.authority.authorize(
             call.session,

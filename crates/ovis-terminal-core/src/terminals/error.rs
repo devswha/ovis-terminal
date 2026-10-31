@@ -25,6 +25,9 @@ pub enum TerminalError {
     /// Parameters failed the launch or metadata boundary.
     #[error("the terminal parameters are invalid")]
     InvalidParams,
+    /// The requested working directory could not be resolved to stable evidence.
+    #[error("the terminal working directory could not be resolved")]
+    Cwd(#[source] std::io::Error),
     /// A JSON boundary rejected malformed fields or numeric counter forms.
     #[error("the terminal request does not match its closed schema")]
     InvalidJson(#[source] serde_json::Error),
@@ -91,7 +94,7 @@ impl TerminalError {
             Self::Identity(error) => error.kind(),
             Self::Lifecycle(error) => error.kind(),
             Self::Serialization(_) => "persistence_failed",
-            Self::InvalidParams | Self::InvalidJson(_) => "invalid_params",
+            Self::InvalidParams | Self::Cwd(_) | Self::InvalidJson(_) => "invalid_params",
             Self::NotFound => "not_found",
             Self::DuplicateName => "duplicate_name",
             Self::ProcessReplaced => "process_replaced",
@@ -125,6 +128,7 @@ impl TerminalError {
             Self::InvalidParams | Self::InvalidJson(_) => {
                 "supply explicit valid argv, cwd, environment, grid and metadata"
             }
+            Self::Cwd(_) => "supply an existing working directory that can be resolved",
             Self::NotFound | Self::DuplicateName => "read the current terminal registry",
             Self::ProcessReplaced => "refresh PID and start token; never redirect a stale action",
             Self::UnsupportedField => {

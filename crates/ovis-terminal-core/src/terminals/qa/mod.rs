@@ -97,9 +97,13 @@ impl Fixture {
     }
 
     fn launch(&self, argv: Vec<String>) -> Result<Launch, Box<dyn std::error::Error>> {
+        Self::launch_in(argv, self.root.clone())
+    }
+
+    fn launch_in(argv: Vec<String>, cwd: PathBuf) -> Result<Launch, Box<dyn std::error::Error>> {
         let program = Program::new(
             argv,
-            self.root.clone(),
+            cwd,
             [
                 ("PATH".into(), "/usr/bin:/bin".into()),
                 ("OVIS_FIXTURE".into(), "explicit-environment".into()),
