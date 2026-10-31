@@ -109,7 +109,12 @@ impl StatusService {
         &self.tokens
     }
 
-    pub(super) const fn location(&self, terminal: TerminalId) -> Location {
+    /// Sequence of the first domain event of an operation unit built on `snapshot`.
+    pub(crate) const fn unit_event(snapshot: &Snapshot) -> EventSeq {
+        operation_event(snapshot)
+    }
+
+    pub(crate) const fn location(&self, terminal: TerminalId) -> Location {
         Location {
             runtime: self.runtime,
             terminal,

@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, ops-digest]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest]
 
 permissions:
   contents: read
@@ -553,6 +553,79 @@ jobs:
         with:
           name: docs-retention-stress-macos-${{ github.run_id }}
           path: docs-retention-stress-macos.log
+          if-no-files-found: error
+  session-binding:
+    if: inputs.probe == 'session-binding'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat session binding tests and scenario 25 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              cargo nextest run -p ovis-terminal-agent --locked --no-tests=fail -E 'test(conversation::binding)'
+              cargo nextest run -p ovis-terminal-server --test dispatch --locked --no-tests=fail -E 'test(session_binding)'
+              cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/binding --isolated --case all --evidence "session-binding-$iteration.json"
+              printf 'PASS %s/25\n' "$iteration"
+            done
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee session-binding-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: session-binding-stress-macos-${{ github.run_id }}
+          path: session-binding-stress-macos.log
+          if-no-files-found: error
+  conpty:
+    if: inputs.probe == 'conpty'
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: pin C toolchain (Windows MSVC 14.44)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          toolset: "14.44"
+      - name: use the pinned MSVC linker
+        shell: bash
+        run: |
+          linker="${VCToolsInstallDir}bin\HostX64\x64\link.exe"
+          test -f "$linker"
+          echo "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$linker" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - name: native ConPTY terminal and terminal.run admission tests, repeated
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 10); do
+              printf '\nITERATION %s/10\n' "$iteration"
+              cargo test --locked -p ovis-terminal-holder --lib windows:: -- --nocapture
+              cargo test --locked -p ovis-terminal-server --lib conpty
+            done
+            printf 'RESULT pass\n'
+          } 2>&1 | tee conpty-windows.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: conpty-windows-${{ github.run_id }}
+          path: conpty-windows.log
           if-no-files-found: error
   ops-digest:
     if: inputs.probe == 'ops-digest'
