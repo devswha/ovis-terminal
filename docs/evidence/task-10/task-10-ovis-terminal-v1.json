@@ -21,15 +21,15 @@
     {
       "command": "cargo nextest run -p ovis-terminal-core",
       "exit": 0,
-      "passed": 38,
+      "passed": 40,
       "skipped": 0,
-      "event_tests": 20
+      "event_tests": 22
     },
     {
       "command": "cargo test -p ovis-terminal-core --test events integrity:: -- --nocapture",
       "exit": 0,
-      "passed": 7,
-      "properties": 1
+      "passed": 9,
+      "properties": 2
     },
     {
       "command": "cargo clippy -p ovis-terminal-core --all-targets -- -D warnings",
@@ -106,6 +106,9 @@
     "duplicated and reordered pages reject with snapshot_torn",
     "one-byte final truncation rejects with snapshot_torn",
     "random page removals never expose complete state",
+    "same-length interior byte corruption rejects with DigestMismatch",
+    "random interior page and byte corruption rejects with DigestMismatch",
+    "digest-removal mutation is killed by a shipped assertion-bearing test",
     "page indices and counts are decimal strings and numeric forms reject",
     "every page and lease carry one SHA-256 end-to-end digest",
     "constant page revision across a concurrent mutation",
@@ -138,7 +141,8 @@
   "logs": [
     "verification.log",
     "conformance.log",
-    "tdd.log"
+    "tdd.log",
+    "mutation-digest.log"
   ],
   "unmet_foundation_requirements": []
 }

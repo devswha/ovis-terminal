@@ -437,6 +437,20 @@ json.sh: 25 JSON file(s) checked
 
 check.sh: all steps passed
 CHECK_SH_EXIT=0
+
+ADVERSARIALVERIFY_ROUND_2_COVERAGE
+
+COMMAND: cargo test -p ovis-terminal-core --test events integrity::corrupted_interior_byte_is_snapshot_torn -- --exact --nocapture
+test integrity::corrupted_interior_byte_is_snapshot_torn ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+CORRUPTED_INTERIOR_EXIT=0
+
+COMMAND: cargo test -p ovis-terminal-core --test events integrity::any_same_length_interior_corruption_is_digest_mismatch -- --exact --nocapture
+test integrity::any_same_length_interior_corruption_is_digest_mismatch ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+CORRUPTION_PROPERTY_EXIT=0
+
+MUTATION EVIDENCE: docs/evidence/task-10/mutation-digest.log
 Linux x86_64
 rustc 1.99.1 (58cf8f9c3 2026-10-13)
 FINAL_VERIFICATION_EXIT=0

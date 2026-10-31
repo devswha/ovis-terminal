@@ -76,22 +76,34 @@ cargo test -p ovis-terminal-core --test events integrity:: -- --nocapture
 ```
 
 ```text
-running 7 tests
+running 9 tests
 test integrity::missing_interior_page_is_snapshot_torn ... ok
 test integrity::missing_final_page_is_snapshot_torn ... ok
 test integrity::duplicated_page_is_snapshot_torn ... ok
 test integrity::reordered_pages_are_snapshot_torn ... ok
 test integrity::truncated_final_page_is_snapshot_torn ... ok
+test integrity::corrupted_interior_byte_is_snapshot_torn ... ok
 test integrity::page_metadata_uses_decimal_strings_and_rejects_numbers ... ok
 test integrity::any_removed_page_is_snapshot_torn ... ok
-test result: ok. 7 passed; 0 failed
+test integrity::any_same_length_interior_corruption_is_digest_mismatch ... ok
+test result: ok. 9 passed; 0 failed
 ```
 
 The intact 17 MiB case also passes through `SnapshotAssembler` and compares its
 re-serialized bytes with the inline snapshot byte-for-byte. `cargo test
--p ovis-terminal-core` now reports 38 passed across its four test binaries.
+-p ovis-terminal-core` now reports 40 passed across its four test binaries.
 The updated `bash scripts/check.sh` exits 0 with zero hygiene violations across
 290 files and 26 JSON documents.
+
+AdversarialVerify round-2 blocker T10-R2-4 is covered by a mutation-sensitive
+regression using genuine emitted pages. It flips one byte in the middle of an
+interior page while preserving every header, offset and length, then requires
+`snapshot_torn` with `DigestMismatch`. Removing only the final SHA-256 comparison
+makes that shipped test fail with exit 101 because the corrupted valid JSON would
+otherwise expose a complete `StateSnapshot`; restoring the comparison makes it
+pass. A second proptest varies both interior page and byte position. Exact mutation,
+failure, restoration and pass evidence is in
+`docs/evidence/task-10/mutation-digest.log`.
 
 The single workspace skip is the existing store `crash_child` process fixture,
 explicitly invoked by its parent tests; this PR adds no ignored tests.
@@ -143,7 +155,8 @@ behavior are used.
 - Pagination: a 17 MiB record reconstructs byte-identically from at most 64 KiB
   pages; a separate concurrent-mutation case proves constant revision and exactly
   one later event. Missing interior/final pages, duplicates, swaps and final-byte
-  truncation are typed `snapshot_torn`; proptest removes random pages.
+  truncation are typed `snapshot_torn`; proptest removes random pages. Same-length
+  random byte corruption preserves page shape and returns `DigestMismatch`.
 - Backpressure: queue overflow reports missed; dropping that queue releases the
   aggregate byte budget so a replacement subscriber can receive a later commit.
 - Boundary parsing: numeric, leading-zero, signed, whitespace and overflowing

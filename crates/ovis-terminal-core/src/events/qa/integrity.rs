@@ -165,6 +165,32 @@ fn truncated_final_page_is_snapshot_torn() -> TestResult {
 }
 
 #[test]
+fn corrupted_interior_byte_is_snapshot_torn() -> TestResult {
+    // Given one emitted interior page with a same-length data-byte corruption.
+    let mut case = PageCase::new()?;
+    let page_index = case.pages.len().checked_div(2).ok_or("pages missing")?;
+    let page = case
+        .pages
+        .get_mut(page_index)
+        .ok_or("interior page missing")?;
+    let byte_index = page.data.len().checked_div(2).ok_or("empty page")?;
+    let byte = page
+        .data
+        .get_mut(byte_index)
+        .ok_or("interior byte missing")?;
+    *byte = byte.wrapping_add(1);
+    // When every unchanged header and page is reconstructed.
+    let error = assemble(&case.lease, &case.pages).expect_err("corrupted bytes must fail");
+    // Then the end-to-end digest rejects state exposure.
+    assert_torn(
+        &error,
+        case.lease.page_count.get(),
+        SnapshotTornReason::DigestMismatch,
+    );
+    case.close()
+}
+
+#[test]
 fn page_metadata_uses_decimal_strings_and_rejects_numbers() -> TestResult {
     // Given one emitted digest-bound snapshot page.
     let case = PageCase::new()?;
@@ -215,6 +241,31 @@ proptest! {
         let result = assemble(&case.lease, &case.pages);
         // Then no removed page can produce complete state.
         prop_assert!(matches!(result, Err(ref error) if error.kind() == "snapshot_torn"));
+        case.close().map_err(|error| TestCaseError::fail(error.to_string()))?;
+    }
+
+    #[test]
+    fn any_same_length_interior_corruption_is_digest_mismatch(
+        page_index in 1usize..16,
+        byte_index in 0usize..64,
+    ) {
+        // Given a random byte in a random emitted interior page.
+        let mut case = PageCase::new()
+            .map_err(|error| TestCaseError::fail(error.to_string()))?;
+        let page = case.pages.get_mut(page_index)
+            .ok_or_else(|| TestCaseError::fail("interior page missing"))?;
+        let byte = page.data.get_mut(byte_index)
+            .ok_or_else(|| TestCaseError::fail("interior byte missing"))?;
+        *byte = byte.wrapping_add(1);
+        // When all page headers and lengths remain unchanged.
+        let result = assemble(&case.lease, &case.pages);
+        // Then only the end-to-end digest detects the corruption.
+        prop_assert!(matches!(
+            result,
+            Err(ref error)
+                if error.kind() == "snapshot_torn"
+                    && error.snapshot_torn_reason() == Some(SnapshotTornReason::DigestMismatch)
+        ));
         case.close().map_err(|error| TestCaseError::fail(error.to_string()))?;
     }
 }
