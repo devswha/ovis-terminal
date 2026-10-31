@@ -440,3 +440,40 @@ CHECK_SH_EXIT=0
 Linux x86_64
 rustc 1.99.1 (58cf8f9c3 2026-10-13)
 FINAL_VERIFICATION_EXIT=0
+
+ADVERSARIALVERIFY_ROUND_1_FIX
+
+COMMAND: cargo test -p ovis-terminal-core --test events integrity:: -- --nocapture
+running 7 tests
+missing interior page: snapshot_torn page 2
+missing final page: snapshot_torn final index
+duplicated page: snapshot_torn page 2
+swapped pages: snapshot_torn page 1
+truncated final page: snapshot_torn final index
+page metadata counters: decimal strings; numeric forms rejected
+random page removal property: snapshot_torn
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured
+INTEGRITY_EXIT=0
+
+COMMAND: cargo test -p ovis-terminal-core --test events durable::snapshot_larger_than_one_frame_reconstructs_from_bounded_pages -- --exact --nocapture
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+INTACT_17_MIB_EXIT=0
+
+COMMAND: cargo test -p ovis-terminal-core
+test binaries: 9 + 20 + 3 + 6 = 38 passed; 0 failed; 0 ignored
+CORE_CARGO_TEST_EXIT=0
+
+COMMAND: cargo nextest run -p ovis-terminal-core
+status: completed
+CORE_NEXTEST_EXIT=0
+
+COMMAND: cargo clippy -p ovis-terminal-core --all-targets -- -D warnings
+status: completed; no warnings
+CORE_CLIPPY_EXIT=0
+
+COMMAND: bash scripts/check.sh
+workspace-hygiene: 0 violation(s) in 290 file(s) checked
+manifests.sh: 16 member manifest(s) checked
+json.sh: 26 JSON file(s) checked
+check.sh: all steps passed
+CHECK_SH_EXIT=0

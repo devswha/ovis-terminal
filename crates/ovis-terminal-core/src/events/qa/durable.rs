@@ -3,7 +3,7 @@
 use std::sync::mpsc::TryRecvError;
 
 use ovis_terminal_core::events::{
-    Event, Limits, RemoteOrigin, RemoteSeq, StateSnapshot, SubscribeRequest,
+    Event, Limits, RemoteOrigin, RemoteSeq, SnapshotAssembler, StateSnapshot, SubscribeRequest,
 };
 use ovis_terminal_protocol::schema::scalar::EventSeq;
 use ovis_terminal_store::StoreLimits;
@@ -170,23 +170,24 @@ fn snapshot_larger_than_one_frame_reconstructs_from_bounded_pages() -> TestResul
     let lease = subscription.snapshot.ok_or("snapshot lease missing")?;
     assert!(lease.total.get() > 16 << 20);
     // When all pages are assembled using the returned continuation offsets.
-    let mut bytes = Vec::new();
+    let expected = serde_json::to_vec(&core.subscribe(None)?.snapshot.ok_or("snapshot missing")?)?;
+    let mut assembler = SnapshotAssembler::new(lease.clone());
     let mut offset = ByteOffset::new(0);
     loop {
         let page = core.page(&lease.token, offset)?;
         assert_eq!(page.cursor, lease.cursor);
         assert!(page.data.len() <= 64 << 10);
-        bytes.extend_from_slice(&page.data);
+        assembler.push(&page)?;
         match page.next_offset {
             Some(next) => offset = next,
             None => break,
         }
     }
     // Then a complete typed record survives without truncation or changed revision.
-    let snapshot: StateSnapshot<SnapshotSections<(), Vec<String>>> =
-        serde_json::from_slice(&bytes)?;
+    let snapshot: StateSnapshot<SnapshotSections<(), Vec<String>>> = assembler.finish()?;
     assert_eq!(snapshot.cursor, lease.cursor);
     assert_eq!(snapshot.sections.terminals, Section::Complete(vec![input]));
+    assert_eq!(serde_json::to_vec(&snapshot)?, expected);
     core.release_snapshot(&lease.token)?;
     core.close()?;
     Ok(())

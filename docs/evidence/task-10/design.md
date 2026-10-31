@@ -31,8 +31,12 @@ Domain producers and wire dispatch are owned by later assembly todos.
 
 Paged startup installs delivery and a snapshot lease under the same mutex.
 Immutable serialized bytes and a WAL read transaction remain pinned until release
-or core shutdown. Every page carries the same cursor and exact total, plus a typed
-byte continuation. Released tokens and tokens from another core return
+or core shutdown. Every page carries the same token, cursor, exact total,
+canonical-decimal page index/count and SHA-256 digest. `SnapshotAssembler` accepts
+only the next contiguous page, validates each byte range, and verifies final page
+count, total length and digest before deserializing typed state. Missing, duplicated,
+reordered, truncated or foreign pages return `snapshot_torn` with the first required
+page index and recovery hint. Released tokens and tokens from another core return
 `stale_snapshot`. A concurrent commit cannot change already-pinned bytes.
 
 Registry machine/runtime/boot/resource identities are reused. Local sequences use
@@ -47,7 +51,8 @@ not a second transport API: Todo 21 must adapt it to the protocol's RPC envelope
 and install real domain producers. Bootstrap identity allocator events precede
 coordinator ownership; retained domain replay must use the producer's complete
 typed event enum. Unknown or malformed durable event bodies fail with a sourced
-typed error rather than being skipped.
+typed error rather than being skipped. SHA-256 is the only added dependency seam;
+page indices/counts reuse the protocol's canonical decimal counter representation.
 
 ## Deferred acceptance
 

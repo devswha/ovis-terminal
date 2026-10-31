@@ -27,6 +27,8 @@ type TestResult = Result<(), Box<dyn Error>>;
 mod contracts;
 #[path = "../src/events/qa/durable.rs"]
 mod durable;
+#[path = "../src/events/qa/integrity.rs"]
+mod integrity;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct Changed {

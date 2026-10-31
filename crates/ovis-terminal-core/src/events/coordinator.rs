@@ -11,7 +11,7 @@ use serde::de::DeserializeOwned;
 
 use super::delivery::{Charge, Sink};
 use super::record::{Body, SCHEMA_VERSION};
-use super::snapshot::Pinned;
+use super::snapshot::{PageCount, Pinned, SnapshotDigest};
 use super::{
     Commit, Cursor, EventData, EventError, Filter, SnapshotLease, SnapshotPage, SnapshotProducer,
     SnapshotToken, StateSnapshot,
@@ -248,19 +248,26 @@ impl<D: EventData + Clone + Serialize + DeserializeOwned, P: SnapshotProducer> C
         }
         let total =
             ByteCount::new(u64::try_from(bytes.len()).map_err(|_| EventError::LimitExceeded)?);
+        let page_count = PageCount::for_bytes(bytes.len(), self.limits.page_bytes)?;
+        let digest = SnapshotDigest::for_bytes(&bytes);
         let token = SnapshotToken::new();
         state.pages.insert(
             token.clone(),
             Pinned {
                 _view: view,
+                token: token.clone(),
                 cursor,
                 bytes,
+                page_count,
+                digest: digest.clone(),
             },
         );
         Ok(SnapshotLease {
             token,
             cursor,
             total,
+            page_count,
+            digest,
         })
     }
 

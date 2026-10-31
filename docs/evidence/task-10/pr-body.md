@@ -22,6 +22,12 @@ committed event row, never an in-memory preallocation. Typed event bodies and
 state CAS writes share a transaction. Publication follows the commit receipt.
 Inline and paged startup install independent delivery under that same boundary.
 Remote-origin sequence and identity remain separate from local-mirror ordering.
+Paged snapshots now carry canonical-decimal page index/count, total length, pinned
+cursor/token and one SHA-256 digest on the lease and every page. The checked
+`SnapshotAssembler` validates contiguity and byte ranges, then verifies the final
+length and digest before exposing typed state. Missing interior/final pages,
+duplicates, swaps and one-byte final truncation return `snapshot_torn` with the
+first required page index and a fresh-snapshot recovery hint.
 
 Platform: Linux x86_64. Toolchain: rustc 1.99.1 (58cf8f9c3 2026-10-13).
 All Cargo invocations used the isolated RUSTUP_HOME/CARGO_HOME and local zigcc
@@ -59,9 +65,33 @@ Final commands and actual exits:
 
 | Command | Exit | Evidence |
 | --- | --- | --- |
-| `cargo nextest run -p ovis-terminal-core` | 0 | 31 passed, 0 skipped; 13 event tests |
+| `cargo nextest run -p ovis-terminal-core` | 0 | 38 passed, 0 skipped; 20 event tests |
 | `cargo clippy -p ovis-terminal-core --all-targets -- -D warnings` | 0 | No warnings |
-| `bash scripts/check.sh` | 0 | fmt, workspace Clippy, 245 tests passed, doctests, source/manifest/JSON hygiene |
+| `bash scripts/check.sh` | 0 | fmt, workspace Clippy/nextest, doctests, 290-file source hygiene, manifest and 26-file JSON hygiene |
+
+AdversarialVerify round-1 blocker T10-AV-2 was reproduced and fixed:
+
+```sh
+cargo test -p ovis-terminal-core --test events integrity:: -- --nocapture
+```
+
+```text
+running 7 tests
+test integrity::missing_interior_page_is_snapshot_torn ... ok
+test integrity::missing_final_page_is_snapshot_torn ... ok
+test integrity::duplicated_page_is_snapshot_torn ... ok
+test integrity::reordered_pages_are_snapshot_torn ... ok
+test integrity::truncated_final_page_is_snapshot_torn ... ok
+test integrity::page_metadata_uses_decimal_strings_and_rejects_numbers ... ok
+test integrity::any_removed_page_is_snapshot_torn ... ok
+test result: ok. 7 passed; 0 failed
+```
+
+The intact 17 MiB case also passes through `SnapshotAssembler` and compares its
+re-serialized bytes with the inline snapshot byte-for-byte. `cargo test
+-p ovis-terminal-core` now reports 38 passed across its four test binaries.
+The updated `bash scripts/check.sh` exits 0 with zero hygiene violations across
+290 files and 26 JSON documents.
 
 The single workspace skip is the existing store `crash_child` process fixture,
 explicitly invoked by its parent tests; this PR adds no ignored tests.
@@ -110,8 +140,10 @@ behavior are used.
   fresh snapshots; released and old-core page tokens reject as stale_snapshot.
 - Mirroring: remote u64::MAX survives durable replay unchanged while local sequence
   follows local commit order.
-- Pagination: a 17 MiB record reconstructs from at most 64 KiB pages; a separate
-  concurrent-mutation case proves constant revision and exactly one later event.
+- Pagination: a 17 MiB record reconstructs byte-identically from at most 64 KiB
+  pages; a separate concurrent-mutation case proves constant revision and exactly
+  one later event. Missing interior/final pages, duplicates, swaps and final-byte
+  truncation are typed `snapshot_torn`; proptest removes random pages.
 - Backpressure: queue overflow reports missed; dropping that queue releases the
   aggregate byte budget so a replacement subscriber can receive a later commit.
 - Boundary parsing: numeric, leading-zero, signed, whitespace and overflowing
@@ -126,8 +158,8 @@ not establish transport performance or cross-platform functional acceptance.
 
 ## Contract checklist
 
-- [x] All 64-bit event sequences, page totals and byte offsets use existing protocol
-  canonical decimal-string scalars; explicit u64::MAX and numeric-rejection tests.
+- [x] All 64-bit event sequences, page indices/counts, totals and byte offsets use
+  canonical decimal strings; explicit u64::MAX and numeric-rejection tests.
 - [x] One thiserror boundary enum with kind(), hint() and preserved inner sources;
   protocol MissedReason and landed store/identity errors are reused.
 - [x] Registry machine/runtime/boot/layout/terminal identities are reused. Tokens,
@@ -147,7 +179,9 @@ snapshot producers must use the supplied pinned WAL view, including the requeste
 filter, rather than independent live actor reads. Todo 21 adapts these components
 to RPC envelopes and installs actual domain producers. Typed section composition
 allows later agents/services without advertising empty successful sections now.
-No dependency or Cargo.lock change is needed.
+The core adds workspace-managed `sha2` solely for the end-to-end snapshot digest;
+`Cargo.lock` records its RustCrypto dependency graph. No landed crate API outside
+the Task 10 event component changes.
 
 ## Risks
 

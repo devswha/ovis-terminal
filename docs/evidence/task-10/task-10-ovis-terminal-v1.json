@@ -21,9 +21,15 @@
     {
       "command": "cargo nextest run -p ovis-terminal-core",
       "exit": 0,
-      "passed": 31,
+      "passed": 38,
       "skipped": 0,
-      "event_tests": 13
+      "event_tests": 20
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test events integrity:: -- --nocapture",
+      "exit": 0,
+      "passed": 7,
+      "properties": 1
     },
     {
       "command": "cargo clippy -p ovis-terminal-core --all-targets -- -D warnings",
@@ -32,8 +38,9 @@
     {
       "command": "bash scripts/check.sh",
       "exit": 0,
-      "passed": 245,
       "skipped": 1,
+      "files_checked": 290,
+      "json_files_checked": 26,
       "preexisting_skip": "ovis-terminal-store::transactions crash_child is an ignored child-process fixture launched explicitly by parent tests"
     }
   ],
@@ -94,7 +101,13 @@
     "disconnect then replay across core restart",
     "local commit order independent of remote u64::MAX sequence",
     "old-core and released page tokens rejected",
-    "17 MiB record reconstructed from pages at most 64 KiB",
+    "17 MiB record reconstructed byte-identically through the checked assembler",
+    "missing interior and final pages reject with snapshot_torn and the missing index",
+    "duplicated and reordered pages reject with snapshot_torn",
+    "one-byte final truncation rejects with snapshot_torn",
+    "random page removals never expose complete state",
+    "page indices and counts are decimal strings and numeric forms reject",
+    "every page and lease carry one SHA-256 end-to-end digest",
     "constant page revision across a concurrent mutation",
     "expired cursor receives fresh snapshot",
     "numeric and noncanonical sequences reject with invalid_params",
@@ -105,63 +118,11 @@
     "disconnect releases aggregate queued-byte charges",
     "unimplemented snapshot sections remain unavailable"
   ],
-  "source_audit": [
-    {
-      "path": "crates/ovis-terminal-core/src/events.rs",
-      "pure_lines": 16,
-      "forbidden": []
-    },
-    {
-      "path": "crates/ovis-terminal-core/src/events/coordinator.rs",
-      "pure_lines": 230,
-      "forbidden": []
-    },
-    {
-      "path": "crates/ovis-terminal-core/src/events/delivery.rs",
-      "pure_lines": 86,
-      "forbidden": []
-    },
-    {
-      "path": "crates/ovis-terminal-core/src/events/error.rs",
-      "pure_lines": 75,
-      "forbidden": []
-    },
-    {
-      "path": "crates/ovis-terminal-core/src/events/record.rs",
-      "pure_lines": 160,
-      "forbidden": []
-    },
-    {
-      "path": "crates/ovis-terminal-core/src/events/replay.rs",
-      "pure_lines": 61,
-      "forbidden": []
-    },
-    {
-      "path": "crates/ovis-terminal-core/src/events/snapshot.rs",
-      "pure_lines": 117,
-      "forbidden": []
-    },
-    {
-      "path": "crates/ovis-terminal-core/src/events/startup.rs",
-      "pure_lines": 109,
-      "forbidden": []
-    },
-    {
-      "path": "crates/ovis-terminal-core/src/events/qa/contracts.rs",
-      "pure_lines": 169,
-      "forbidden": []
-    },
-    {
-      "path": "crates/ovis-terminal-core/src/events/qa/durable.rs",
-      "pure_lines": 173,
-      "forbidden": []
-    },
-    {
-      "path": "crates/ovis-terminal-core/tests/events.rs",
-      "pure_lines": 196,
-      "forbidden": []
-    }
-  ],
+  "source_audit": {
+    "command": "cargo run --locked --quiet -p workspace-hygiene -- check --root .",
+    "violations": 0,
+    "files_checked": 290
+  },
   "conformance": {
     "status": "DEFERRED VERIFICATION (runner lands in Todo 21)",
     "command": "cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-10 --isolated --case happy --evidence \"$ATTEMPT_DIR/task-10-ovis-terminal-v1.json\"",

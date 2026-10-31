@@ -5,3 +5,15 @@ error[E0432]: unresolved imports `ovis_terminal_core::events::Commit`, `ovis_ter
 For more information about this error, try `rustc --explain E0432`.
 error: could not compile `ovis-terminal-core` (test "events") due to 1 previous error
 exit: 101
+
+$ cargo test -p ovis-terminal-core --test events integrity::missing_interior_page_is_snapshot_torn -- --exact --nocapture
+Before the integrity implementation, the new regression failed to compile because
+`SnapshotAssembler` and `SnapshotTornReason` did not exist.
+error[E0432]: unresolved import `ovis_terminal_core::events::SnapshotAssembler`
+error[E0432]: unresolved imports `ovis_terminal_core::events::SnapshotAssembler`, `ovis_terminal_core::events::SnapshotTornReason`
+exit: 101
+
+$ cargo test -p ovis-terminal-core --test events integrity:: -- --nocapture
+running 7 tests
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured
+exit: 0

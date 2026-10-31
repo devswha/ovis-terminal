@@ -55,7 +55,17 @@
     {
       "class": "large snapshots",
       "test": "durable::snapshot_larger_than_one_frame_reconstructs_from_bounded_pages",
-      "assertions": ["17 MiB record reconstructs exactly", "each page is at most 64 KiB", "all cursors match"]
+      "assertions": ["17 MiB record reconstructs byte-identically through SnapshotAssembler", "each page is at most 64 KiB", "all cursors, totals and digests match"]
+    },
+    {
+      "class": "torn snapshots",
+      "test": "integrity",
+      "assertions": ["missing interior and final pages return snapshot_torn with the missing index", "duplicates and swaps return snapshot_torn", "one-byte final truncation returns snapshot_torn", "random page removal never exposes complete state"]
+    },
+    {
+      "class": "page metadata",
+      "test": "integrity::page_metadata_uses_decimal_strings_and_rejects_numbers",
+      "assertions": ["page index, page count, total and offset are canonical decimal strings", "numeric counter forms reject", "every page carries one SHA-256 digest"]
     },
     {
       "class": "malformed counters",
