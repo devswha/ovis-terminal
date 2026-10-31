@@ -203,6 +203,30 @@ Both exit 0 and each runs one assertion-bearing case. `lifecycle-qa.log` contain
 }
 ```
 
+### Reconciliation with todo 76
+
+The integration merge at dfa7de2 composed todo 16's "child unreaped at EOF" barrier ahead of todo 76's reap-under-lock. A same-group descendant can hold the PTY slave indefinitely after the leader exits, so the waiter blocked forever. Three todo-76 shutdown tests timed out at 30 s.
+
+Resolution (full reasoning in `docs/evidence/task-16/reconciliation.md`): the barrier was a means, not the contract.
+
+- The waiter is todo 76's again: `waitid(EXITED|NOWAIT)` (retried on EINTR), then the reap under the holder-state mutex (`WaiterState::Reaped`), then the pending-byte drain and the slave drop. `DrainSignal::wait_until_finished` and `HolderState::begin_reap` are removed.
+- `record_hangup` publishes Hangup from the PID and start token retained in `HeldTerminal` at spawn. These survive the reap, so a post-reap EOF is still correctly attributed. The pump still publishes Hangup before it consumes the waiter report and records Exit, and Exit stays last.
+- `Holder::hangup` now uses todo 76's reap-serialized, incarnation-checked delivery (`signalling::signal_with` + `process::send_hangup`). A reaped leader's group is still addressed, a replaced PID never is, and the PID 0/1 refusal covers SIGHUP. No wire record changed.
+
+Tests guarding the invariants:
+
+- I-76: `shutdown_tests::{shutdown_reports_already_exited_when_waiter_reaped_before_output_completion, shutdown_kills_same_group_descendant_after_leader_is_reaped, shutdown_stops_pump_when_reaped_leader_group_is_gone, shutdown_reports_zombie_without_signalling_before_waiter_reaps}`.
+- I-16: `reap_tests::hangup_after_reap_carries_spawned_incarnation_and_precedes_exit` replaces `child_is_unreaped_at_the_real_pty_hangup_barrier`. With the leader reaped and nothing queued yet, it asserts exactly `[Hangup, Exit]`: the Hangup carries the spawned pid and start token at `final_offset`, the Exit has code 3, and nothing follows Exit.
+- I-16 + I-76: `reap_tests::shutdown_with_descendant_holding_slave_is_bounded_and_keeps_hangup_before_exit`. After the reap, `hangup()` reaches the HUP-ignoring descendant's group. Shutdown returns in under 2 s with all workers joined and `already_exited == 1`. Delivered lifecycle events are `[]`, `[Hangup]` or `[Hangup, Exit]`, and the exit is recorded at the tail head.
+
+Reconciliation verification (Linux x86_64):
+
+| Command | Exit | Result |
+| --- | --- | --- |
+| `cargo nextest run -p ovis-terminal-holder -p ovis-terminal-core --all-targets --locked` | 0 | 149 passed (run before the final lint-only edits: `send_hangup` visibility, `matches!` assertion form) |
+| `bash scripts/check.sh` (final code) | 0 | fmt, workspace clippy `-D warnings`, workspace nextest 433 passed / 1 skipped, doctests, 0 hygiene violations in 428 files, manifest + JSON gates; `reconcile-check.log` |
+| `cargo nextest run -p ovis-terminal-holder --locked` x50 under 8 busy-loop CPU hogs (final code) | 0 | `STRESS_DONE pass=50 fail=0`, 56/56 each; `reconcile-stress.log` |
+
 ## QA
 
 Recorded in docs/evidence/task-16/checks.log and lifecycle-qa.log:
@@ -221,10 +245,10 @@ The workspace's one ignored store test is the existing child-process fixture at 
 
 ## Adversarial
 
-- Stale state / PID reuse: the failure case supplies the current PID with a different start token and asserts process_replaced. The live native token remains unchanged. Full identity is checked at every escalation stage; the holder retains its unreaped child until the EOF boundary and fences ownership before reaping.
+- Stale state / PID reuse: the failure case supplies the current PID with a different start token and asserts process_replaced. The live native token remains unchanged. Full identity is checked at every escalation stage. Every holder signal, SIGHUP included, is serialized with the waiter's reap and refuses a PID whose start token no longer matches.
 - Hung command: repeated_kill_and_recover_never_retarget_the_replacement waits for the real fixture's ARMED marker after it installs HUP/TERM traps, then asserts all three delivered stages and actual signal-9 exit.
 - Repeated interruption: the same kill op returns its historical receipt after relaunch, and the same recover op creates only one new incarnation. A pending launch is adopted without replay; its interrupted operation stays outcome_unknown.
-- Misleading success: Hangup, delivered signals and Exit are separate evidence. The holder test proves the real child is still waitable at EOF, and Exit follows final bytes. No status text is used as exit evidence.
+- Misleading success: Hangup, delivered signals and Exit are separate evidence. The holder test proves that, even when the leader is reaped before PTY EOF, Hangup carries the spawned pid and start token at the final offset and precedes Exit. No status text is used as exit evidence.
 - Metadata removal: a live sibling crosses an explicit input/output barrier after removal; no signal handler ran. Removal names only the ended process metadata.
 - Authority: a real SQLite COMMIT barrier lets the test revoke the credential after admission but before spawn. No process is created, and the terminal plus operation retain the typed credential_revoked failure.
 - Child replacement: after the shell reaps the declared child agent, agent authority is cleared while the independent shell identity remains live.
@@ -250,8 +274,8 @@ The two orchestrator decisions are applied without exposing the raw store or add
 - crates/ovis-terminal-core/src/registry/lifecycle.rs:88 and registry/lifecycle/terminal.rs:14: add ProcessEnded/Finished, validated serde persistence and historical-process accessors. Registry property tests reject contradictory Running metadata and preserve live/ended round trips.
 - crates/ovis-terminal-holder/src/protocol/messages/io.rs:25, :35 and protocol/payload.rs:10: Output gains optional typed Hangup evidence carried outside the unchanged nested payload. Message tags and HOLDER_PROTOCOL_GENERATION remain 2. Legacy adjacent-tagged generation-two readers ignore the optional envelope field while retaining identical target/offset/bytes; today's fixtures replay in the compatibility test.
 - crates/ovis-terminal-holder/src/protocol/process_pid.rs:7: move the existing PID newtype and add canonical string serde; src/process.rs preserves its old public re-export.
-- crates/ovis-terminal-holder/src/unix/holder/threads.rs:50, holder/state.rs:70 and unix/drain.rs:46: safe rustix waitid(WNOWAIT) observes termination without reaping, the pump publishes Hangup before releasing the drain guard, ownership is fenced, and actual wait supplies the final Exit. Existing input-ack-before-Exit and final-output invariants remain covered.
-- crates/ovis-terminal-holder/src/unix/holder/hangup.rs:18: local holder SIGHUP method requires the exact process incarnation without changing the frozen Signal wire enum. The Unix-only rustix process dependency is recorded in Cargo.lock.
+- crates/ovis-terminal-holder/src/unix/holder/threads.rs:51, :130 and holder/state.rs:83: the waiter reaps under the state mutex as soon as the leader exits (todo 76), then drains pending bytes before dropping the slave. The pump publishes Hangup at EOF from the retained `HeldTerminal` pid and start token, then consumes the waiter report and records Exit. Existing input-ack-before-Exit and final-output invariants remain covered.
+- crates/ovis-terminal-holder/src/unix/holder/hangup.rs:20, holder/signalling.rs:34 and process/signal.rs:94: the local holder SIGHUP method requires the exact process incarnation and goes through the reap-serialized, start-token-checked `signal_with` and the reserved-PID-refusing `send_hangup`, without changing the frozen Signal wire enum. The Unix-only rustix process dependency is recorded in Cargo.lock.
 
 Todo-5/6 scenarios, property examples, counter tests, and the task-16 scenario are updated. No todo-10/15 test was weakened; additive rollback and crash-replay tests run beside them.
 

@@ -26,6 +26,16 @@ pub(super) fn signal(
     scope: SignalScope,
     kind: SignalKind,
 ) -> Result<SignalOutcome, HolderError> {
+    signal_with(terminal, scope, |scope| send_signal(scope, kind))
+}
+
+/// Delivers through `send` only when the retained incarnation evidence allows it:
+/// a reaped leader's group is still addressed, a replaced PID never is.
+pub(super) fn signal_with(
+    terminal: &Terminal,
+    scope: SignalScope,
+    send: impl FnOnce(SignalScope) -> Result<(), SignalError>,
+) -> Result<SignalOutcome, HolderError> {
     let leader = leader_state(terminal)?;
     match (scope, leader) {
         (SignalScope::Process(_), LeaderState::Exited | LeaderState::Replaced)
@@ -35,7 +45,7 @@ pub(super) fn signal(
         (SignalScope::Process(_) | SignalScope::ProcessGroup(_), LeaderState::Live)
         | (SignalScope::ProcessGroup(_), LeaderState::Exited) => {}
     }
-    match send_signal(scope, kind) {
+    match send(scope) {
         Ok(()) => Ok(SignalOutcome::Delivered {
             leader_exited: leader == LeaderState::Exited,
         }),

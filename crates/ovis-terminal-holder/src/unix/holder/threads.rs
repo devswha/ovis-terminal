@@ -1,8 +1,10 @@
 //! Bodies of a terminal's exit waiter, output pump and input writer.
 //!
 //! Output order is fixed by construction: the pump records every chunk, reaches
-//! the PTY hang-up, and only then records the exit the waiter observed, so
-//! `final_offset` always covers the final bytes. Exit also waits for the input
+//! the PTY hang-up and publishes it, and only then records the exit the waiter
+//! observed, so `final_offset` always covers the final bytes and Hangup precedes
+//! Exit. The waiter reaps as soon as the leader exits: a descendant may hold the
+//! PTY slave indefinitely, so reaping is never gated on output completion. Exit also waits for the input
 //! writer to acknowledge every entry remaining in the closed queue. Unexpected
 //! failures are kept typed with their sources and reach the core in the exit record.
 
@@ -55,10 +57,9 @@ pub(super) fn wait_for_exit(waiter: Waiter, report: &SyncSender<WaiterReport>) {
         probe,
         drain,
     } = waiter;
-    // WNOWAIT preserves both the PID and the exit status while the master drains.
-    // Reaping first would make a later PTY EOF an unprovable pre-reap stage, and
-    // the zombie keeps the PID reserved until the reap below.
-    let observed = loop {
+    // NOWAIT leaves the zombie/PID reserved while we wait without the state lock.
+    // The only reap happens under the same mutex held through signal delivery.
+    let ready = loop {
         match waitid(
             WaitId::Pid(Pid::from_child(&child)),
             WaitIdOptions::EXITED | WaitIdOptions::NOWAIT,
@@ -67,32 +68,16 @@ pub(super) fn wait_for_exit(waiter: Waiter, report: &SyncSender<WaiterReport>) {
             result => break result,
         }
     };
-    if let Err(source) = observed {
-        shared.lock().record_io_error(
-            &terminal_id,
-            TerminalIoError::Wait {
-                source: source.into(),
-            },
-        );
-    }
-    // A failed pending-byte query must not hold the exit forever: the slave is
-    // closed anyway, the pump records what the kernel still returns, and the
-    // failure is reported with the exit.
-    let drained = drain.wait_until_drained(&probe);
-    drop(slave);
-    drain.wait_until_finished();
-    // The only reap happens under the same mutex that signal delivery holds, so
-    // shutdown can never address a PID this waiter has already released.
-    let status = {
+    let status = ready.map_err(std::io::Error::from).and_then(|_| {
         let mut state = shared.lock();
-        state.begin_reap(&terminal_id);
-        let status = child.wait();
+        let status = child.wait()?;
         if let Some(terminal) = state.terminals.get_mut(&terminal_id) {
             terminal.waiter = WaiterState::Reaped;
         }
         shared.reaped.notify_all();
-        status
-    };
+        drop(state);
+        Ok(status)
+    });
     let evidence = match status {
         Ok(status) => ExitEvidence::Status {
             code: status.code(),
@@ -100,6 +85,14 @@ pub(super) fn wait_for_exit(waiter: Waiter, report: &SyncSender<WaiterReport>) {
         },
         Err(source) => ExitEvidence::Unknown(TerminalIoError::Wait { source }),
     };
+    // A failed pending-byte query must not hold the exit forever: the slave is
+    // closed anyway, the pump records what the kernel still returns, and the
+    // failure is reported with the exit.
+    let drained = drain.wait_until_drained(&probe);
+    if drained.is_err() {
+        drain.finish();
+    }
+    drop(slave);
     let report_value = WaiterReport {
         evidence,
         drain: drained.err().map(|source| TerminalIoError::Poll { source }),

@@ -81,11 +81,32 @@ impl SignalError {
 /// `kill(2)`, [`SignalError::PidOutOfRange`] for a PID that is not a `pid_t`,
 /// and [`SignalError::Delivery`] when `kill(2)` fails.
 pub fn send_signal(scope: SignalScope, signal: SignalKind) -> Result<(), SignalError> {
+    deliver(scope, number(signal), kill)
+}
+
+/// Sends SIGHUP to the processes in `scope`, with the same reserved-PID refusal.
+///
+/// SIGHUP is a local kill stage, not a generation-two `SignalKind`.
+///
+/// # Errors
+///
+/// As [`send_signal`].
+pub fn send_hangup(scope: SignalScope) -> Result<(), SignalError> {
+    deliver(scope, libc::SIGHUP, kill)
+}
+
+fn kill(pid: libc::pid_t, number: libc::c_int) -> libc::c_int {
     // SAFETY: kill(2) takes two integers by value and neither reads nor writes
     // memory owned by this process.
-    deliver(scope, signal, |pid, number| unsafe {
-        libc::kill(pid, number)
-    })
+    unsafe { libc::kill(pid, number) }
+}
+
+const fn number(signal: SignalKind) -> libc::c_int {
+    match signal {
+        SignalKind::Interrupt => libc::SIGINT,
+        SignalKind::Terminate => libc::SIGTERM,
+        SignalKind::Kill => libc::SIGKILL,
+    }
 }
 
 /// Validates the target, then calls `kill` exactly once; it is never reached for
@@ -93,7 +114,7 @@ pub fn send_signal(scope: SignalScope, signal: SignalKind) -> Result<(), SignalE
 /// holder-owned children.
 fn deliver(
     scope: SignalScope,
-    signal: SignalKind,
+    number: libc::c_int,
     kill: impl FnOnce(libc::pid_t, libc::c_int) -> libc::c_int,
 ) -> Result<(), SignalError> {
     let (pid, group) = match scope {
@@ -107,11 +128,6 @@ fn deliver(
         .map_err(|_| SignalError::PidOutOfRange { pid: pid.get() })?;
     // A negative PID addresses the whole process group; `raw > 1`, so negation cannot overflow.
     let addressed = if group { raw.saturating_neg() } else { raw };
-    let number = match signal {
-        SignalKind::Interrupt => libc::SIGINT,
-        SignalKind::Terminate => libc::SIGTERM,
-        SignalKind::Kill => libc::SIGKILL,
-    };
     if kill(addressed, number) == 0 {
         Ok(())
     } else {
@@ -125,13 +141,13 @@ fn deliver(
 mod tests {
     use std::cell::Cell;
 
-    use super::{ProcessId, SignalError, SignalScope, deliver};
+    use super::{ProcessId, SignalError, SignalScope, deliver, number};
     use crate::protocol::SignalKind;
 
     /// Records every requested `kill(2)` call instead of making it.
     fn recorded(
         scope: SignalScope,
-        signal: SignalKind,
+        signal: libc::c_int,
     ) -> (Result<(), SignalError>, Vec<(i32, i32)>) {
         let calls = Cell::new(Vec::new());
         let result = deliver(scope, signal, |pid, number| {
@@ -145,16 +161,17 @@ mod tests {
 
     #[test]
     fn reserved_pids_are_refused_before_kill_is_reached() {
-        // Given: every scope addressing PID 0 or 1, with every signal kind.
+        // Given: every scope addressing PID 0 or 1, with every wire signal and SIGHUP.
         for raw in [0, 1] {
             for scope in [
                 SignalScope::Process(ProcessId::new(raw)),
                 SignalScope::ProcessGroup(ProcessId::new(raw)),
             ] {
                 for signal in [
-                    SignalKind::Interrupt,
-                    SignalKind::Terminate,
-                    SignalKind::Kill,
+                    number(SignalKind::Interrupt),
+                    number(SignalKind::Terminate),
+                    number(SignalKind::Kill),
+                    libc::SIGHUP,
                 ] {
                     // When: delivery is requested.
                     let (result, calls) = recorded(scope, signal);
@@ -177,7 +194,7 @@ mod tests {
         // When: a group signal is requested.
         let (result, calls) = recorded(
             SignalScope::ProcessGroup(ProcessId::new(raw)),
-            SignalKind::Kill,
+            number(SignalKind::Kill),
         );
 
         // Then: no kill(2) call, typed out-of-range refusal.
@@ -191,8 +208,10 @@ mod tests {
         let pid = ProcessId::new(2);
 
         // When: delivery is requested through the recording seam.
-        let (process, process_calls) = recorded(SignalScope::Process(pid), SignalKind::Terminate);
-        let (group, group_calls) = recorded(SignalScope::ProcessGroup(pid), SignalKind::Kill);
+        let (process, process_calls) =
+            recorded(SignalScope::Process(pid), number(SignalKind::Terminate));
+        let (group, group_calls) =
+            recorded(SignalScope::ProcessGroup(pid), number(SignalKind::Kill));
 
         // Then: exactly one call each, the group addressed by its negative id.
         assert!(process.is_ok() && group.is_ok());

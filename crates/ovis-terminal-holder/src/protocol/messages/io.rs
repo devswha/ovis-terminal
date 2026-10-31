@@ -20,20 +20,22 @@ pub struct Output {
     pub offset: u64,
     /// Raw bytes, not decoded text.
     pub bytes: Vec<u8>,
-    /// Optional pre-reap PTY hangup evidence. The frame codec places this in the
+    /// Optional PTY hangup evidence. The frame codec places this in the
     /// envelope, not the closed generation-two payload, so older cores ignore it.
     #[serde(skip)]
     pub hangup: Option<Hangup>,
 }
 
-/// The PTY reached EOF while the holder still owned the unreaped child.
+/// The PTY of the named process incarnation reached EOF.
 ///
 /// This says nothing about exit status. Only the later, final `Exit` carries that.
+/// The leader may already have been reaped; the PID and start token are the
+/// incarnation evidence captured at spawn.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct Hangup {
-    /// PID protected from reuse until the holder reaps the child.
+    /// PID captured at spawn; meaningful only together with `start_token`.
     pub pid: crate::process::ProcessId,
     /// Start token captured at spawn, paired with the PID.
     pub start_token: crate::protocol::ProcessStartToken,

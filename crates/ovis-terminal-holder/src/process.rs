@@ -9,7 +9,7 @@ mod signal;
 mod start_token;
 
 #[cfg(unix)]
-pub use signal::{SignalError, SignalScope, send_signal};
+pub use signal::{SignalError, SignalScope, send_hangup, send_signal};
 #[cfg(unix)]
 pub use start_token::{StartTokenError, read_start_token};
 

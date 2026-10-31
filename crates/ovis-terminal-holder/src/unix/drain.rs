@@ -42,16 +42,6 @@ impl DrainSignal {
         self.changed.notify_all();
     }
 
-    /// Keeps the child unreaped until the pump has published its EOF evidence.
-    pub(super) fn wait_until_finished(&self) {
-        let progress = self.progress.lock().unwrap_or_else(PoisonError::into_inner);
-        drop(
-            self.changed
-                .wait_while(progress, |now| !now.finished)
-                .unwrap_or_else(PoisonError::into_inner),
-        );
-    }
-
     /// Blocks until `probe` has no unread output or the pump has finished.
     pub(super) fn wait_until_drained(&self, probe: &OwnedFd) -> io::Result<()> {
         let mut progress = self.progress.lock().unwrap_or_else(PoisonError::into_inner);

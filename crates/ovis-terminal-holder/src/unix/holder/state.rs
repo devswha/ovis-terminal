@@ -75,18 +75,11 @@ pub(super) struct HolderState {
 }
 
 impl HolderState {
-    /// Fences signal and input ownership before the waiter permits PID reuse.
-    pub(super) fn begin_reap(&mut self, terminal_id: &TerminalId) {
-        if let Some(live) = self
-            .terminals
-            .get_mut(terminal_id)
-            .and_then(|terminal| terminal.live.take())
-        {
-            live.input.close();
-        }
-    }
-
-    /// The waiter cannot reap until the pump publishes this and releases its drain guard.
+    /// Publishes PTY EOF before the pump records Exit.
+    ///
+    /// The leader may already be reaped (a descendant can hold the slave long
+    /// after it exits), so the evidence is the PID and start token retained at
+    /// spawn, never a live lookup of a PID that may since have been reused.
     pub(super) fn record_hangup(&mut self, terminal_id: &TerminalId) {
         let Some(terminal) = self.terminals.get(terminal_id) else {
             return;
