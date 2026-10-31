@@ -19,6 +19,7 @@ pub struct Recorder {
     cancelled: AtomicU64,
     released: Notify,
     held: watch::Sender<u64>,
+    journal: Mutex<Vec<&'static str>>,
     subscribers: Mutex<Vec<(String, Notifier)>>,
 }
 
@@ -53,15 +54,38 @@ impl Recorder {
         Ok(())
     }
 
-    async fn get(&self, name: &str) -> Value {
+    /// What `a` and `b` observed, in the order the handler saw it.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a handler panicked while recording.
+    pub fn journal(&self) -> TestResult<Vec<&'static str>> {
+        Ok(self.journal.lock().map_err(|_| "journal poisoned")?.clone())
+    }
+
+    fn record(&self, step: &'static str) -> Result<(), BoundaryError> {
+        self.journal
+            .lock()
+            .map_err(internal::<PoisonError<_>>)?
+            .push(step);
+        Ok(())
+    }
+
+    async fn get(&self, name: &str) -> Result<Value, BoundaryError> {
         match name {
             // `a` cannot finish before `b` ran: only concurrent dispatch settles both.
-            "a" => self.released.notified().await,
-            "b" => self.released.notify_one(),
+            "a" => {
+                self.released.notified().await;
+                self.record("a resumed")?;
+            }
+            "b" => {
+                self.record("b released a")?;
+                self.released.notify_one();
+            }
             "hold" => self.hold().await,
             _ => {}
         }
-        json!({ "name": name })
+        Ok(json!({ "name": name }))
     }
 
     async fn hold(&self) {
@@ -120,7 +144,7 @@ impl RequestHandler for Recorder {
         self.calls.fetch_add(1, Ordering::SeqCst);
         let name = call.request.params().get("name").and_then(Value::as_str);
         match (call.request.method(), name) {
-            ("doc.get", Some(name)) => Ok(self.get(name).await),
+            ("doc.get", Some(name)) => self.get(name).await,
             ("doc.set", Some(_)) => self.set().await,
             ("events.subscribe", _) => self.subscribe(call.notifier),
             _ => Err(BoundaryError::invalid_params(Some("params.name"))),

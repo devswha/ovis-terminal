@@ -16,7 +16,8 @@ use crate::fixture::launch;
 use crate::fixture::wire::decode;
 use crate::scenario::matcher::{Assertion, Subject};
 use crate::scenario::model::{
-    Connect, Effects, ExpectFailure, FixtureKind, Run, Send as SendStep, SendWire, Step, Via,
+    Connect, Effects, ExpectFailure, FixtureKind, Principal, Run, Send as SendStep, SendWire, Step,
+    Via,
 };
 
 type StepFuture<'s> = Pin<Box<dyn Future<Output = Result<(), RunnerError>> + Send + 's>>;
@@ -72,7 +73,15 @@ impl Session<'_> {
     }
 
     async fn connect(&mut self, connect: &Connect) -> Result<(), RunnerError> {
-        let bearer = self.bearer().ok_or(RunnerError::FixtureState)?.to_owned();
+        let ready = &self
+            .fixture
+            .as_ref()
+            .ok_or(RunnerError::FixtureState)?
+            .ready;
+        let bearer = match connect.principal {
+            Principal::Owner => ready.bearer.clone(),
+            Principal::Observe => ready.observer.clone(),
+        };
         if self.conns.contains_key(&connect.conn) {
             return Err(RunnerError::ScenarioInconsistent {
                 scenario: connect.conn.as_str().to_owned(),

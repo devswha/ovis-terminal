@@ -4,6 +4,7 @@
 //! runtime behavior arrives with the plan todos named on each module.
 
 pub mod conversation;
+pub mod prompts;
 pub mod status;
 
 /// Cargo package name of this crate, used by the workspace layering record.

@@ -6,8 +6,10 @@ pub mod conpty;
 pub mod documents_retention;
 pub mod machine_identity;
 pub mod plugins;
+pub mod prompts;
 pub mod restart;
 
 pub mod session_binding;
 pub mod unix_service;
+pub mod windows_service;
 pub mod worktrees;

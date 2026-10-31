@@ -1,0 +1,162 @@
+{
+  "scenario": "part-a/task-28",
+  "todo": 28,
+  "title": "Authenticated WebSocket transport with parity",
+  "closes": [
+    "GAP-023",
+    "GAP-129",
+    "GAP-130"
+  ],
+  "delivers": [
+    "IDEAL-001",
+    "IDEAL-004",
+    "IDEAL-020",
+    "IDEAL-034",
+    "IDEAL-102",
+    "IDEAL-103"
+  ],
+  "excludes": [
+    "EXCL-014",
+    "EXCL-016",
+    "EXCL-023"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "verification": {
+    "status": "declared_until_routed",
+    "server_tests": "cargo nextest run -p ovis-terminal-server --test ws",
+    "blocking_todo": 31,
+    "requires_actual_cli_socket_transcript": true
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "transport": "both",
+          "rpc": "hello",
+          "principal": "owner",
+          "assert": {
+            "unix.endpoint_kind": "unix",
+            "websocket.endpoint_kind": "websocket",
+            "result_without_endpoint_kind_and_server_time_ms_equal": true,
+            "limits.heartbeat_ms": "15000"
+          }
+        },
+        {
+          "transport": "websocket",
+          "ws_ping": "beat-1",
+          "assert": {
+            "ws_pong": "beat-1",
+            "next_record_is_reply_to_next_request": true
+          }
+        },
+        {
+          "holder_output": "title, bracketed paste and a screen painted once"
+        },
+        {
+          "rpc": "attach.open",
+          "viewers": [
+            {"transport": "websocket", "principal": "owner", "role": "interact", "as": "tui"},
+            {"transport": "websocket", "principal": "phone", "role": "observe", "as": "phone"},
+            {"transport": "unix", "principal": "bridge", "role": "observe", "as": "local"}
+          ],
+          "assert": {
+            "outcome": "ready",
+            "first_paint_equal_across_viewers": true
+          }
+        },
+        {
+          "holder_output": "a cursor query split across two reads, then text",
+          "then_rpc": "attach.repaint on every viewer after it received the last chunk",
+          "assert": {
+            "tui.checkpoint": "$local.checkpoint",
+            "phone.checkpoint": "$local.checkpoint"
+          }
+        },
+        {
+          "transport": "websocket",
+          "inject": "phone connection dropped, then reconnected",
+          "rpc": "attach.open",
+          "assert": {
+            "outcome": "ready",
+            "stream_id_differs_from": "$phone.stream_id",
+            "first_paint.output_offset": "$raw_end"
+          }
+        },
+        {
+          "holder_exit": 0,
+          "assert": {
+            "close.reason": "exited",
+            "close.final_output_offset": "$raw_end",
+            "vt_equals_continuous_vt": true,
+            "tui.received_bytes": "$local.received_bytes",
+            "ws_report.failures": {}
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "transport": "both",
+          "rpc": "hello",
+          "principal": "expired_credential",
+          "expect_error": "credential_expired",
+          "then_rpc": "attach.open",
+          "then_expect_error": "unauthenticated",
+          "assert": {
+            "websocket_replies_equal_unix_replies": true,
+            "reply_contains_bearer": false
+          }
+        },
+        {
+          "transport": "both",
+          "rpc": "attach.open",
+          "principal": "observer_only",
+          "params": {"role": "interact"},
+          "assert": {"outcome": "refused", "reason": "forbidden", "stream_id": null, "lease": null}
+        },
+        {
+          "transport": "both",
+          "after": "framed hello",
+          "frame": {"kind": "DATA", "channel": 1, "payload_b64": "A3JtIC1yZiB+DQ=="},
+          "assert": {
+            "closing.method": "$/closing",
+            "closing.params.reason": "unowned_channel",
+            "websocket_closing_equals_unix_closing": true,
+            "websocket_close_code": 1000
+          }
+        },
+        {
+          "transport": "websocket",
+          "ws_text_message": "a valid attach.credit request",
+          "assert": {"ws_close_code": 1003, "ws_close_reason": "invalid_ws_message", "reply": null}
+        },
+        {
+          "transport": "websocket",
+          "ws_raw": "unmasked binary frame",
+          "assert": {"ws_close_code": 1002, "ws_close_reason": "ws_protocol"}
+        },
+        {
+          "transport": "websocket",
+          "ws_raw": "frame header declaring 16 MiB + 10 bytes",
+          "assert": {"ws_close_code": 1009, "ws_close_reason": "message_too_large"}
+        },
+        {
+          "transport": "websocket",
+          "upgrade_origin": "https://evil.example",
+          "assert": {"http_status": 403, "body.kind": "origin_rejected", "body_echoes_origin": false}
+        },
+        {
+          "transport": "websocket",
+          "inject": "TCP peer that never sends the upgrade",
+          "assert": {"ws_report.failures.handshake_timeout": 1, "response_bytes": 0}
+        }
+      ]
+    }
+  ]
+}

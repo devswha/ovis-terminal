@@ -1,0 +1,277 @@
+{
+  "scenario": "part-a/task-26",
+  "todo": 26,
+  "title": "Order geometry transitions and unchanged grid repaint",
+  "closes": [
+    "GAP-050",
+    "GAP-058",
+    "GAP-059"
+  ],
+  "delivers": [
+    "IDEAL-037",
+    "IDEAL-038",
+    "IDEAL-039"
+  ],
+  "excludes": [
+    "EXCL-004",
+    "EXCL-007",
+    "EXCL-019"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "verification": {
+    "status": "deferred_by_plan",
+    "runner_todo": 21,
+    "requires_actual_cli_socket_transcript": true,
+    "blocked_on": "attach.resize, attach.release_geometry, attach.focus and attach.repaint are not routed to ovis_terminal_core::geometry by any served binary until todo 31 assembles the attach routes, holder link and geometry events"
+  },
+  "core_tests": {
+    "happy": "cargo nextest run -p ovis-terminal-core --test geometry happy",
+    "failure": "cargo nextest run -p ovis-terminal-core --test geometry failure"
+  },
+  "credentials": {
+    "operator": [
+      "observe",
+      "interact"
+    ],
+    "phone": [
+      "observe"
+    ]
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "as": "operator",
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.launch",
+            "program": {
+              "argv": [
+                "bash",
+                "--norc",
+                "--noprofile",
+                "-i"
+              ]
+            },
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin",
+              "TERM": "xterm-256color"
+            },
+            "geometry": {
+              "rows": 30,
+              "cols": 100
+            },
+            "keep": true
+          },
+          "capture": [
+            "terminal_id"
+          ]
+        },
+        {
+          "as": "operator",
+          "rpc": "attach.open",
+          "params": {
+            "op_id": "$uuidv7.attach",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "role": "interact",
+            "client_id": "operator",
+            "geometry": {
+              "rows": 30,
+              "cols": 100
+            },
+            "stream_mode": "channel"
+          },
+          "capture": [
+            "lease.lease_id",
+            "stream_id"
+          ]
+        },
+        {
+          "as": "operator",
+          "rpc": "events.subscribe",
+          "params": {
+            "types": [
+              "geometry.changed",
+              "geometry.checkpoint",
+              "geometry.input_ready"
+            ]
+          },
+          "capture": [
+            "subscription_id"
+          ]
+        },
+        {
+          "as": "operator",
+          "rpc": "attach.resize",
+          "params": {
+            "op_id": "$uuidv7.resize",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "lease_id": "$operator.lease.lease_id",
+            "geometry": {
+              "rows": 40,
+              "cols": 120
+            }
+          },
+          "assert": {
+            "outcome": "applied",
+            "geometry": {
+              "rows": 40,
+              "cols": 120
+            },
+            "events_in_order": [
+              "geometry.changed",
+              "geometry.checkpoint",
+              "geometry.input_ready"
+            ],
+            "changed_before_new_grid_bytes": true,
+            "producer_readiness_reports": "0"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.marker",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "lease_id": "$operator.lease.lease_id",
+            "text": "printf 'MARK_RESIZE_OK\\n'",
+            "submit": "enter"
+          },
+          "await": "pty_written",
+          "assert": {
+            "receipt.delivery.state": "pty_written",
+            "screen_contains": "MARK_RESIZE_OK",
+            "screen_grid": {
+              "rows": 40,
+              "cols": 120
+            },
+            "deadline_ms": "10000"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "attach.repaint",
+          "params": {
+            "stream_id": "$operator.stream_id"
+          },
+          "assert": {
+            "checkpoint.geometry": {
+              "rows": 40,
+              "cols": 120
+            },
+            "child_winch_signals_added": "0",
+            "holder_resize_messages_added": "0"
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "as": "phone",
+          "rpc": "attach.open",
+          "params": {
+            "op_id": "$uuidv7.phone",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "role": "observe",
+            "client_id": "phone",
+            "stream_mode": "channel"
+          },
+          "capture": [
+            "lease.lease_id"
+          ]
+        },
+        {
+          "as": "phone",
+          "rpc": "attach.resize",
+          "params": {
+            "op_id": "$uuidv7.phone_resize",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "lease_id": "$phone.lease.lease_id",
+            "geometry": {
+              "rows": 10,
+              "cols": 40
+            }
+          },
+          "assert": {
+            "kind": "forbidden",
+            "grid": {
+              "rows": 30,
+              "cols": 100
+            }
+          }
+        },
+        {
+          "inject": {
+            "fixture": "hold_holder_resize_ack",
+            "target": {
+              "terminal_id": "$terminal_id"
+            }
+          },
+          "as": "operator",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.early",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "lease_id": "$operator.lease.lease_id",
+            "text": "early",
+            "submit": "none"
+          },
+          "assert": {
+            "kind": "not_ready",
+            "pending_epoch_present": true,
+            "written_bytes": "0"
+          }
+        },
+        {
+          "inject": {
+            "fixture": "replay_geometry_ack",
+            "epoch": "1",
+            "target": {
+              "terminal_id": "$terminal_id"
+            }
+          },
+          "assert": {
+            "kind": "stale_geometry"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "attach.resize",
+          "params": {
+            "op_id": "$uuidv7.zero",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "lease_id": "$operator.lease.lease_id",
+            "geometry": {
+              "rows": 0,
+              "cols": 120
+            }
+          },
+          "assert": {
+            "kind": "invalid_geometry"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -78,6 +78,11 @@ impl Connection {
         }
     }
 
+    /// The bearer this connection presents in its hello.
+    pub(crate) fn secret(&self) -> &str {
+        &self.secret
+    }
+
     /// Encodes one JSON-RPC record for the current mode.
     pub(crate) fn encode(&self, record: &Value) -> Result<Vec<u8>, RunnerError> {
         let mut bytes = serde_json::to_vec(record)?;
