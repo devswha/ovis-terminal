@@ -59,7 +59,7 @@ EXIT=0
 - `cargo nextest run -p ovis-terminal-core --test authority_scope`: exit 0, 2 passed.
 - `cargo clippy -p ovis-terminal-authz --all-targets -- -D warnings`: exit 0.
 - `bash scripts/check.sh`: exit 0, all steps passed. Workspace nextest: 276 passed, 1 skipped (the intentional `crash_child` fixture). Hygiene: 0 violations in 302 files, 16 manifests, and 26 JSON files checked.
-- `cargo metadata --locked --format-version 1 --no-deps`: exit 0. `origin/integration` was still at `c1dd6cf` when this branch was pushed, so no merge was needed.
+- `cargo metadata --locked --format-version 1 --no-deps`: exit 0. `origin/integration` moved to `243e3d6` (todo 74 holder fix) and was merged cleanly. `bash scripts/check.sh` on the merged tree exits 0: 277 passed, 1 skipped, hygiene 0 violations in 302 files (`docs/evidence/task-19/check-merged.log`).
 
 ## Adversarial
 
