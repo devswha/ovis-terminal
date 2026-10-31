@@ -1,5 +1,6 @@
 //! Typed errors crossing the JSON-RPC protocol boundary.
 
+mod bound;
 mod boundary;
 mod candidate;
 mod data;
@@ -8,6 +9,7 @@ pub use candidate::TargetCandidate;
 mod identity;
 mod kinds;
 
+pub use bound::{ExceededBound, LimitName};
 pub use boundary::BoundaryError;
 pub use data::ErrorData;
 pub use identity::{FieldPath, OpId, TargetId};

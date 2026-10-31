@@ -9,6 +9,7 @@ use ovis_terminal_store::Store;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+use super::admission::{SnapshotQueue, SnapshotSlot};
 use super::delivery::{Charge, Sink};
 use super::snapshot::{PageCount, Pinned, SnapshotDigest};
 use super::{
@@ -67,11 +68,13 @@ pub struct Coordinator<D, P> {
     pub(super) identity: RuntimeIdentity,
     pub(super) limits: Limits,
     pub(super) queued_bytes: Arc<AtomicUsize>,
+    pub(super) pins: Arc<SnapshotQueue>,
 }
 
 impl<D, P> Coordinator<D, P> {
     /// Takes ownership of the core's store after identity/bootstrap reservation.
     pub fn new(store: Store, identity: RuntimeIdentity, producer: P) -> Self {
+        let limits = Limits::default();
         Self {
             state: Mutex::new(State {
                 store,
@@ -80,7 +83,8 @@ impl<D, P> Coordinator<D, P> {
             }),
             producer,
             identity,
-            limits: Limits::default(),
+            pins: SnapshotQueue::new(limits.pinned_snapshots),
+            limits,
             queued_bytes: Arc::new(AtomicUsize::new(0)),
         }
     }
@@ -104,8 +108,14 @@ impl<D, P> Coordinator<D, P> {
         {
             return Err(EventError::LimitExceeded);
         }
+        self.pins = SnapshotQueue::new(limits.pinned_snapshots);
         self.limits = limits;
         Ok(self)
+    }
+
+    /// The pinned-snapshot slots and the FIFO of requests waiting for one.
+    pub const fn snapshot_queue(&self) -> &Arc<SnapshotQueue> {
+        &self.pins
     }
 
     pub(super) fn lock(&self) -> Result<MutexGuard<'_, State<D>>, EventError> {
@@ -177,8 +187,14 @@ impl<D: EventData + Clone + Serialize + DeserializeOwned, P: SnapshotProducer> C
     ///
     /// # Errors
     ///
-    /// Returns typed producer/store failures or `limit_exceeded` at the pin budget.
+    /// Returns typed producer/store failures, or `limit_exceeded` when every slot is held
+    /// or another request is already waiting for one.
     pub fn pin_snapshot(&self) -> Result<SnapshotLease, EventError> {
+        let slot = self.pins.try_acquire()?;
+        self.pin_in(slot)
+    }
+
+    pub(super) fn pin_in(&self, slot: SnapshotSlot) -> Result<SnapshotLease, EventError> {
         let mut state = self.lock()?;
         let view = state.store.snapshot()?;
         let cursor = self.cursor(view.revision().get());
@@ -186,7 +202,7 @@ impl<D: EventData + Clone + Serialize + DeserializeOwned, P: SnapshotProducer> C
             cursor,
             sections: self.producer.capture(&view, &Filter::default())?,
         };
-        let pinned = self.pin(&mut state, &snapshot);
+        let pinned = self.pin(&mut state, (&snapshot, slot));
         drop(state);
         pinned
     }
@@ -194,11 +210,8 @@ impl<D: EventData + Clone + Serialize + DeserializeOwned, P: SnapshotProducer> C
     pub(super) fn pin(
         &self,
         state: &mut State<D>,
-        snapshot: &StateSnapshot<P::Sections>,
+        (snapshot, slot): (&StateSnapshot<P::Sections>, SnapshotSlot),
     ) -> Result<SnapshotLease, EventError> {
-        if state.pages.len() >= self.limits.pinned_snapshots {
-            return Err(EventError::LimitExceeded);
-        }
         let view = state.store.snapshot()?;
         let cursor = snapshot.cursor;
         let bytes = serde_json::to_vec(snapshot)?;
@@ -219,6 +232,7 @@ impl<D: EventData + Clone + Serialize + DeserializeOwned, P: SnapshotProducer> C
             token.clone(),
             Pinned {
                 _view: view,
+                _slot: slot,
                 token: token.clone(),
                 cursor,
                 bytes,

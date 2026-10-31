@@ -1653,6 +1653,9 @@
             },
             "type": "array"
           },
+          "bound": {
+            "$ref": "#/components/schemas/ExceededBound"
+          },
           "candidates": {
             "items": {
               "$ref": "#/components/schemas/TargetCandidate"
@@ -1683,6 +1686,9 @@
           },
           "op_id": {
             "$ref": "#/components/schemas/OpId"
+          },
+          "queued_position": {
+            "$ref": "#/components/schemas/QueuePosition"
           },
           "retryable": {
             "description": "Whether a retry may succeed.",
@@ -2396,6 +2402,25 @@
         "required": [
           "outcome",
           "seq"
+        ],
+        "type": "object"
+      },
+      "ExceededBound": {
+        "additionalProperties": false,
+        "description": "The advertised limit a refusal reached and its value.",
+        "properties": {
+          "limit": {
+            "$ref": "#/components/schemas/LimitName",
+            "description": "The `hello` limits field that was reached."
+          },
+          "value": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Its advertised value."
+          }
+        },
+        "required": [
+          "limit",
+          "value"
         ],
         "type": "object"
       },
@@ -3865,6 +3890,10 @@
           }
         ]
       },
+      "LimitName": {
+        "description": "Name of a limit advertised in `hello` limits.",
+        "type": "string"
+      },
       "Limits": {
         "description": "Per-object and session-wide bounds; admission budgets, not preallocations.",
         "properties": {
@@ -3920,6 +3949,10 @@
             "$ref": "#/components/schemas/ByteCount",
             "description": "Retained raw output per terminal."
           },
+          "queued_operations": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Operations one connection may hold waiting for FIFO admission; one more is refused."
+          },
           "rpc_default_deadline_ms": {
             "$ref": "#/components/schemas/DurationMs",
             "description": "Deadline applied when a request names none."
@@ -3973,6 +4006,7 @@
           "history_lines",
           "output_ring_bytes",
           "max_in_flight_requests",
+          "queued_operations",
           "connection_unwritten_bytes",
           "session_rss_bytes",
           "session_retained_bytes",
@@ -4603,6 +4637,17 @@
             "description": "Cancellation guarantee, independent of the operation's execution state.",
             "x-ovis-open-enum": true
           },
+          "queued_position": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueuePosition"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "FIFO admission position, present only while the state is `queued`."
+          },
           "result": {
             "description": "Method result, once committed."
           },
@@ -4661,6 +4706,17 @@
           "op_id": {
             "$ref": "#/components/schemas/OpId",
             "description": "Operation identity."
+          },
+          "queued_position": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueuePosition"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "FIFO admission position, present only while the state is `queued`."
           },
           "result": {
             "description": "Method result, once committed."
@@ -4728,6 +4784,11 @@
           {
             "const": "outcome_unknown",
             "description": "Effects may have begun; the outcome cannot be proven.",
+            "type": "string"
+          },
+          {
+            "const": "queued",
+            "description": "Waiting in FIFO order for admission; never accepted, no effect has begun.",
             "type": "string"
           }
         ]
@@ -5890,6 +5951,11 @@
       },
       "ProtocolGeneration": {
         "description": "ProtocolGeneration carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
+      "QueuePosition": {
+        "description": "QueuePosition carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
@@ -20476,6 +20542,7 @@
       "max_in_flight_requests": "64",
       "op_retention_ms": "86400000",
       "output_ring_bytes": "67108864",
+      "queued_operations": "32",
       "rpc_default_deadline_ms": "10000",
       "session_backlog_bytes": "67108864",
       "session_event_queue_bytes": "67108864",

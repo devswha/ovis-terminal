@@ -26,7 +26,7 @@ pub struct Completion<D> {
 enum Outcome {
     Pending,
     Result(Value),
-    Failed(ErrorData),
+    Failed(Box<ErrorData>),
 }
 
 impl<D> Completion<D> {
@@ -51,9 +51,9 @@ impl<D> Completion<D> {
     }
 
     /// Records a proven failure before an external effect, with its domain state.
-    pub const fn failed(error: ErrorData) -> Self {
+    pub fn failed(error: ErrorData) -> Self {
         Self {
-            outcome: Outcome::Failed(error),
+            outcome: Outcome::Failed(Box::new(error)),
             writes: Vec::new(),
             events: Vec::new(),
             evidence: None,
@@ -143,7 +143,7 @@ where
                     }
                     (OpenEnum::Known(OpState::Committed), Outcome::Failed(error)) => {
                         row.entry.record.state = OpenEnum::Known(OpState::Failed);
-                        row.entry.record.error = Some(error);
+                        row.entry.record.error = Some(*error);
                     }
                     _ => return Err(OperationError::InvalidParams),
                 }

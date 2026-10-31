@@ -1,5 +1,6 @@
 //! Commit, snapshot and subscription barrier coordination (plan todo 10).
 
+mod admission;
 mod coordinator;
 mod delivery;
 mod error;
@@ -11,6 +12,7 @@ mod snapshot_assembly;
 mod startup;
 mod unit;
 
+pub use admission::{QueueTicket, SnapshotQueue, SnapshotSlot, TicketId};
 pub use coordinator::{Coordinator, Limits};
 pub use delivery::{Delivery, MissedReason, PagedSubscription, Subscription};
 pub use error::EventError;
