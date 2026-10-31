@@ -138,3 +138,13 @@ Fix (tests only, no product change):
 - Every exit-code check goes through `Ran::exit(code)`. On a mismatch it fails with the argv, stdout and stderr; this was verified by forcing a wrong expectation locally, and the error printed the typed stderr.
 - `failure` now also asserts the real long-path case: `XDG_RUNTIME_DIR=<root>/d*100` gives exit 2, empty stdout and `kind == socket_path_too_long`.
 - `bash scripts/check.sh` -> exit 0; `cargo nextest run -p ovis-terminal-cli` -> 16 passed.
+
+## CI history
+
+| head | result | cause | fix |
+|---|---|---|---|
+| 8049564 | red: `test (windows-latest)`, run 41194283701, job 124517198664 | Windows dead code under `-D warnings`: the credential, transport and `Failure::Server` paths were platform-neutral, but their only users were `cfg(unix)` (7 dead-code errors + 1 `unused_async`). | 8e2e122: one platform-neutral transport (Unix socket / Windows named pipe); `cfg` only on `connect`; no `#[allow]`. |
+| 8e2e122 | red: `test (macos-latest)`, run 41194902106, job 124519009290 (Windows green) | Darwin `sun_path` limit in the CLI tests: an isolated root under `temp_dir()` (`/var/folders/...`) pushed `<root>/ovis-terminal/default.sock` past 103 bytes, so the CLI correctly refused with `socket_path_too_long` (exit 2). The tests did not print child output, so the log showed no cause. | db25f66: roots under `/tmp/ovt20-<pid>-<n>`; `Ran::exit` reports argv, stdout and stderr on a mismatch; `failure` asserts the typed long-path refusal. |
+| db25f66 | green 11/11: run 41195655161 (ci) + 41195655170 (platform-probes) | none | none |
+
+After db25f66, `integration` advanced to b80cc12 (task 17). The branch is CONFLICTING only in `.github/workflows/probe-stress-macos.yml`, because both lanes added a dispatch input. The resolution (options `[platform, holder-shutdown, screen, cli]`, both jobs kept) is merge commit 06e5a68. It is local and unpushed; `bash scripts/check.sh` passed on it (460 tests).
