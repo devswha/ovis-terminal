@@ -133,7 +133,7 @@ macOS: `probe-stress-macos.yml` gains the option `geometry` and a job running `-
 
 ## Round 2: Windows open-file cleanup
 
-CI `test (windows-latest)` failed: `geometry/qa/rig.rs:49` panicked with `geometry store cleanup: Err(Os {{ code: 32, .. being used by another process }})` in `adversarial::a_released_owners_waiting_resize_is_refused_and_the_grid_stays`. This is the same class todo 50 fixed in `4e609d1`.
+CI `test (windows-latest)` failed: `geometry/qa/rig.rs:49` panicked with `geometry store cleanup: Err(Os { code: 32, .. being used by another process })` in `adversarial::a_released_owners_waiting_resize_is_refused_and_the_grid_stays`. This is the same class todo 50 fixed in `4e609d1`.
 
 Cause: the rig only *dropped* its `Coordinator` and relied on field order to remove the store directory afterwards. It never called `Coordinator::close`, the API that tears the coordinator down (it drops sinks and pages, then `Store::close`) and returns the close error. Windows refuses `remove_dir_all` while any handle on the SQLite files remains, whereas Unix unlinks open files, so only Windows failed.
 
