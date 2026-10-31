@@ -66,9 +66,13 @@ TASK76 shutdown group=6870 error=Delivery { source: Os { code: 1, kind: Permissi
 
 The complete process table immediately afterwards contains neither PID 6870
 nor any member of PGID 6870. No PID reuse or surviving group member was observed.
-This distinguishes a reaped target with a still-retained PTY from a permissions
-failure on a live incarnation. The syscall was a second SIGKILL, addressed to
-the negative process-group ID, not a direct PID signal.
+The syscall was a second SIGKILL, addressed to the negative process-group ID,
+not a direct PID signal. The token/table diagnostics run after the failed
+syscall, so this native trace alone does not order the reap against syscall
+entry: it captures the exit/reap window, with the PID reaped by observation
+time. The Linux syscall toggle below forces and proves the specific
+reaped-before-shutdown schedule; the second deterministic test forces a
+waitable zombie before the waiter reaps. The product handles both schedules.
 
 Darwin's `killpg1` explains why this can be EPERM rather than ESRCH:
 <https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sig.c>.
@@ -146,3 +150,22 @@ The prescribed assembled-binary conformance attempt exited 2:
 `conformance: no scenarios are registered in this build (protocol crate ovis-terminal-protocol)`.
 The transcript is `conformance.log`; this is DEFERRED-BY-PLAN until Todo 21,
 not a passing assembled-runtime scenario.
+
+## Acceptance receipts
+
+- Linux: `bash docs/evidence/task-74/stress.sh 50`, exit 0. All 50 complete
+  holder suites passed all 46 tests with zero skips: 2,300 test executions
+  under eight owned CPU load workers and nextest `-j 8`.
+  `linux-stress.log` contains all per-run exit statuses.
+- Native macOS: <https://github.com/devswha/ovis-terminal/actions/runs/41173999276>,
+  job 124457661774, head `824ad606e13e725f3c0b2421a7c1aabdede97c31`,
+  success/exit 0 on Darwin 25.6.0 arm64, Rust 1.99.1.
+  `macos-stress.log` contains the initial 36/36 library pass and all 200
+  consecutive required named-test passes, ending `RESULT 200/200`.
+  The 35 filtered tests per targeted invocation were all executed in the
+  initial complete library pass.
+- The fixed source hashes matched `source-sha256.txt` before dispatch.
+  `origin/integration` remained 8db5609 at the pre-push synchronization checks.
+- Temporary diagnostic source statements were removed. No added unsafe code,
+  test retries, sleeps, lint suppressions or changes outside the authorized
+  source/workflow/dependency/evidence seams remain.
