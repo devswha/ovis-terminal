@@ -197,10 +197,11 @@ struct Launch {
 
 /// Whether `params` names one of the tree fixture terminals.
 fn names_tree_terminal(params: &TerminalRunParams) -> bool {
-    params
-        .name
-        .as_ref()
-        .is_some_and(|name| TREE_TERMINALS.iter().any(|(_, tree)| *tree == name.as_str()))
+    params.name.as_ref().is_some_and(|name| {
+        TREE_TERMINALS
+            .iter()
+            .any(|(_, tree)| *tree == name.as_str())
+    })
 }
 
 impl Method<Event, OperationProducer> for Launch {
