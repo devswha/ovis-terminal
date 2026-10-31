@@ -1,7 +1,8 @@
 //! The fixture's request handler: the real dispatcher plus methods served directly.
 //!
 //! Those are the read-only protocol methods `rpc.discover` and paged `terminal.output`,
-//! the fixture-only `fixture.transcript` provider write and `fixture.pty` input byte count.
+//! the fixture-only `fixture.transcript` provider write, `fixture.pty` input byte count and
+//! `fixture.deliver`, which lets the sequenced terminal's holder stand-in write.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -19,6 +20,7 @@ use serde_json::Value;
 use super::agents::Directory;
 use super::output;
 use super::prompts::Gate;
+use super::rotation::Sequenced;
 use super::serve::at;
 use crate::error::RunnerError;
 
@@ -34,23 +36,28 @@ const PROVIDER_WRITE: &str = "fixture.transcript";
 /// The PTY stand-in's byte count; served but never advertised.
 const PTY_READ: &str = "fixture.pty";
 
+/// Releases the sequenced terminal's write boundary; served but never advertised.
+const DELIVER: &str = "fixture.deliver";
+
 #[derive(Debug)]
 pub(crate) struct FixtureHandler {
     dispatch: Arc<Dispatch>,
     root: PathBuf,
     pty: (Arc<Gate>, Arc<Directory>),
+    sequenced: Arc<Sequenced>,
 }
 
 impl FixtureHandler {
-    pub(crate) const fn new(
+    pub(crate) fn new(
         dispatch: Arc<Dispatch>,
         root: PathBuf,
-        pty: (Arc<Gate>, Arc<Directory>),
+        (gate, directory, sequenced): (Arc<Gate>, Arc<Directory>, Arc<Sequenced>),
     ) -> Self {
         Self {
             dispatch,
             root,
-            pty,
+            pty: (gate, directory),
+            sequenced,
         }
     }
 
@@ -84,6 +91,10 @@ impl RequestHandler for FixtureHandler {
             "terminal.output" => output::page(&call.request),
             PROVIDER_WRITE => super::transcripts::write(&self.root, &call.request),
             PTY_READ => super::prompts::pty((&self.pty.0, &self.pty.1), &call.request),
+            DELIVER => {
+                let _: NoParams = decode_params(&call.request).map_err(BoundaryError::from)?;
+                self.sequenced.deliver()
+            }
             _ => self.dispatch.call(call).await,
         }
     }

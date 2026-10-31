@@ -16,6 +16,8 @@ pub mod output;
 #[cfg(unix)]
 pub mod prompts;
 #[cfg(unix)]
+pub mod rotation;
+#[cfg(unix)]
 pub mod serve;
 #[cfg(unix)]
 pub mod terminals;

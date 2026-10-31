@@ -1,0 +1,1049 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "security/rotation",
+  "title": "Credentials rotate and revoke atomically; queued writes are rechecked before any byte, and no socket keeps authority",
+  "todo": 57,
+  "closes": [
+    "GAP-070",
+    "GAP-071",
+    "GAP-073",
+    "GAP-074",
+    "GAP-075",
+    "GAP-078",
+    "GAP-084",
+    "GAP-131",
+    "GAP-133"
+  ],
+  "delivers": [
+    "IDEAL-048",
+    "IDEAL-049",
+    "IDEAL-050",
+    "IDEAL-051",
+    "IDEAL-052",
+    "IDEAL-055",
+    "IDEAL-061",
+    "IDEAL-103",
+    "IDEAL-104",
+    "IDEAL-106"
+  ],
+  "excludes": [
+    "EXCL-007",
+    "EXCL-023",
+    "EXCL-026"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the bridge: the writer's send to the sequenced terminal is admitted with a queued receipt within 1000 ms while the holder write boundary is held and zero PTY bytes exist; releasing it writes 2 bytes reported already_committed with the holder's delivery facts. Multiline text with submit none is refused as paste_refused (no bracketed paste) and a control sequence as invalid_encoding, both before admission. The owner rotates the writer's credential c3 at principal epoch 1: one step issues c4 and withdraws c3 at credential epoch 2 and principal epoch 2, and the writer's still-queued write is reported cancelled_before_commit (credential_revoked); releasing the boundary then writes nothing. The writer's open socket is refused credential_revoked at principal epoch 2, reconnecting with the old bearer fails hello, the kept replacement bearer reconnects, inspects its principal's earlier operation, sends again and is delivered; it may not rotate itself (forbidden) and a rotation naming stale principal epoch 1 is version_conflict at epoch 2.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "owner",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "owner",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "writer",
+            "via": "bridge",
+            "principal": "writer"
+          }
+        },
+        {
+          "hello": {
+            "conn": "writer",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "writer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "first",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:first",
+                  "target": {
+                    "name": "rotation"
+                  },
+                  "text": "ok",
+                  "submit": "none"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "writer",
+            "expect": {
+              "first": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/op_id": "$op:first",
+                "/result/receipt/queued_seq": "1",
+                "/result/receipt/admitted_bytes": "2",
+                "/result/receipt/kind": "text",
+                "/result/receipt/delivery": {
+                  "state": "queued"
+                }
+              }
+            },
+            "within_ms": 1000
+          }
+        },
+        {
+          "send": {
+            "conn": "owner",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "held",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "rotation"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "owner",
+            "expect": {
+              "held": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "owner",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "release-first",
+                "method": "fixture.deliver",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "owner",
+            "expect": {
+              "release-first": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/settled/0/op_id": "$op:first",
+                "/result/settled/0/race": {
+                  "outcome": "already_committed",
+                  "written_bytes": "2",
+                  "output_offset": "0"
+                },
+                "/result/settled/1": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "writer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "late",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:late",
+                  "target": {
+                    "name": "rotation"
+                  },
+                  "text": "late",
+                  "submit": "none"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "multiline",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:multiline",
+                  "target": {
+                    "name": "rotation"
+                  },
+                  "text": "echo a\nrm -rf b",
+                  "submit": "none"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "control",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:control",
+                  "target": {
+                    "name": "rotation"
+                  },
+                  "text": "\u001b[2J",
+                  "submit": "none"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "writer",
+            "expect": {
+              "late": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/queued_seq": "2",
+                "/result/receipt/delivery": {
+                  "state": "queued"
+                }
+              },
+              "multiline": {
+                "/error/data/kind": "paste_refused",
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/op_id": "$op:multiline"
+              },
+              "control": {
+                "/error/data/kind": "invalid_encoding",
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/op_id": "$op:control"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "owner",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "before-rotate",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "rotation"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "owner",
+            "expect": {
+              "before-rotate": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "2"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "owner",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "rotate",
+                "method": "credential.rotate",
+                "params": {
+                  "op_id": "$op:rotate",
+                  "credential": "c3",
+                  "principal_epoch": "1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "owner",
+            "expect": {
+              "rotate": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/issued/credential": "c4",
+                "/result/issued/epoch": "1",
+                "/result/replaced/withdrawn/credential": "c3",
+                "/result/replaced/withdrawn/epoch": "2",
+                "/result/replaced/standing/principal": "writer",
+                "/result/replaced/standing/principal_epoch": "2",
+                "/result/replaced/writes/0/op_id": "$op:late",
+                "/result/replaced/writes/0/queued_seq": "2",
+                "/result/replaced/writes/0/admitted_bytes": "4",
+                "/result/replaced/writes/0/race": {
+                  "outcome": "cancelled_before_commit",
+                  "reason": "credential_revoked"
+                },
+                "/result/replaced/writes/1": {
+                  "$present": false
+                }
+              }
+            },
+            "keep_bearer": {
+              "rotate": "rotated"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "owner",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "release-late",
+                "method": "fixture.deliver",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "owner",
+            "expect": {
+              "release-late": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/settled/0": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "owner",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "after-rotate",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "rotation"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "owner",
+            "expect": {
+              "after-rotate": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "2"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "writer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stale-socket",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:first"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "writer",
+            "expect": {
+              "stale-socket": {
+                "/error/data/kind": "credential_revoked",
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/principal_epoch": "2"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "replay",
+            "via": "bridge",
+            "principal": "writer"
+          }
+        },
+        {
+          "hello": {
+            "conn": "replay",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/error/data/kind": "credential_revoked",
+              "/result": {
+                "$present": false
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "replay"
+          }
+        },
+        {
+          "closed": {
+            "conn": "replay"
+          }
+        },
+        {
+          "connect": {
+            "conn": "rotated",
+            "via": "bridge",
+            "bearer": "rotated"
+          }
+        },
+        {
+          "hello": {
+            "conn": "rotated",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "rotated",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "inspect-first",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:first"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "again",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:again",
+                  "target": {
+                    "name": "rotation"
+                  },
+                  "text": "new",
+                  "submit": "none"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "rotated",
+            "expect": {
+              "inspect-first": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "committed",
+                "/result/result/receipt/queued_seq": "1"
+              },
+              "again": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/queued_seq": "3",
+                "/result/receipt/delivery": {
+                  "state": "queued"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "rotated",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "self-rotate",
+                "method": "credential.rotate",
+                "params": {
+                  "op_id": "$op:self-rotate",
+                  "credential": "c4",
+                  "principal_epoch": "2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "rotated",
+            "expect": {
+              "self-rotate": {
+                "/error/data/kind": "forbidden",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "owner",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "release-again",
+                "method": "fixture.deliver",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "owner",
+            "expect": {
+              "release-again": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/settled/0/op_id": "$op:again",
+                "/result/settled/0/race/outcome": "already_committed",
+                "/result/settled/0/race/written_bytes": "3"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "owner",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "final",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "rotation"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "stale-rotate",
+                "method": "credential.rotate",
+                "params": {
+                  "op_id": "$op:stale-rotate",
+                  "credential": "c4",
+                  "principal_epoch": "1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "owner",
+            "expect": {
+              "final": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "5"
+              },
+              "stale-rotate": {
+                "/error/data/kind": "version_conflict",
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/principal_epoch": "2"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "rotated"
+          }
+        },
+        {
+          "closed": {
+            "conn": "rotated"
+          }
+        },
+        {
+          "hangup": {
+            "conn": "writer"
+          }
+        },
+        {
+          "closed": {
+            "conn": "writer"
+          }
+        },
+        {
+          "hangup": {
+            "conn": "owner"
+          }
+        },
+        {
+          "closed": {
+            "conn": "owner"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "An open prompt p1 version 1 and a queued write of the writer exist; the owner revokes c3, which reports the write cancelled_before_commit at principal epoch 2. prompt.answer over the revoked writer socket, with the plan's numeric version literal or a valid decimal one, is refused credential_revoked at principal epoch 2 before its parameters are decoded; p1 stays open at version 1 with no answer, the released boundary writes nothing and the PTY holds zero bytes. Revoking again advances both the credential and principal epoch to 3; an unknown credential is not_found; reconnecting with the revoked bearer fails hello.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "owner",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "owner",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "writer",
+            "via": "bridge",
+            "principal": "writer"
+          }
+        },
+        {
+          "hello": {
+            "conn": "writer",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "owner",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open-p1",
+                "method": "prompt.open",
+                "params": {
+                  "op_id": "$op:open-p1",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "prompt_id": "p1",
+                  "prompt": {
+                    "kind": "permission",
+                    "text": "Proceed?",
+                    "choices": [
+                      {
+                        "id": "yes",
+                        "label": "Yes"
+                      },
+                      {
+                        "id": "no",
+                        "label": "No"
+                      }
+                    ],
+                    "mechanism": "rpc"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "owner",
+            "expect": {
+              "open-p1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/prompt_id": "p1",
+                "/result/version": "1",
+                "/result/state": "open"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "writer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "queued",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:queued",
+                  "target": {
+                    "name": "rotation"
+                  },
+                  "text": "q",
+                  "submit": "none"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "writer",
+            "expect": {
+              "queued": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/queued_seq": "1",
+                "/result/receipt/delivery": {
+                  "state": "queued"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "owner",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "revoke",
+                "method": "credential.revoke",
+                "params": {
+                  "op_id": "$op:revoke",
+                  "credential": "c3"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "owner",
+            "expect": {
+              "revoke": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/withdrawn/credential": "c3",
+                "/result/withdrawn/epoch": "2",
+                "/result/standing/principal": "writer",
+                "/result/standing/principal_epoch": "2",
+                "/result/writes/0/op_id": "$op:queued",
+                "/result/writes/0/race": {
+                  "outcome": "cancelled_before_commit",
+                  "reason": "credential_revoked"
+                },
+                "/result/writes/1": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "writer",
+            "base": {
+              "op_id": "$op:inject",
+              "answer": {
+                "choice": "yes"
+              }
+            },
+            "planned": [
+              {
+                "request": {
+                  "method": "prompt.answer",
+                  "params": {
+                    "prompt_id": "p1",
+                    "version": 1
+                  },
+                  "principal_fixture": "revoked-token"
+                },
+                "expect": {
+                  "/error/data/kind": "credential_revoked",
+                  "/result": {
+                    "$present": false
+                  },
+                  "/error/data/principal_epoch": "2"
+                }
+              },
+              {
+                "request": {
+                  "method": "prompt.answer",
+                  "params": {
+                    "prompt_id": "p1",
+                    "version": "1"
+                  },
+                  "principal_fixture": "revoked-token"
+                },
+                "expect": {
+                  "/error/data/kind": "credential_revoked",
+                  "/result": {
+                    "$present": false
+                  },
+                  "/error/data/principal_epoch": "2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "owner",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "get-p1",
+                "method": "prompt.get",
+                "params": {
+                  "prompt_id": "p1"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "release",
+                "method": "fixture.deliver",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "owner",
+            "expect": {
+              "get-p1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "open",
+                "/result/version": "1",
+                "/result/answer": null,
+                "/result/closed_seq": null
+              },
+              "release": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/settled/0": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "owner",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "pty",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "rotation"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "revoke-again",
+                "method": "credential.revoke",
+                "params": {
+                  "op_id": "$op:revoke-again",
+                  "credential": "c3"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "unknown",
+                "method": "credential.revoke",
+                "params": {
+                  "op_id": "$op:unknown",
+                  "credential": "c99"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "owner",
+            "expect": {
+              "pty": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "0"
+              },
+              "revoke-again": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/withdrawn/epoch": "3",
+                "/result/standing/principal_epoch": "3"
+              },
+              "unknown": {
+                "/error/data/kind": "not_found",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "replay",
+            "via": "bridge",
+            "principal": "writer"
+          }
+        },
+        {
+          "hello": {
+            "conn": "replay",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/error/data/kind": "credential_revoked",
+              "/result": {
+                "$present": false
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "replay"
+          }
+        },
+        {
+          "closed": {
+            "conn": "replay"
+          }
+        },
+        {
+          "hangup": {
+            "conn": "writer"
+          }
+        },
+        {
+          "closed": {
+            "conn": "writer"
+          }
+        },
+        {
+          "hangup": {
+            "conn": "owner"
+          }
+        },
+        {
+          "closed": {
+            "conn": "owner"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

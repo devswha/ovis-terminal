@@ -26,6 +26,11 @@ pub mod support;
 /// Explicit and ambiguous registry targets.
 pub mod targeting;
 
+#[path = "../src/dispatch/lanes/credential_rotation/qa.rs"]
+/// Credential rotation and per-request revalidation over a real socket.
+pub mod credential_rotation;
+#[path = "../src/dispatch/lanes/credential_rotation/rig.rs"]
+pub mod credential_rotation_rig;
 #[path = "../src/dispatch/lanes/prompts/qa.rs"]
 /// The prompt lane's independent answer authorization over a real socket.
 pub mod prompts;

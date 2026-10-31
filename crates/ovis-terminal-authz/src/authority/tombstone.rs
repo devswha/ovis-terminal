@@ -5,12 +5,13 @@ use std::collections::HashMap;
 
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 
-use crate::identity::{CredentialEpoch, CredentialId};
+use crate::identity::{CredentialEpoch, CredentialId, PrincipalId};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct Tombstone {
     pub(super) credential: CredentialId,
     pub(super) epoch: CredentialEpoch,
+    pub(super) principal: PrincipalId,
     pub(super) expires_at: TimestampMs,
 }
 
@@ -31,7 +32,7 @@ impl Tombstones {
     }
 
     pub(super) fn get(&self, credential: CredentialId) -> Option<Tombstone> {
-        self.revoked.get(&credential).copied()
+        self.revoked.get(&credential).cloned()
     }
 
     /// Records a revocation; when the set is full it first forgets revocations of credentials

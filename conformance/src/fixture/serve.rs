@@ -17,6 +17,7 @@ use ovis_terminal_core::registry::{
     ServerBootId,
 };
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
+use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::listen::{ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
@@ -84,15 +85,21 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     dispatch
         .register(TerminalKeep::new(&effects, runtime)?)
         .map_err(at("register terminal.keep"))?;
-    let (agents, gate) = super::agents::register(&mut dispatch, runtime, Arc::clone(&core))?;
+    let (agents, gate, sequenced) =
+        super::agents::register(&mut dispatch, (runtime, Arc::clone(&core)), &authority)?;
+    super::rotation::register(&mut dispatch, &authority, (runtime, Arc::clone(&sequenced)))?;
     let directory = Arc::clone(&agents.1);
     super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
-    let observer = observer(&authority, issued.bearer())?;
-    let handler = Arc::new(FixtureHandler::new(
-        Arc::new(dispatch),
-        root.to_path_buf(),
-        (gate, directory),
+    let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
+    let writer = delegate(&authority, issued.bearer(), ("writer", WRITER))?;
+    let handler = Arc::new(Revalidated::new(
+        Arc::clone(&authority),
+        FixtureHandler::new(
+            Arc::new(dispatch),
+            root.to_path_buf(),
+            (gate, directory, sequenced),
+        ),
     ));
     let socket = root.join("run").join("s.sock");
     let endpoint = UnixEndpoint::bind(&socket)
@@ -101,7 +108,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let config = ServerConfig::new(authority, runtime);
     let server = serve_unix(endpoint, config, Arc::clone(&handler)).map_err(at("serve"))?;
     announce(&json!({"ready": {
-        "socket": socket, "bearer": issued.bearer(), "observer": observer,
+        "socket": socket, "bearer": issued.bearer(), "observer": observer, "writer": writer,
     }}))?;
     let mut sink = Vec::new();
     tokio::io::stdin()
@@ -112,7 +119,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .shutdown()
         .await
         .map_err(at("shut the server down"))?;
-    handler.shutdown().await?;
+    handler.inner().shutdown().await?;
     drop(handler);
     let core = Arc::try_unwrap(core).map_err(|_| at("release the coordinator")("still shared"))?;
     tokio::task::spawn_blocking(move || core.close())
@@ -131,9 +138,24 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     }}))
 }
 
-/// A bearer that may only observe the machine, issued by the owner.
-fn observer(authority: &Authority<RegistryIdentities>, owner: &str) -> Result<String, RunnerError> {
-    let failed = at("issue the observer credential");
+/// May only observe the machine.
+const OBSERVER: &[Permission] = &[Permission::Observe];
+
+/// Observes, types and answers prompts on the machine; may neither take over nor
+/// administer, and is the credential the rotation scenarios withdraw.
+const WRITER: &[Permission] = &[
+    Permission::Observe,
+    Permission::Interact,
+    Permission::PromptAnswer,
+];
+
+/// A bearer of `principal` holding `permissions` on the whole machine, issued by the owner.
+fn delegate(
+    authority: &Authority<RegistryIdentities>,
+    owner: &str,
+    (principal, permissions): (&str, &[Permission]),
+) -> Result<String, RunnerError> {
+    let failed = at("issue a delegated credential");
     let now = TimestampMs::new(1);
     let admission = EndpointPolicy::new(LocalAccount::Unix(UnixUid::new(1000)))
         .admit(&PeerEvidence::Remote(RemoteTransport::Ssh))
@@ -142,9 +164,12 @@ fn observer(authority: &Authority<RegistryIdentities>, owner: &str) -> Result<St
         .authenticate(&admission, Presentation::new(owner, now))
         .map_err(at("authenticate the issuing owner"))?;
     let scope = ResourceScope::new(identity()?.machine_id(), ScopeResource::Machine);
-    let observer = PrincipalId::parse("observer").map_err(at("parse the observer principal"))?;
-    let grants = vec![Grant::new(Permission::Observe, scope)];
-    let request = IssueRequest::new(observer, grants, TimestampMs::new(u64::MAX));
+    let principal = PrincipalId::parse(principal).map_err(at("parse a delegated principal"))?;
+    let grants = permissions
+        .iter()
+        .map(|permission| Grant::new(*permission, scope.clone()))
+        .collect();
+    let request = IssueRequest::new(principal, grants, TimestampMs::new(u64::MAX));
     let issued = authority
         .issue(&owner, Issuance::new(request, now))
         .map_err(failed)?;

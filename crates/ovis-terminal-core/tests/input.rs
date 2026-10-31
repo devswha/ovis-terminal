@@ -9,6 +9,8 @@ type TestResult<T = ()> = Result<T, Box<dyn Error>>;
 mod admission;
 #[path = "../src/input/sequencer/qa/authority.rs"]
 mod authority;
+#[path = "../src/input/authority/qa.rs"]
+mod authority_recheck;
 #[cfg(unix)]
 #[path = "../src/input/sequencer/qa/blocked.rs"]
 mod blocked;

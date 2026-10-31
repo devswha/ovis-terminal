@@ -1,19 +1,21 @@
 //! The agent status lane over two fixture terminals and their programs' output path.
 //!
-//! `agent` (terminal:4) and `shell` (terminal:5) each run program incarnation 1 whose
-//! spawn token is known to the scenarios.
+//! `agent` (terminal:4), `shell` (terminal:5) and `rotation` (terminal:6) each run program
+//! incarnation 1 whose spawn token is known to the scenarios; `rotation`'s input goes
+//! through the real input sequencer instead of the echo stand-in.
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use ovis_terminal_agent::status::{Ingested, OscOutput, ProcessOwner, StatusService};
-use ovis_terminal_authz::{Action, ResolvedTarget, Session, TargetResource};
+use ovis_terminal_authz::{Action, Authority, ResolvedTarget, Session, TargetResource};
 use ovis_terminal_core::events::{Coordinator, EventError};
 use ovis_terminal_core::ops::{Completion, OperationProducer};
 use ovis_terminal_core::registry::{
-    MachineRuntime, ResourceName, ResourceTarget, ResourceTargetKey, RuntimeIdentity, TargetIndex,
-    TargetRequest, TargetResolutionError, TerminalGeneration, TerminalId,
+    MachineRuntime, RegistryIdentities, ResourceName, ResourceTarget, ResourceTargetKey,
+    RuntimeIdentity, TargetIndex, TargetRequest, TargetResolutionError, TerminalGeneration,
+    TerminalId,
 };
 use ovis_terminal_protocol::schema::common::Target;
 use ovis_terminal_protocol::schema::ids::ProcessToken;
@@ -29,13 +31,19 @@ use serde_json::{Value, json};
 
 use super::handler::{Dispatch, Event};
 use super::prompts::Gate;
+use super::rotation::Sequenced;
 use super::serve::at;
 use crate::error::RunnerError;
 
 /// Spawn tokens of the two fixture programs.
-const TERMINALS: [(u64, &str, &str); 2] = [
+const TERMINALS: [(u64, &str, &str); 3] = [
     (4, "agent", "fixture-process-token-agent"),
     (5, "shell", "fixture-process-token-shell"),
+    (
+        super::rotation::TERMINAL,
+        "rotation",
+        "fixture-process-token-rotation",
+    ),
 ];
 
 type Core = Coordinator<Event, OperationProducer>;
@@ -82,6 +90,7 @@ pub(crate) struct EchoProgram {
     core: Arc<Core>,
     directory: Arc<Directory>,
     screens: Arc<Mutex<BTreeMap<TerminalId, Vt>>>,
+    sequenced: Arc<Sequenced>,
 }
 
 fn directory(runtime: RuntimeIdentity) -> Result<Directory, RunnerError> {
@@ -105,12 +114,13 @@ fn directory(runtime: RuntimeIdentity) -> Result<Directory, RunnerError> {
 pub(crate) type AgentParts = (Arc<StatusService>, Arc<Directory>);
 
 /// Registers the agent status methods and the echoing programs, binding their tokens;
-/// the returned gate holds the prompts that block those programs' input.
+/// the returned gate holds the prompts that block those programs' input, and the
+/// sequenced terminal is the one whose input `authority` rechecks at its write boundary.
 pub(crate) fn register(
     dispatch: &mut Dispatch,
-    runtime: RuntimeIdentity,
-    core: Arc<Core>,
-) -> Result<(AgentParts, Arc<Gate>), RunnerError> {
+    (runtime, core): (RuntimeIdentity, Arc<Core>),
+    authority: &Arc<Authority<RegistryIdentities>>,
+) -> Result<(AgentParts, Arc<Gate>, Arc<Sequenced>), RunnerError> {
     let service = Arc::new(StatusService::new(runtime.runtime_id()));
     for (id, _, token) in TERMINALS {
         let terminal = TerminalId::try_from(id).map_err(at("build a terminal id"))?;
@@ -139,6 +149,7 @@ pub(crate) fn register(
         .register(ClearStatus::new(&lane))
         .map_err(at("register status.clear"))?;
     let gate = Gate::new(runtime, &service);
+    let sequenced = Sequenced::new(authority, runtime, Arc::clone(&gate.pty))?;
     dispatch
         .register(EchoProgram {
             gate: Arc::clone(&gate),
@@ -146,9 +157,10 @@ pub(crate) fn register(
             core,
             directory: Arc::clone(&directory),
             screens: Arc::new(Mutex::new(BTreeMap::new())),
+            sequenced: Arc::clone(&sequenced),
         })
         .map_err(at("register input.send"))?;
-    Ok(((service, directory), gate))
+    Ok(((service, directory), gate, sequenced))
 }
 
 fn echo(program: &EchoProgram, terminal: TerminalId, text: &str) -> Result<Value, DispatchError> {
@@ -232,12 +244,26 @@ impl Method<Event, OperationProducer> for EchoProgram {
                 .commit_unit(move |_| Ok(Completion::failed(refusal)))
                 .await;
         }
+        if self.sequenced.serves(terminal) {
+            let sequenced = Arc::clone(&self.sequenced);
+            let session = Arc::clone(execution.session());
+            let op_id = execution.op_id().clone();
+            return execution
+                .commit_unit(move |_| {
+                    Ok(match sequenced.send(&session, (op_id, &params)) {
+                        Ok(receipt) => Completion::new(json!({ "receipt": receipt })),
+                        Err(refusal) => Completion::failed(*refusal),
+                    })
+                })
+                .await;
+        }
         let program = Self {
             gate: Arc::clone(&self.gate),
             service: Arc::clone(&self.service),
             core: Arc::clone(&self.core),
             directory: Arc::clone(&self.directory),
             screens: Arc::clone(&self.screens),
+            sequenced: Arc::clone(&self.sequenced),
         };
         execution
             .commit(move || echo(&program, terminal, &params.text))

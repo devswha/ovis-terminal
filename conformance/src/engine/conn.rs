@@ -9,6 +9,7 @@ use serde_json::Value;
 use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
 use tokio::time::Instant;
 
+use super::redact::scrub;
 use super::transport::{Bridge, Opened, Reader, Writer};
 use crate::error::RunnerError;
 use crate::evidence::{ConnectionReport, Direction, ProcessReport, Record, TEXT_LIMIT, sha256_hex};
@@ -16,7 +17,7 @@ use crate::ids::Decimal;
 use crate::scenario::model::Split;
 
 const READ_BUFFER: usize = 64 * 1024;
-const REDACTED: &str = "<redacted-credential>";
+pub(crate) const REDACTED: &str = "<redacted-credential>";
 
 /// Whether records are NDJSON lines or channel-0 frames after a framed hello.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -224,7 +225,7 @@ impl Connection {
     fn record(&self, bytes: &[u8], (direction, unit): (Direction, String)) -> Record {
         let at = u64::try_from(self.clock.elapsed().as_millis()).unwrap_or(u64::MAX);
         let text = (bytes.len() <= TEXT_LIMIT)
-            .then(|| String::from_utf8_lossy(bytes).replace(&self.secret, REDACTED));
+            .then(|| scrub(&String::from_utf8_lossy(bytes).replace(&self.secret, REDACTED)));
         Record {
             direction,
             offset: Decimal(0),

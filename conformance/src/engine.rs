@@ -5,6 +5,7 @@ pub mod exchange;
 pub mod inject;
 pub mod page;
 pub mod process;
+pub mod redact;
 pub mod root;
 pub mod run;
 pub mod session;

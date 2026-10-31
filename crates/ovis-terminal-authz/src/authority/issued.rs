@@ -51,6 +51,12 @@ impl<F: IdentityFamily> IssuedCredential<F> {
         self.epoch
     }
 
+    /// When the credential stops being valid.
+    #[must_use]
+    pub const fn expires_at(&self) -> TimestampMs {
+        self.expires_at_ms
+    }
+
     /// The text a client presents in `hello` to authenticate.
     #[must_use]
     pub fn bearer(&self) -> &str {
