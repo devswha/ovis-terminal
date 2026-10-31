@@ -1,0 +1,1301 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "agent/binding",
+  "title": "Owning processes bind sessions explicitly and conversation cursors stay bound to history identity and revision",
+  "todo": 36,
+  "closes": [
+    "GAP-097",
+    "GAP-101",
+    "GAP-102"
+  ],
+  "delivers": [
+    "IDEAL-072",
+    "IDEAL-075",
+    "IDEAL-076"
+  ],
+  "excludes": [
+    "EXCL-008",
+    "EXCL-019"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the bridge: bind h1 from the authorized store, page it with a bound cursor, the provider forks r4 from r2 so the active chain is r1 r2 r4 at revision 2 while r3 stays addressable through a cursor head, then an explicit resume binds h2 and a cursor of h1 is refused with the rebound identity.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "register",
+                "method": "agent.register",
+                "params": {
+                  "op_id": "$op:register",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "label": "custom-agent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "register": {
+                "/result/agent/label": "custom-agent",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "write-h1",
+                "method": "fixture.transcript",
+                "params": {
+                  "file": "one.jsonl",
+                  "mode": "write",
+                  "text": "{\"id\":\"r1\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-r1\"}]}\n{\"id\":\"r2\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-r2\"}]}\n{\"id\":\"r3\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-r3\"}]}\n"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "write-h1": {
+                "/result/bytes": {
+                  "$present": true
+                },
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "bind-h1",
+                "method": "agent.update_session",
+                "params": {
+                  "op_id": "$op:bind-h1",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "session": {
+                    "source": "fixture-store",
+                    "kind": "path",
+                    "value": "one.jsonl"
+                  },
+                  "history_id": "h1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "bind-h1": {
+                "/result/agent/history_id": "h1",
+                "/result/agent/session/value": "one.jsonl",
+                "/result/agent/process_incarnation": "1",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "page-1",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  },
+                  "page": {
+                    "after": null,
+                    "limit": 2
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "page-1": {
+                "/result/records/0/record_id": "r1",
+                "/result/records/1/record_id": "r2",
+                "/result/records/2": {
+                  "$present": false
+                },
+                "/result/history_id": "h1",
+                "/result/revision": "1",
+                "/result/active": true,
+                "/result/page/total": 3,
+                "/result/next_cursor": {
+                  "history_id": "h1",
+                  "revision": "1",
+                  "position": "2"
+                },
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "page-2",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  },
+                  "cursor": {
+                    "history_id": "h1",
+                    "revision": "1",
+                    "position": "2"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "page-2": {
+                "/result/records/0/record_id": "r3",
+                "/result/records/1": {
+                  "$present": false
+                },
+                "/result/revision": "1",
+                "/result/next_cursor": null,
+                "/result/records/0/parent": "r2",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "fork",
+                "method": "fixture.transcript",
+                "params": {
+                  "file": "one.jsonl",
+                  "mode": "append",
+                  "text": "{\"id\":\"r4\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-r4\"}],\"parent\":\"r2\"}\n"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "fork": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "forked",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "forked": {
+                "/result/records/0/record_id": "r1",
+                "/result/records/1/record_id": "r2",
+                "/result/records/2/record_id": "r4",
+                "/result/records/3": {
+                  "$present": false
+                },
+                "/result/revision": "2",
+                "/result/active": true,
+                "/result/head": "r4",
+                "/result/off_branch": [
+                  "r3"
+                ],
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "off-branch",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  },
+                  "cursor": {
+                    "history_id": "h1",
+                    "revision": "2",
+                    "position": "0",
+                    "head": "r3"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "off-branch": {
+                "/result/records/0/record_id": "r1",
+                "/result/records/1/record_id": "r2",
+                "/result/records/2/record_id": "r3",
+                "/result/records/3": {
+                  "$present": false
+                },
+                "/result/revision": "2",
+                "/result/active": false,
+                "/result/head": "r3",
+                "/result/off_branch": [
+                  "r4"
+                ],
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "write-h2",
+                "method": "fixture.transcript",
+                "params": {
+                  "file": "two.jsonl",
+                  "mode": "write",
+                  "text": "{\"id\":\"s1\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-s1\"}]}\n"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "write-h2": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "resume-h2",
+                "method": "agent.update_session",
+                "params": {
+                  "op_id": "$op:resume-h2",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "session": {
+                    "source": "fixture-store",
+                    "kind": "path",
+                    "value": "two.jsonl"
+                  },
+                  "history_id": "h2",
+                  "reason": "resume"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "resume-h2": {
+                "/result/agent/history_id": "h2",
+                "/result/agent/session/value": "two.jsonl",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "agent",
+                "method": "agent.get",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "h2-page",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "agent": {
+                "/result/agent/history_id": "h2",
+                "/result/agent/session/value": "two.jsonl",
+                "/error": {
+                  "$present": false
+                }
+              },
+              "h2-page": {
+                "/result/records/0/record_id": "s1",
+                "/result/records/1": {
+                  "$present": false
+                },
+                "/result/history_id": "h2",
+                "/result/revision": "1",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "old-cursor",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  },
+                  "cursor": {
+                    "history_id": "h1",
+                    "revision": "2",
+                    "position": "0"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "old-cursor": {
+                "/error/data/kind": "history_changed",
+                "/error/data/history": {
+                  "history_id": "h2",
+                  "revision": "1",
+                  "change": "rebind"
+                },
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "After an append, a schema-valid stale cursor is history_changed naming h1 at revision 2 (append) and a numeric revision is invalid_params at params.cursor.revision; a same-size rewrite and a replacement each advance the revision; a branch selection replayed under one op_id applies once; missing reasons, escaping paths, foreign, forged and unregistered tokens are typed refusals that change nothing.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "register",
+                "method": "agent.register",
+                "params": {
+                  "op_id": "$op:register",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "label": "custom-agent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "register": {
+                "/result/agent/label": "custom-agent",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "write-h1",
+                "method": "fixture.transcript",
+                "params": {
+                  "file": "one.jsonl",
+                  "mode": "write",
+                  "text": "{\"id\":\"r1\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-r1\"}]}\n{\"id\":\"r2\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-r2\"}]}\n"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "write-h1": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "bind-h1",
+                "method": "agent.update_session",
+                "params": {
+                  "op_id": "$op:bind-h1",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "session": {
+                    "source": "fixture-store",
+                    "kind": "path",
+                    "value": "one.jsonl"
+                  },
+                  "history_id": "h1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "bind-h1": {
+                "/result/agent/history_id": "h1",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "first",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "first": {
+                "/result/records/0/record_id": "r1",
+                "/result/records/1/record_id": "r2",
+                "/result/records/2": {
+                  "$present": false
+                },
+                "/result/revision": "1",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "append",
+                "method": "fixture.transcript",
+                "params": {
+                  "file": "one.jsonl",
+                  "mode": "append",
+                  "text": "{\"id\":\"r3\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-r3\"}]}\n"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "append": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "bridge",
+            "base": {
+              "target": {
+                "name": "agent"
+              }
+            },
+            "planned": [
+              {
+                "request": {
+                  "method": "agent.conversation",
+                  "params": {
+                    "cursor": {
+                      "history_id": "h1",
+                      "revision": "1",
+                      "position": "0"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "history_changed",
+                  "/error/data/history": {
+                    "history_id": "h1",
+                    "revision": "2",
+                    "change": "append"
+                  },
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "agent.conversation",
+                  "params": {
+                    "cursor": {
+                      "history_id": "h1",
+                      "revision": 1,
+                      "position": "0"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/error/data/field_path": "params.cursor.revision",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "current",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  },
+                  "cursor": {
+                    "history_id": "h1",
+                    "revision": "2",
+                    "position": "0"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "current": {
+                "/result/records/0/record_id": "r1",
+                "/result/records/1/record_id": "r2",
+                "/result/records/2/record_id": "r3",
+                "/result/records/3": {
+                  "$present": false
+                },
+                "/result/revision": "2",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "rewrite",
+                "method": "fixture.transcript",
+                "params": {
+                  "file": "one.jsonl",
+                  "mode": "write",
+                  "text": "{\"id\":\"q1\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-q1\"}]}\n{\"id\":\"q2\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-q2\"}]}\n{\"id\":\"q3\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-q3\"}]}\n"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "rewrite": {
+                "/result/bytes": "159",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "after-rewrite",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  },
+                  "cursor": {
+                    "history_id": "h1",
+                    "revision": "2",
+                    "position": "0"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "after-rewrite": {
+                "/error/data/kind": "history_changed",
+                "/error/data/history": {
+                  "history_id": "h1",
+                  "revision": "3",
+                  "change": "rewrite"
+                },
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "replace",
+                "method": "fixture.transcript",
+                "params": {
+                  "file": "one.jsonl",
+                  "mode": "replace",
+                  "text": "{\"id\":\"p1\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-p1\"}]}\n{\"id\":\"p2\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-p2\"}]}\n{\"id\":\"p3\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-p3\"}]}\n"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "replace": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "after-replace",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  },
+                  "cursor": {
+                    "history_id": "h1",
+                    "revision": "3",
+                    "position": "0"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "after-replace": {
+                "/error/data/kind": "history_changed",
+                "/error/data/history": {
+                  "history_id": "h1",
+                  "revision": "4",
+                  "change": "replace"
+                },
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "branch-1",
+                "method": "agent.update_session",
+                "params": {
+                  "op_id": "$op:branch",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "session": {
+                    "source": "fixture-store",
+                    "kind": "path",
+                    "value": "one.jsonl"
+                  },
+                  "history_id": "h1",
+                  "reason": "branch",
+                  "head": "p1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "branch-1": {
+                "/result/agent/history_id": "h1",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "branch-2",
+                "method": "agent.update_session",
+                "params": {
+                  "op_id": "$op:branch",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "session": {
+                    "source": "fixture-store",
+                    "kind": "path",
+                    "value": "one.jsonl"
+                  },
+                  "history_id": "h1",
+                  "reason": "branch",
+                  "head": "p1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "branch-2": {
+                "/result/agent/history_id": "h1",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "branched",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  },
+                  "cursor": {
+                    "history_id": "h1",
+                    "revision": "5",
+                    "position": "0"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "branched": {
+                "/result/records/0/record_id": "p1",
+                "/result/records/1": {
+                  "$present": false
+                },
+                "/result/revision": "5",
+                "/result/off_branch": [
+                  "p3"
+                ],
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "no-reason",
+                "method": "agent.update_session",
+                "params": {
+                  "op_id": "$op:no-reason",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "session": {
+                    "source": "fixture-store",
+                    "kind": "path",
+                    "value": "one.jsonl"
+                  },
+                  "history_id": "h1"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "escape",
+                "method": "agent.update_session",
+                "params": {
+                  "op_id": "$op:escape",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "session": {
+                    "source": "fixture-store",
+                    "kind": "path",
+                    "value": "../state.db"
+                  },
+                  "history_id": "h9",
+                  "reason": "replace"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "foreign",
+                "method": "agent.update_session",
+                "params": {
+                  "op_id": "$op:foreign",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-shell",
+                  "session": {
+                    "source": "fixture-store",
+                    "kind": "path",
+                    "value": "one.jsonl"
+                  },
+                  "history_id": "h1",
+                  "reason": "resume"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "forged",
+                "method": "agent.update_session",
+                "params": {
+                  "op_id": "$op:forged",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "forged-token",
+                  "session": {
+                    "source": "fixture-store",
+                    "kind": "path",
+                    "value": "one.jsonl"
+                  },
+                  "history_id": "h1",
+                  "reason": "resume"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "unregistered",
+                "method": "agent.update_session",
+                "params": {
+                  "op_id": "$op:unregistered",
+                  "target": {
+                    "name": "shell"
+                  },
+                  "process_token": "fixture-process-token-shell",
+                  "session": {
+                    "source": "fixture-store",
+                    "kind": "path",
+                    "value": "one.jsonl"
+                  },
+                  "history_id": "h1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "no-reason": {
+                "/error/data/kind": "invalid_session",
+                "/error/data/field_path": "params.reason",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "escape": {
+                "/error/data/kind": "invalid_session",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "foreign": {
+                "/error/data/kind": "not_owner",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "forged": {
+                "/error/data/kind": "not_owner",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "unregistered": {
+                "/error/data/kind": "not_owner",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "after-refusals",
+                "method": "agent.get",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "still-5",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  },
+                  "cursor": {
+                    "history_id": "h1",
+                    "revision": "5",
+                    "position": "0"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "after-refusals": {
+                "/result/agent/history_id": "h1",
+                "/result/agent/session/value": "one.jsonl",
+                "/error": {
+                  "$present": false
+                }
+              },
+              "still-5": {
+                "/result/records/0/record_id": "p1",
+                "/result/records/1": {
+                  "$present": false
+                },
+                "/result/revision": "5",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
