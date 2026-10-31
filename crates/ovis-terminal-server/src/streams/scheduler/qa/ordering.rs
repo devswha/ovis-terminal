@@ -150,8 +150,22 @@ async fn admissions_and_cancels_overtake_pending_parse_turns_while_stdin_is_stuc
         cancelled <= admitted.saturating_add(1),
         "withdrawn after {cancelled} turns"
     );
+    assert!(
+        before < TURNS,
+        "parse work remained when the requests were sent"
+    );
+    let end = OutputOffset::new(u64::try_from(TURN.saturating_mul(32)).expect("fits"));
+    await_event(&mut output, |event| match event {
+        OutputEvent::Parsed { offset } if *offset == end => Some(()),
+        _ => None,
+    })
+    .await;
     handle.stop().expect("stop queued");
     let report = task.join().await.expect("joined");
     assert_eq!((report.withdrawn, report.cut_off), (1, Some(stuck.ticket)));
+    assert_eq!(
+        report.parse_turns, TURNS,
+        "one budget per turn, never the whole backlog"
+    );
     drop(stdin_never_read);
 }

@@ -5,10 +5,11 @@
 //! fire together every 10 ms; pacing is the workload, not a synchronization: every
 //! assertion waits on product replies or events.
 //!
-//! The 100 ms contract is reported (`within_contract`) and asserted with a CI margin of
-//! 1 s, because a stalled CI host delays every sample alike; control-first ordering
-//! itself is pinned by counts in `ordering`. Release-build latency is measured by
-//! `bench/tuning`.
+//! The test asserts what does not depend on host speed: every request answered, every
+//! commit seen by every client, nothing lost, every accepted byte parsed. The 100 ms
+//! contract is reported (`within_contract`), not asserted, since wall time depends on the
+//! host; control-first ordering is asserted by counts in `ordering`, and release-build
+//! latency is measured by `bench/tuning`.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -16,14 +17,12 @@ use std::time::{Duration, Instant};
 
 use ovis_terminal_protocol::schema::limits::Limits;
 use ovis_terminal_vt::{Geometry, ParseBudget};
-use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::watch;
 use tokio::task::JoinSet;
 
-use super::super::{
-    ActorConfig, Engine, OutputFeed, TerminalEvent, TerminalHandle, TerminalSetup, spawn_terminal,
-};
-use super::{WAIT, screenful, vt};
+use super::super::{ActorConfig, Engine, TerminalHandle, TerminalSetup, spawn_terminal};
+use super::workload::{drain, produce, track_parsed, watch_events};
+use super::{WAIT, vt};
 
 const TERMINALS: usize = 16;
 const CLIENTS: usize = 8;
@@ -31,14 +30,10 @@ const IN_FLIGHT_PER_CLIENT: usize = 2;
 const ROUNDS: usize = 48;
 /// Four seconds of the profile's 1 MiB/s: lanes keep issuing requests until it is sent.
 const OUTPUT_TARGET: u64 = 4 * 1024 * 1024;
-const TICK: Duration = Duration::from_millis(16);
-const PER_TICK: usize = 1024;
 /// Every lane issues one request per tick, so all 16 are in flight together each tick.
 const REQUEST_TICK: Duration = Duration::from_millis(10);
 /// The plan's bound on every admitted send and committed event.
 const CONTRACT: Duration = Duration::from_millis(100);
-/// The asserted bound: the contract with room for a descheduled CI host.
-const CI_MARGIN: Duration = Duration::from_secs(1);
 /// Debug builds parse roughly ten times slower than release; 4 KiB keeps one turn short.
 const DEBUG_PARSE_BUDGET: usize = 4 * 1024;
 
@@ -88,58 +83,8 @@ async fn lane(index: usize, (handles, sent): (Vec<TerminalHandle>, Arc<AtomicU64
     samples
 }
 
-/// Commit-to-delivery latency of every committed control event one client sees.
-async fn watch_events(
-    mut events: tokio::sync::broadcast::Receiver<TerminalEvent>,
-) -> (Vec<Duration>, u64) {
-    let mut latency = Vec::new();
-    let mut lost = 0_u64;
-    loop {
-        match events.recv().await {
-            Ok(
-                TerminalEvent::Admitted { at, .. }
-                | TerminalEvent::Withdrawn { at, .. }
-                | TerminalEvent::Resized { at, .. },
-            ) => latency.push(at.elapsed()),
-            Ok(_) => {}
-            Err(RecvError::Lagged(missed)) => lost = lost.saturating_add(missed),
-            Err(RecvError::Closed) => return (latency, lost),
-        }
-    }
-}
-
-/// 64 KiB/s of dense output per terminal for as long as the clients run.
-async fn produce(
-    terminal: usize,
-    feed: OutputFeed,
-    (done, total): (watch::Receiver<bool>, Arc<AtomicU64>),
-) -> u64 {
-    let stream: Vec<u8> = (0..64)
-        .flat_map(|seed| screenful(terminal.wrapping_mul(64).wrapping_add(seed)))
-        .collect();
-    let len = u64::try_from(PER_TICK).expect("fits");
-    let mut pace = tokio::time::interval(TICK);
-    let mut sent = 0_u64;
-    let mut at = 0_usize;
-    while !*done.borrow() {
-        pace.tick().await;
-        if stream.get(at..at.saturating_add(PER_TICK)).is_none() {
-            at = 0;
-        }
-        let next = at.saturating_add(PER_TICK);
-        let piece = stream.get(at..next).expect("the stream holds one tick");
-        if feed.send(piece).await.is_err() {
-            break;
-        }
-        at = next;
-        sent = sent.saturating_add(len);
-        total.fetch_add(len, Ordering::AcqRel);
-    }
-    sent
-}
-
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn sixteen_ptys_eight_clients_keep_every_control_within_100_ms() {
+async fn sixteen_ptys_eight_clients_get_every_request_and_commit_with_latency_reported() {
     let limits = Limits::v1();
     let budget = ParseBudget::new(DEBUG_PARSE_BUDGET.try_into().expect("nonzero"));
     let config = ActorConfig::advertised(&limits).with_parse_budget(budget);
@@ -148,11 +93,13 @@ async fn sixteen_ptys_eight_clients_keep_every_control_within_100_ms() {
     let sent = Arc::new(AtomicU64::new(0));
     let mut handles = Vec::new();
     let mut tasks = Vec::new();
+    let mut trackers = Vec::new();
     let mut producers = JoinSet::new();
     for terminal in 0..TERMINALS {
         let (sink, mut program) = tokio::io::duplex(64 * 1024);
         tokio::spawn(async move { tokio::io::copy(&mut program, &mut tokio::io::sink()).await });
         let (handle, feed, task) = spawn_terminal(Engine::new(vt()), sink, &setup).expect("spawns");
+        trackers.push(track_parsed(handle.subscribe_output()));
         let progress = (finished.clone(), Arc::clone(&sent));
         producers.spawn(produce(terminal, feed, progress));
         handles.push(handle);
@@ -179,10 +126,7 @@ async fn sixteen_ptys_eight_clients_keep_every_control_within_100_ms() {
         samples.control.extend(lane.control);
     }
     done.send(true).expect("producers listen");
-    let mut output_bytes = 0_u64;
-    while let Some(sent) = producers.join_next().await {
-        output_bytes = sent.expect("producer joined").saturating_add(output_bytes);
-    }
+    let output_bytes = drain(producers, trackers).await;
     for handle in &handles {
         handle.stop().expect("stop queued");
     }
@@ -234,27 +178,24 @@ async fn sixteen_ptys_eight_clients_keep_every_control_within_100_ms() {
         commits.saturating_mul(CLIENTS),
         "every client saw every commit"
     );
-    assert!(
-        parsed >= OUTPUT_TARGET && parsed <= output_bytes,
-        "the target was parsed; output still queued at stop is never parsed"
+    assert_eq!(
+        parsed, output_bytes,
+        "every accepted byte was parsed before stop"
     );
-    assert_within_bound(&samples, &events, max_turn);
+    report_bound(&samples, &events, max_turn);
 }
 
-/// Every sample within the control bound; a failure prints what was measured.
-fn assert_within_bound(samples: &Samples, events: &[Duration], max_turn: Duration) {
+/// Reports the worst sample against the plan's 100 ms contract. It is evidence, not an
+/// assertion: wall time depends on the host (a contended CI runner delays every sample
+/// alike), while control-first ordering is asserted by counts in `ordering`.
+fn report_bound(samples: &Samples, events: &[Duration], max_turn: Duration) {
     let worst = max(&samples.admission)
         .max(max(&samples.control))
         .max(max(events));
     let within_contract = worst <= CONTRACT;
-    let measured = format!(
-        "admission {:?}, control {:?}, event {:?}; longest parse turn {max_turn:?} (a turn of \
-         {DEBUG_PARSE_BUDGET} bytes costs well under 10 ms of CPU, so a longer one means the \
-         host descheduled the worker)",
-        max(&samples.admission),
-        max(&samples.control),
-        max(events),
+    println!(
+        "{{\"within_contract\":{within_contract},\"contract_ms\":100,\"worst_ms\":{:.3},\"max_turn_ms\":{:.3}}}",
+        worst.as_secs_f64() * 1e3,
+        max_turn.as_secs_f64() * 1e3,
     );
-    println!("{{\"within_contract\":{within_contract},\"contract_ms\":100,\"ci_margin_ms\":1000}}");
-    assert!(worst <= CI_MARGIN, "{measured}");
 }

@@ -2,8 +2,8 @@
 //! a program that never reads stdin, session caps, disk history, shared fanout and
 //! slow-subscriber loss counts, owned-thread shutdown, and the 16-PTY latency profile.
 //!
-//! Every assertion waits on product replies or events. Wall-clock latency is reported;
-//! only the profile asserts it, with a CI margin, since the plan names that bound.
+//! Every assertion waits on product replies or events. Wall-clock latency is reported,
+//! never asserted.
 
 mod caps;
 mod failure;
@@ -12,6 +12,7 @@ mod history;
 mod ordering;
 mod profile;
 mod threads;
+mod workload;
 
 use std::time::Duration;
 

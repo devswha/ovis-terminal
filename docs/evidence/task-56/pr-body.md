@@ -41,10 +41,19 @@ Measured "before" for the parse budget (`docs/evidence/task-56/tuning/parse-budg
   - `a_resize_waits_behind_at_most_one_parse_turn`: 32 one-KiB turns pending; asserts `Resized.after_turns <= turns_seen + 1` and `< 32`.
   - `admissions_and_cancels_overtake_pending_parse_turns_while_stdin_is_stuck`: the writer is stuck on a never-read pipe; asserts admission/withdrawal `after_turns` within one turn, and the outcomes `Withdrawn`/`InFlight`/`cut_off`.
   - Mutant M1 (parse arm moved ahead of control) fails both: "resize committed after 16 turns; 1 had run when it was sent" (`docs/evidence/task-56/mutant-parse-before-control.log`, exit 101).
-  - Wall-clock bounds are now reported, not asserted, in `failure.rs`. The profile test, where the plan names the 100 ms bound, prints `within_contract` and asserts a 1 s CI margin.
+  - Wall-clock bounds are reported, not asserted (round 3 also removed the profile's 1 s margin; see below).
 - **B3:** session caps for control/output/events and disk-backed history as above, with tests in `qa::caps`, `qa::history`, `history::tests` (retention eviction and floor, reopen rebuild, discontinuity refusal, typed fault, proptest over chunking/segment size/read windows).
 - Slow subscriber: `a_slow_subscriber_is_told_exactly_how_many_events_it_lost` asserts `Lagged(2·100 − 64)` exactly, and that the newest 64 events are still delivered.
 - Unused API removed: `ActorConfig::with_terminal_input`, `with_events`, `TerminalSetup::session`, `ByteBudget::limit` (and `ByteBudget` is renamed `Budget`). Every remaining public item has a caller in tests or bench.
+
+## Round 3 (verification note N5/N6)
+
+- **N5:** the profile test no longer depends on host speed. A lag-tolerant tracker follows each terminal's newest parsed offset. Before stopping, the test waits (event-driven, 300 s hang guard only) until every terminal has parsed exactly what its feed accepted, then asserts `parsed_bytes == output_bytes`.
+  - The wall-clock bound is no longer asserted anywhere: the profile prints `within_contract` and `worst_ms` against the 100 ms contract.
+  - Under the verifier's recipe, the round-2 1 s margin itself failed once (run 12 of 25: `profile.rs:204`, `worst <= CI_MARGIN`). Control-first ordering is asserted by counts (`qa::ordering`, kills M1 and N6).
+  - The test is renamed `sixteen_ptys_eight_clients_get_every_request_and_commit_with_latency_reported`; its workload helpers moved to `qa/workload.rs`.
+  - Recipe (taskset -c 0-1, 8 busy loops on CPUs 0-1, 25× full server lib): **25/25** pass (`docs/evidence/task-56/stress-lib-2cpu-8busy.log`).
+- **N6:** the admissions/cancels ordering test waits for the end of output and asserts `parse_turns == 32` and `before < 32`. With the drain-whole-backlog mutant (a turn ignores its budget), both ordering tests fail (`docs/evidence/task-56/mutant-drain-whole-backlog.log`, exit 101).
 
 ## Seams
 
@@ -61,7 +70,7 @@ Native host: Linux 7.0.0-38-generic x86_64, AMD Ryzen Threadripper PRO 3995WX (1
 $ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal                                  exit=0
 $ cargo test -p ovis-terminal-vt -p ovis-terminal-server --all-targets                           exit=0 (177 passed)
 $ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings                  exit=0
-$ bash scripts/check.sh                                                                          exit=0 (nextest 844 passed, 1 skipped; hygiene 0 violations in 852 files)
+$ bash scripts/check.sh                                                                          exit=0 (nextest 844 passed, 1 skipped; hygiene 0 violations in 853 files)
 $ RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked   exit=0
 ```
 
@@ -107,7 +116,7 @@ So there is no materialized `ovis-terminal` CLI/socket invocation for this todo 
 - history: `qa::history::*` (actor records to disk; tail read equals the bytes; read at 0 → `history_gap`; floor readable; `report.history.disk_bytes == end − floor`; evicted > 0; no fault; a terminal without history → `invalid_params`) and `history::tests::*`.
 - fanout: 8 viewers share one allocation (`Arc::ptr_eq`); slow subscriber exact lost count.
 - threads: DB writer busy/join/panic; blocking gate saturation; pump EOF (concurrent lag-tolerant reader) / actor-stopped.
-- profile: 16 actors × 8 clients × 16 lanes at 1 MiB/s until 4 MiB; every client sees every commit, 0 lost, ≤ 1 s CI margin, `within_contract` reported.
+- profile: 16 actors × 8 clients × 16 lanes at 1 MiB/s until 4 MiB. Asserts every client sees every commit, 0 lost, and every accepted byte parsed before stop. `within_contract`/`worst_ms` are reported, not asserted.
 
 ## Adversarial
 
