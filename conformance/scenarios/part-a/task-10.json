@@ -1,0 +1,71 @@
+{
+  "scenario": "part-a/task-10",
+  "todo": 10,
+  "title": "Coordinate commits snapshots and subscription barriers",
+  "closes": ["GAP-020", "GAP-024", "GAP-025"],
+  "delivers": ["IDEAL-015", "IDEAL-016", "IDEAL-017", "IDEAL-023", "IDEAL-024"],
+  "runner": "shell",
+  "note": "Component tests use the real SQLite writer and explicit pre-COMMIT barriers. DEFERRED VERIFICATION (runner lands in Todo 21): real CLI/socket assembly must rerun this scenario and record the actual socket transcript. No component output is claimed as that transcript.",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "argv": ["cargo", "test", "-p", "ovis-terminal-core", "--test", "events", "happy", "--", "--exact", "--nocapture"],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "\"schema_version\":1",
+              "\"seq\":\"1\"",
+              "\"type\":\"terminal.updated\"",
+              "\"terminals\":{\"availability\":\"complete\",\"records\":[\"one\"]}",
+              "test result: ok. 1 passed; 0 failed"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "argv": ["cargo", "test", "-p", "ovis-terminal-core", "--test", "events", "failure", "--", "--exact", "--nocapture"],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "missed=lifetime_mismatch; page.kind=stale_snapshot; write.kind=conflict",
+              "test result: ok. 1 passed; 0 failed"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "adversarial_cases": [
+    {
+      "class": "cancel/resume",
+      "test": "durable::disconnect_replays_commits_across_core_restart_without_renumbering_origin",
+      "assertions": ["retained replay has no duplicate snapshot", "sequence continues across core boot", "remote origin remains distinct", "old page token is stale"]
+    },
+    {
+      "class": "stale state",
+      "test": "durable::expired_cursor_gets_fresh_state_instead_of_a_truncated_replay",
+      "assertions": ["cursor_expired accompanies a fresh snapshot", "no incomplete replay is delivered"]
+    },
+    {
+      "class": "large snapshots",
+      "test": "durable::snapshot_larger_than_one_frame_reconstructs_from_bounded_pages",
+      "assertions": ["17 MiB record reconstructs exactly", "each page is at most 64 KiB", "all cursors match"]
+    },
+    {
+      "class": "malformed counters",
+      "test": "contracts::maximum_sequence_round_trips_exactly_and_numeric_forms_reject",
+      "assertions": ["u64::MAX is an exact decimal string", "numeric and noncanonical forms yield invalid_params"]
+    },
+    {
+      "class": "flaky tests",
+      "test": "happy",
+      "assertions": ["Applied barrier precedes racing subscribe", "no event is visible before COMMIT", "no fixed sleeps"]
+    }
+  ]
+}
