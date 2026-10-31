@@ -1,14 +1,15 @@
 //! Running a plan. Only `connect`, `server status`, `terminal get` without a target and
 //! method calls reach the endpoint, and none of them can start a server.
 
-use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use ovis_terminal_protocol::errors::TargetCandidate;
+use ovis_terminal_protocol::rpc::RpcRequest;
+use ovis_terminal_protocol::schema::common::NoParams;
 use ovis_terminal_protocol::schema::ids::{MachineId, TerminalId};
-use ovis_terminal_protocol::schema::methods::server::{ServerState, ServerStatusResult};
+use ovis_terminal_protocol::schema::methods::server::ServerStatusResult;
 use ovis_terminal_protocol::schema::methods::terminal::TerminalListParams;
-use ovis_terminal_server::listen::{EndpointDescriptor, EndpointStatus, Platform, Probe};
+use ovis_terminal_server::listen::{EndpointAddress, EndpointDescriptor, Platform};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -22,13 +23,10 @@ use super::transport::{Session, bridge};
 const DEADLINE_MS: u64 = 10_000;
 const DEADLINE: Duration = Duration::from_millis(DEADLINE_MS);
 
-fn socket(context: &Context) -> Result<PathBuf, CliError> {
-    let descriptor = EndpointDescriptor::resolve(context.endpoint(), Platform::CURRENT)
-        .map_err(CliError::Endpoint)?;
-    descriptor
-        .unix_path()
-        .map(Path::to_owned)
-        .ok_or(CliError::UnsupportedTransport)
+fn address(context: &Context) -> Result<EndpointAddress, CliError> {
+    EndpointDescriptor::resolve(context.endpoint(), Platform::CURRENT)
+        .map(|descriptor| descriptor.address().clone())
+        .map_err(CliError::Endpoint)
 }
 
 async fn bounded<T>(work: impl Future<Output = Result<T, Failure>>) -> Result<T, Failure> {
@@ -40,28 +38,24 @@ async fn bounded<T>(work: impl Future<Output = Result<T, Failure>>) -> Result<T,
 }
 
 /// Sends one planned request and returns its result untouched.
-pub(super) async fn call(
-    context: &Context,
-    request: &ovis_terminal_protocol::rpc::RpcRequest,
-) -> Result<Value, Failure> {
-    let path = socket(context)?;
+pub(super) async fn call(context: &Context, request: &RpcRequest) -> Result<Value, Failure> {
+    let address = address(context)?;
     bounded(async {
-        let mut session = Session::open(&path, context.credential()).await?;
+        let mut session = Session::open(&address, context.credential()).await?;
         session.call(request).await
     })
     .await
 }
 
-fn idle_status(state: ServerState) -> Result<Value, Failure> {
-    let record = json!({
+fn idle_status(state: &str) -> Result<Value, Failure> {
+    published_status(json!({
         "state": state,
         "runtime_lifetime": null,
         "server_boot_id": null,
         "uptime_ms": null,
         "holder_count": 0,
         "live_terminals": 0,
-    });
-    published_status(record)
+    }))
 }
 
 /// Decodes a status record as the published result type and encodes it back.
@@ -70,32 +64,20 @@ pub(super) fn published_status(record: Value) -> Result<Value, Failure> {
     Ok(serde_json::to_value(status).map_err(CliError::Encode)?)
 }
 
-/// Observes the endpoint without creating, binding or starting anything.
+/// Observes the endpoint without creating, binding or starting anything: a missing or
+/// refused endpoint is reported locally, one that accepts but never answers hello is
+/// `unreachable`, and only a server that completes hello is asked `server.status`.
 pub(super) async fn status(context: &Context) -> Result<Value, Failure> {
-    let path = socket(context)?;
-    let bearer = context
-        .credential()
-        .map_or("", |credential| credential.bearer());
-    let observed =
-        Probe::new(bearer, DEADLINE)
-            .observe(&path)
-            .await
-            .map_err(|error| match error {
-                ovis_terminal_server::listen::EndpointError::HelloRejected { error } => {
-                    Failure::Server(error)
-                }
-                other => CliError::Endpoint(other).into(),
-            })?;
-    match observed {
-        EndpointStatus::Running(_) => {
-            let request = typed::<ovis_terminal_protocol::schema::common::NoParams>(
-                "server.status",
-                &json!({}),
-            )?;
-            published_status(call(context, &request).await?)
-        }
-        other => idle_status(other.state()),
-    }
+    let address = address(context)?;
+    let opened = tokio::time::timeout(DEADLINE, Session::open(&address, context.credential()));
+    let mut session = match opened.await {
+        Ok(Ok(session)) => session,
+        Ok(Err(Failure::Cli(CliError::NotRunning { state, .. }))) => return idle_status(state),
+        Ok(Err(Failure::Cli(CliError::Closed))) | Err(_) => return idle_status("unreachable"),
+        Ok(Err(other)) => return Err(other),
+    };
+    let request = typed::<NoParams>("server.status", &json!({}))?;
+    published_status(bounded(session.call(&request)).await?)
 }
 
 #[derive(Deserialize)]
@@ -111,12 +93,12 @@ struct Listing {
 
 /// Refuses a targetless read with the live candidates; it never picks one.
 pub(super) async fn needs_target(context: &Context) -> Failure {
-    let path = match socket(context) {
-        Ok(path) => path,
+    let address = match address(context) {
+        Ok(address) => address,
         Err(error) => return error.into(),
     };
     let listed = bounded(async {
-        let mut session = Session::open(&path, context.credential()).await?;
+        let mut session = Session::open(&address, context.credential()).await?;
         let request = typed::<TerminalListParams>("terminal.list", &json!({}))?;
         let listing: Listing =
             serde_json::from_value(session.call(&request).await?).map_err(CliError::Result)?;
@@ -145,7 +127,7 @@ pub(super) async fn needs_target(context: &Context) -> Failure {
 
 /// Relays protocol bytes between stdio and the endpoint.
 pub(super) async fn connect(context: &Context) -> Result<(), CliError> {
-    bridge(&socket(context)?).await
+    bridge(&address(context)?).await
 }
 
 #[cfg(test)]

@@ -54,7 +54,8 @@ EXIT=2
 - Parse-then-plan before any I/O: clap parse, then typed params decoded with the protocol's own `decode_params::<P>` (`TerminalGetParams`, `TerminalListParams`, `OpRefParams`, `NoParams`). `call` refuses `hello`, names outside `all_methods()` and non-object params.
 - Success is one JSON document on stdout with empty stderr. Failure leaves stdout empty and writes `{"error":{origin,kind,hint,message,exit_code,...}}` to stderr. Server errors pass their `data` through with `origin:"server"`.
 - Published exit codes (`ExitStatus`, also in `schema cli` and the manual): 0 success, 1 failure, 2 usage, 3 not_found, 4 unavailable, 7 needs_target, 9 blocked, 10 cancelled, 11 conflict, 12 forbidden, 13 outcome_unknown.
-- `server status` uses the landed side-effect-free `listen::Probe`. Stopped, unreachable and stale states are reported locally as a `ServerStatusResult`; a running server is asked `server.status`. Nothing is ever created or started.
+- `server status` classifies the endpoint from the same connect path every command uses. A missing endpoint is `stopped`, a refused one `stale_endpoint`, and one that accepts but never completes hello within 10 s, or closes, is `unreachable`. These are reported locally as a `ServerStatusResult`; only a server that completes hello is asked `server.status`. Nothing is ever created or started.
+- One platform-neutral transport: a generic duplex NDJSON session over the Unix socket, or on Windows the named pipe `EndpointDescriptor` names (`tokio::net::windows::named_pipe::ClientOptions`). The only `cfg` is on `connect` itself.
 - `terminal get` without a target lists `terminal.list` and refuses with `needs_target` + `TargetCandidate`s (runtime_lifetime from hello). It never picks one. With no server it returns `candidates: []`, `candidates_listed: false`.
 - The bearer credential comes from `OVIS_TERMINAL_CREDENTIAL`, with a redacted Debug.
 - `.github/workflows/probe-stress-macos.yml`: new `cli` choice that repeats `cargo nextest run -p ovis-terminal-cli` 100 times on macos-latest.
@@ -113,6 +114,15 @@ What the tests assert (and only this):
 
 - `serve` and `hold` are **not** in this PR's grammar. They need the runtime assembly that todo 31 owns (`src/assembly/`, binding core/store/holder/authz). Shipping them as typed "not assembled" stubs would advertise commands this build cannot perform. `connect` is implemented for real.
 - No credential file convention exists yet. The bearer comes only from `OVIS_TERMINAL_CREDENTIAL`, and a running server without one answers `unauthenticated` (exit 12) to `server status`.
-- On Windows, connecting commands exit 4 `unsupported_transport` (no named-pipe client yet). Offline discovery works on every platform, and the process tests are `cfg(unix)`.
+- Windows connects over the named pipe, but only compile- and clippy-checked: locally with `--target x86_64-pc-windows-msvc` (zig cc with MinGW headers for bundled SQLite, check only; no link) and in CI. The process tests are `cfg(unix)`, so the Windows pipe path has no runtime test in this PR. `ERROR_PIPE_BUSY` is reported as `transport_failed`, without retry.
+- `server status` no longer reuses `listen::Probe` (it is Unix-only). The connect-path classification replaces it on both platforms.
 - `call` checks the method name and the object shape only; per-method typing of generic `call` params is the server's job (named verbs are typed locally).
 - Worktree: the brief named `lane-t76`, which is occupied by a live lane (`lane/t24-input-geometry-leases`). This work used `/home/devswha/workspace/ovis-terminal-wt/lane-t20` on the brief's branch `lane/t20-json-cli-discovery`.
+
+## Follow-up commit: keep the credential and transport seam live on every target
+
+CI run 41194283701 job `test (windows-latest)` failed to compile `ovis-terminal-cli` under `-D warnings`: seven dead-code errors and one `unused_async`. The transport, credential and `Failure::Server` paths were platform-neutral, but their only users sat behind `cfg(unix)`. The fix makes the transport itself platform-neutral (named-pipe client on Windows) instead of silencing anything:
+
+- No `#[allow]`/`#[expect]` added.
+- `cargo clippy -p ovis-terminal-cli --all-targets --all-features --locked --target x86_64-pc-windows-msvc -- -D warnings` -> Finished (local, check-only).
+- Linux clippy -> Finished; `cargo nextest run -p ovis-terminal-cli` -> 16 passed; `bash scripts/check.sh` -> exit 0 (log `docs/evidence/task-20/check.log`).

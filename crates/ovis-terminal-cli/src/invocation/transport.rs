@@ -1,56 +1,73 @@
-//! The Unix client transport: one persistent NDJSON connection per invocation.
+//! The client transport: one persistent NDJSON connection per invocation, over the Unix
+//! socket or the Windows named pipe the endpoint descriptor names.
 //!
-//! Connecting never creates the endpoint: a missing socket is `stopped`, a refused one is
+//! Connecting never creates the endpoint: a missing one is `stopped`, a refused one is
 //! `stale_endpoint`, and both are reported instead of starting a server.
 
 use std::io::ErrorKind;
-use std::path::Path;
+use std::path::PathBuf;
 
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::rpc::{RequestId, RpcReply, RpcRequest, parse_reply, parse_request};
 use ovis_terminal_protocol::schema::PROTOCOL_GENERATION;
 use ovis_terminal_protocol::schema::methods::server::HelloResult;
 use ovis_terminal_protocol::wire::MAX_FRAME_PAYLOAD;
+use ovis_terminal_server::listen::EndpointAddress;
 use serde_json::{Value, json};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixStream;
-use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
+use tokio::io::{
+    AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader, ReadHalf,
+    WriteHalf,
+};
 
 use super::context::Credential;
 use super::error::CliError;
 use super::report::Failure;
 
-/// An authenticated connection after a successful hello.
-#[derive(Debug)]
-pub(super) struct Session {
-    wire: Wire,
-    hello: HelloResult,
+/// A connected byte stream of either platform transport.
+trait Duplex: AsyncRead + AsyncWrite + Unpin + Send {}
+
+impl<T: AsyncRead + AsyncWrite + Unpin + Send> Duplex for T {}
+
+type Stream = Box<dyn Duplex>;
+
+fn refused(endpoint: PathBuf, source: std::io::Error) -> CliError {
+    match source.kind() {
+        ErrorKind::NotFound => CliError::NotRunning {
+            path: endpoint,
+            state: "stopped",
+        },
+        ErrorKind::ConnectionRefused => CliError::NotRunning {
+            path: endpoint,
+            state: "stale_endpoint",
+        },
+        _ => CliError::Io {
+            operation: "connect",
+            source,
+        },
+    }
 }
 
-/// The two halves of one NDJSON connection.
-#[derive(Debug)]
-struct Wire {
-    reader: BufReader<OwnedReadHalf>,
-    writer: OwnedWriteHalf,
+#[cfg(unix)]
+async fn connect(address: &EndpointAddress) -> Result<Stream, CliError> {
+    match address {
+        EndpointAddress::Unix(path) => tokio::net::UnixStream::connect(path)
+            .await
+            .map(|stream| Box::new(stream) as Stream)
+            .map_err(|source| refused(path.clone(), source)),
+        _ => Err(CliError::UnsupportedTransport),
+    }
 }
 
-async fn connect(path: &Path) -> Result<UnixStream, CliError> {
-    UnixStream::connect(path)
-        .await
-        .map_err(|source| match source.kind() {
-            ErrorKind::NotFound => CliError::NotRunning {
-                path: path.to_owned(),
-                state: "stopped",
-            },
-            ErrorKind::ConnectionRefused => CliError::NotRunning {
-                path: path.to_owned(),
-                state: "stale_endpoint",
-            },
-            _ => CliError::Io {
-                operation: "connect",
-                source,
-            },
-        })
+/// Opening a named-pipe client completes immediately, so the future is already ready.
+#[cfg(windows)]
+fn connect(address: &EndpointAddress) -> std::future::Ready<Result<Stream, CliError>> {
+    std::future::ready(match address {
+        EndpointAddress::Pipe(name) => tokio::net::windows::named_pipe::ClientOptions::new()
+            .open(name)
+            .map(|pipe| Box::new(pipe) as Stream)
+            .map_err(|source| refused(PathBuf::from(name), source)),
+        _ => Err(CliError::UnsupportedTransport),
+    })
 }
 
 fn hello_request(credential: Option<&Credential>) -> Result<RpcRequest, CliError> {
@@ -65,13 +82,34 @@ fn hello_request(credential: Option<&Credential>) -> Result<RpcRequest, CliError
     parse_request(&envelope.to_string()).map_err(CliError::Reply)
 }
 
+/// An authenticated connection after a successful hello.
+pub(super) struct Session {
+    wire: Wire,
+    hello: HelloResult,
+}
+
+impl std::fmt::Debug for Session {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Session")
+            .field("hello", &self.hello)
+            .finish_non_exhaustive()
+    }
+}
+
+/// The two halves of one NDJSON connection.
+struct Wire {
+    reader: BufReader<ReadHalf<Stream>>,
+    writer: WriteHalf<Stream>,
+}
+
 impl Session {
     /// Connects and completes hello; a refused hello is the server's typed error.
     pub(super) async fn open(
-        path: &Path,
+        address: &EndpointAddress,
         credential: Option<&Credential>,
     ) -> Result<Self, Failure> {
-        let (read, writer) = connect(path).await?.into_split();
+        let (read, writer) = tokio::io::split(connect(address).await?);
         let mut wire = Wire {
             reader: BufReader::new(read),
             writer,
@@ -139,8 +177,8 @@ impl Wire {
 }
 
 /// Copies stdin to the endpoint and the endpoint to stdout until the server closes.
-pub(super) async fn bridge(path: &Path) -> Result<(), CliError> {
-    let (mut read, mut write) = connect(path).await?.into_split();
+pub(super) async fn bridge(address: &EndpointAddress) -> Result<(), CliError> {
+    let (mut read, mut write) = tokio::io::split(connect(address).await?);
     let io = |operation| move |source| CliError::Io { operation, source };
     let mut stdout = tokio::io::stdout();
     {

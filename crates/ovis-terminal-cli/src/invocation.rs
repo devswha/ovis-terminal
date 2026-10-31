@@ -4,13 +4,11 @@ mod args;
 mod context;
 mod discovery;
 mod error;
-#[cfg(unix)]
 mod execute;
 mod exit;
 mod plan;
 mod report;
 mod text;
-#[cfg(unix)]
 mod transport;
 
 use std::ffi::OsString;
@@ -57,20 +55,12 @@ async fn execute(plan: Plan, mode: OutputMode, context: &Context) -> Result<Repo
         Plan::Schema(SchemaPart::Openrpc) => return Ok(discovery::openrpc()?),
         Plan::Schema(SchemaPart::Cli) => discovery::cli_contract(),
         Plan::Endpoint => discovery::endpoint(context)?,
-        #[cfg(unix)]
         Plan::Status => execute::status(context).await?,
-        #[cfg(unix)]
         Plan::Call(request) => execute::call(context, &request).await?,
-        #[cfg(unix)]
         Plan::NeedsTarget => return Err(execute::needs_target(context).await),
-        #[cfg(unix)]
         Plan::Bridge => {
             execute::connect(context).await?;
             return Ok(Report::raw(String::new()));
-        }
-        #[cfg(not(unix))]
-        Plan::Status | Plan::Call(_) | Plan::NeedsTarget | Plan::Bridge => {
-            return Err(CliError::UnsupportedTransport.into());
         }
     };
     Ok(Report::success(mode, &value))
