@@ -654,7 +654,6 @@ jobs:
                 --isolated --case all --evidence "process-info-$iteration.json"
               printf 'PASS %s/30\n' "$iteration"
             done
-            cp process-info-1.json process-info-macos-evidence.json
             printf 'RESULT 30/30\n'
           } 2>&1 | tee process-info-stress-macos.log
       - uses: actions/upload-artifact@v4
@@ -663,5 +662,5 @@ jobs:
           name: process-info-stress-macos-${{ github.run_id }}
           path: |
             process-info-stress-macos.log
-            process-info-macos-evidence.json
+            process-info-*.json
           if-no-files-found: error
