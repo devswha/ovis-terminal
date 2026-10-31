@@ -78,7 +78,10 @@ The acceptance criterion "exit 0 with failed:0, skipped:0" for `recovery/crash` 
 
 - Happy: the crash test above, plus `a_damaged_checkpoint_is_quarantined_and_a_repeated_recovery_reaches_the_same_verdict`.
 - Failure: the isolation decode test and the unreachable dedicated holder test above.
-- macOS stress: `gh workflow run probe-stress-macos.yml --ref lane/t49-recover-holders-checkpoints -f probe=recovery` (25 iterations of the recovery tests), run https://github.com/devswha/ovis-terminal/actions/runs/41250874516.
+- macOS stress, first run (aff08e3): https://github.com/devswha/ovis-terminal/actions/runs/41250874516 failed at iteration 1 with `path must be shorter than SUN_LEN`. The Darwin temp directory made the test's holder socket path exceed the 104-byte `sun_path` limit (test-only). Fixed in 353f116 by moving test state and sockets to short `/tmp/t49-*` paths.
+- macOS stress, rerun on `lane/t49-stress` (60500ea = 353f116 plus the stress job): https://github.com/devswha/ovis-terminal/actions/runs/41251157995 succeeded with `RESULT 25/25` (25 PASS lines).
+- CI on 353f116: `test (windows-latest)` failed with `clippy::unnecessary_wraps` at `recovery/durable.rs:48` (the non-Unix `sync_directory` stub). Fixed in f81c64b by syncing the directory only under `cfg(unix)` at the call site, with no Windows stub. Local `cargo clippy --workspace --all-targets --all-features --target x86_64-pc-windows-gnu -- -D warnings` exits 0. On f81c64b every check passed (check.sh ubuntu, test ubuntu/macos/windows, probes, msrv, deny, rustdoc, machete).
+- `crates/ovis-terminal-core/proptest-regressions/recovery/qa/{exact,verdicts}.txt` are the seeds proptest saved while the mutation probes ran. They replay as extra passing cases on the real code.
 
 ## Adversarial
 
