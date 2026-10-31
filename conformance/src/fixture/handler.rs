@@ -1,6 +1,8 @@
 //! The fixture's request handler: the real dispatcher plus two read-only protocol methods
-//! served directly, `rpc.discover` and paged `terminal.output`.
+//! served directly, `rpc.discover` and paged `terminal.output`, and the fixture-only
+//! `fixture.transcript` provider write.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use ovis_terminal_agent::status::AgentStatusEvent;
@@ -23,14 +25,18 @@ pub(crate) type Dispatch = Dispatcher<Event, OperationProducer>;
 
 const DIRECT: [&str; 2] = ["rpc.discover", "terminal.output"];
 
+/// The provider-store stand-in; served but never advertised, since it is no catalog method.
+const PROVIDER_WRITE: &str = "fixture.transcript";
+
 #[derive(Debug)]
 pub(crate) struct FixtureHandler {
     dispatch: Arc<Dispatch>,
+    root: PathBuf,
 }
 
 impl FixtureHandler {
-    pub(crate) const fn new(dispatch: Arc<Dispatch>) -> Self {
-        Self { dispatch }
+    pub(crate) const fn new(dispatch: Arc<Dispatch>, root: PathBuf) -> Self {
+        Self { dispatch, root }
     }
 
     /// Cancels and joins every dispatcher-owned operation task.
@@ -61,6 +67,7 @@ impl RequestHandler for FixtureHandler {
         match call.request.method() {
             "rpc.discover" => discover(&call.request),
             "terminal.output" => output::page(&call.request),
+            PROVIDER_WRITE => super::transcripts::write(&self.root, &call.request),
             _ => self.dispatch.call(call).await,
         }
     }

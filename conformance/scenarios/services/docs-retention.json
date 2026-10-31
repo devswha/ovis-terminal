@@ -1,0 +1,127 @@
+{
+  "scenario": "services/docs-retention",
+  "todo": 50,
+  "title": "Commit versioned documents and visible retention floors",
+  "closes": [
+    "GAP-128"
+  ],
+  "delivers": [
+    "IDEAL-098",
+    "IDEAL-101"
+  ],
+  "excludes": [
+    "EXCL-020",
+    "EXCL-021",
+    "EXCL-025"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "verification": {
+    "status": "deferred_until_routed",
+    "blocked_by_todo": 52,
+    "executed_today_by": [
+      "cargo nextest run -p ovis-terminal-server --test documents_retention",
+      "cargo nextest run -p ovis-terminal-core -E 'test(/docs::|retention::/)'"
+    ],
+    "requires_actual_cli_socket_transcript": true
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "rpc": "doc.set",
+          "connections": 2,
+          "params": {
+            "op_id": "$uuidv7.writer",
+            "name": "shared",
+            "version": "0",
+            "value": {
+              "writer": "$connection"
+            }
+          },
+          "expect": "exactly one result {version: \"1\", seq} and one error {kind: conflict}; exactly one doc.changed event at seq"
+        },
+        {
+          "rpc": "doc.get",
+          "params": {
+            "name": "shared"
+          },
+          "expect": "{version: \"1\", value: winner's value}"
+        },
+        {
+          "virtual_clock_advance_ms": "691200000",
+          "sweep": [
+            "output_history",
+            "events",
+            "receipts",
+            "plugin_runs",
+            "finished_terminals"
+          ],
+          "expect": "five retention.floor_advanced events; every floor above zero; a cursor below a floor reads gap, a position below it expired"
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "rpc": "doc.set",
+          "params": {
+            "op_id": "$uuidv7.first",
+            "name": "shared",
+            "version": "0",
+            "value": {
+              "x": 1
+            }
+          },
+          "expect": "{version: \"1\"}"
+        },
+        {
+          "rpc": "doc.set",
+          "inject": {
+            "method": "doc.set",
+            "params": {
+              "name": "shared",
+              "version": 0,
+              "value": {
+                "x": 2
+              }
+            }
+          },
+          "params": {
+            "op_id": "$uuidv7.stale",
+            "name": "shared",
+            "version": "0",
+            "value": {
+              "x": 2
+            }
+          },
+          "expect": "decimal version \"0\": error {kind: conflict, op_id}, and a retry with the same op_id returns the same conflict; doc.get still {version: \"1\", value: {x: 1}}. The literal numeric version 0 of the plan inject is invalid_params at params.version under the decimal-string contract"
+        },
+        {
+          "rpc": "doc.set",
+          "params": {
+            "op_id": "$uuidv7.big",
+            "name": "shared",
+            "version": "1",
+            "value": "$string_encoding_to_1048577_bytes"
+          },
+          "expect": "error {kind: too_large}; doc.get still version \"1\""
+        },
+        {
+          "rpc": "doc.set",
+          "params": {
+            "op_id": "$uuidv7_minted_25h_ago",
+            "name": "shared",
+            "version": "1",
+            "value": 1
+          },
+          "expect": "error {kind: op_expired}; nothing committed"
+        }
+      ]
+    }
+  ]
+}

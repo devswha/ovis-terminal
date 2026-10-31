@@ -80,6 +80,17 @@
         "additionalProperties": false,
         "description": "Parameters of `agent.conversation`.",
         "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationCursor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Position bound to a history identity and revision; absent starts the active chain."
+          },
           "page": {
             "anyOf": [
               {
@@ -104,9 +115,42 @@
       "AgentConversationResult": {
         "description": "Result of `agent.conversation`.",
         "properties": {
+          "active": {
+            "description": "Whether the chain read is the active chain.",
+            "type": "boolean"
+          },
+          "head": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last record of the chain read; absent for an empty history."
+          },
           "history_id": {
             "$ref": "#/components/schemas/HistoryId",
             "description": "History identity the page belongs to."
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationCursor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Continuation bound to this history identity and revision; absent on the last page."
+          },
+          "off_branch": {
+            "description": "Leaf records outside the chain read, addressable through a cursor head.",
+            "items": {
+              "$ref": "#/components/schemas/RecordId"
+            },
+            "type": "array"
           },
           "page": {
             "$ref": "#/components/schemas/PageInfo",
@@ -118,10 +162,17 @@
               "$ref": "#/components/schemas/ConversationRecord"
             },
             "type": "array"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/HistoryRevision",
+            "description": "Observed history revision every record of the page belongs to."
           }
         },
         "required": [
           "history_id",
+          "revision",
+          "active",
+          "off_branch",
           "records",
           "page"
         ],
@@ -403,6 +454,17 @@
         "additionalProperties": false,
         "description": "Parameters of `agent.update_session`.",
         "properties": {
+          "head": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Record that becomes the active chain head; only with reason `branch`."
+          },
           "history_id": {
             "anyOf": [
               {
@@ -421,6 +483,17 @@
           "process_token": {
             "$ref": "#/components/schemas/ProcessToken",
             "description": "Token handed to the program at spawn."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionChange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the binding changes; required once the incarnation is bound."
           },
           "session": {
             "$ref": "#/components/schemas/SessionRef",
@@ -1242,6 +1315,41 @@
         ],
         "type": "object"
       },
+      "ConversationCursor": {
+        "additionalProperties": false,
+        "description": "A page position bound to one history identity, revision and chain.",
+        "properties": {
+          "head": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last record of the chain being read; absent for the active chain."
+          },
+          "history_id": {
+            "$ref": "#/components/schemas/HistoryId",
+            "description": "History the position belongs to."
+          },
+          "position": {
+            "$ref": "#/components/schemas/RecordPosition",
+            "description": "Records of the chain already returned."
+          },
+          "revision": {
+            "$ref": "#/components/schemas/HistoryRevision",
+            "description": "Revision the position was issued at."
+          }
+        },
+        "required": [
+          "history_id",
+          "revision",
+          "position"
+        ],
+        "type": "object"
+      },
       "ConversationRecord": {
         "description": "One conversation record with provenance.",
         "properties": {
@@ -1250,9 +1358,24 @@
             "items": true,
             "type": "array"
           },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Record this one continues; absent for a chain root."
+          },
           "provenance": {
             "description": "Provider store the record came from.",
             "type": "string"
+          },
+          "record_id": {
+            "$ref": "#/components/schemas/RecordId",
+            "description": "Record identity, stable across revisions that keep the record."
           },
           "role": {
             "description": "Record role, such as user or assistant.",
@@ -1260,6 +1383,7 @@
           }
         },
         "required": [
+          "record_id",
           "role",
           "blocks",
           "provenance"
@@ -1553,6 +1677,9 @@
           "hint": {
             "description": "Recovery guidance.",
             "type": "string"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistoryHead"
           },
           "kind": {
             "$ref": "#/components/schemas/ErrorKindName"
@@ -2691,6 +2818,41 @@
         ],
         "type": "object"
       },
+      "HistoryChange": {
+        "description": "What an observation found different from the recorded history.",
+        "oneOf": [
+          {
+            "const": "append",
+            "description": "Records were added after the recorded content, which is unchanged.",
+            "type": "string"
+          },
+          {
+            "const": "truncate",
+            "description": "The source is shorter than the recorded content.",
+            "type": "string"
+          },
+          {
+            "const": "replace",
+            "description": "The source is a different file than the one recorded.",
+            "type": "string"
+          },
+          {
+            "const": "rewrite",
+            "description": "Recorded bytes changed in place, including rewrites that keep the size.",
+            "type": "string"
+          },
+          {
+            "const": "branch",
+            "description": "The active chain was selected explicitly by the owning process.",
+            "type": "string"
+          },
+          {
+            "const": "rebind",
+            "description": "The binding moved to another history identity.",
+            "type": "string"
+          }
+        ]
+      },
       "HistoryGap": {
         "description": "Why history is not available.",
         "oneOf": [
@@ -2711,8 +2873,43 @@
           }
         ]
       },
+      "HistoryHead": {
+        "description": "Identity and revision a history has now, and why it moved.",
+        "properties": {
+          "change": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistoryChange",
+                "x-ovis-open-enum": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What differed from the presented cursor, when known."
+          },
+          "history_id": {
+            "$ref": "#/components/schemas/HistoryId",
+            "description": "Current history identity."
+          },
+          "revision": {
+            "$ref": "#/components/schemas/HistoryRevision",
+            "description": "Current revision."
+          }
+        },
+        "required": [
+          "history_id",
+          "revision"
+        ],
+        "type": "object"
+      },
       "HistoryId": {
         "description": "Opaque identity string.",
+        "type": "string"
+      },
+      "HistoryRevision": {
+        "description": "HistoryRevision carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
       "Incarnation": {
@@ -5767,6 +5964,15 @@
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "RecordId": {
+        "description": "Opaque identity string.",
+        "type": "string"
+      },
+      "RecordPosition": {
+        "description": "RecordPosition carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
       "RecordVersion": {
         "description": "RecordVersion carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
@@ -6456,6 +6662,104 @@
           "label"
         ],
         "type": "object"
+      },
+      "SessionBindingRecord": {
+        "description": "Payload of `agent.session_bound`: one explicit binding change of an agent.",
+        "properties": {
+          "agent_id": {
+            "$ref": "#/components/schemas/AgentId",
+            "description": "Agent whose binding changed."
+          },
+          "binding_revision": {
+            "$ref": "#/components/schemas/Revision",
+            "description": "Binding revision after this change."
+          },
+          "head": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Active chain head selected by the owning process, when one was selected."
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistoryHead",
+            "description": "History now bound, with its revision."
+          },
+          "previous_history": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistoryId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "History bound before this change."
+          },
+          "previous_session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Session bound before this change."
+          },
+          "process_incarnation": {
+            "$ref": "#/components/schemas/Incarnation",
+            "description": "Program incarnation that reported the change."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionChange",
+                "x-ovis-open-enum": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Declared reason; absent for the first binding of the incarnation."
+          },
+          "session": {
+            "$ref": "#/components/schemas/SessionRef",
+            "description": "Session now bound."
+          }
+        },
+        "required": [
+          "agent_id",
+          "process_incarnation",
+          "session",
+          "history",
+          "binding_revision"
+        ],
+        "type": "object"
+      },
+      "SessionChange": {
+        "description": "Why an owning process changed the session it is bound to.",
+        "oneOf": [
+          {
+            "const": "resume",
+            "description": "The process resumed an existing provider session.",
+            "type": "string"
+          },
+          {
+            "const": "branch",
+            "description": "The process selected another chain of the same history (fork or rewind).",
+            "type": "string"
+          },
+          {
+            "const": "replace",
+            "description": "The process replaced its session with a different one.",
+            "type": "string"
+          }
+        ]
       },
       "SessionRef": {
         "additionalProperties": false,
@@ -15463,6 +15767,21 @@
       "paramStructure": "by-name",
       "params": [
         {
+          "name": "head",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Record that becomes the active chain head; only with reason `branch`."
+          }
+        },
+        {
           "name": "history_id",
           "required": false,
           "schema": {
@@ -15491,6 +15810,21 @@
           "schema": {
             "$ref": "#/components/schemas/ProcessToken",
             "description": "Token handed to the program at spawn."
+          }
+        },
+        {
+          "name": "reason",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionChange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the binding changes; required once the incarnation is bound."
           }
         },
         {
@@ -16021,6 +16355,21 @@
       "name": "agent.conversation",
       "paramStructure": "by-name",
       "params": [
+        {
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationCursor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Position bound to a history identity and revision; absent starts the active chain."
+          }
+        },
         {
           "name": "page",
           "required": false,
@@ -20057,6 +20406,13 @@
         "$ref": "#/components/schemas/AgentBinding"
       },
       "summary": "An agent binding changed."
+    },
+    {
+      "name": "agent.session_bound",
+      "schema": {
+        "$ref": "#/components/schemas/SessionBindingRecord"
+      },
+      "summary": "An owning process bound, resumed, branched or replaced its session."
     },
     {
       "name": "agent.released",

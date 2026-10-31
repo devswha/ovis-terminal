@@ -95,6 +95,10 @@ pub(super) enum CliError {
     /// The embedded OpenRPC document could not be rendered.
     #[error("the OpenRPC document could not be rendered")]
     Schema(#[source] ovis_terminal_protocol::schema::SchemaError),
+    /// A holder service verb failed.
+    #[cfg(unix)]
+    #[error(transparent)]
+    Service(ovis_terminal_holder::service::unix::ServiceError),
     /// A request or result could not be encoded.
     #[error("a JSON value could not be encoded")]
     Encode(#[source] serde_json::Error),
@@ -118,6 +122,8 @@ impl CliError {
             Self::Timeout { .. } => "deadline_exceeded",
             Self::UnsupportedTransport => "unsupported_transport",
             Self::Schema(_) | Self::Encode(_) => "internal",
+            #[cfg(unix)]
+            Self::Service(error) => error.kind(),
         }
     }
 
@@ -146,6 +152,8 @@ impl CliError {
             Self::Timeout { .. } => "inspect the operation; it may still be running",
             Self::UnsupportedTransport => "use a Unix build or the protocol directly",
             Self::Schema(_) | Self::Encode(_) => "report the build; a value could not be encoded",
+            #[cfg(unix)]
+            Self::Service(error) => error.hint(),
         }
     }
 }

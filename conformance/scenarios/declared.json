@@ -82,6 +82,11 @@
       "reason": "Free-form descriptor written by todo 25 before the runner existed; it runs once its steps are rewritten as ovis-conformance/1 over RPC routes wired by todos 23, 25 and 28-31 (real-binary serving lands with todo 31)."
     },
     {
+      "file": "part-a/task-27.json",
+      "owner_todo": "27",
+      "reason": "ovis_terminal_core::waits is a core seam that no RPC route serves yet: terminal.wait_output, turn.wait, events.wait and input.interrupt are wired to it by todos 28-31 (real-binary serving lands with todo 31). Until then the behavior runs as cargo nextest run -p ovis-terminal-core --test waits (happy/failure on a real holder PTY)."
+    },
+    {
       "file": "part-a/task-3.json",
       "owner_todo": "3",
       "reason": "Free-form descriptor written by todo 3 before the runner existed; it runs once its steps are rewritten as ovis-conformance/1 over RPC routes wired by todos 23, 25 and 28-31 (real-binary serving lands with todo 31)."
@@ -125,6 +130,11 @@
       "file": "remote/identity.json",
       "owner_todo": "43",
       "reason": "machine.add/get/rename are served only by dispatchers assembled in the todo-43 lane tests: no served binary registers the lane until todo 31 assembles it, and the scenario needs two private runtimes joined by a stdio transport plus the plan's --inject/--append runner flags, which the todo-21 runner (one fixture per case) does not have; todo 52 composes remote dispatch across two private runtimes over real endpoints."
+    },
+    {
+      "file": "services/docs-retention.json",
+      "owner_todo": "50",
+      "reason": "doc.get/doc.set are registered by dispatch::lanes::documents_retention on a Dispatcher whose event type carries doc.changed (DocumentsRetentionEvent). The runner's only fixture (todo 21) serves Dispatcher<OperationEvent, OperationProducer> with file-effect doc.* stubs that protocol/* scenarios depend on, and the runner has no --inject/--append or virtual-clock step. It runs once assembly (todo 52, blocked by this todo) serves the lane on the real binary; until then crates/ovis-terminal-server/tests/documents_retention.rs drives the same requests over a real socket."
     },
     {
       "file": "services/plugins.json",

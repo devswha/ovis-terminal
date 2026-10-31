@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::bound::ExceededBound;
 use super::identity::{FieldPath, OpId, TargetId};
 use super::kinds::ErrorKind;
+use crate::domain::session_binding::HistoryHead;
 use crate::schema::scalar::{DurationMs, QueuePosition, ReportSeq};
 
 /// Machine-readable context attached to a boundary failure.
@@ -48,6 +49,9 @@ pub struct ErrorData {
     /// The advertised limit a `limit_exceeded` refusal reached.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bound: Option<ExceededBound>,
+    /// Current history identity and revision, present on a `history_changed` refusal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history: Option<Box<HistoryHead>>,
 }
 
 impl ErrorData {
@@ -66,6 +70,7 @@ impl ErrorData {
             affected: Box::default(),
             queued_position: None,
             bound: None,
+            history: None,
         }
     }
 

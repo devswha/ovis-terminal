@@ -1,0 +1,31 @@
+# Union-merge into .github/workflows/probe-stress-macos.yml: append `waits` to the probe options list and this job at the end of jobs.
+  waits:
+    if: inputs.probe == 'waits'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat wait and interrupt tests 50 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 50); do
+              printf '\nITERATION %s/50\n' "$iteration"
+              cargo nextest run -p ovis-terminal-core --test waits --locked --no-tests=fail --no-capture
+              printf 'PASS %s/50\n' "$iteration"
+            done
+            printf 'RESULT 50/50\n'
+          } 2>&1 | tee waits-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waits-stress-macos-${{ github.run_id }}
+          path: waits-stress-macos.log
+          if-no-files-found: error

@@ -119,6 +119,14 @@ decimal_newtype!(
     ReportSeq
 );
 decimal_newtype!(
+    /// Observed revision of one conversation history; bumps on every detected change.
+    HistoryRevision
+);
+decimal_newtype!(
+    /// Position of a record along one history chain, counted from its root.
+    RecordPosition
+);
+decimal_newtype!(
     /// Number of records an ingestion path dropped.
     RecordCount
 );

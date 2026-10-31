@@ -1,0 +1,18 @@
+Linux 7.0.0-38-generic x86_64
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+ca1d47e12cc6db2a64384d7c1e40cd832b6013411d34e415f43144e262aab2b6  target/debug/ovis-terminal
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/binding --isolated --case happy --evidence /home/devswha/workspace/ovis-terminal-wt/lane-t36/.omo/evidence/ovis-terminal-v1/task-36/task-36-ovis-terminal-v1.json
+{"case":"happy","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t36/.omo/evidence/ovis-terminal-v1/task-36/task-36-ovis-terminal-v1.json","evidence_written":null,"result":"passed","scenario":"agent/binding","totals":{"assertions":"74","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+EXIT=0
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/binding --isolated --case failure --inject {"method":"agent.conversation","params":{"cursor":{"history_id":"h1","revision":"1","position":"0"}}} --evidence /home/devswha/workspace/ovis-terminal-wt/lane-t36/.omo/evidence/ovis-terminal-v1/task-36/task-36-ovis-terminal-v1.json --append
+{"case":"failure","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t36/.omo/evidence/ovis-terminal-v1/task-36/task-36-ovis-terminal-v1.json","evidence_written":null,"result":"passed","scenario":"agent/binding","totals":{"assertions":"78","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+EXIT=0
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/binding --isolated --case failure --inject {"method":"agent.conversation","params":{"cursor":{"history_id":"h1","revision":1,"position":"0"}}} --evidence /home/devswha/workspace/ovis-terminal-wt/lane-t36/.omo/evidence/ovis-terminal-v1/task-36/task-36-ovis-terminal-v1.json --append
+{"case":"failure","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t36/.omo/evidence/ovis-terminal-v1/task-36/task-36-ovis-terminal-v1.json","evidence_written":null,"result":"passed","scenario":"agent/binding","totals":{"assertions":"78","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+EXIT=0
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/binding --isolated --case all --evidence /home/devswha/workspace/ovis-terminal-wt/lane-t36/.omo/evidence/ovis-terminal-v1/task-36/task-36-ovis-terminal-v1.json --append
+{"case":"all","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t36/.omo/evidence/ovis-terminal-v1/task-36/task-36-ovis-terminal-v1.json","evidence_written":null,"result":"passed","scenario":"agent/binding","totals":{"assertions":"155","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
+EXIT=0
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario all/all --isolated --case all --evidence /home/devswha/workspace/ovis-terminal-wt/lane-t36/.omo/evidence/ovis-terminal-v1/task-36/all-all.json --require-no-skips
+{"case":"all","error":{"detail":"27 declaration files are not executed","hint":"register the remaining declarations; declared.json must be empty","kind":"declared_only_present","step":null},"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t36/.omo/evidence/ovis-terminal-v1/task-36/all-all.json","evidence_written":null,"result":"failed","scenario":"all/all","totals":{"assertions":"637","cases":"22","declared_only":"27","failed":"0","passed":"22","skipped":"0"}}
+EXIT=1

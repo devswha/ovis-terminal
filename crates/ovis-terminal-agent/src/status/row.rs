@@ -11,7 +11,7 @@ use super::StatusError;
 
 /// Status, agent binding and turn bookkeeping of one terminal.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(super) struct Row {
+pub(crate) struct Row {
     pub status: StatusSnapshot,
     pub agent: Option<AgentBinding>,
     /// Status event that started the current turn.
@@ -45,7 +45,7 @@ impl Row {
 
 /// A row and the version its compare-and-swap write must expect.
 #[derive(Debug)]
-pub(super) struct Stored {
+pub(crate) struct Stored {
     pub row: Row,
     pub version: Version,
     pub terminal: TerminalId,
@@ -54,7 +54,7 @@ pub(super) struct Stored {
 
 /// Where a terminal's row lives.
 #[derive(Debug, Clone, Copy)]
-pub(super) struct Location {
+pub(crate) struct Location {
     pub runtime: RuntimeId,
     pub terminal: TerminalId,
 }
@@ -69,7 +69,7 @@ impl Location {
 
     /// Reads the row as seen by program `process`; a newer incarnation replaces the row,
     /// an older one is refused with `stale_incarnation`.
-    pub(super) fn read(
+    pub(crate) fn read(
         self,
         snapshot: &Snapshot,
         process: Option<Incarnation>,
@@ -102,7 +102,7 @@ impl Location {
 
 impl Stored {
     /// The compare-and-swap write of the updated row.
-    pub(super) fn write(&self) -> Result<CasWrite, StatusError> {
+    pub(crate) fn write(&self) -> Result<CasWrite, StatusError> {
         let bytes = serde_json::to_vec(&self.row)?;
         Ok(CasWrite::new(
             self.key.clone(),

@@ -45,6 +45,10 @@ pub(super) enum Command {
     Op(OpCommand),
     /// Send one published method with JSON params.
     Call(CallArgs),
+    /// The session holder's OS service: status, install, uninstall, start, stop.
+    #[cfg(unix)]
+    #[command(subcommand)]
+    Service(crate::service::unix::ServiceCommand),
 }
 
 /// The two published contracts.

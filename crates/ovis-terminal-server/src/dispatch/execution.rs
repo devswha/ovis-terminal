@@ -7,6 +7,7 @@ use ovis_terminal_authz::{AccessRequest, Action, Authority, Decision, ResolvedTa
 use ovis_terminal_core::events::{Coordinator, EventData, SnapshotProducer};
 use ovis_terminal_core::ops::{
     Completion, Context, OperationError, OperationEvent, OperationSnapshot, Operations,
+    RunningOperation,
 };
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
 use ovis_terminal_protocol::errors::OpId;
@@ -125,22 +126,8 @@ where
         R: Serialize + Send + 'static,
     {
         tokio::task::spawn_blocking(move || {
-            let operations = Operations::new(&self.state.core, self.context.at(now()?));
-            if *self.cancellation.borrow() {
-                operations.cancel(&self.op_id)?;
-            }
-            let permission = operations.start(&self.op_id)?;
-            // Starting the durable intent can block behind SQLite; revoke/expiry must
-            // therefore be checked after that wait, at the actual effect boundary.
-            if let Err(error) = self
-                .state
-                .authority
-                .recheck(&self.decision, &self.access.at(now()?))
-            {
-                let error = DispatchError::Authority(error);
-                operations.fail_running(permission, error.boundary().data().clone())?;
-                return Err(error);
-            }
+            let operations = Operations::new(&self.state.core, self.context.clone().at(now()?));
+            let permission = self.permit(&operations)?;
             match effect().and_then(|result| serde_json::to_value(result).map_err(Into::into)) {
                 Ok(result) => {
                     operations.commit(permission, result.clone())?;
@@ -154,52 +141,51 @@ where
         })
         .await?
     }
-}
 
-impl<D, P> Execution<D, P>
-where
-    D: EventData + From<OperationEvent> + Clone + Serialize + DeserializeOwned + Send + 'static,
-    P: SnapshotProducer + Send + Sync + 'static,
-    P::Sections: AsRef<OperationSnapshot> + DeserializeOwned,
-{
-    /// Commits domain writes, events and the operation outcome as one transaction.
+    /// Commits the method's state writes, its domain events and the operation receipt in
+    /// one SQLite transaction built from one read snapshot.
     ///
-    /// `build` reads the committed state through the unit's snapshot and returns either
-    /// a result with its writes and events, or a typed refusal, which settles the
-    /// operation as failed with nothing else written.
+    /// A [`Completion::failed`] outcome is retained as the operation's typed failure and
+    /// returned as that error, so a retry with the same operation id answers it again.
     ///
     /// # Errors
     ///
-    /// Returns authority, cancellation and persistence failures, and a refusal as the
-    /// settled operation carrying its typed error.
+    /// Returns the retained domain failure, or authority, cancellation and persistence
+    /// failures; a rolled-back unit leaves the operation running, never committed.
     pub async fn commit_unit<F>(self, build: F) -> Result<Completed, DispatchError>
     where
         F: FnOnce(&Snapshot) -> Result<Completion<D>, OperationError> + Send + 'static,
     {
         tokio::task::spawn_blocking(move || {
-            let operations = Operations::new(&self.state.core, self.context.at(now()?));
-            if *self.cancellation.borrow() {
-                operations.cancel(&self.op_id)?;
-            }
-            let permission = operations.start(&self.op_id)?;
-            if let Err(error) = self
-                .state
-                .authority
-                .recheck(&self.decision, &self.access.at(now()?))
-            {
-                let error = DispatchError::Authority(error);
-                operations.fail_running(permission, error.boundary().data().clone())?;
-                return Err(error);
-            }
+            let operations = Operations::new(&self.state.core, self.context.clone().at(now()?));
+            let permission = self.permit(&operations)?;
             let record = operations.commit_unit(permission, build)?;
-            match (&record.state, &record.result) {
-                (OpenEnum::Known(OpState::Committed), Some(result)) => {
-                    Ok(Completed(result.clone()))
-                }
+            match (&record.state, record.result.clone()) {
+                (OpenEnum::Known(OpState::Committed), Some(result)) => Ok(Completed(result)),
                 _ => Err(OperationError::Settled(Box::new(record)).into()),
             }
         })
         .await?
+    }
+
+    /// Starts the durable intent, then rechecks authority at the effect boundary.
+    fn permit(&self, operations: &Operations<'_, D, P>) -> Result<RunningOperation, DispatchError> {
+        if *self.cancellation.borrow() {
+            operations.cancel(&self.op_id)?;
+        }
+        let permission = operations.start(&self.op_id)?;
+        // Starting the durable intent can block behind SQLite; revoke/expiry must
+        // therefore be checked after that wait, at the actual effect boundary.
+        if let Err(error) = self
+            .state
+            .authority
+            .recheck(&self.decision, &self.access.at(now()?))
+        {
+            let error = DispatchError::Authority(error);
+            operations.fail_running(permission, error.boundary().data().clone())?;
+            return Err(error);
+        }
+        Ok(permission)
     }
 }
 
