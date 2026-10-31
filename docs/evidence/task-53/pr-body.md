@@ -60,14 +60,21 @@ $ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance --
   {"result":"passed","totals":{"assertions":"530","cases":"22","declared_only":"28","failed":"0","passed":"22","skipped":"0"}}   # exit 0
 ```
 
-Native Windows tests, run by ci.yml `test (windows-latest)` through nextest and by the `conpty` stress job (`crates/ovis-terminal-holder/src/windows/terminal_tests.rs`). The test driver plays the core: it feeds output into `ovis_terminal_vt::Vt` and writes the engine's query replies back as input, which is how ConPTY's start-up `ESC[6n` gets answered.
+Native Windows execution: the `conpty` stress job on windows-2025 (`MINGW64_NT-10.0-26100 x86_64`, rustc 1.99.1), dispatched on this branch at 2f702cb, run https://github.com/devswha/ovis-terminal/actions/runs/41226982421 (job 124613079474), concluded `success`. It ran 10 of 10 iterations of `cargo test --locked -p ovis-terminal-holder --lib windows::` (`12 passed; 0 failed` every time) and `cargo test --locked -p ovis-terminal-server --lib conpty` (`3 passed; 0 failed` every time, including the Windows-only `spawn_failed` test), then printed `RESULT pass` (log: conpty-windows-run4-pass.log). ci.yml `test (windows-latest)` also runs these tests through nextest once the PR is mergeable.
 
-- `utf8_output_and_win32_input_mode_precede_an_exit_carrying_the_final_offset`: `cmd.exe /d /c "echo OVIS-é-53& exit /b 7"`. Asserts:
+Three earlier dispatched runs failed on test-side assumptions, not product behaviour; their logs are committed.
+- 41226056580: the final VT state had `win32_input` off. ConPTY resets mode 9001 when the console closes, so the test now asserts the mode was on while the program ran.
+- 41226417389: a bare `x` keypress was lost, and so was its win32-input form in 41226748395. In 41226417389 the key went in before the start-up handshake finished; in 41226748395 the cause was that `pause` flushes the console input buffer before it waits. The test now waits for cmd's title, sends `x`+Enter in win32-input form, and uses `set /p`, which keeps buffered input.
+- In all three runs the resize already reached ConPTY (`ESC[8;40;132t`).
+
+Native Windows tests (the same tests, as named in (`crates/ovis-terminal-holder/src/windows/terminal_tests.rs`). The test driver plays the core: it feeds output into `ovis_terminal_vt::Vt` and writes the engine's query replies back as input, which is how ConPTY's start-up `ESC[6n` gets answered.
+
+- `utf8_output_and_win32_input_mode_precede_an_exit_carrying_the_final_offset`: `cmd.exe /d /c "echo OVIS-é-53& exit /b 7"`. Asserts (the mode check is while the program runs):
   - the UTF-8 marker bytes are present;
   - `ProgramExit::Code(7)` and `OutputEnd::Eof`;
   - `final_offset` equals the number of bytes read;
   - the stream contains `ESC[?9001h`, and `vt.modes().keyboard.win32_input` is true.
-- `a_resize_and_a_keypress_reach_the_program_through_separate_paths`: `pause >NUL & mode con & exit /b 3`. Resizes to 132x40, then sends a keypress as input. Asserts the `mode con` output contains `132` and `40`, and exit code 3.
+- `a_resize_and_a_keypress_reach_the_program_through_separate_paths`: `set /p line= & mode con & exit /b 3`. After the title OSC appears, it resizes to 132x40 and sends `x` and Enter as win32-input key events. Asserts the output contains ConPTY's `ESC[8;40;132t`, that `mode con` reports 132 and 40, and exit code 3.
 - `kill_ends_a_program_that_never_reads_input_and_the_job_is_left_empty`: `ping -n 600` never reads stdin. Asserts:
   - a request one byte over the byte bound is `input_overflow`;
   - up to 64 queued 256 KiB inputs do not delay `kill`;
@@ -103,7 +110,8 @@ Until the route exists, these behaviours are proven by the lane tests instead:
 
 ## QA
 
-- Happy and failure behaviour runs natively on Windows CI (above). The scenario runs are recorded as DEFERRED.
+- Happy and failure behaviour ran natively on Windows: run 41226982421, 10/10 iterations passed. The scenario runs are recorded as DEFERRED.
+- PR state: CONFLICTING with integration 664ded7. The conflicts are union slot lines only: the stress-workflow options list, `protocol/src/domain.rs` and `server/src/dispatch/lanes.rs`. Per the lane rule I did not merge; until the orchestrator merges, PR-triggered CI does not run.
 - `bash scripts/check.sh`: `733 tests run: 733 passed (1 slow), 1 skipped`, exit 0 (check-summary.log).
 - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked`: exit 0 (windows-precheck.log).
 
