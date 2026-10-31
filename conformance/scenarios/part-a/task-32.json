@@ -1,0 +1,271 @@
+{
+  "scenario": "part-a/task-32",
+  "todo": 32,
+  "title": "Encode literal text keys and paste without hidden execution",
+  "closes": [
+    "GAP-072",
+    "GAP-084",
+    "GAP-148"
+  ],
+  "delivers": [
+    "IDEAL-046",
+    "IDEAL-049",
+    "IDEAL-050",
+    "IDEAL-061"
+  ],
+  "excludes": [
+    "EXCL-002",
+    "EXCL-009",
+    "EXCL-017",
+    "EXCL-023"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "verification": {
+    "status": "deferred_by_plan",
+    "runner_todo": 21,
+    "requires_actual_cli_socket_transcript": true
+  },
+  "credentials": {
+    "operator": [
+      "observe",
+      "interact",
+      "raw_input"
+    ],
+    "agent": [
+      "observe",
+      "interact"
+    ]
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "as": "operator",
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.launch",
+            "program": {
+              "argv": [
+                "/bin/sh",
+                "-c",
+                "printf '\\033[?2004h\\033[?1000h\\033[?1006hARMED\\n'; stty raw -echo; od -An -tx1 -v"
+              ]
+            },
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin"
+            },
+            "geometry": {
+              "rows": 24,
+              "cols": 80
+            },
+            "keep": true
+          },
+          "capture": [
+            "terminal_id"
+          ]
+        },
+        {
+          "as": "operator",
+          "rpc": "terminal.screen",
+          "params": {
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "include_modes": true
+          },
+          "assert": {
+            "modes.bracketed_paste": true,
+            "modes.mouse": "click"
+          },
+          "capture": [
+            "mode_revision"
+          ]
+        },
+        {
+          "as": "operator",
+          "rpc": "attach.open",
+          "params": {
+            "op_id": "$uuidv7.operator",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "role": "interact",
+            "client_id": "operator",
+            "stream_mode": "channel"
+          },
+          "capture": [
+            "lease.lease_id"
+          ]
+        },
+        {
+          "as": "operator",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.send",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "lease_id": "$operator.lease.lease_id",
+            "text": "first\nsecond; rm -rf ~",
+            "submit": "enter"
+          },
+          "assert": {
+            "receipt.mode_revision": "$operator.mode_revision",
+            "receipt.admitted_bytes": "35",
+            "written_hex": "1b5b3230307e66697273740a7365636f6e643b20726d202d7266207e1b5b3230317e0d"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "input.raw",
+          "params": {
+            "op_id": "$uuidv7.mouse",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "lease_id": "$operator.lease.lease_id",
+            "data_b64": "G1s8MDsxMDs1TQ=="
+          },
+          "assert": {
+            "receipt.admitted_bytes": "10",
+            "written_hex": "1b5b3c303b31303b354d"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "input.raw",
+          "params": {
+            "op_id": "$uuidv7.raw",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "lease_id": "$operator.lease.lease_id",
+            "data_b64": "G1s5OTk7dW5rbm93bgf/"
+          },
+          "assert": {
+            "receipt.admitted_bytes": "15",
+            "written_hex": "1b5b3939393b756e6b6e6f776e07ff"
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "as": "operator",
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.plain",
+            "program": {
+              "argv": [
+                "/bin/sh",
+                "-c",
+                "printf 'ARMED\\n'; stty raw -echo; od -An -tx1 -v"
+              ]
+            },
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin"
+            },
+            "geometry": {
+              "rows": 24,
+              "cols": 80
+            },
+            "keep": true
+          },
+          "capture": [
+            "terminal_id"
+          ]
+        },
+        {
+          "as": "agent",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.multiline",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "first\nsecond",
+            "submit": "none"
+          },
+          "assert": {
+            "kind": "paste_refused",
+            "written_bytes": "0"
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "input.paste",
+          "params": {
+            "op_id": "$uuidv7.terminator",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "ok\u001b[201~\rrm -rf ~",
+            "bracketed": "auto"
+          },
+          "assert": {
+            "kind": "invalid_encoding",
+            "written_bytes": "0"
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.control",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "bell\u0007",
+            "submit": "none"
+          },
+          "assert": {
+            "kind": "invalid_encoding",
+            "written_bytes": "0"
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "input.keys",
+          "params": {
+            "op_id": "$uuidv7.unknown",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "keys": [
+              "enter",
+              "hyper+x"
+            ]
+          },
+          "assert": {
+            "kind": "unknown_key",
+            "written_bytes": "0"
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "input.raw",
+          "params": {
+            "op_id": "$uuidv7.unauthorized",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "lease_id": "$agent.lease.lease_id",
+            "data_b64": "Aw=="
+          },
+          "assert": {
+            "kind": "raw_not_authorized",
+            "written_bytes": "0"
+          }
+        }
+      ]
+    }
+  ]
+}
