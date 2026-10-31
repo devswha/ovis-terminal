@@ -149,6 +149,7 @@ mod tests {
             io_errors: Vec::new(),
             first_io_failure: None,
             completion: Completion::Running,
+            waiter: super::super::state::WaiterState::Waiting,
         };
         let mut state = HolderState::default();
         state.terminals.insert(terminal_id.clone(), terminal);

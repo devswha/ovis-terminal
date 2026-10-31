@@ -14,15 +14,16 @@ use std::sync::Arc;
 use std::sync::mpsc::{Receiver, SyncSender};
 
 use portable_pty::SlavePty;
+use rustix::process::{Pid, WaitId, WaitIdOptions, waitid};
 
 use super::Shared;
 use super::ending::{Ending, ExitEvidence, WaiterReport};
-use super::state::WriteAck;
+use super::state::{WaiterState, WriteAck};
 use crate::protocol::TerminalId;
 use crate::unix::drain::DrainSignal;
 use crate::unix::input::{Dequeued, InputQueue};
 use crate::unix::io_error::TerminalIoError;
-use crate::unix::pty_io::{ReadOutcome, read_chunk, write_prefix};
+use crate::unix::pty_io::{PumpWake, ReadOutcome, read_chunk, write_prefix};
 
 /// Output is read in chunks no larger than the stream chunk size.
 const OUTPUT_CHUNK: usize = 16 * 1024;
@@ -54,7 +55,23 @@ pub(super) fn wait_for_exit(waiter: Waiter, report: &SyncSender<WaiterReport>) {
         probe,
         drain,
     } = waiter;
-    let evidence = match child.wait() {
+    // NOWAIT leaves the zombie/PID reserved while we wait without the state lock.
+    // The only reap happens under the same mutex held through signal delivery.
+    let ready = waitid(
+        WaitId::Pid(Pid::from_child(&child)),
+        WaitIdOptions::EXITED | WaitIdOptions::NOWAIT,
+    );
+    let status = ready.map_err(std::io::Error::from).and_then(|_| {
+        let mut state = shared.lock();
+        let status = child.wait()?;
+        if let Some(terminal) = state.terminals.get_mut(&terminal_id) {
+            terminal.waiter = WaiterState::Reaped;
+        }
+        shared.reaped.notify_all();
+        drop(state);
+        Ok(status)
+    });
+    let evidence = match status {
         Ok(status) => ExitEvidence::Status {
             code: status.code(),
             signal: status.signal(),
@@ -88,6 +105,7 @@ pub(super) struct Pump {
     pub(super) reader: File,
     pub(super) finish: FinishOnDrop,
     pub(super) report: Receiver<WaiterReport>,
+    pub(super) wake: PumpWake,
 }
 
 pub(super) fn pump_output(shared: &Shared, pump: Pump) {
@@ -96,10 +114,11 @@ pub(super) fn pump_output(shared: &Shared, pump: Pump) {
         mut reader,
         finish,
         report,
+        wake,
     } = pump;
     let mut buffer = vec![0_u8; OUTPUT_CHUNK];
     loop {
-        let failure = match read_chunk(&mut reader, &mut buffer) {
+        let failure = match read_chunk(&mut reader, &mut buffer, &wake) {
             Ok(ReadOutcome::Hangup) => break,
             Ok(ReadOutcome::Data(read)) => buffer
                 .get(..read)
