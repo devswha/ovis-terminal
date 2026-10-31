@@ -223,3 +223,6 @@ impl<'a> IdentityReservation<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

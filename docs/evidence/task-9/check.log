@@ -4,7 +4,7 @@ cargo: cargo 1.99.1 (5f94df478 2026-08-27)
 
 Command: cargo nextest run -p ovis-terminal-core
 Exit: 0
-The enclosing workspace run reported 195 tests run, 195 passed, 1 skipped.
+The final enclosing workspace run reported 205 tests run, 205 passed, 1 skipped.
 
 Command: cargo clippy -p ovis-terminal-core --all-targets -- -D warnings
 Exit: 0
@@ -12,15 +12,20 @@ Exit: 0
 Command: bash scripts/check.sh
 Exit: 0
 Output: check.sh: all steps passed
-Nextest: 195 tests run, 195 passed, 1 skipped
-Workspace hygiene: 0 violations in 241 files
+Nextest: 205 tests run, 205 passed, 1 skipped
+Workspace hygiene: 0 violations in 246 files
 Manifest hygiene: 16 member manifests checked
-JSON hygiene: 22 JSON files checked
+JSON hygiene: 23 JSON files checked
 
 Command: cargo metadata --locked --format-version 1 --no-deps
+Exit: 0
+Integration merge: origin/integration eb9827d was merged as 4e76232.
+Command after merge: cargo metadata --locked --format-version 1 --no-deps
 Exit: 0
 
 Windows sharing-violation follow-up:
 Initial Windows test job 124351154181 failed registry happy with OS error 32 because a test Snapshot reader remained alive across store close/reopen. The test now drops it before close.
 After the ordering change, `cargo test -p ovis-terminal-core --test registry happy -- --exact --nocapture` exited 0, and `bash scripts/check.sh` again exited 0.
-The updated Windows CI check is pending on the repair commit; see windows-sharing-violation.log.
+On repair head d8ca367, PR #13 reported 11 successful checks, 1 skipped CodeRabbit check, and no failures; both test and probe checks on windows-latest succeeded. F1/F2 review-fix CI will run on the subsequent head.
+
+AdversarialVerify F1/F2: the final happy test mutation failed at `tests/registry.rs:77` with the boot-ID assertion and exit 101, then passed after restoration. Malformed UUID/resource integer tests report `source().is_some()` and retain kind `invalid_identity`.

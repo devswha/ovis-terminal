@@ -18,7 +18,25 @@ Command: cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::i
 test registry::ids::tests::identity_serialization_preserves_u64_max ... ok
 Exit: 0
 
-The happy case asserts stable identity by explicit scoped ID after rename and ambiguity with two machine candidates. The failure case asserts needs_target, cross_lifetime, invalid_identity, invalid_name and stale_target on PID/start-token reuse; it returns no replacement resolution.
+The happy case asserts stable identity by explicit scoped ID after rename and ambiguity with two machine candidates. The failure case asserts needs_target, cross_lifetime and stale_target on PID/start-token reuse; it returns no replacement resolution.
+
+Command: cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::malformed_identity_inputs_have_typed_kinds -- --exact --nocapture
+Exit: 0; zero, wrong-family and invalid-name cases assert invalid_identity / invalid_name.
+Command: cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::malformed_machine_uuid_preserves_source_and_kind -- --exact --nocapture
+Exit: 0; source is Some and kind remains invalid_identity.
+Command: cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::malformed_resource_integer_preserves_source_and_kind -- --exact --nocapture
+Exit: 0; source is Some and kind remains invalid_identity.
+Command: cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::malformed_generation_and_pid_integers_preserve_sources -- --exact --nocapture
+Exit: 0; ParseIntError sources are retained for generation and PID parsing.
+
+Command: cargo test --locked -p ovis-terminal-core --test registry host_reboot_and_relaunch_identity_domains -- --exact --nocapture
+Exit: 0; server boot, runtime lifetime, terminal generation and process generation transitions are asserted.
+Command: cargo test --locked -p ovis-terminal-core --lib registry::resolution::tests::target_resolution_returns_candidates_and_preserves_scoped_identity -- --exact --nocapture
+Exit: 0; complete ambiguity candidates are checked.
+Command: cargo test --locked -p ovis-terminal-core --lib registry::reservation::tests::reservation_is_durable_before_return_and_survives_store_reopen -- --exact --nocapture
+Exit: 0; reserved machine identity survives reopen and terminal ID is not reused.
+
+Interim post-source-fix check: bash scripts/check.sh exit 0; nextest reported 203 passed, 1 skipped; workspace hygiene reported 0 violations in 243 files; 16 manifests and 23 JSON files checked. The final gate included the subsequently added lifecycle and source-retention cases.
 
 Windows CI follow-up:
 Initial Windows job 124351154181 failed registry happy with OS error 32 while the test Snapshot still held a SQLite reader connection across store close/reopen. The test now drops the snapshot before close.
@@ -26,3 +44,17 @@ Command: cargo test -p ovis-terminal-core --test registry happy -- --exact --noc
 Exit after fix: 0; test happy ... ok
 Command: bash scripts/check.sh
 Exit after fix: 0; check.sh: all steps passed
+
+AdversarialVerify F1:
+Replacing `next.identity.server_boot = server_boot_id` with a comment made `cargo test -p ovis-terminal-core --test registry happy -- --exact --nocapture` fail at `tests/registry.rs:77`, assertion `core restart must adopt the new server boot ID`, exit 101. Restoring the assignment made the same test pass, exit 0. Full details: mutation-boot-id.log.
+
+AdversarialVerify F2:
+`malformed_machine_uuid_preserves_source_and_kind`, `malformed_resource_integer_preserves_source_and_kind`, and `malformed_generation_and_pid_integers_preserve_sources` passed. Each asserts `Error::source().is_some()`; the malformed UUID and overflowing resource ID preserve kind `invalid_identity`.
+
+Final task-9 scenario steps were run with `--locked`: `registry happy`, `host_reboot_and_relaunch_identity_domains`, `resolution::tests::target_resolution_returns_candidates_and_preserves_scoped_identity`, `reservation::tests::reservation_is_durable_before_return_and_survives_store_reopen`, `registry failure`, the caller-binding rejection, malformed-identity checks, and all parser-source checks. All exited 0 with one assertion-bearing test selected by each filter.
+
+Final `bash scripts/check.sh`: exit 0; 205 workspace tests passed, 1 intentional child-process fixture skipped, 0 hygiene violations in 246 files, 16 member manifests and 23 JSON files checked.
+
+AdversarialVerify final bundle:
+The F1 mutation was re-run against the final split test layout and failed at `tests/registry.rs:77` with `core restart must adopt the new server boot ID`, exit 101; after restoring `next.identity.server_boot = server_boot_id`, `happy` passed.
+The current origin/integration head eb9827d was merged as 4e76232; `cargo metadata --locked --format-version 1 --no-deps` exited 0 after the merge.

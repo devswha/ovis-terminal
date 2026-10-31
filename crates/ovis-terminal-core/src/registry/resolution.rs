@@ -265,3 +265,6 @@ impl TargetIndex {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

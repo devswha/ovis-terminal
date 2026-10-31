@@ -1,7 +1,7 @@
 //! Opaque family-prefixed resource identifiers.
 
 use std::fmt;
-use std::num::{IntErrorKind, NonZeroU64};
+use std::num::NonZeroU64;
 use std::str::FromStr;
 
 use serde::de::Error as _;
@@ -56,13 +56,7 @@ macro_rules! resource_id {
                         actual: family.to_owned(),
                     });
                 }
-                let value = u64::from_str(sequence).map_err(|error| {
-                    if error.kind() == &IntErrorKind::PosOverflow {
-                        IdentityError::Overflow
-                    } else {
-                        IdentityError::InvalidIdentity
-                    }
-                })?;
+                let value = u64::from_str(sequence).map_err(IdentityError::from)?;
                 let id = Self::try_from(value)?;
                 if id.to_string() != raw {
                     return Err(IdentityError::InvalidIdentity);

@@ -51,7 +51,7 @@ impl FromStr for MachineId {
                     .split_once(':')
                     .map_or_else(|| raw.to_owned(), |(family, _)| family.to_owned()),
             })?;
-        let value = Uuid::parse_str(uuid).map_err(|_| IdentityError::InvalidIdentity)?;
+        let value = Uuid::parse_str(uuid).map_err(|source| IdentityError::UuidParse { source })?;
         let id = Self::new(value)?;
         if id.to_string() != raw {
             return Err(IdentityError::InvalidIdentity);

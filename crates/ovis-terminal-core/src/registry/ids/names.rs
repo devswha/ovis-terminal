@@ -80,6 +80,19 @@ impl TryFrom<u64> for ProcessPid {
     }
 }
 
+impl FromStr for ProcessPid {
+    type Err = IdentityError;
+
+    fn from_str(raw: &str) -> Result<Self, Self::Err> {
+        let value = u64::from_str(raw)?;
+        let pid = Self::try_from(value)?;
+        if pid.0.to_string() != raw {
+            return Err(IdentityError::InvalidIdentity);
+        }
+        Ok(pid)
+    }
+}
+
 impl Serialize for ProcessPid {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -95,18 +108,7 @@ impl<'de> Deserialize<'de> for ProcessPid {
         D: Deserializer<'de>,
     {
         let raw = String::deserialize(deserializer)?;
-        let value = u64::from_str(&raw).map_err(|error| {
-            if error.kind() == &std::num::IntErrorKind::PosOverflow {
-                D::Error::custom(IdentityError::Overflow)
-            } else {
-                D::Error::custom(IdentityError::InvalidIdentity)
-            }
-        })?;
-        let pid = Self::try_from(value).map_err(D::Error::custom)?;
-        if pid.0.to_string() != raw {
-            return Err(D::Error::custom(IdentityError::InvalidIdentity));
-        }
-        Ok(pid)
+        raw.parse().map_err(D::Error::custom)
     }
 }
 

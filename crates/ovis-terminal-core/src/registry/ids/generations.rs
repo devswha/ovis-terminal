@@ -44,6 +44,19 @@ macro_rules! generation {
             }
         }
 
+        impl FromStr for $name {
+            type Err = IdentityError;
+
+            fn from_str(raw: &str) -> Result<Self, Self::Err> {
+                let value = u64::from_str(raw)?;
+                let generation = Self::new(value)?;
+                if generation.0.to_string() != raw {
+                    return Err(IdentityError::InvalidIdentity);
+                }
+                Ok(generation)
+            }
+        }
+
         impl Serialize for $name {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
@@ -59,18 +72,7 @@ macro_rules! generation {
                 D: Deserializer<'de>,
             {
                 let raw = String::deserialize(deserializer)?;
-                let value = u64::from_str(&raw).map_err(|error| {
-                    if error.kind() == &std::num::IntErrorKind::PosOverflow {
-                        D::Error::custom(IdentityError::Overflow)
-                    } else {
-                        D::Error::custom(IdentityError::InvalidIdentity)
-                    }
-                })?;
-                let generation = Self::new(value).map_err(D::Error::custom)?;
-                if generation.0.to_string() != raw {
-                    return Err(D::Error::custom(IdentityError::InvalidIdentity));
-                }
-                Ok(generation)
+                raw.parse().map_err(D::Error::custom)
             }
         }
     };

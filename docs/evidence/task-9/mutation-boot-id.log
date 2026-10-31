@@ -1,0 +1,20 @@
+Finding: T9-ADV-4 (E3)
+Initial repair head: d8ca367ce98a9ca2005f4c9fd790c1688b9cbce2
+
+Temporary mutation in crates/ovis-terminal-core/src/registry/lifecycle/terminal.rs:
+- replaced `next.identity.server_boot = server_boot_id;` with `// Adversarial mutation: retain the prior server boot identity.`
+
+Command:
+cargo test -p ovis-terminal-core --test registry happy -- --exact --nocapture
+
+Observed mutation result:
+test happy ... FAILED
+thread 'happy' panicked at crates/ovis-terminal-core/tests/registry.rs:77:5:
+core restart must adopt the new server boot ID
+test result: FAILED. 0 passed; 1 failed
+Command exited with code 101.
+
+The production assignment was restored immediately. The same named test then passed:
+test happy ... ok
+test result: ok. 1 passed; 0 failed
+Command exited with code 0.

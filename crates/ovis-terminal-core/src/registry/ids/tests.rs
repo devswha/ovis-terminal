@@ -77,3 +77,61 @@ fn identity_serialization_preserves_u64_max() -> TestResult<()> {
     );
     Ok(())
 }
+
+#[test]
+fn malformed_machine_uuid_preserves_source_and_kind() {
+    let error = "machine:not-a-uuid".parse::<MachineId>().unwrap_err();
+
+    assert_eq!(error.kind(), "invalid_identity");
+    assert!(error.source().is_some());
+}
+
+#[test]
+fn malformed_resource_integer_preserves_source_and_kind() {
+    let error = "terminal:18446744073709551616"
+        .parse::<TerminalId>()
+        .unwrap_err();
+
+    assert_eq!(error.kind(), "invalid_identity");
+    assert!(error.source().is_some());
+}
+
+#[test]
+fn malformed_generation_and_pid_integers_preserve_sources() {
+    let generation = "18446744073709551616"
+        .parse::<TerminalGeneration>()
+        .unwrap_err();
+    let pid = "18446744073709551616".parse::<ProcessPid>().unwrap_err();
+
+    assert_eq!(generation.kind(), "invalid_identity");
+    assert!(generation.source().is_some());
+    assert_eq!(pid.kind(), "invalid_identity");
+    assert!(pid.source().is_some());
+}
+
+#[test]
+fn malformed_identity_inputs_have_typed_kinds() {
+    assert_eq!(
+        TerminalId::try_from(0_u64).unwrap_err().kind(),
+        "invalid_identity"
+    );
+    assert_eq!(
+        MachineId::new(uuid::Uuid::from_u128(0)).unwrap_err().kind(),
+        "invalid_identity"
+    );
+    assert_eq!(
+        "workspace:7".parse::<TerminalId>().unwrap_err().kind(),
+        "invalid_identity"
+    );
+    assert!(serde_json::from_str::<TerminalId>("\"workspace:7\"").is_err());
+    assert_eq!(
+        crate::registry::ResourceName::new("bad/name")
+            .unwrap_err()
+            .kind(),
+        "invalid_name"
+    );
+    assert_eq!(
+        ProcessStartToken::new("").unwrap_err().kind(),
+        "invalid_identity"
+    );
+}

@@ -16,7 +16,7 @@
     {
       "command": "cargo nextest run -p ovis-terminal-core",
       "exit": 0,
-      "result": "scripts/check.sh included the workspace nextest run; its displayed summary was 195 tests run, 195 passed, 1 skipped."
+      "result": "scripts/check.sh included the workspace nextest run; final summary: 205 passed, 1 skipped."
     },
     {
       "command": "cargo clippy -p ovis-terminal-core --all-targets -- -D warnings",
@@ -25,13 +25,18 @@
     {
       "command": "bash scripts/check.sh",
       "exit": 0,
-      "result": "check.sh: all steps passed; workspace-hygiene reported 0 violations in 241 files; manifests.sh checked 16 member manifests; json.sh checked 22 JSON files."
+      "result": "check.sh: all steps passed; workspace nextest reported 205 passed and 1 skipped; workspace-hygiene reported 0 violations in 246 files; manifests.sh checked 16 member manifests; json.sh checked 23 JSON files."
     },
     {
       "command": "cargo metadata --locked --format-version 1 --no-deps",
       "exit": 0
     }
   ],
+  "integration_reconciliation": {
+    "origin_integration": "eb9827d",
+    "merge_commit": "4e76232",
+    "cargo_metadata_locked_exit": 0
+  },
   "asserted_identity_json_values": {
     "terminal_id_max": "\"terminal:18446744073709551615\"",
     "generation_max": "\"18446744073709551615\"",
@@ -61,8 +66,42 @@
       "command": "cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::identity_serialization_preserves_u64_max -- --exact --nocapture",
       "exit": 0,
       "result": "test registry::ids::tests::identity_serialization_preserves_u64_max ... ok"
+    },
+    {
+      "case": "host reboot and relaunch",
+      "command": "cargo test --locked -p ovis-terminal-core --test registry host_reboot_and_relaunch_identity_domains -- --exact --nocapture",
+      "exit": 0,
+      "result": "test host_reboot_and_relaunch_identity_domains ... ok"
+    },
+    {
+      "case": "target candidates and durable reservation",
+      "commands": [
+        "cargo test --locked -p ovis-terminal-core --lib registry::resolution::tests::target_resolution_returns_candidates_and_preserves_scoped_identity -- --exact --nocapture",
+        "cargo test --locked -p ovis-terminal-core --lib registry::reservation::tests::reservation_is_durable_before_return_and_survives_store_reopen -- --exact --nocapture"
+      ],
+      "exit": 0,
+      "result": "Both assertion-bearing tests passed."
+    },
+    {
+      "case": "parser source preservation",
+      "commands": [
+        "cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::malformed_machine_uuid_preserves_source_and_kind -- --exact --nocapture",
+        "cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::malformed_resource_integer_preserves_source_and_kind -- --exact --nocapture",
+        "cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::malformed_generation_and_pid_integers_preserve_sources -- --exact --nocapture"
+      ],
+      "exit": 0,
+      "assertion": "source() is Some and malformed UUID / overflowing resource ID kinds remain invalid_identity"
     }
   ],
+  "mutation_proof": {
+    "finding": "T9-ADV-4",
+    "mutation": "Removed next.identity.server_boot = server_boot_id in lifecycle/terminal.rs",
+    "test": "cargo test -p ovis-terminal-core --test registry happy -- --exact --nocapture",
+    "failed_assertion": "core restart must adopt the new server boot ID",
+    "mutated_exit": 101,
+    "restored_exit": 0,
+    "evidence": "docs/evidence/task-9/mutation-boot-id.log"
+  },
   "windows_ci_follow_up": {
     "initial_head": "af30f0102c93ef166d733bdcf03b7f8d9e765b",
     "job_id": "124351154181",
@@ -70,7 +109,26 @@
     "error": "Os { code: 32, kind: Uncategorized, message: \"The process cannot access the file because it is being used by another process.\" }",
     "analysis": "The happy test kept a SQLite Snapshot reader connection alive across Store::close and reopening the store.",
     "fix": "Explicitly drop the Snapshot immediately after the reservation assertion and before closing the store. No product store path or retry behavior changed.",
-    "verification": "Linux happy test and scripts/check.sh pass after the test ordering change; the Windows CI rerun is pending on the repair commit."
+    "verification": "Windows test and probe passed on repair head d8ca367; the F1/F2 follow-up is tested locally and will run through CI on its new head."
+  },
+  "adversarial_review_round_1": {
+    "finding_T9_ADV_4": {
+      "status": "fixed_and_mutation_proven",
+      "test": "cargo test -p ovis-terminal-core --test registry happy -- --exact --nocapture",
+      "mutation": "Temporarily replaced next.identity.server_boot = server_boot_id with a comment",
+      "failure": "test happy failed at tests/registry.rs:77 with assertion 'core restart must adopt the new server boot ID', exit 101",
+      "restored_result": "test happy ... ok, exit 0",
+      "evidence": "docs/evidence/task-9/mutation-boot-id.log"
+    },
+    "finding_T9_CONTRACT_2": {
+      "status": "fixed_and_source_tested",
+      "error_kinds": "malformed UUID and overflowing resource ID remain invalid_identity",
+      "source_tests": [
+        "malformed_machine_uuid_preserves_source_and_kind",
+        "malformed_resource_integer_preserves_source_and_kind",
+        "malformed_generation_and_pid_integers_preserve_sources"
+      ]
+    }
   },
   "adversarial": [
     {
@@ -114,7 +172,7 @@
   "limitations": [
     "No real ovis-terminal CLI/socket transcript exists yet; the plan defers that conformance run until assembly.",
     "Only Linux x86_64 was exercised locally.",
-    "One workspace test was skipped by nextest; its reason was not shown in the captured summary.",
+    "One workspace test was skipped by nextest; the independent gate review identified it as the intentional child-process fixture.",
     "Rust and JSON LSP diagnostics were unavailable because rust-analyzer and Biome are not installed."
   ]
 }
