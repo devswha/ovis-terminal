@@ -77,6 +77,13 @@ pub enum RestartError {
     /// The wall clock does not fit a millisecond timestamp.
     #[error("the wall clock does not fit a millisecond timestamp")]
     ClockRange(#[source] std::num::TryFromIntError),
+    /// Test fault injection: the control process died right after `phase`.
+    #[cfg(test)]
+    #[error("the control process died after the restart crossed {phase:?}")]
+    Crashed {
+        /// The barrier crossed last.
+        phase: RestartPhase,
+    },
     /// A thread panicked while it held the control state.
     #[error("the control state lock was poisoned by a panicking thread")]
     Poisoned,
@@ -100,6 +107,8 @@ impl RestartError {
             Self::Store(error) => error.kind(),
             Self::Identity(error) => error.kind(),
             Self::Clock(_) | Self::ClockRange(_) => "clock_unrepresentable",
+            #[cfg(test)]
+            Self::Crashed { .. } => "crashed",
             Self::Poisoned => "restart_poisoned",
         }
     }
@@ -131,6 +140,8 @@ impl RestartError {
             Self::Store(error) => error.hint(),
             Self::Identity(error) => error.hint(),
             Self::Clock(_) | Self::ClockRange(_) => "correct the runtime clock",
+            #[cfg(test)]
+            Self::Crashed { .. } => "open control again to finish the restart",
             Self::Poisoned => "restart the runtime; a control thread panicked",
         }
     }

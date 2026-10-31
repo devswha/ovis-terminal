@@ -1,7 +1,9 @@
 //! A real holder, SQLite store and authority under one restartable control.
 
 mod barriers;
+mod fates;
 mod happy;
+mod loss;
 mod stop;
 
 use std::path::PathBuf;
@@ -87,7 +89,7 @@ impl Fixture {
     }
 
     /// Opens control of the fixture identity; a pending intent is finished first.
-    fn open(&self) -> TestResult<(Control, Option<super::RestartReceipt>)> {
+    fn open(&self) -> TestResult<(Control, super::Boot)> {
         Ok(Control::open(self.plan()?, self.identity)?)
     }
 
@@ -110,6 +112,14 @@ impl Drop for Fixture {
         assert!(stopped.is_ok(), "join owned holder workers: {stopped:?}");
         let removed = std::fs::remove_dir_all(&self.root);
         assert!(removed.is_ok(), "remove owned fixture: {removed:?}");
+    }
+}
+
+/// The receipt of a restart the open finished from its intent; an unplanned boot fails.
+fn planned(boot: super::Boot) -> TestResult<super::RestartReceipt> {
+    match boot {
+        super::Boot::Planned(receipt) => Ok(*receipt),
+        other => Err(format!("expected the planned path, got {other:?}").into()),
     }
 }
 

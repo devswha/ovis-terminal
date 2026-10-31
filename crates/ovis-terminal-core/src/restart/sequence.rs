@@ -2,7 +2,6 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use ovis_terminal_holder::process::{ProcessId, StartTokenError, read_start_token};
 use ovis_terminal_protocol::domain::restart::{BoundaryPhase, RestartBoundary, RestartPhase};
 use ovis_terminal_protocol::errors::OpId;
 use ovis_terminal_protocol::schema::ids::{RuntimeLifetimeId, ServerBootId as WireBootId};
@@ -10,11 +9,9 @@ use ovis_terminal_protocol::schema::methods::server::RecoveryEvidence;
 use ovis_terminal_protocol::schema::scalar::{EventSeq, TimestampMs};
 
 use super::control::{Control, Inner};
-use super::{IntentFile, Preserved, RestartError, RestartIntent, RestartReceipt, classify};
-use crate::registry::{
-    HostIdentity, IdentityError, ProcessIdentity, RuntimeIdentity, ServerBootId,
-};
-use crate::terminals::{Call, LaunchState, TerminalError};
+use super::{IntentFile, Preserved, RestartError, RestartIntent, RestartReceipt};
+use crate::registry::{HostIdentity, IdentityError, RuntimeIdentity, ServerBootId};
+use crate::terminals::{Call, LaunchState};
 
 /// The identity a successor serves under: the lifetime and boot the intent recorded.
 pub(super) fn successor(
@@ -69,12 +66,18 @@ impl Control {
         let file = inner.plan.intent();
         file.store(&intent)?;
         self.set(intent.phase)?;
+        #[cfg(test)]
+        self.crash_point(intent.phase)?;
         advance(&file, &mut intent)?;
         self.set(intent.phase)?;
+        #[cfg(test)]
+        self.crash_point(intent.phase)?;
         intent.waits = self.waits.interrupt();
         self.announce(&boundary(&intent, BoundaryPhase::Started))?;
         advance(&file, &mut intent)?;
         self.set(intent.phase)?;
+        #[cfg(test)]
+        self.crash_point(intent.phase)?;
         if let Err(error) = inner.hand_over() {
             file.clear()?;
             self.set(RestartPhase::Running)?;
@@ -86,6 +89,8 @@ impl Control {
         advance(&file, &mut intent)?;
         self.set(intent.phase)?;
         inner.release()?;
+        #[cfg(test)]
+        self.crash_point(intent.phase)?;
         drop(inner);
         self.finish(&intent, false)
     }
@@ -107,6 +112,8 @@ impl Control {
         intent.phase = RestartPhase::Booted;
         file.store(&intent)?;
         self.set(intent.phase)?;
+        #[cfg(test)]
+        self.crash_point(intent.phase)?;
         let mut receipt = inner.recover(&intent)?;
         receipt.resumed = resumed;
         advance(&file, &mut intent)?;
@@ -176,56 +183,6 @@ impl Inner {
             terminals.close()?;
         }
         Ok(())
-    }
-
-    fn recover(&self, intent: &RestartIntent) -> Result<RestartReceipt, RestartError> {
-        let terminals = self
-            .terminals
-            .as_ref()
-            .ok_or(RestartError::ControlStopped)?;
-        let session = self.plan.session();
-        let records = terminals.list(session)?;
-        let mut receipt = RestartReceipt {
-            runtime: intent.runtime,
-            from: intent.from,
-            to: intent.to,
-            preserved: Vec::new(),
-            lost: Vec::new(),
-            interrupted_ops: Vec::new(),
-            interrupted_waits: intent.waits.clone(),
-            seq_before: intent.seq,
-            seq_after: intent.seq,
-            resumed: false,
-        };
-        for held in &intent.preserved {
-            let adopted = records
-                .iter()
-                .find(|record| record.id() == held.terminal)
-                .and_then(|record| record.lifecycle.process());
-            if adopted == Some(&held.process) && alive(&held.process)? {
-                receipt.preserved.push(held.clone());
-            } else {
-                receipt.lost.push(held.clone());
-            }
-        }
-        for op in &intent.in_flight {
-            receipt
-                .interrupted_ops
-                .push(classify(&terminals.operation(session, op)?));
-        }
-        receipt.seq_after =
-            EventSeq::new(terminals.coordinator().read_snapshot()?.cursor.seq.get());
-        Ok(receipt)
-    }
-}
-
-/// Whether the operating system still runs `process` with its recorded start token.
-fn alive(process: &ProcessIdentity) -> Result<bool, RestartError> {
-    let pid = u32::try_from(process.pid().get()).map_err(|_| TerminalError::ProcessReplaced)?;
-    match read_start_token(ProcessId::new(pid)) {
-        Ok(token) => Ok(token.as_str() == process.start_token().as_str()),
-        Err(StartTokenError::ProcessGone { .. }) => Ok(false),
-        Err(error) => Err(TerminalError::from(error).into()),
     }
 }
 

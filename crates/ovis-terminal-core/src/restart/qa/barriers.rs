@@ -8,20 +8,32 @@ use super::*;
 use crate::restart::RestartIntent;
 use crate::restart::sequence::successor;
 
-/// Persists the intent at `phase` (handing over when the phase lies past it), then the
-/// control process dies: its link is released and no program is signalled.
-fn crash_at(control: Control, phase: RestartPhase) -> TestResult<RestartIntent> {
-    let intent = {
-        let mut inner = control.lock()?;
-        let mut intent = inner.intent(op())?;
-        intent.phase = phase;
-        if !phase.before_handover() {
-            inner.hand_over()?;
-        }
-        inner.plan.intent().store(&intent)?;
-        intent
-    };
+/// Drives `restart()` until the control process dies right after it crossed `phase`,
+/// then reads back the intent `restart()` itself made durable at that barrier.
+pub(super) fn crash_at(
+    fixture: &Fixture,
+    control: Control,
+    phase: RestartPhase,
+) -> TestResult<RestartIntent> {
+    *control
+        .crash_after
+        .lock()
+        .map_err(|_| "poisoned crash point")? = Some(phase);
+    let crashed = control
+        .restart(op())
+        .map(drop)
+        .map_err(|error| error.kind());
+    assert_eq!(crashed, Err("crashed"), "{phase:?}");
     control.close()?;
+    let intent = fixture
+        .plan()?
+        .intent()
+        .load()?
+        .ok_or("restart() left no durable intent")?;
+    assert_eq!(
+        intent.phase, phase,
+        "the intent on disk names the barrier crossed"
+    );
     Ok(intent)
 }
 
@@ -40,13 +52,14 @@ fn a_crash_at_any_barrier_is_finished_by_the_next_open_with_the_same_processes()
         let record = spawn(&control, fixture.launch("printf ARMED; read gate")?)?;
         marker(&control, (record.id(), b"ARMED"))?;
         let process = record.lifecycle.process().ok_or("process")?.clone();
-        let intent = crash_at(control, phase)?;
+        let intent = crash_at(&fixture, control, phase)?;
 
         // When: the next control opens.
-        let (control, resumed) = fixture.open()?;
+        let (control, boot) = fixture.open()?;
 
-        // Then: it serves the intent's boot in the same lifetime with the same process.
-        let receipt = resumed.ok_or("the pending intent was not finished")?;
+        // Then: it takes the planned path, serving the intent's boot in the same lifetime
+        // with the same process.
+        let receipt = planned(boot)?;
         assert!(receipt.resumed);
         let preserved: Vec<_> = receipt.preserved.iter().map(|held| &held.process).collect();
         assert_eq!(preserved, vec![&process], "{phase:?}");
@@ -72,15 +85,15 @@ fn repeated_interruptions_never_mint_another_boot_or_lose_the_process() -> TestR
     let record = spawn(&control, fixture.launch("printf ARMED; read gate")?)?;
     marker(&control, (record.id(), b"ARMED"))?;
     let process = record.lifecycle.process().ok_or("process")?.clone();
-    let intent = crash_at(control, RestartPhase::HandedOver)?;
+    let intent = crash_at(&fixture, control, RestartPhase::HandedOver)?;
     let plan = fixture.plan()?;
     plan.boot(successor(&intent, fixture.identity)?)?.close()?;
 
     // When: a third control opens.
-    let (control, resumed) = fixture.open()?;
+    let (control, boot) = fixture.open()?;
 
     // Then: the boot is still the one the intent named, and the process is unchanged.
-    let receipt = resumed.ok_or("the pending intent was not finished")?;
+    let receipt = planned(boot)?;
     assert_eq!(control.identity()?.server_boot_id(), intent.to);
     assert_eq!(receipt.preserved.len(), 1);
     assert!(running(&process)?);
@@ -93,7 +106,7 @@ fn an_intent_from_another_host_boot_or_lifetime_is_refused_and_kept() -> TestRes
     // Given: a restart intent left behind by a crashed control.
     let fixture = Fixture::new()?;
     let (control, _) = fixture.open()?;
-    let intent = crash_at(control, RestartPhase::IntentPersisted)?;
+    let intent = crash_at(&fixture, control, RestartPhase::IntentPersisted)?;
 
     // When: control opens after a host reboot, or as another runtime lifetime.
     let host = HostIdentity::new(fixture.identity.machine_id(), HostBootId::try_from(2)?);

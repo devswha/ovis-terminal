@@ -32,7 +32,15 @@ fails when this copy differs.
 - `server_boot_id` changes on every control restart, so a client compares `hello`
   results (`listen::continuity`) to tell a restart apart from a new lifetime.
 - Attach streams never survive a boundary. Streams of the old boot end with
-  `server_restart`; a client re-attaches and gets a new `stream_id`.
+  `server_restart` (`TerminalStreams::restarting`), and connections of the old boot
+  close with `$/closing{reason: "server_restart", incarnations_preserved: true}`
+  (`ServerHandle::restart`), never `server_shutdown`. A client reconnects to the same
+  endpoint, re-attaches and gets a new `stream_id` for the same process incarnation.
+- An incarnation held when the restart began that the successor cannot prove is
+  reported lost with typed evidence (`exited` with code or signal, `exit_unknown`,
+  `gone`, `replaced` with the identity found, `not_adopted`), never as preserved.
+- `Control::open` reports `planned` only when a restart intent was on disk; without
+  one it reports `unplanned` and claims no handover.
 
 ## Interrupted work
 

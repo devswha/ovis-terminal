@@ -11,7 +11,7 @@ use ovis_terminal_protocol::errors::OpId;
 use ovis_terminal_protocol::schema::methods::server::StopScope;
 use ovis_terminal_store::{Store, StoreOptions};
 
-use super::{ArmedWaits, IntentFile, RestartError, RestartReceipt, StopReceipt};
+use super::{ArmedWaits, Boot, IntentFile, RestartError, StopReceipt};
 use crate::registry::{RegistryIdentities, RuntimeIdentity};
 use crate::terminals::{Call, ControlReceipt, Host, TerminalError, Terminals};
 
@@ -71,13 +71,16 @@ pub struct Control {
     pub(super) phase: Mutex<RestartPhase>,
     pub(super) waits: ArmedWaits,
     listeners: Mutex<Vec<SyncSender<RestartBoundary>>>,
+    #[cfg(test)]
+    pub(super) crash_after: Mutex<Option<RestartPhase>>,
 }
 
 impl Control {
     /// Opens control of `identity`; a pending restart intent is finished first.
     ///
     /// With an intent on disk, the successor takes the boot identity the intent names and
-    /// the lifetime it recorded, and returns the receipt of the finished restart.
+    /// the lifetime it recorded, and reports [`Boot::Planned`] with the receipt of the
+    /// finished restart; without one it reports [`Boot::Unplanned`].
     ///
     /// # Errors
     ///
@@ -86,7 +89,7 @@ impl Control {
     pub fn open(
         plan: ControlPlan,
         identity: RuntimeIdentity,
-    ) -> Result<(Self, Option<RestartReceipt>), RestartError> {
+    ) -> Result<(Self, Boot), RestartError> {
         let file = plan.intent();
         let pending = file.load()?;
         let identity = match &pending {
@@ -103,12 +106,14 @@ impl Control {
             phase: Mutex::new(RestartPhase::Running),
             waits: ArmedWaits::new(),
             listeners: Mutex::new(Vec::new()),
+            #[cfg(test)]
+            crash_after: Mutex::new(None),
         };
-        let resumed = match pending {
-            Some(intent) => Some(control.finish(&intent, true)?),
-            None => None,
+        let boot = match pending {
+            Some(intent) => Boot::Planned(Box::new(control.finish(&intent, true)?)),
+            None => Boot::Unplanned,
         };
-        Ok((control, resumed))
+        Ok((control, boot))
     }
 
     /// The identity control serves under now.
@@ -234,6 +239,19 @@ impl Control {
             terminals.close()?;
         }
         Ok(())
+    }
+
+    /// Simulates the control process dying right after the restart crossed `phase`.
+    #[cfg(test)]
+    pub(super) fn crash_point(&self, phase: RestartPhase) -> Result<(), RestartError> {
+        let crash = *self
+            .crash_after
+            .lock()
+            .map_err(|_| RestartError::Poisoned)?;
+        match crash {
+            Some(crash) if crash == phase => Err(RestartError::Crashed { phase }),
+            _ => Ok(()),
+        }
     }
 
     pub(super) fn lock(&self) -> Result<MutexGuard<'_, Inner>, RestartError> {

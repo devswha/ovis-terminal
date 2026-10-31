@@ -24,6 +24,8 @@ mod qa;
 mod receipt;
 #[cfg(unix)]
 mod sequence;
+#[cfg(unix)]
+mod verify;
 mod waits;
 
 pub use classify::classify;
@@ -32,5 +34,5 @@ pub use control::{Control, ControlPlan};
 pub use error::RestartError;
 pub use intent::{IntentFile, RestartIntent};
 pub use ovis_terminal_protocol::domain::restart::RestartPhase;
-pub use receipt::{Preserved, RestartReceipt, StopReceipt};
+pub use receipt::{Boot, LossEvidence, Lost, Preserved, RestartReceipt, StopReceipt};
 pub use waits::{ArmedWait, ArmedWaits};

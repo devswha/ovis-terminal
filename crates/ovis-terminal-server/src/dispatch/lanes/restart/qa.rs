@@ -170,10 +170,20 @@ impl Served {
     /// Ends this boot's listener and dispatcher, as the old control process exits.
     async fn retire(self) -> TestResult {
         self.server.shutdown().await?;
-        self.dispatch.shutdown().await?;
-        block_in_place(|| drop(self.dispatch));
-        Ok(())
+        release(self.dispatch).await
     }
+
+    /// Ends this boot for a planned restart: connections close `server_restart`.
+    async fn hand_over(self) -> TestResult {
+        self.server.restart().await?;
+        release(self.dispatch).await
+    }
+}
+
+async fn release(dispatch: Arc<Dispatch>) -> TestResult {
+    dispatch.shutdown().await?;
+    block_in_place(|| drop(dispatch));
+    Ok(())
 }
 
 impl Drop for Fixture {

@@ -1,7 +1,7 @@
 use proptest::prelude::*;
 use serde_json::json;
 
-use super::identity::{Cause, Fate, Field, fate, markdown};
+use super::identity::{Cause, Field, fate, markdown};
 use super::{Delivery, InterruptedOp, InterruptedOutcome, RestartPhase};
 use crate::errors::OpId;
 use crate::schema::ids::ServerBootId;
@@ -107,40 +107,6 @@ fn the_phases_form_one_cycle_and_only_pre_handover_phases_can_roll_back() {
             &RestartPhase::Announced
         ]
     );
-}
-
-#[test]
-fn a_control_restart_keeps_lifetime_and_incarnations_and_replaces_boot_and_streams() {
-    for cause in [Cause::ControlRestart, Cause::Upgrade, Cause::CoreCrash] {
-        assert_eq!(fate(cause, Field::RuntimeLifetime), Fate::Kept);
-        assert_eq!(fate(cause, Field::TerminalIncarnation), Fate::Kept);
-        assert_eq!(fate(cause, Field::ProcessIncarnation), Fate::Kept);
-        assert_eq!(fate(cause, Field::ServerBootId), Fate::Replaced);
-        assert_eq!(fate(cause, Field::StreamId), Fate::Replaced);
-        assert_eq!(fate(cause, Field::Seq), Fate::Advances);
-    }
-}
-
-#[test]
-fn holder_loss_and_host_reboot_never_claim_a_surviving_process() {
-    assert_eq!(fate(Cause::HolderLoss, Field::ServerBootId), Fate::Kept);
-    assert_eq!(
-        fate(Cause::HolderLoss, Field::ProcessIncarnation),
-        Fate::Replaced
-    );
-    for field in [
-        Field::RuntimeLifetime,
-        Field::ServerBootId,
-        Field::TerminalIncarnation,
-        Field::ProcessIncarnation,
-    ] {
-        assert_eq!(fate(Cause::HostReboot, field), Fate::Replaced, "{field:?}");
-    }
-    assert_eq!(fate(Cause::HostReboot, Field::Seq), Fate::Rescoped);
-    for cause in Cause::ALL {
-        assert_eq!(fate(cause, Field::MachineId), Fate::Kept);
-        assert_eq!(fate(cause, Field::TerminalId), Fate::Kept);
-    }
 }
 
 #[test]

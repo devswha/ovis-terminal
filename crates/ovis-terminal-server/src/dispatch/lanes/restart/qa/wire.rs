@@ -50,12 +50,25 @@ async fn a_restart_over_the_socket_keeps_the_child_and_the_lifetime_and_changes_
 
     // And: the successor answers hello under the same lifetime and a new boot, while the
     // same process still runs with its start token.
-    served.retire().await?;
-    assert!(
-        client
-            .record()
-            .await?
-            .is_some_and(|closing| closing.get("method") == Some(&json!("$/closing")))
+    served.hand_over().await?;
+    let closing = client.next().await?;
+    assert_eq!(
+        closing.get("method"),
+        Some(&json!("$/closing")),
+        "{closing}"
+    );
+    assert_eq!(
+        closing.pointer("/params/reason"),
+        Some(&json!("server_restart"))
+    );
+    assert_eq!(
+        closing.pointer("/params/incarnations_preserved"),
+        Some(&json!(true))
+    );
+    assert_eq!(
+        client.record().await?,
+        None,
+        "the old boot's connection ends after it"
     );
     let served = fixture.serve().await?;
     let (_client, hello) = fixture.connect().await?;
@@ -65,7 +78,15 @@ async fn a_restart_over_the_socket_keeps_the_child_and_the_lifetime_and_changes_
     assert_eq!(continuity, Continuity::ControlRestarted);
     assert!(running(&process)?);
     let adopted = fixture.terminals(|terminals, session| terminals.get(session, record.id()))?;
-    assert_eq!(adopted.lifecycle.process(), Some(&process));
+    let after = adopted
+        .lifecycle
+        .process()
+        .ok_or("the reconnect found no process")?;
+    assert_eq!(
+        (after.pid(), after.start_token(), after.generation()),
+        (process.pid(), process.start_token(), process.generation()),
+        "the reconnect reaches the same process incarnation"
+    );
     served.retire().await?;
     block_in_place(|| drop(fixture));
     Ok(())

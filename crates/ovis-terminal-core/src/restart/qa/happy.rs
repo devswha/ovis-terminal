@@ -22,8 +22,8 @@ fn a_live_child_keeps_pid_token_and_lifetime_while_boot_changes_and_a_wait_ends_
 -> TestResult {
     // Given: a live child, a wait armed on its terminal and a boundary listener.
     let fixture = Fixture::new()?;
-    let (control, resumed) = fixture.open()?;
-    assert!(resumed.is_none());
+    let (control, boot) = fixture.open()?;
+    assert!(matches!(boot, crate::restart::Boot::Unplanned), "{boot:?}");
     let record = spawn(&control, fixture.launch("printf ARMED; read gate")?)?;
     marker(&control, (record.id(), b"ARMED"))?;
     let process = record.lifecycle.process().ok_or("process")?.clone();

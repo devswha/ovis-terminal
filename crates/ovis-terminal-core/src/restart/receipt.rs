@@ -45,6 +45,75 @@ impl Preserved {
     }
 }
 
+/// Why an incarnation held before the boundary is not preserved.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "evidence", rename_all = "snake_case", deny_unknown_fields)]
+#[non_exhaustive]
+pub enum LossEvidence {
+    /// The holder reaped it with this status.
+    Exited {
+        /// Exit code, when it exited normally.
+        code: Option<i32>,
+        /// Signal number, when a signal ended it.
+        signal: Option<i32>,
+    },
+    /// The holder reported its end without an observable status.
+    ExitUnknown {},
+    /// The operating system no longer runs it with its recorded start token.
+    Gone {},
+    /// The successor found another process identity than the one recorded.
+    Replaced {
+        /// The identity found.
+        found: ProcessIdentity,
+    },
+    /// The holder did not report the terminal at all.
+    NotAdopted {},
+}
+
+impl LossEvidence {
+    /// Stable machine token.
+    #[must_use]
+    pub const fn kind(&self) -> &'static str {
+        match self {
+            Self::Exited { .. } => "exited",
+            Self::ExitUnknown {} => "exit_unknown",
+            Self::Gone {} => "gone",
+            Self::Replaced { .. } => "replaced",
+            Self::NotAdopted {} => "not_adopted",
+        }
+    }
+}
+
+/// An incarnation the restart began with and could not keep.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct Lost {
+    /// What was held when the restart began.
+    pub held: Preserved,
+    /// Why it is not preserved.
+    pub evidence: LossEvidence,
+}
+
+impl Lost {
+    /// `held` is lost for `evidence`.
+    #[must_use]
+    pub const fn new(held: Preserved, evidence: LossEvidence) -> Self {
+        Self { held, evidence }
+    }
+}
+
+/// How a control came up.
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum Boot {
+    /// A restart intent was on disk: the planned restart was finished from it.
+    Planned(Box<RestartReceipt>),
+    /// No restart intent: a first start, or a control that ended without a planned
+    /// restart. Nothing is claimed about a handover.
+    Unplanned,
+}
+
 /// The outcome of one completed restart.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -57,8 +126,9 @@ pub struct RestartReceipt {
     pub to: ServerBootId,
     /// Incarnations the successor proved with the same PID and start token.
     pub preserved: Vec<Preserved>,
-    /// Incarnations held before the boundary that the successor did not find.
-    pub lost: Vec<Preserved>,
+    /// Incarnations held before the boundary that the successor could not prove, each
+    /// with the evidence of why; never reported as preserved.
+    pub lost: Vec<Lost>,
     /// Operations in flight at the boundary, classified from the ledger.
     pub interrupted_ops: Vec<InterruptedOp>,
     /// Waits armed at the boundary; each ended `cancelled`.
@@ -86,7 +156,7 @@ impl RestartReceipt {
                 .map(|op| op.op_id.clone())
                 .collect(),
         );
-        result.ended_incarnations = self.lost.iter().map(Preserved::wire).collect();
+        result.ended_incarnations = self.lost.iter().map(|lost| lost.held.wire()).collect();
         result
     }
 }

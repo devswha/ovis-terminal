@@ -1,3 +1,43 @@
+## Round 2 (gate blockers B1-B3)
+
+- **B1, typed restart close (EXCL-016).**
+  - `conn::Ending { Shutdown, Restart }` now carries the server's ending to every connection.
+  - `ServerHandle::restart()` closes each connection with `$/closing{"reason":"server_restart","incarnations_preserved":true,"hint":...}`. `shutdown()` keeps `server_shutdown`.
+  - `TerminalStreams::restarting(op)` revokes input and closes every viewer with `StreamCloseReason::ServerRestart`; attaches then wait `recovering` until `recovered()`. It shares one close path with `recovering`, which keeps closing with `lost`.
+  - Tests:
+    - `lanes::restart::qa::wire::a_restart_over_the_socket_keeps_the_child_and_the_lifetime_and_changes_the_boot` asserts on the wire `/params/reason == "server_restart"` and `/params/incarnations_preserved == true`, that the connection then ends, and that after reconnect the terminal's process has the same pid, start token and generation.
+    - The streams failure flow (`tests/streams.rs` `failure`) gains `planned_restart`: `close.reason == "server_restart"`, an attach in between gets `recovering`, and the successor serves a new `stream_id`.
+- **B2, intent persistence proven through `restart()` itself.**
+  - `Control::open` now returns `Boot::Planned(receipt)` only when an intent was on disk, else `Boot::Unplanned`.
+  - A `#[cfg(test)]` crash point makes `restart()` die right after each barrier (`intent_persisted`, `suspended`, `announced`, `handed_over`, `booted`). `crash_at` then reads back the intent that `restart()` itself wrote and asserts its phase equals the barrier.
+  - `a_crash_at_any_barrier_is_finished_by_the_next_open_with_the_same_processes` requires `Boot::Planned`.
+  - The mirror `a_control_that_dies_without_an_intent_reopens_unplanned_as_the_core_crash_row_says` requires `Boot::Unplanned` and no intent.
+- **B3, holder loss proven.**
+  - A lost incarnation carries typed `LossEvidence`: `exited{code,signal}`, `exit_unknown`, `gone`, `replaced{found}` or `not_adopted`. It is never reported preserved.
+  - `a_child_killed_during_the_restart_is_lost_with_its_exit_and_never_preserved`:
+    - the restart crashes after `handed_over`;
+    - the test kills its own child (pid > 1) through `Holder::signal(Kill)` on its exact incarnation;
+    - it waits for the holder's reap evidence on a probe link (event-driven, no polling);
+    - the successor reports `lost == [exited{signal}]`, `preserved == []` and `ended_incarnations == [gen]`.
+  - `a_recorded_identity_that_does_not_match_the_held_process_is_not_adopted_and_is_typed` forges the intent's start token. The result is `replaced{found: actual}`, and the real process runs on untouched.
+  - The tautological protocol table tests were removed. `restart::qa::fates` now checks observed identity movement against `identity::fate` for:
+    - `control_restart` (a real planned restart);
+    - `core_crash` (unplanned reopen under the next boot);
+    - `holder_loss` (the holder is shut down and replaced, and the kept terminal recovered).
+- **Mutants**, applied by me, in `docs/evidence/task-48/mutants-r2.log`:
+  - `skip_intent_marker` (no intent store in `restart()` and `advance`): 5 tests fail.
+  - `keep_dead_holder` (verdict forced to preserved, the "if true" adoption): 2 tests fail.
+- **Gate:**
+  - `bash scripts/check.sh` exit 0: nextest 866 run, 866 passed; hygiene 0 violations in 850 files.
+  - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exit 0.
+  - `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` exit 0.
+- **Seams** (disclosed, outside the literal write scope):
+  - `crates/ovis-terminal-server/src/conn/{outbound,connections,driver}.rs` and `conn.rs`: `Ending`, `Connections::end`, and the typed `$/closing`.
+  - `listen/server.rs`: `ServerHandle::restart`. Its test gate `listen/server/shutdown_race.rs` gets the watch type.
+  - `streams/hub.rs`: `TerminalStreams::restarting`. `streams/qa/failure.rs` gets the new step.
+  - `Control::open` returns `(Control, Boot)`.
+  - `RestartReceipt.lost` is now `Vec<Lost>`.
+
 ## Before
 
 `docs/evidence/baseline/smoke/attempt2-herdr-h03-workspace.log:5` (RT-HD-05): `workspaces before: 1`. herdr's persisted workspace metadata reappears after a server restart, and nothing proves that any program survived. Gap baseline: GAP-065 (a live handoff has no structured relookup signal), GAP-122 (a planned restart cuts waits without structured outcomes), GAP-126 (stop/restart/kill/removal receipts do not enumerate affected processes).
@@ -113,15 +153,11 @@ The acceptance criterion "conformance exits 0 with failed:0, skipped:0" is **not
 
 ## Risks
 
-- **Not closed here (needs owners outside this scope):**
-  - The old boot's connections still end with the conn layer's fixed `$/closing{reason:"server_shutdown"}` (`conn/outbound.rs`).
-  - Attach streams are not closed with `StreamCloseReason::ServerRestart` (`streams/hub.rs`).
-  - `Control::boundaries(0)` is the hook for that owner: the restart waits at `started` until the stream owner has taken it.
-  - Until both land, EXCL-016 is only partly enforced: the initiator gets a typed receipt, other clients see `server_shutdown`.
+- **Assembly obligation (todo 31):** the served binary must call `ServerHandle::restart()` (not `shutdown()`) and `TerminalStreams::restarting()` for each terminal when `Control` announces `started`. `Control::boundaries(0)` lets it hold the restart until streams are closed. Both closes are typed and tested here; the wiring into one served process is not.
 - The published `server.restart` result lists process incarnation numbers only. Terminal id, PID and start token are in the core `RestartReceipt`.
 - `Terminals::new` always tells the holder `PreviousCoreState::Crash`, even on a planned handover (terminals runtime, todo 16 scope). The holder does not change behavior on it today.
 - Interrupted operations are enumerated from the lifecycle ledger (pending launches). Input sends become interruptible once todos 28-31 route them through `Control`; `classify` already handles their write evidence.
-- origin/integration moved to b1c68ef (todo 78: params digest, store SCHEMA_VERSION 2) after this lane's base. It was not merged here, per the lane rule.
+- Round 2 is pushed on top of the orchestrator's merge cb74619. origin/integration has since moved to 0d3022c; it was not merged here, per the lane rule.
 
 ## Pre-existing failure (not this change)
 
