@@ -67,6 +67,151 @@ or changed-incarnation evidence. Live-target EPERM remains a sourced
 `HolderError::Signal`. Shutdown returns the non-error count in
 `ShutdownReport::already_exited`.
 
+### Fix after gate round 1
+
+Round-2 commit: `0e56473` (`fix(holder): keep signalling a live process group
+after its leader is reaped`).
+
+The round-1 gate found a shutdown deadlock introduced by the first fix. When
+the reaped leader left a same-group descendant holding the PTY slave, shutdown
+classified the leader as already exited, skipped the still-live process group,
+and blocked forever joining the output pump. The bounded pre-fix regression
+fails after two seconds and performs explicit cleanup:
+`docs/evidence/task-76/round-2-pre-fix.log`.
+
+Shutdown now distinguishes the leader's incarnation from the process group's
+liveness. A reaped or waitable leader is still counted in
+`ShutdownReport::already_exited`, but the holder delivers SIGKILL to its group;
+the group ID cannot be reused while that group retains members. ESRCH, or EPERM
+with fresh evidence that the original leader is gone, remains the typed
+already-exited outcome. A replaced live PID is never signalled.
+
+If the original group is absent while a process outside that group still holds
+the PTY slave, shutdown drops a dedicated pump-stop endpoint. The pump drains
+already-readable output, exits its poll, records Exit last, closes the remaining
+master descriptors and allows every worker join to complete. Deterministic
+tests cover both the gate's same-group `sleep 777` case and the absent-group
+pump-stop case without sleeps or retry-to-green behavior.
+
+What the round-2 tests assert:
+
+- `shutdown_kills_same_group_descendant_after_leader_is_reaped`: script
+  `trap '' HUP; sleep 777 & echo descendant-ready; exit 0`. A condvar
+  signalled by the real waiter confirms the leader was reaped. Then
+  `shutdown()` must return within 2 s. The pump stop is not dropped on this
+  path, so a timely return requires the group SIGKILL to close the
+  descendant's PTY slave. The test also requires `already_exited == 1` (the
+  leader) and all three workers `Joined`. On timeout, the test kills the
+  group and fails.
+- `shutdown_stops_pump_when_reaped_leader_group_is_gone`: `set -m` moves the
+  PTY-holding child into another group. The test requires
+  `kill(-leader, 0)` to fail with ESRCH, shutdown to return within 2 s,
+  `already_exited == 1`, and all workers `Joined`.
+- Both round-1 tests (forced reap, zombie before reap) and the stale-token
+  and live-EPERM tests still pass.
+
+```text
+# pre-fix (round-2 test against 33f4d3b behaviour; recorded by the previous round-2 executor)
+$ cargo test -p ovis-terminal-holder --locked --lib shutdown_kills_same_group_descendant_after_leader_is_reaped -- --nocapture
+shutdown did not return within 2s: Ok(())
+test result: FAILED. 0 passed; 1 failed
+exit: 101
+
+# post-fix, head 0e56473
+$ cargo test -p ovis-terminal-holder --locked --lib shutdown_tests -- --nocapture
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 34 filtered out
+exit: 0
+
+$ bash scripts/check.sh
+Summary [ 118.684s] 370 tests run: 370 passed (1 slow), 1 skipped
+workspace-hygiene: 0 violation(s) in 360 file(s) checked
+check.sh: all steps passed
+exit: 0
+
+$ cargo nextest run --workspace --all-targets --locked --no-fail-fast -j 8
+Summary [ 114.095s] 370 tests run: 370 passed (1 slow), 1 skipped
+exit: 0
+```
+
+No `sleep 777` or `read gate` process remained after the shutdown tests
+(`ps` check after `round-2-post-fix.log`).
+
+Reported nextest-parallel failure: the round-2 brief said a parallel
+workspace nextest run had failed, but no failing test was ever named. I
+could not reproduce a failure: the `-j 8` run and `check.sh` both pass. The
+only anomaly is the slow, unchanged
+`ovis-terminal-core::ops bounds::capacity_accepts_1024_and_rejects_1025_without_eviction`
+(about 110 s, CPU-bound SQLite, no holder code, no child processes). See
+`investigation.md` for details. No code was changed for this.
+
+Round-2 evidence: `round-2-pre-fix.log`, `round-2-post-fix.log`,
+`round-2-check.log`, `round-2-nextest-parallel.log`,
+`round-2-linux-stress.log`, `round-2-macos-stress.log`.
+Round-2 loaded Linux and native macOS runs, head `0e56473`:
+
+```text
+$ bash docs/evidence/task-74/stress.sh 50
+CPU load workers: 8; command: cargo nextest run -p ovis-terminal-holder --locked -j 8 --no-tests=fail
+RUN 50 exit: 0
+PASS 50/50
+exit: 0
+```
+
+All 50 runs exited 0 under eight CPU burners with nextest `-j 8`, with no
+retries (`round-2-linux-stress.log`).
+
+macOS: `gh workflow run probe-stress-macos.yml --repo devswha/ovis-terminal
+--ref lane/t76-holder-shutdown-reaped-target -f probe=holder-shutdown`,
+run https://github.com/devswha/ovis-terminal/actions/runs/41180185131 (job
+124475821740, success, Darwin 25.6.0 arm64, Rust 1.99.1). The run first
+passed the full library (`38 tests run: 38 passed, 0 skipped`). The loop
+filter now also selects `shutdown_tests::`, so each of the 200 fail-fast
+iterations ran 5 tests: the original fence test plus all four shutdown
+tests, including both round-2 regressions (`5 tests run: 5 passed`,
+`RESULT 200/200`). Log: `round-2-macos-stress.log`. CI on `0e56473`:
+https://github.com/devswha/ovis-terminal/actions/runs/41180184638, success.
+
+### Reserved-pid guard
+
+A reviewer probe on the host called
+`signal(SignalScope::ProcessGroup(ProcessId::new(1)), Terminate)`.
+`send_signal` accepted every PID greater than 0, so this became
+`kill(-1, SIGTERM)` and terminated every process of that user. `send_signal`
+now returns `SignalError::ReservedPid { pid }` (kind `reserved_pid`, with a
+hint) for PID 0 or 1 in both `Process` and `ProcessGroup` scope, before
+`kill(2)` can be reached. The syscall goes through a private
+`deliver(scope, signal, kill)` whose `kill` argument is the real
+`libc::kill` in production. This follows the Ovis precedent in
+`crates/pty-sidecar/src/pty.rs` ("Never 0 or 1").
+
+Tests use a recording `kill` closure and never send a real signal:
+
+- `reserved_pids_are_refused_before_kill_is_reached`: for PID 0 and 1, both
+  scopes, and every `SignalKind`, the recorded call list must be empty and
+  the error must be `ReservedPid { pid }` with kind `reserved_pid`.
+- `unrepresentable_pid_is_refused_before_kill_is_reached`:
+  `pid_t::MAX + 1` must give `PidOutOfRange` with no call recorded.
+- `ordinary_targets_reach_kill_once_with_group_negation`: PID 2 must record
+  exactly `[(2, SIGTERM)]` as a process and `[(-2, SIGKILL)]` as a group.
+
+```text
+$ cargo test -p ovis-terminal-holder --locked --lib process::signal
+test process::signal::tests::ordinary_targets_reach_kill_once_with_group_negation ... ok
+test process::signal::tests::reserved_pids_are_refused_before_kill_is_reached ... ok
+test process::signal::tests::unrepresentable_pid_is_refused_before_kill_is_reached ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 38 filtered out; finished in 0.00s
+/bin/sh: 1: Bad substitution
+
+$ bash scripts/check.sh
+Summary [ 116.536s] 373 tests run: 373 passed (1 slow), 1 skipped
+workspace-hygiene: 0 violation(s) in 360 file(s) checked
+check.sh: all steps passed
+exit: 0
+```
+
+Logs: `round-2-reserved-pid.log`, `round-2-check.log` (guard included). No
+signal probe was run against the host for this guard.
+
 Fixed product commit: `824ad606e13e725f3c0b2421a7c1aabdede97c31`.
 `source-sha256.txt` identifies the exact source used for Linux verification
 and the native dispatch. Later evidence-only changes do not change it.
@@ -225,8 +370,10 @@ conformance.
 
 ## Seams
 
-The holder's non-wire public API adds `ShutdownReport::already_exited` and
-two `HolderError` observation variants; tests are updated in this same PR.
+The holder's non-wire public API adds `ShutdownReport::already_exited`,
+two `HolderError` observation variants, and `SignalError::ReservedPid`
+(the error is `#[non_exhaustive]`; the reserved-pid guard refuses PID 0 and
+1 before `kill(2)`); tests are updated in this same PR.
 Worker join outcomes retain their existing meaning. Holder wire generation,
 wire schema, JSON representation, and settled-contract checklist items are
 unchanged.
@@ -241,9 +388,28 @@ introduced. No other crate's implementation or API changes.
 - macOS's existing `ps` start token has one-second granularity; Todo 55 owns
   stronger cross-platform consistency. The new reap/delivery mutex and
   non-reaping wait prevent reuse inside this holder's delivery boundary.
-- A descendant retaining a PTY slave can still delay output completion.
-  Shutdown does not signal a recycled/unauthenticated group merely to force
-  EOF after the original target is gone.
+- Round-1 head `33f4d3b` introduced a regression. When a reaped leader left
+  a live same-group descendant holding the PTY slave, `Holder::shutdown()`
+  hung indefinitely: the group was skipped and the output-pump join waited
+  without bound. Base `8db5609` killed that group and returned. This was a
+  new hang, not a pre-existing delay, and the group had not been recycled:
+  a process-group ID is not reused while members remain. Round 2 signals the
+  group again and counts the reaped leader in `already_exited`.
+- Residual: a process outside the original group (one that called
+  `setsid`/`setpgid`, or was moved by shell job control) can keep the PTY
+  slave open while the original group is still alive. Shutdown kills the
+  group, but the pump-stop endpoint is dropped only when the group is gone,
+  so the pump join can still wait on that outside process. This is the same
+  as base `8db5609` behaviour; it is not fixed here.
+- Residual: group EPERM after the leader has been freshly proven exited is
+  reported as already exited. On Darwin that means only zombies or
+  unsignalable members remain; on Linux it means a member with different
+  credentials (for example setuid) remains. In both cases the holder cannot
+  signal anything, but such a member is not killed.
+- Residual: between the leader-state check and `kill(-pgid)`, the last
+  group member could exit and its ID could be reallocated to a new group
+  leader. That needs PID wrap-around within the window; base `8db5609` had
+  the same exposure.
 - Rust/YAML LSP servers are unavailable locally. Compiler, Clippy, rustfmt,
   repository hygiene and actual workflow execution supply validation.
 - The requested task-6 gate-review file was unavailable at its specified
