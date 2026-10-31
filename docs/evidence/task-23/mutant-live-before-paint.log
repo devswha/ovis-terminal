@@ -1,0 +1,86 @@
+# Mutant: live log bytes served before the queued checkpoint/paint (Viewer::next)
+# Applied to crates/ovis-terminal-server/src/streams/viewer.rs, then reverted (reverted_clean=0).
+
+diff --git a/crates/ovis-terminal-server/src/streams/viewer.rs b/crates/ovis-terminal-server/src/streams/viewer.rs
+index 35511d2..b9a8fea 100644
+--- a/crates/ovis-terminal-server/src/streams/viewer.rs
++++ b/crates/ovis-terminal-server/src/streams/viewer.rs
+@@ -161,6 +161,10 @@ impl Viewer {
+         if self.closed {
+             return None;
+         }
++        if let Some(early) = self.live(log, chunk) {
++            self.progress = Instant::now();
++            return Some(early);
++        }
+         let allowance = self.allowance();
+         let delivery = match self.queue.front_mut() {
+             Some(Pending::Control(_)) => match self.queue.pop_front() {
+
+
+$ cargo nextest run -p ovis-terminal-server --test streams --no-fail-fast
+        FAIL [   0.019s] (1/5) ovis-terminal-server::streams an_exited_terminal_answers_ended
+  stdout ───
+
+--
+    test an_exited_terminal_answers_ended ... FAILED
+
+    failures:
+--
+        an_exited_terminal_answers_ended
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.01s
+
+  stderr ───
+--
+    thread 'an_exited_terminal_answers_ended' (3681753) panicked at crates/ovis-terminal-server/tests/../src/streams/qa/fence.rs:121:5:
+    assertion `left == right` failed
+      left: [ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }]
+     right: [ScreenLine { text: "build finished", wrapped: false }, ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }, ScreenLine { text: "", wrapped: false }]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.033s] (2/5) ovis-terminal-server::streams paint_is_fenced_ahead_of_live_bytes_under_credit_pressure
+  stdout ───
+
+--
+    test paint_is_fenced_ahead_of_live_bytes_under_credit_pressure ... FAILED
+
+    failures:
+--
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.02s
+
+  stderr ───
+--
+    thread 'paint_is_fenced_ahead_of_live_bytes_under_credit_pressure' (3681766) panicked at crates/ovis-terminal-server/tests/../src/streams/qa/fence.rs:64:5:
+    assertion `left == right` failed: paint first
+      left: Some([27, 99, 27, 91, 49, 59, 49, 72, 27, 91, 48, 59, 51, 49, 59, 52, 57, 109, 114, 111, 119, 32, 49, 32, 112, 97, 105, 110, 116, 101, 100, 32, 111, 110, 99, 101, 32, 98, 101, 102, 111, 114, 101, 32, 97, 116, 116, 97, 99, 104, 27, 91, 50, 59, 49, 72, 27, 91, 48, 59, 51, 50, 59, 52, 27, 91, 50, 59, 53, 72, 76, 73, 86, 69, 45, 65, 70, 84, 69, 82, 45, 70, 69, 78, 67, 69, 13, 10, 110, 101,
+     right: Some([27, 99, 27, 91, 49, 59, 49, 72, 27, 91, 48, 59, 51, 49, 59, 52, 57, 109, 114, 111, 119, 32, 49, 32, 112, 97, 105, 110, 116, 101, 100, 32, 111, 110, 99, 101, 32, 98, 101, 102, 111, 114, 101, 32, 97, 116, 116, 97, 99, 104, 27, 91, 50, 59, 49, 72, 27, 91, 48, 59, 51, 50, 59, 52, 57, 109, 114, 111, 119, 32, 50, 32, 112, 97, 105, 110, 116, 101, 100, 32, 111, 110, 99, 101, 32, 98, 101,
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.035s] (3/5) ovis-terminal-server::streams failure
+  stdout ───
+
+--
+    test failure ... FAILED
+
+    failures:
+--
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.02s
+
+  stderr ───
+--
+    thread 'failure' (3681751) panicked at crates/ovis-terminal-server/tests/../src/streams/qa/failure.rs:179:5:
+    assertion `left == right` failed: [String("checkpoint"), String("input_ready"), String("close")]
+      left: [String("input_ready"), String("close")]
+     right: [String("input_revoked"), String("close")]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   2.954s] (4/5) ovis-terminal-server::streams stalled_viewers_close_without_pausing_others
+        PASS [   3.195s] (5/5) ovis-terminal-server::streams happy
+────────────
+     Summary [   3.196s] 5 tests run: 2 passed, 3 failed, 0 skipped
+        FAIL [   0.019s] (1/5) ovis-terminal-server::streams an_exited_terminal_answers_ended
+        FAIL [   0.033s] (2/5) ovis-terminal-server::streams paint_is_fenced_ahead_of_live_bytes_under_credit_pressure
+        FAIL [   0.035s] (3/5) ovis-terminal-server::streams failure
+error: test run failed
+

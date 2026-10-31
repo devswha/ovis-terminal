@@ -98,12 +98,15 @@ fn directory(runtime: RuntimeIdentity) -> Result<Directory, RunnerError> {
     })
 }
 
+/// The status service and terminal directory other agent lanes share.
+pub(crate) type AgentParts = (Arc<StatusService>, Arc<Directory>);
+
 /// Registers the agent status methods and the echoing programs, binding their tokens.
 pub(crate) fn register(
     dispatch: &mut Dispatch,
     runtime: RuntimeIdentity,
     core: Arc<Core>,
-) -> Result<(), RunnerError> {
+) -> Result<AgentParts, RunnerError> {
     let service = Arc::new(StatusService::new(runtime.runtime_id()));
     for (id, _, token) in TERMINALS {
         let terminal = TerminalId::try_from(id).map_err(at("build a terminal id"))?;
@@ -133,12 +136,13 @@ pub(crate) fn register(
         .map_err(at("register status.clear"))?;
     dispatch
         .register(EchoProgram {
-            service,
+            service: Arc::clone(&service),
             core,
-            directory,
+            directory: Arc::clone(&directory),
             screens: Arc::new(Mutex::new(BTreeMap::new())),
         })
-        .map_err(at("register input.send"))
+        .map_err(at("register input.send"))?;
+    Ok((service, directory))
 }
 
 fn echo(program: &EchoProgram, terminal: TerminalId, text: &str) -> Result<Value, DispatchError> {

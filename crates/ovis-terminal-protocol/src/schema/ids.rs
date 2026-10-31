@@ -121,6 +121,10 @@ string_id!(
     HistoryId
 );
 string_id!(
+    /// Identity of one record inside a conversation history.
+    RecordId
+);
+string_id!(
     /// Capability token handed to a spawned program for reports it owns.
     ProcessToken
 );

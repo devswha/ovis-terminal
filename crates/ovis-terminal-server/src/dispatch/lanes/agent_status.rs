@@ -84,22 +84,34 @@ impl<T: TerminalDirectory> AgentStatusLane<T> {
     }
 
     fn access(&self, target: &Target, action: Action) -> Result<Access, DispatchError> {
-        let resolved = self.terminals.resolve(target)?;
-        Ok(Access::new(
-            action,
-            ResolvedTarget::new(
-                resolved.machine,
-                TargetResource::Terminal {
-                    placement: None,
-                    terminal: resolved.terminal,
-                    incarnation: resolved.generation,
-                },
-            ),
-        ))
+        terminal_access(&self.terminals, target, action)
     }
 }
 
-const fn terminal<D, P>(execution: &Execution<D, P>) -> Result<TerminalId, DispatchError> {
+/// The access an explicit terminal target requests, resolved by `terminals`.
+pub(super) fn terminal_access<T: TerminalDirectory>(
+    terminals: &T,
+    target: &Target,
+    action: Action,
+) -> Result<Access, DispatchError> {
+    let resolved = terminals.resolve(target)?;
+    Ok(Access::new(
+        action,
+        ResolvedTarget::new(
+            resolved.machine,
+            TargetResource::Terminal {
+                placement: None,
+                terminal: resolved.terminal,
+                incarnation: resolved.generation,
+            },
+        ),
+    ))
+}
+
+/// The terminal an execution's resolved target names.
+pub(super) const fn terminal<D, P>(
+    execution: &Execution<D, P>,
+) -> Result<TerminalId, DispatchError> {
     match execution.target().resource() {
         TargetResource::<RegistryIdentities>::Terminal { terminal, .. } => Ok(*terminal),
         _ => Err(DispatchError::Registration),

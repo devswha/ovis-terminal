@@ -80,6 +80,17 @@
         "additionalProperties": false,
         "description": "Parameters of `agent.conversation`.",
         "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationCursor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Position bound to a history identity and revision; absent starts the active chain."
+          },
           "page": {
             "anyOf": [
               {
@@ -104,9 +115,42 @@
       "AgentConversationResult": {
         "description": "Result of `agent.conversation`.",
         "properties": {
+          "active": {
+            "description": "Whether the chain read is the active chain.",
+            "type": "boolean"
+          },
+          "head": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last record of the chain read; absent for an empty history."
+          },
           "history_id": {
             "$ref": "#/components/schemas/HistoryId",
             "description": "History identity the page belongs to."
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationCursor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Continuation bound to this history identity and revision; absent on the last page."
+          },
+          "off_branch": {
+            "description": "Leaf records outside the chain read, addressable through a cursor head.",
+            "items": {
+              "$ref": "#/components/schemas/RecordId"
+            },
+            "type": "array"
           },
           "page": {
             "$ref": "#/components/schemas/PageInfo",
@@ -118,10 +162,17 @@
               "$ref": "#/components/schemas/ConversationRecord"
             },
             "type": "array"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/HistoryRevision",
+            "description": "Observed history revision every record of the page belongs to."
           }
         },
         "required": [
           "history_id",
+          "revision",
+          "active",
+          "off_branch",
           "records",
           "page"
         ],
@@ -403,6 +454,17 @@
         "additionalProperties": false,
         "description": "Parameters of `agent.update_session`.",
         "properties": {
+          "head": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Record that becomes the active chain head; only with reason `branch`."
+          },
           "history_id": {
             "anyOf": [
               {
@@ -421,6 +483,17 @@
           "process_token": {
             "$ref": "#/components/schemas/ProcessToken",
             "description": "Token handed to the program at spawn."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionChange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the binding changes; required once the incarnation is bound."
           },
           "session": {
             "$ref": "#/components/schemas/SessionRef",
@@ -489,6 +562,63 @@
         ],
         "type": "object"
       },
+      "AttachControl": {
+        "description": "Params of the `attach.control` notification.",
+        "properties": {
+          "checkpoint": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Checkpoint"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Checkpoint, for `checkpoint`."
+          },
+          "close": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StreamClose"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Close details, for `close`."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ControlKind",
+            "description": "Record kind.",
+            "x-ovis-open-enum": true
+          },
+          "skipped": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkippedOutput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Skipped raw output, for `gap`."
+          },
+          "stream_id": {
+            "$ref": "#/components/schemas/StreamId",
+            "description": "Stream."
+          },
+          "stream_offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "Filtered stream offset the record applies at."
+          }
+        },
+        "required": [
+          "stream_id",
+          "kind",
+          "stream_offset"
+        ],
+        "type": "object"
+      },
       "AttachCreditParams": {
         "additionalProperties": false,
         "description": "Parameters of `attach.credit` for plain-mode streams.",
@@ -505,6 +635,29 @@
         "required": [
           "stream_id",
           "acknowledged"
+        ],
+        "type": "object"
+      },
+      "AttachData": {
+        "description": "Params of the `attach.data` notification: terminal bytes only.",
+        "properties": {
+          "data_b64": {
+            "description": "Base64 terminal bytes, at most one stream chunk decoded.",
+            "type": "string"
+          },
+          "offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "Filtered stream offset of the first byte."
+          },
+          "stream_id": {
+            "$ref": "#/components/schemas/StreamId",
+            "description": "Stream."
+          }
+        },
+        "required": [
+          "stream_id",
+          "offset",
+          "data_b64"
         ],
         "type": "object"
       },
@@ -691,6 +844,17 @@
             ],
             "description": "Lease displaced by an explicit takeover."
           },
+          "final_output_offset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ByteOffset"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Raw output offset of the final byte of an ended terminal."
+          },
           "first_paint": {
             "anyOf": [
               {
@@ -729,6 +893,24 @@
             "description": "Typed outcome.",
             "x-ovis-open-enum": true
           },
+          "reason": {
+            "description": "Stable reason token of a refused or ended outcome.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "retry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetryBoundary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What to wait for before retrying a held or recovering attach."
+          },
           "stream_id": {
             "anyOf": [
               {
@@ -739,6 +921,17 @@
               }
             ],
             "description": "Stream identity, never reused."
+          },
+          "terminal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttachedTerminal"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Terminal and program incarnations the stream is bound to."
           }
         },
         "required": [
@@ -925,6 +1118,35 @@
         ],
         "type": "object"
       },
+      "AttachedTerminal": {
+        "description": "The terminal and program incarnations a stream is bound to; never inherited.",
+        "properties": {
+          "process_incarnation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Incarnation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Program incarnation, when a program is running."
+          },
+          "terminal_id": {
+            "$ref": "#/components/schemas/TerminalId",
+            "description": "Terminal identity."
+          },
+          "terminal_incarnation": {
+            "$ref": "#/components/schemas/Incarnation",
+            "description": "Terminal incarnation."
+          }
+        },
+        "required": [
+          "terminal_id",
+          "terminal_incarnation"
+        ],
+        "type": "object"
+      },
       "BootChallenge": {
         "description": "Fresh random challenge, 32 bytes as lowercase hexadecimal.",
         "pattern": "^[0-9a-f]{64}$",
@@ -1083,6 +1305,10 @@
             "$ref": "#/components/schemas/Geometry",
             "description": "Grid size."
           },
+          "history_lines": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Primary-screen history lines readable behind the paint: the history cursor."
+          },
           "modes": {
             "$ref": "#/components/schemas/Modes",
             "description": "Terminal modes."
@@ -1106,7 +1332,8 @@
           "revision",
           "geometry",
           "modes",
-          "cursor"
+          "cursor",
+          "history_lines"
         ],
         "type": "object"
       },
@@ -1242,6 +1469,71 @@
         ],
         "type": "object"
       },
+      "ControlKind": {
+        "description": "Kind of an `attach.control` record; control never travels as terminal bytes.",
+        "oneOf": [
+          {
+            "const": "checkpoint",
+            "description": "A checkpoint paint begins at `stream_offset`.",
+            "type": "string"
+          },
+          {
+            "const": "gap",
+            "description": "Bytes were skipped; a checkpoint follows.",
+            "type": "string"
+          },
+          {
+            "const": "input_ready",
+            "description": "The interact stream is ready for input.",
+            "type": "string"
+          },
+          {
+            "const": "input_revoked",
+            "description": "Input readiness was revoked.",
+            "type": "string"
+          },
+          {
+            "const": "close",
+            "description": "The stream closed; no record or byte follows.",
+            "type": "string"
+          }
+        ]
+      },
+      "ConversationCursor": {
+        "additionalProperties": false,
+        "description": "A page position bound to one history identity, revision and chain.",
+        "properties": {
+          "head": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last record of the chain being read; absent for the active chain."
+          },
+          "history_id": {
+            "$ref": "#/components/schemas/HistoryId",
+            "description": "History the position belongs to."
+          },
+          "position": {
+            "$ref": "#/components/schemas/RecordPosition",
+            "description": "Records of the chain already returned."
+          },
+          "revision": {
+            "$ref": "#/components/schemas/HistoryRevision",
+            "description": "Revision the position was issued at."
+          }
+        },
+        "required": [
+          "history_id",
+          "revision",
+          "position"
+        ],
+        "type": "object"
+      },
       "ConversationRecord": {
         "description": "One conversation record with provenance.",
         "properties": {
@@ -1250,9 +1542,24 @@
             "items": true,
             "type": "array"
           },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Record this one continues; absent for a chain root."
+          },
           "provenance": {
             "description": "Provider store the record came from.",
             "type": "string"
+          },
+          "record_id": {
+            "$ref": "#/components/schemas/RecordId",
+            "description": "Record identity, stable across revisions that keep the record."
           },
           "role": {
             "description": "Record role, such as user or assistant.",
@@ -1260,6 +1567,7 @@
           }
         },
         "required": [
+          "record_id",
           "role",
           "blocks",
           "provenance"
@@ -1529,6 +1837,9 @@
             },
             "type": "array"
           },
+          "bound": {
+            "$ref": "#/components/schemas/ExceededBound"
+          },
           "candidates": {
             "items": {
               "$ref": "#/components/schemas/TargetCandidate"
@@ -1551,11 +1862,17 @@
             "description": "Recovery guidance.",
             "type": "string"
           },
+          "history": {
+            "$ref": "#/components/schemas/HistoryHead"
+          },
           "kind": {
             "$ref": "#/components/schemas/ErrorKindName"
           },
           "op_id": {
             "$ref": "#/components/schemas/OpId"
+          },
+          "queued_position": {
+            "$ref": "#/components/schemas/QueuePosition"
           },
           "retryable": {
             "description": "Whether a retry may succeed.",
@@ -2272,6 +2589,25 @@
         ],
         "type": "object"
       },
+      "ExceededBound": {
+        "additionalProperties": false,
+        "description": "The advertised limit a refusal reached and its value.",
+        "properties": {
+          "limit": {
+            "$ref": "#/components/schemas/LimitName",
+            "description": "The `hello` limits field that was reached."
+          },
+          "value": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Its advertised value."
+          }
+        },
+        "required": [
+          "limit",
+          "value"
+        ],
+        "type": "object"
+      },
       "Expect": {
         "additionalProperties": false,
         "description": "Identities the caller expects at admission; any mismatch writes nothing.",
@@ -2666,6 +3002,41 @@
         ],
         "type": "object"
       },
+      "HistoryChange": {
+        "description": "What an observation found different from the recorded history.",
+        "oneOf": [
+          {
+            "const": "append",
+            "description": "Records were added after the recorded content, which is unchanged.",
+            "type": "string"
+          },
+          {
+            "const": "truncate",
+            "description": "The source is shorter than the recorded content.",
+            "type": "string"
+          },
+          {
+            "const": "replace",
+            "description": "The source is a different file than the one recorded.",
+            "type": "string"
+          },
+          {
+            "const": "rewrite",
+            "description": "Recorded bytes changed in place, including rewrites that keep the size.",
+            "type": "string"
+          },
+          {
+            "const": "branch",
+            "description": "The active chain was selected explicitly by the owning process.",
+            "type": "string"
+          },
+          {
+            "const": "rebind",
+            "description": "The binding moved to another history identity.",
+            "type": "string"
+          }
+        ]
+      },
       "HistoryGap": {
         "description": "Why history is not available.",
         "oneOf": [
@@ -2686,8 +3057,43 @@
           }
         ]
       },
+      "HistoryHead": {
+        "description": "Identity and revision a history has now, and why it moved.",
+        "properties": {
+          "change": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistoryChange",
+                "x-ovis-open-enum": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What differed from the presented cursor, when known."
+          },
+          "history_id": {
+            "$ref": "#/components/schemas/HistoryId",
+            "description": "Current history identity."
+          },
+          "revision": {
+            "$ref": "#/components/schemas/HistoryRevision",
+            "description": "Current revision."
+          }
+        },
+        "required": [
+          "history_id",
+          "revision"
+        ],
+        "type": "object"
+      },
       "HistoryId": {
         "description": "Opaque identity string.",
+        "type": "string"
+      },
+      "HistoryRevision": {
+        "description": "HistoryRevision carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
       "Incarnation": {
@@ -3668,6 +4074,10 @@
           }
         ]
       },
+      "LimitName": {
+        "description": "Name of a limit advertised in `hello` limits.",
+        "type": "string"
+      },
       "Limits": {
         "description": "Per-object and session-wide bounds; admission budgets, not preallocations.",
         "properties": {
@@ -3723,6 +4133,10 @@
             "$ref": "#/components/schemas/ByteCount",
             "description": "Retained raw output per terminal."
           },
+          "queued_operations": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Operations one connection may hold waiting for FIFO admission; one more is refused."
+          },
           "rpc_default_deadline_ms": {
             "$ref": "#/components/schemas/DurationMs",
             "description": "Deadline applied when a request names none."
@@ -3776,6 +4190,7 @@
           "history_lines",
           "output_ring_bytes",
           "max_in_flight_requests",
+          "queued_operations",
           "connection_unwritten_bytes",
           "session_rss_bytes",
           "session_retained_bytes",
@@ -4406,6 +4821,17 @@
             "description": "Cancellation guarantee, independent of the operation's execution state.",
             "x-ovis-open-enum": true
           },
+          "queued_position": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueuePosition"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "FIFO admission position, present only while the state is `queued`."
+          },
           "result": {
             "description": "Method result, once committed."
           },
@@ -4464,6 +4890,17 @@
           "op_id": {
             "$ref": "#/components/schemas/OpId",
             "description": "Operation identity."
+          },
+          "queued_position": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueuePosition"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "FIFO admission position, present only while the state is `queued`."
           },
           "result": {
             "description": "Method result, once committed."
@@ -4531,6 +4968,11 @@
           {
             "const": "outcome_unknown",
             "description": "Effects may have begun; the outcome cannot be proven.",
+            "type": "string"
+          },
+          {
+            "const": "queued",
+            "description": "Waiting in FIFO order for admission; never accepted, no effect has begun.",
             "type": "string"
           }
         ]
@@ -5696,8 +6138,22 @@
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "QueuePosition": {
+        "description": "QueuePosition carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
       "RecordCount": {
         "description": "RecordCount carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
+      "RecordId": {
+        "description": "Opaque identity string.",
+        "type": "string"
+      },
+      "RecordPosition": {
+        "description": "RecordPosition carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
@@ -5820,6 +6276,51 @@
           "next_try_ms"
         ],
         "type": "object"
+      },
+      "RetryBoundary": {
+        "description": "An actionable retry boundary: which event to wait for, never a blind poll.",
+        "properties": {
+          "event": {
+            "description": "Event type that announces it.",
+            "type": "string"
+          },
+          "lease": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeaseRecord"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lease whose release ends the hold."
+          },
+          "on": {
+            "$ref": "#/components/schemas/RetryOn",
+            "description": "The state change to wait for.",
+            "x-ovis-open-enum": true
+          }
+        },
+        "required": [
+          "on",
+          "event"
+        ],
+        "type": "object"
+      },
+      "RetryOn": {
+        "description": "The state change that lets a held or recovering attach succeed on retry.",
+        "oneOf": [
+          {
+            "const": "lease_released",
+            "description": "The named interact lease is released or revoked (`lease.revoked`).",
+            "type": "string"
+          },
+          {
+            "const": "recovered",
+            "description": "The terminal finishes recovery (`server.recovery`).",
+            "type": "string"
+          }
+        ]
       },
       "Revision": {
         "description": "Revision carried as a canonical decimal string.",
@@ -6391,6 +6892,104 @@
         ],
         "type": "object"
       },
+      "SessionBindingRecord": {
+        "description": "Payload of `agent.session_bound`: one explicit binding change of an agent.",
+        "properties": {
+          "agent_id": {
+            "$ref": "#/components/schemas/AgentId",
+            "description": "Agent whose binding changed."
+          },
+          "binding_revision": {
+            "$ref": "#/components/schemas/Revision",
+            "description": "Binding revision after this change."
+          },
+          "head": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Active chain head selected by the owning process, when one was selected."
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistoryHead",
+            "description": "History now bound, with its revision."
+          },
+          "previous_history": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistoryId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "History bound before this change."
+          },
+          "previous_session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Session bound before this change."
+          },
+          "process_incarnation": {
+            "$ref": "#/components/schemas/Incarnation",
+            "description": "Program incarnation that reported the change."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionChange",
+                "x-ovis-open-enum": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Declared reason; absent for the first binding of the incarnation."
+          },
+          "session": {
+            "$ref": "#/components/schemas/SessionRef",
+            "description": "Session now bound."
+          }
+        },
+        "required": [
+          "agent_id",
+          "process_incarnation",
+          "session",
+          "history",
+          "binding_revision"
+        ],
+        "type": "object"
+      },
+      "SessionChange": {
+        "description": "Why an owning process changed the session it is bound to.",
+        "oneOf": [
+          {
+            "const": "resume",
+            "description": "The process resumed an existing provider session.",
+            "type": "string"
+          },
+          {
+            "const": "branch",
+            "description": "The process selected another chain of the same history (fork or rewind).",
+            "type": "string"
+          },
+          {
+            "const": "replace",
+            "description": "The process replaced its session with a different one.",
+            "type": "string"
+          }
+        ]
+      },
       "SessionRef": {
         "additionalProperties": false,
         "description": "Provider session an agent is bound to.",
@@ -6482,6 +7081,24 @@
           "leases",
           "layout",
           "page"
+        ],
+        "type": "object"
+      },
+      "SkippedOutput": {
+        "description": "Raw output the stream skipped when it was resynchronized.",
+        "properties": {
+          "from_output_offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "First raw output offset not delivered."
+          },
+          "to_output_offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "Raw output offset the following checkpoint represents."
+          }
+        },
+        "required": [
+          "from_output_offset",
+          "to_output_offset"
         ],
         "type": "object"
       },
@@ -6948,6 +7565,63 @@
             "type": "string"
           }
         ]
+      },
+      "StreamClose": {
+        "description": "Why and where a stream closed.",
+        "properties": {
+          "by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeaseRecord"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lease that displaced this stream's lease."
+          },
+          "exit_code": {
+            "description": "Exit code, when the program exited with one.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "final_offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "Final filtered stream offset; every byte before it was delivered."
+          },
+          "final_output_offset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ByteOffset"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Raw output offset of the final byte, when the program exited."
+          },
+          "reason": {
+            "$ref": "#/components/schemas/StreamCloseReason",
+            "description": "Reason.",
+            "x-ovis-open-enum": true
+          },
+          "signal": {
+            "description": "Signal number, when a signal ended the program.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "reason",
+          "final_offset"
+        ],
+        "type": "object"
       },
       "StreamCloseReason": {
         "description": "Why a stream closed.",
@@ -15397,6 +16071,21 @@
       "paramStructure": "by-name",
       "params": [
         {
+          "name": "head",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Record that becomes the active chain head; only with reason `branch`."
+          }
+        },
+        {
           "name": "history_id",
           "required": false,
           "schema": {
@@ -15425,6 +16114,21 @@
           "schema": {
             "$ref": "#/components/schemas/ProcessToken",
             "description": "Token handed to the program at spawn."
+          }
+        },
+        {
+          "name": "reason",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionChange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the binding changes; required once the incarnation is bound."
           }
         },
         {
@@ -15955,6 +16659,21 @@
       "name": "agent.conversation",
       "paramStructure": "by-name",
       "params": [
+        {
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationCursor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Position bound to a history identity and revision; absent starts the active chain."
+          }
+        },
         {
           "name": "page",
           "required": false,
@@ -19993,6 +20712,13 @@
       "summary": "An agent binding changed."
     },
     {
+      "name": "agent.session_bound",
+      "schema": {
+        "$ref": "#/components/schemas/SessionBindingRecord"
+      },
+      "summary": "An owning process bound, resumed, branched or replaced its session."
+    },
+    {
       "name": "agent.released",
       "schema": {
         "$ref": "#/components/schemas/AgentBinding"
@@ -20120,6 +20846,7 @@
       "max_in_flight_requests": "64",
       "op_retention_ms": "86400000",
       "output_ring_bytes": "67108864",
+      "queued_operations": "32",
       "rpc_default_deadline_ms": "10000",
       "session_backlog_bytes": "67108864",
       "session_event_queue_bytes": "67108864",
@@ -20151,6 +20878,18 @@
       "name": "missed",
       "schema": {
         "$ref": "#/components/schemas/MissedNotice"
+      }
+    },
+    {
+      "name": "attach.data",
+      "schema": {
+        "$ref": "#/components/schemas/AttachData"
+      }
+    },
+    {
+      "name": "attach.control",
+      "schema": {
+        "$ref": "#/components/schemas/AttachControl"
       }
     }
   ],

@@ -133,6 +133,9 @@ impl JsonSchema for ErrorData {
                 "current_seq": generator.subschema_for::<super::scalar::ReportSeq>(),
                 "candidates": generator.subschema_for::<Vec<crate::errors::TargetCandidate>>(),
                 "affected": generator.subschema_for::<Vec<TargetId>>(),
+                "queued_position": generator.subschema_for::<super::scalar::QueuePosition>(),
+                "bound": generator.subschema_for::<crate::errors::ExceededBound>(),
+                "history": generator.subschema_for::<crate::domain::session_binding::HistoryHead>(),
             },
             "required": ["kind", "hint", "retryable"],
         })

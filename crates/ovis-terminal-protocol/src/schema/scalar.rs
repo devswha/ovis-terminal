@@ -119,12 +119,24 @@ decimal_newtype!(
     ReportSeq
 );
 decimal_newtype!(
+    /// Observed revision of one conversation history; bumps on every detected change.
+    HistoryRevision
+);
+decimal_newtype!(
+    /// Position of a record along one history chain, counted from its root.
+    RecordPosition
+);
+decimal_newtype!(
     /// Number of records an ingestion path dropped.
     RecordCount
 );
 decimal_newtype!(
     /// Count of turns that finished on a terminal; deduplicates completion facts.
     FinishGeneration
+);
+decimal_newtype!(
+    /// One-based place of a waiting operation in FIFO admission order; 1 is admitted next.
+    QueuePosition
 );
 
 /// An output enum value that a client tolerates even when it postdates the client.

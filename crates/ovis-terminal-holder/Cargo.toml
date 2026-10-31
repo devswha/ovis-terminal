@@ -45,6 +45,16 @@ thiserror = { workspace = true }
 libc = "0.2"
 rustix = { version = "1.1.6", features = ["event", "fs", "net", "process"] }
 
+# Job objects and process times for ConPTY ownership (plan todo 53); the version
+# portable-pty's dependency tree already resolves.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
+
+[features]
+# Exposes the platform-neutral ConPTY ownership model (`windows::model`) off Windows,
+# so Miri can check it (plan F2); Windows builds always include it.
+ffi-model = []
+
 [dev-dependencies]
 ovis-terminal-bench = { workspace = true }
 ovis-terminal-probes = { workspace = true }

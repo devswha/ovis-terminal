@@ -2,9 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::bound::ExceededBound;
 use super::identity::{FieldPath, OpId, TargetId};
 use super::kinds::ErrorKind;
-use crate::schema::scalar::{DurationMs, ReportSeq};
+use crate::domain::session_binding::HistoryHead;
+use crate::schema::scalar::{DurationMs, QueuePosition, ReportSeq};
 
 /// Machine-readable context attached to a boundary failure.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -41,6 +43,15 @@ pub struct ErrorData {
     /// Every resource a refusal would touch or a partial effect already committed.
     #[serde(default, skip_serializing_if = "<[TargetId]>::is_empty")]
     pub affected: Box<[TargetId]>,
+    /// FIFO admission position of an operation that is still queued.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub queued_position: Option<QueuePosition>,
+    /// The advertised limit a `limit_exceeded` refusal reached.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bound: Option<ExceededBound>,
+    /// Current history identity and revision, present on a `history_changed` refusal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history: Option<Box<HistoryHead>>,
 }
 
 impl ErrorData {
@@ -57,6 +68,9 @@ impl ErrorData {
             current_seq: None,
             candidates: Vec::new(),
             affected: Box::default(),
+            queued_position: None,
+            bound: None,
+            history: None,
         }
     }
 

@@ -2,8 +2,9 @@
 
 use thiserror::Error;
 
-use super::{ErrorData, ErrorKind, FieldPath, JsonRpcCode, OpId, TargetId};
-use crate::schema::scalar::ReportSeq;
+use super::{ErrorData, ErrorKind, ExceededBound, FieldPath, JsonRpcCode, OpId, TargetId};
+use crate::domain::session_binding::HistoryHead;
+use crate::schema::scalar::{QueuePosition, ReportSeq};
 
 /// Error raised while parsing, validating or correlating protocol records.
 #[derive(Debug, Error)]
@@ -198,6 +199,34 @@ impl BoundaryError {
     #[must_use]
     pub fn with_affected(mut self, affected: Vec<TargetId>) -> Self {
         self.data_mut().affected = affected.into_boxed_slice();
+        self
+    }
+
+    /// Adds the FIFO position of an operation that is still waiting for admission.
+    #[must_use]
+    pub fn with_queued_position(mut self, position: QueuePosition) -> Self {
+        self.data_mut().queued_position = Some(position);
+        self
+    }
+
+    /// Names the advertised limit a `limit_exceeded` refusal reached.
+    #[must_use]
+    pub fn with_bound(mut self, bound: ExceededBound) -> Self {
+        self.data_mut().bound = Some(bound);
+        self
+    }
+
+    /// Names the request field a domain refusal is about.
+    #[must_use]
+    pub fn with_field_path(mut self, field_path: &str) -> Self {
+        self.data_mut().field_path = Some(FieldPath::new(field_path.to_owned()));
+        self
+    }
+
+    /// Adds the identity and revision a history has now.
+    #[must_use]
+    pub fn with_history(mut self, history: HistoryHead) -> Self {
+        self.data_mut().history = Some(Box::new(history));
         self
     }
 

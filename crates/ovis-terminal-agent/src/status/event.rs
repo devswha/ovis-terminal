@@ -2,6 +2,7 @@
 
 use ovis_terminal_core::events::EventData;
 use ovis_terminal_core::ops::OperationEvent;
+use ovis_terminal_protocol::domain::session_binding::SessionBindingRecord;
 use ovis_terminal_protocol::schema::methods::status::TurnRecord;
 use ovis_terminal_protocol::schema::records::{AgentBinding, StatusSnapshot};
 use ovis_terminal_protocol::schema::scalar::EventSeq;
@@ -18,6 +19,8 @@ pub enum AgentStatusEvent {
     TurnEnded(Box<TurnRecord>),
     /// An agent registered.
     AgentRegistered(Box<AgentBinding>),
+    /// An owning process bound, resumed, branched or replaced its session.
+    SessionBound(Box<SessionBindingRecord>),
     /// Retains the released operation event's unwrapped representation.
     #[serde(untagged)]
     Operation(Box<OperationEvent>),
@@ -35,6 +38,7 @@ impl EventData for AgentStatusEvent {
             Self::StatusChanged(_) => "status.changed",
             Self::TurnEnded(_) => "turn.ended",
             Self::AgentRegistered(_) => "agent.registered",
+            Self::SessionBound(_) => "agent.session_bound",
             Self::Operation(event) => event.event_type(),
         }
     }
@@ -42,7 +46,10 @@ impl EventData for AgentStatusEvent {
     fn at_sequence(&mut self, seq: EventSeq) {
         match self {
             Self::Operation(event) => event.at_sequence(seq),
-            Self::StatusChanged(_) | Self::TurnEnded(_) | Self::AgentRegistered(_) => {}
+            Self::StatusChanged(_)
+            | Self::TurnEnded(_)
+            | Self::AgentRegistered(_)
+            | Self::SessionBound(_) => {}
         }
     }
 }
