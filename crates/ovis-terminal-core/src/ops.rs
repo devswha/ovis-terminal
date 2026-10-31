@@ -1,5 +1,6 @@
 //! Operation deduplication and inspectable outcomes (plan todo 15).
 
+mod admission;
 mod completion;
 mod context;
 mod error;

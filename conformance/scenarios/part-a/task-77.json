@@ -1,0 +1,287 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "part-a/task-77",
+  "title": "op.cancel reaches a mutation whether or not its durable accept has committed",
+  "todo": 77,
+  "closes": [],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "A held mutation is cancelled without awaiting the $/fixture/held barrier: the cancel names the operation in state cancelled, the mutation settles cancelled, op.get retains the cancellation and no effect exists.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "client",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "client",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "held",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:held",
+                  "name": "held",
+                  "value": "never",
+                  "version": "0"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "quick",
+                "method": "doc.get",
+                "params": {
+                  "name": "alpha"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "quick": {
+                "/result/value": null
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cancel",
+                "method": "op.cancel",
+                "params": {
+                  "op_id": "$op:held"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "cancel": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/op_id": "$op:held",
+                "/result/method": "doc.set",
+                "/result/state": "cancelled"
+              },
+              "held": {
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/kind": "cancelled",
+                "/error/data/op_id": "$op:held"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "inspect",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:held"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "inspect": {
+                "/result/op_id": "$op:held",
+                "/result/state": "cancelled"
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {}
+          }
+        },
+        {
+          "hangup": {
+            "conn": "client"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "An unknown identity is not_found and nothing is cancelled; cancelling completed work returns already_committed with the retained receipt and keeps its effect.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "client",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "client",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cancel-unknown",
+                "method": "op.cancel",
+                "params": {
+                  "op_id": "$op:unknown"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "done",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:done",
+                  "name": "done",
+                  "value": "kept",
+                  "version": "0"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "cancel-unknown": {
+                "/error/data/kind": "not_found",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "done": {
+                "/result/value": "kept"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cancel-done",
+                "method": "op.cancel",
+                "params": {
+                  "op_id": "$op:done"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "cancel-done": {
+                "/result/outcome": "already_committed",
+                "/result/state": "committed",
+                "/result/result/value": "kept"
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "done.json": "kept"
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "client"
+          }
+        },
+        {
+          "closed": {
+            "conn": "client"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
