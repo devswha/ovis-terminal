@@ -1,0 +1,92 @@
+{
+  "scenario": "part-a/task-15",
+  "todo": 15,
+  "title": "Persist operation deduplication and inspectable outcomes",
+  "closes": ["GAP-013", "GAP-144", "GAP-147"],
+  "delivers": ["IDEAL-011", "IDEAL-012", "IDEAL-117"],
+  "runner": "shell",
+  "note": "DEFERRED VERIFICATION (runner lands in Todo 21). Component tests drive the real SQLite coordinator and Unix PTY holder; they are not an assembled CLI/socket transcript. After assembly, run the declared conformance command with isolated state and record requests, replies, holder bytes and reopen outcomes.",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "argv": ["cargo", "test", "-p", "ovis-terminal-core", "--test", "ops", "happy", "--", "--exact", "--nocapture"],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "\"state\":\"committed\"",
+              "\"written_bytes\":\"4\"",
+              "\"observed\":true",
+              "holder_bytes=",
+              "test result: ok. 1 passed; 0 failed"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "argv": ["cargo", "test", "-p", "ovis-terminal-core", "--test", "ops", "failure", "--", "--exact", "--nocapture"],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "reused=op_reused",
+              "expired=op_expired",
+              "\"state\":\"outcome_unknown\"",
+              "test result: ok. 1 passed; 0 failed"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "adversarial_cases": [
+    {
+      "class": "cancel/resume",
+      "test": "adversarial",
+      "assertions": [
+        "accepted cancellation persists and never grants execution after reopen",
+        "running cancellation returns pending and cannot retract committed work",
+        "failed records and typed error kinds survive reopen"
+      ]
+    },
+    {
+      "class": "stale state",
+      "test": "failure",
+      "assertions": [
+        "changed argv returns op_reused with the original receipt",
+        "UUIDv7 older than the acceptance floor returns op_expired",
+        "crash after an external write but before acknowledgement is outcome_unknown"
+      ]
+    },
+    {
+      "class": "misleading success",
+      "test": "holder",
+      "assertions": [
+        "actual InputWritten is distinct from actual Exit",
+        "missing delivery evidence cannot become committed",
+        "typed write and process-exit facts survive retry and reopen"
+      ]
+    },
+    {
+      "class": "durable commit boundary",
+      "test": "inspection::inspection_exposes_only_a_committed_revision",
+      "assertions": [
+        "inspection cannot expose Applied rows before COMMIT",
+        "snapshot revision and operation event revision equal the committed receipt"
+      ]
+    },
+    {
+      "class": "wire and store round trips",
+      "test": "inspection",
+      "assertions": [
+        "generated receipts survive actual SQLite reopen",
+        "arbitrary u64 revisions round trip as decimal strings",
+        "u64::MAX is exact and JSON numbers yield invalid_params"
+      ]
+    }
+  ]
+}

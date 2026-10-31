@@ -18,6 +18,26 @@ use super::records::{AgentBinding, StatusSnapshot, TerminalGeometry, TerminalRec
 
 /// Every event type, in publication order of the schema.
 pub(super) const EVENTS: &[EventSpec] = &[
+    event!(
+        "op.accepted",
+        "Operation acceptance was persisted.",
+        OpRecord
+    ),
+    event!(
+        "op.running",
+        "Operation intent was persisted before effects.",
+        OpRecord
+    ),
+    event!(
+        "op.cancelled",
+        "Operation was cancelled before effects.",
+        OpRecord
+    ),
+    event!(
+        "op.outcome_unknown",
+        "Operation effects cannot yet be proven.",
+        OpRecord
+    ),
     event!("terminal.created", "A launch committed.", TerminalRecord),
     event!(
         "terminal.spawned",
