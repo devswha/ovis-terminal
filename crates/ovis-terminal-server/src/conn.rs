@@ -5,6 +5,7 @@
 //! concurrent correlated requests until the peer closes or the server shuts down.
 
 mod budget;
+mod cause;
 mod connections;
 mod core;
 mod driver;
@@ -14,6 +15,9 @@ mod hello;
 mod identity;
 mod outbound;
 mod writer;
+
+#[cfg(test)]
+mod terminal_order;
 
 pub use connections::Connections;
 pub use error::{ConnectionError, HelloError};

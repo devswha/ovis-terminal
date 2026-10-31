@@ -42,15 +42,21 @@ drained report.
 
 ## After
 
-The driver now reads the retained first-overflow state after request teardown and
-writer join. A published overflow remains the connection outcome even if shutdown,
-EOF, or a closed writer queue initiated teardown. Other outcomes retain the
-existing result combination. The accept-loop join/grace behavior is unchanged.
+`conn/cause.rs` owns one set-once first-terminal-cause cell and final writer/result
+resolution. A budget refusal records overflow before publishing its signal; the
+driver records another terminal path as soon as its select loop ends; and the writer
+records genuine encode, write, or shutdown failures where they occur. Whichever
+record wins stays authoritative.
+The final driver result uses backpressure only when overflow won that ordering,
+so later teardown errors cannot replace peer-visible backpressure and a later
+escaped-notifier overflow cannot replace an earlier connection I/O failure. The
+accept-loop join/grace behavior is unchanged. Extracting the ordering cell and
+writer resolution leaves `driver.rs` at 237 pure lines, below the 250-line limit.
 
 Local evidence is Linux x86_64 with the isolated Rust/linker environment from the
 brief, after fast-forwarding to integration base
 `8db5609986d000997b6344d230523c62d290e694`. `source-sha256.log` identifies the
-four Rust sources used for verification.
+nine Rust sources used for verification.
 
 ```sh
 cargo nextest run -p ovis-terminal-server --locked \
@@ -62,6 +68,35 @@ cargo nextest run -p ovis-terminal-server --locked \
 FORCED_RACE_REPORT=ServeReport { accepted: 1, failures: {"backpressure": 1}, panicked: 0, aborted: 0 }
 Summary [   3.173s] 1 test run: 1 passed, 33 skipped
 FORCED_RACE_EXIT=0
+```
+
+AdversarialVerify round 1 found the inverse ordering missing. The new deterministic
+test `io_before_overflow_keeps_its_terminal_cause` first makes the transport return
+an I/O error, reads the actual `$/closing{reason:"connection_io"}`, then publishes
+overflow through a retained real notifier while writer shutdown is gated.
+
+```sh
+cargo nextest run -p ovis-terminal-server --locked \
+  -E 'test(io_before_overflow_keeps_its_terminal_cause)' --nocapture
+# pre-fix exit 100; round-2-pre-fix.log
+# EARLIER_IO_FINAL_ERROR=Backpressure { limit: 67108864, queued: 0 }
+
+cargo nextest run -p ovis-terminal-server --locked \
+  -E 'test(io_before_overflow_keeps_its_terminal_cause) |
+      test(shutdown_joins_and_counts_an_overflow_before_the_driver_can_finish)' \
+  --nocapture
+# exit 0; round-2-ordering.log
+# I/O first -> connection_io; overflow first -> backpressure
+
+# round-2-ordering-stress.log
+# ROUND_2_ORDERING_RESULT=50/50 PASS
+# 50 runs x 2 ordering tests = 100 passing executions under eight CPU workers
+
+bash scripts/check.sh
+# exit 0; round-2-check.log
+# Summary [ 119.909s] 368 tests run: 368 passed (1 slow), 1 skipped
+# check.sh: all steps passed
+# ROUND_2_CHECK_EXIT=0
 ```
 
 ```sh
@@ -103,6 +138,9 @@ claim. The real Unix socket component behavior was exercised as described below.
 - `cargo nextest run -p ovis-terminal-server --locked -j 8 -E 'test(bound::)' --nocapture`
   exited 0 (`socket-qa.log`). Nextest serializes `--nocapture` runs; the hundred-run
   stress command does not use that flag and uses eight test workers.
+- Round-2 `cargo nextest run -p ovis-terminal-server --locked` exited 0 with
+  37 passed and zero skipped (`round-2-server.log`). The two real socket bound
+  tests passed again with their peer-visible closing record (`round-2-socket-qa.log`).
 - The record-boundary peer actually receives `$/closing` with reason
   `backpressure`, decimal-string limit `"67108864"` and queued bytes `"0"`, then
   EOF. Shutdown must report `backpressure: 1` and `aborted: 0`.
@@ -115,15 +153,23 @@ claim. The real Unix socket component behavior was exercised as described below.
   observed after signalling connections, yet remains unfinished until the gate
   is released. The resulting report counts one accepted connection, one
   backpressure failure, zero panics and zero forced aborts.
+- The inverse-order test uses real authentication, dispatch, notifier budgeting,
+  writer output and driver result selection over a duplex transport. It injects
+  only the read error and writer-shutdown completion barrier. The peer receives
+  `connection_io` before overflow is triggered, and the final error remains
+  `connection_io`.
 
 ## Adversarial
 
-- **Ordering:** the forced schedule puts shutdown and overflow ready together
-  before the driver resumes. The pre-fix failure and post-fix pass distinguish
-  a lost outcome from a missing join.
+- **Ordering:** one forced schedule publishes overflow before shutdown can resume
+  the driver; the inverse publishes a transport I/O failure and peer-visible
+  closing before an escaped notifier overflows during teardown. Both directions
+  assert the first terminal cause.
 - **Flaky tests:** final hundred-run result is recorded before submission.
   `load-workers.log` records eight `sha256sum /dev/zero` processes consuming
   approximately one CPU each. The final stress loop uses no retries.
+- **Round-2 ordering stress:** both inverse orderings passed together 50/50 under
+  eight independently observed CPU workers, with no retries or sleeps.
 - No fixed sleeps, wire changes, fake connection outcomes, or loosened assertions.
   The only original-test changes add the full report to mismatch diagnostics.
 
@@ -149,15 +195,18 @@ claim. The real Unix socket component behavior was exercised as described below.
 
 No public API, wire schema, dependency, manifest, lockfile, or other crate changes.
 The listener's poll gate and shutdown notification exist only under `cfg(test)`.
-The product change is confined to the shared connection driver's final outcome.
+The private `conn/cause.rs` module owns the first-cause cell and writer/result
+resolution. Budget, driver and writer record their existing terminal events
+against it. No new externally configurable seam exists.
 
 ## Risks
 
 - Local execution is Linux x86_64. Native macOS/Windows coverage belongs to the
   PR's CI lanes; no local cross-platform execution is claimed.
-- The final report prioritizes a previously published overflow over a later
-  teardown I/O error. This preserves the first-refusal budget contract and the
-  reason already sent to the peer.
+- The first cause is ordered by the successful set of one `OnceLock`: overflow
+  publication, driver termination and writer failure compete exactly once. Later
+  causes remain observable to their immediate caller but cannot rewrite the final
+  connection outcome.
 - The shutdown grace and classification of tasks that require forced abort
   remain unchanged. The regression asserts no forced abort in its scenario.
 - Rust and shell LSP executables are unavailable locally. Compiler, Clippy,

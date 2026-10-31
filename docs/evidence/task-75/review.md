@@ -9,11 +9,13 @@ No delegation was used.
 joins aborted tasks after the grace period. `ServerHandle::shutdown` awaits that
 accept-loop task. The missing entry therefore does not need another join loop.
 
-The shared connection driver is the correct seam: its writer and request tasks
-have ended before the final return. The first refused budget reservation is
-retained in a watch channel. Reading that value at this boundary preserves the
-overflow outcome even when shutdown, peer EOF, or a closed writer queue was
-observed first. Non-overflow outcomes still use the original result combination.
+The shared connection lifetime is the correct seam. A budget refusal can happen
+in an escaped notifier while the driver and writer are already tearing down, so a
+post-join overflow snapshot has no temporal meaning. The private `conn/cause.rs`
+module now owns one set-once first-cause cell and final writer/result resolution.
+Overflow publication, driver termination and writer failure compete to set it at
+the point each event occurs. The final result selects backpressure only when
+overflow won; otherwise the existing connection result remains authoritative.
 
 The new listener field, poll wrapper, and shutdown notification are `cfg(test)`
 only. Production builds have neither the gate nor a way to configure it.
@@ -38,18 +40,28 @@ assertions, retries, skipped tests, or weakened existing expectations. Timeouts
 are failure bounds on actual events. The original two bound tests now print the
 complete report on mismatch.
 
+AdversarialVerify round 1 supplied the inverse ordering. The permanent regression
+uses real authentication, request dispatch, notifier budgeting and writer output
+over a duplex transport. It injects a read error, observes the peer-visible
+`connection_io` closing, then overflows through the retained notifier while
+writer shutdown is gated. It failed on e9edf37 because the final snapshot returned
+backpressure; it passes with the set-once cause cell and returns the original I/O
+error. Together the two tests distinguish both temporal orders.
+
 ## Programming and remove-ai-slops checks
 
-- Responsibility: driver owns connection teardown; server owns connection
-  joining/reporting; the new test module owns the forced shutdown schedule.
-- The production change is a final outcome selection, with no new helper,
-  abstraction, dependency, public API, parser, or normalization layer.
-- The watch borrow is copied out immediately; no guard crosses an await.
+- Responsibility: budget owns byte admission; `cause.rs` owns ordered cause and
+  result resolution; driver/writer record terminal events; server owns reporting.
+- `OnceLock` is the standard-library set-once primitive. It replaces an incorrect
+  snapshot comparison without a speculative abstraction, dependency, public API,
+  parser or normalization layer.
+- No lock or watch guard crosses an await.
 - Existing typed errors and overflow values are reused. No identity or wire type
   is added; no new production unwrap, expect, panic, numeric cast, unsafe block,
   blanket suppression, or placeholder is introduced.
-- The regression tests behavior, not a locally assigned value or source text.
-  Gate state is only a scheduling seam, not a mocked failure or mocked report.
+- The regressions test real connection behavior, not locally assigned values or
+  source text. Test gates control scheduling and transport completion without
+  mocking a failure, budget outcome or report.
 - No unrelated cleanup, dead code, speculative fallback, or compatibility shim.
 - The driver is in the 200-250 pure-line warning band; no further growth is
   needed. Repository hygiene is the authoritative size and parameter check.
@@ -59,10 +71,11 @@ complete report on mismatch.
 
 ## Seams and assumptions
 
-The first published overflow remains authoritative once teardown has joined the
-request and writer tasks. This follows the existing first-refusal budget contract
-and preserves the close reason the peer already observed. The existing five-second
-shutdown grace and classification of forcibly aborted tasks are unchanged.
+The first terminal cause is authoritative. Overflow remains the report outcome
+only when its set wins before driver/writer termination; an earlier I/O failure
+cannot be rewritten by a retained notifier during teardown. The existing
+five-second shutdown grace and classification of forcibly aborted tasks are
+unchanged.
 
 The task's supplied GAP-026 / IDEAL-053 regression labels are retained for
 traceability; this change proves shutdown failure accounting, not the unrelated

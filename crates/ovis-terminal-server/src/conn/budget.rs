@@ -9,6 +9,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use tokio::sync::watch;
 
+use super::cause::FirstTerminalCause;
+
 /// A refused reservation: the bound and the bytes already queued when it was refused.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct Overflow {
@@ -22,6 +24,7 @@ pub(super) struct Budget {
     // Only this counter is shared through it; no other memory is published, so Relaxed.
     queued: AtomicU64,
     overflow: watch::Sender<Option<Overflow>>,
+    first_cause: FirstTerminalCause,
 }
 
 impl Budget {
@@ -30,6 +33,7 @@ impl Budget {
             limit,
             queued: AtomicU64::new(0),
             overflow: watch::Sender::new(None),
+            first_cause: FirstTerminalCause::default(),
         }
     }
 
@@ -61,14 +65,24 @@ impl Budget {
             limit: self.limit,
             queued,
         };
-        self.overflow.send_if_modified(|first| {
-            let unset = first.is_none();
-            if unset {
-                *first = Some(overflow);
-            }
-            unset
-        });
+        if self.first_cause.record_overflow(overflow) {
+            self.overflow.send_replace(Some(overflow));
+        }
         overflow
+    }
+
+    /// Records that the connection selected another terminal path before overflow.
+    pub(super) fn record_connection_end(&self) -> bool {
+        self.first_cause.record_connection()
+    }
+
+    /// Resolves the connection result against an earlier overflow, if any.
+    pub(super) fn resolve_terminal<T>(
+        &self,
+        connection: T,
+        overflow: impl FnOnce(Overflow) -> T,
+    ) -> T {
+        self.first_cause.resolve(connection, overflow)
     }
 
     /// Returns `bytes` the writer finished writing or discarded.

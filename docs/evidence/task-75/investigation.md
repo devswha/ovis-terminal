@@ -34,11 +34,26 @@ into the writer's closed queue. That I/O failure replaces backpressure. Without 
 closed-queue error the same schedule can instead report success. The report
 correctly counts the joined outcome, but that outcome has already lost its cause.
 
-The product change reads the first-overflow state after request teardown and writer
-join, before returning the connection outcome. That state is authoritative for a
-connection closed by overflow, regardless of which select branch initiated teardown.
-The existing accept-loop join/drain invariant is retained and explicitly exercised.
-There is no wire change or new public API.
+The round-1 product change read retained overflow state after request teardown and
+writer join. That repaired overflow-before-shutdown but lacked temporal precedence:
+an escaped notifier could publish overflow after an earlier I/O failure and rewrite
+the final outcome.
+
+## AdversarialVerify round 1 correction
+
+The inverse-order test first makes the driver observe a real transport read error,
+then reads the actual `$/closing{reason:"connection_io"}` while writer shutdown is
+gated. Only afterward does the retained notifier overflow. On e9edf37 the final
+error incorrectly became backpressure (`round-2-pre-fix.log`, exit 100).
+
+`conn/cause.rs` now owns one `OnceLock` first-cause cell and final writer/result
+resolution. Budget refusal records overflow before publishing its watch signal;
+the driver records its chosen terminal branch; and writer encode, write or shutdown
+failures record where they occur. The first successful set wins. Later teardown
+causes cannot rewrite it. The original overflow-first test and the inverse I/O-first
+test both pass, including 50 consecutive combined runs under eight CPU workers.
+The existing accept-loop join/drain invariant is unchanged. There is no wire or
+public API change.
 
 ## Verification correction
 
