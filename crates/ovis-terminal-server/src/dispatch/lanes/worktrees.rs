@@ -117,7 +117,7 @@ where
 
 /// Implements one mutation: check before the boundary, apply and publish inside it.
 macro_rules! mutation {
-    ($method:ident, $name:literal, $params:ty, $check:ident, $apply:ident) => {
+    ($method:ident, $name:literal, $params:ty, $action:ident, ($check:ident, $apply:ident)) => {
         impl<D, P> Method<D, P> for $method<D, P>
         where
             D: EventData + From<OperationEvent> + From<WorktreeEvent> + Clone + Serialize,
@@ -129,7 +129,7 @@ macro_rules! mutation {
             type Params = $params;
 
             fn resolve(&self, _: &Self::Params, _: &Session) -> Result<Access, DispatchError> {
-                Ok(self.0.access(Action::LayoutChange))
+                Ok(self.0.access(Action::$action))
             }
 
             async fn run(
@@ -164,22 +164,23 @@ mutation!(
     WorktreeCreate,
     "worktree.create",
     WorktreeCreateParams,
-    check_create,
-    create
+    LayoutChange,
+    (check_create, create)
 );
 mutation!(
     WorktreeOpen,
     "worktree.open",
     WorktreeOpenParams,
-    check_open,
-    open
+    LayoutChange,
+    (check_open, open)
 );
+// Removal deletes files and closes workspaces: it needs the admin grant, not layout change.
 mutation!(
     WorktreeRemove,
     "worktree.remove",
     WorktreeRemoveParams,
-    check_remove,
-    remove
+    Administer,
+    (check_remove, remove)
 );
 
 impl<D, P> Method<D, P> for WorktreeList<D, P>

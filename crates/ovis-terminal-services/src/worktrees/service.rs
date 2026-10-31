@@ -13,8 +13,8 @@ use tokio::sync::{Mutex, MutexGuard};
 
 use super::git::Invocation;
 use super::porcelain::{Listed, parse};
-use super::state::{Known, State};
-use super::{Cancel, Git, Workspaces, WorktreeError};
+use super::state::{Known, Sighting, State};
+use super::{Cancel, Git, Workspaces, WorktreeError, marker};
 
 /// One repository: its primary checkout and the directory new checkouts go to.
 #[derive(Debug, Clone)]
@@ -187,25 +187,31 @@ impl Worktrees {
                 .to_vec(),
         };
         let listed = parse(&self.git.output(call, &mut session.cancel).await?)?;
+        let admins = self.admins(session, repo).await?;
         let mut observed = Vec::with_capacity(listed.len());
         for (index, mut listed) in listed.into_iter().enumerate() {
             listed.path = std::fs::canonicalize(&listed.path).unwrap_or(listed.path);
+            let primary = index == 0;
+            let marker = marker::read_or_mint(&admins.of(&listed.path, primary)?)?;
             let dirty = if listed.bare || listed.prunable {
                 false
             } else {
                 self.dirty(session, &listed.path).await?
             };
+            session.state.sight(Sighting {
+                checkout: &marker.checkout_id,
+                repository,
+                path: listed.path.clone(),
+                source: marker.source,
+            });
             observed.push(Observed {
-                id: session.state.identify(repository, &listed.path),
+                id: marker.checkout_id,
                 listed,
                 dirty,
-                primary: index == 0,
+                primary,
             });
         }
-        let live: Vec<PathBuf> = observed
-            .iter()
-            .map(|seen| seen.listed.path.clone())
-            .collect();
+        let live: Vec<CheckoutId> = observed.iter().map(|seen| seen.id.clone()).collect();
         session.state.retain(repository, &live);
         Ok(observed)
     }

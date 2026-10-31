@@ -2,5 +2,6 @@
 
 mod cancellation;
 mod fixture;
+mod identity;
 mod lifecycle;
 mod refusal;

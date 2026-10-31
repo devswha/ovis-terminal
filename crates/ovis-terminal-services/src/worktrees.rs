@@ -9,6 +9,7 @@ mod create;
 mod error;
 mod event;
 mod git;
+mod marker;
 mod porcelain;
 mod remove;
 mod scope;

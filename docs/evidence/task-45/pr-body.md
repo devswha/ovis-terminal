@@ -6,7 +6,7 @@ Plan todo 45. Closes GAP-114 and GAP-115; delivers IDEAL-087 and IDEAL-088. Enfo
 `absent`: no comparable baseline capability. This is not an executed failing test. Gap baseline: GAP-114, GAP-115.
 
 ## After
-Native platform: Linux x86_64. Base: origin/integration b280ac9 (unchanged at push time).
+Native platform: Linux x86_64. Branch head includes the orchestrator's union merge of origin/integration 99e5c52 (2e38aa8). origin/integration has since moved to 473e7d5; this lane does not merge it.
 
 The `worktree.*` lane is exercised over a real Unix socket. The test drives the real `Dispatcher`, Authority, SQLite `Coordinator` and Git 2.53 in a private repository: `cargo nextest run --locked -p ovis-terminal-server --test dispatch -E 'test(/worktrees::/)' --no-capture` exits 0 with 3 of 3 passed. Transcript: `docs/evidence/task-45/server-qa.log`. These are actual replies from that run:
 
@@ -39,7 +39,7 @@ The runner landed, but it cannot route this surface yet. Its only fixture kind (
 - `cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario services/worktrees --isolated --case all --evidence "$ATTEMPT_DIR/task-45-ovis-terminal-v1.json"` → exit 1, `scenario_not_executable` ("services/worktrees is a declaration, not a registered executable scenario").
 - The same command with `--case happy` → exit 1, `scenario_not_executable`.
 - The same command with `--case failure --inject '{"method":"worktree.remove","params":{"checkout_id":"dirty-checkout","force":false,"group":false}}' ... --append` → exit 2, `error: unexpected argument '--inject' found`.
-- `target/debug/conformance --binary target/debug/ovis-terminal --scenario all/all --isolated --case all` → exit 0: 16 cases passed, 345 assertions, 24 declared_only (including services/worktrees), 0 failed, 0 skipped.
+- `target/debug/conformance --binary target/debug/ovis-terminal --scenario all/all --isolated --case all` → exit 0: 16 cases passed, 345 assertions, 25 declared_only on the merged head (including services/worktrees), 0 failed, 0 skipped.
 
 Raw output is in `docs/evidence/task-45/conformance-*.out|err` and `all-all.out`.
 
@@ -65,7 +65,7 @@ Raw output is in `docs/evidence/task-45/conformance-*.out|err` and `all-all.out`
 - Hung commands: Git runs with `kill_on_drop`. It is killed when the operation's cancellation flag flips (`op.cancel` or dispatcher shutdown) or at a per-command bound. Both cases are tested with real blocking processes, and every test wait is bounded.
 - Misleading success: `worktree.create` reports only the created checkout. Opening a workspace is a separate `worktree.open` with its own `affected_workspaces`, and no program is launched. Cancellation reports what was committed (`branch:…`, `checkout:…`) instead of a plain failure.
 - Misnamed target (EXCL-005/006): unknown or flat fields are `invalid_params`. Unknown repository or checkout ids are `not_found`, never a focus fallback.
-- Identity reuse (EXCL-022): checkout ids are UUIDv7 minted on first sight. They are retired when Git stops listing the path, so a later checkout at the same path gets a new id.
+- Identity reuse (EXCL-022): see Round 3 below. Identity is an ovis marker in the worktree's Git admin directory, never the path.
 - Argv injection: Git runs by argv with `-C <dir>`. Inherited `GIT_*` variables are stripped, prompts are disabled, branch names cannot start with `-`, and `--` precedes paths.
 
 ## Seams
@@ -99,9 +99,31 @@ Verification after the fix:
 - The `x86_64-pc-windows-gnu` pre-check → exit 0.
 - Not reproduced locally on Darwin. This round's CI macOS job is the Darwin check.
 
+## Round 3 (gate review B1 and authz)
+B1 (EXCL-022): `State::identify` matched `known.path == path`. A checkout removed and re-created at the same path between two listings therefore kept the old `checkout_id` and its stale `source`. A client holding the old id could retarget or force-remove the new checkout. The `no_retain` mutant also survived.
+
+Fix: checkout identity lives in an ovis marker, `ovis-terminal-checkout.json` (`{checkout_id, source}`, written atomically by temp file plus rename). The marker sits in the worktree's Git admin directory:
+- for a linked checkout, `<git-common-dir>/worktrees/<name>`, mapped from each admin entry's `gitdir` file;
+- for the primary checkout, the common directory.
+
+Git deletes the admin directory with the worktree, so a re-created checkout has no marker and gets a new UUIDv7 id with no source. A `git worktree move` keeps the admin directory, so a moved checkout keeps its id and source; this also covers gate note N3. The path is reported but is never a key. Because the source relationship is persisted in the marker, it also survives a control restart. The marker is runtime metadata in Git's private admin area, not in checkout content, and the first listing of an existing checkout writes it.
+
+New tests:
+- `worktrees::tests::identity::a_checkout_recreated_at_the_same_path_never_inherits_the_old_identity`: remove plus re-add at the same path between listings gives a new id and `source: null`. The old id is `not_found` for both remove and open, and the new checkout survives.
+- `worktrees::tests::identity::a_moved_checkout_keeps_its_identity_and_source`.
+- `worktrees::state::tests::identities_missing_from_a_listing_are_retired_with_their_links`: this kills the `no_retain` mutant. An unlisted identity is dropped with its workspace links, and another repository's identities are untouched.
+
+Authz: `worktree.remove` now needs `Action::Administer` (the admin permission). It deletes files and closes workspaces, so the layout-change grant is not enough. Create and open stay on `LayoutChange`. The new test is `worktree_authority::removal_needs_the_admin_grant_beyond_layout_change`: a principal holding observe and interact over the whole machine can create a checkout, but `worktree.remove` with `{group:true, force:true}` returns `forbidden`. The directory still exists, and the checkout is still listed.
+
+Verification:
+- The worktree tests (7 protocol, 13 services, 4 server) ran 20 times under `timeout 120`: 20 of 20 runs, 24 of 24 passed each time.
+- clippy `-D warnings` and workspace-hygiene are clean.
+- The Windows `x86_64-pc-windows-gnu` pre-check exits 0.
+- `bash scripts/check.sh` → exit 0 (nextest 604 run / 604 passed / 1 skipped). Log: `docs/evidence/task-45/check.log`.
+
 ## Risks
 - Todos 43 and 46 add `DispatchError::Domain` and the `domain`/`lanes` module roots too. This PR adds `DispatchError::Worktree` and inline `pub mod domain { … }` / `pub mod lanes { … }` blocks. Expect a union merge.
-- Identity state is in memory. Checkout ids and source relationships do not survive a control restart (recovery is todo 49).
+- Checkout ids and source relationships are durable in the Git admin markers. Workspace links and revisions stay in memory (recovery is todo 49).
 - `Workspaces` is a port: no production implementation exists until todo 42 assembles the layout owner on the shared coordinator. Until then, `worktree.open` needs an assembly-supplied owner.
 - `worktree.list` runs `git status` per checkout under the service lock. That is fine for tens of checkouts, but not tuned for hundreds.
 - Git stdout is read whole and stderr is discarded, so Git's diagnostic text is not surfaced.

@@ -84,12 +84,11 @@ impl Worktrees {
             operation: "worktree add",
             code: None,
         })?;
+        self.adopt(&mut session, (&seen, &planned.source)).await?;
         let known = session
             .state
-            .get_mut(&seen.id)
+            .get(&seen.id)
             .ok_or(WorktreeError::Porcelain)?;
-        known.source = Some(planned.source);
-        known.revision = known.revision.saturating_add(1);
         let record = record(known, &seen)?;
         drop(session);
         Ok(Change {
@@ -224,11 +223,8 @@ impl Worktrees {
             repository.ok_or_else(|| WorktreeError::UnknownCheckout(planned.source.clone()))?;
         let created = std::fs::canonicalize(&planned.path).unwrap_or_else(|_| planned.path.clone());
         for seen in self.observe(session, &repository).await? {
-            if seen.listed.path == created
-                && let Some(known) = session.state.get_mut(&seen.id)
-            {
-                known.source = Some(planned.source.clone());
-                known.revision = known.revision.saturating_add(1);
+            if seen.listed.path == created {
+                self.adopt(session, (&seen, &planned.source)).await?;
                 committed.push(AffectedResource::Checkout(seen.id));
             }
         }

@@ -82,6 +82,15 @@ pub enum WorktreeError {
         /// Exit code, absent when killed by a signal.
         code: Option<i32>,
     },
+    /// The checkout's identity marker could not be read or written.
+    #[error("the checkout identity marker is unreadable or unwritable")]
+    Marker {
+        /// The marker path.
+        path: PathBuf,
+        /// I/O or decoding failure.
+        #[source]
+        source: std::io::Error,
+    },
     /// Git output did not match the porcelain format.
     #[error("git output is not in the porcelain format")]
     Porcelain,
@@ -126,9 +135,11 @@ impl WorktreeError {
             Self::ScopeRequired { .. } => "scope_required",
             Self::Dirty { .. } => "checkout_dirty",
             Self::Locked { .. } => "checkout_locked",
-            Self::Spawn { .. } | Self::Vcs { .. } | Self::Porcelain | Self::TimedOut { .. } => {
-                "vcs_failed"
-            }
+            Self::Spawn { .. }
+            | Self::Vcs { .. }
+            | Self::Porcelain
+            | Self::Marker { .. }
+            | Self::TimedOut { .. } => "vcs_failed",
             Self::Interrupted { .. } => "cancelled",
             Self::Workspaces(_) => "unavailable",
             Self::Partial { .. } => "outcome_unknown",
@@ -154,6 +165,9 @@ impl WorktreeError {
             Self::Locked { .. } => "unlock the checkout, or retry with force scope",
             Self::Spawn { .. } => "install git and make it executable by the runtime",
             Self::Vcs { .. } | Self::Porcelain => "inspect the repository with git and retry",
+            Self::Marker { .. } => {
+                "repair or remove the ovis marker in the checkout's git directory"
+            }
             Self::TimedOut { .. } => "inspect the repository for a held lock and retry",
             Self::Interrupted { .. } => "inspect the affected resources; they were committed",
             Self::Workspaces(_) => "retry once the workspace service is available",
