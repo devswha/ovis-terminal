@@ -1,0 +1,20 @@
+# Scratch file crates/ovis-terminal-core/tests/identity_probe.rs, compiled once per probe with
+# cargo test -p ovis-terminal-core --test identity_probe, then removed.
+
+$ probe: terminal scope built from a registry TabId
+fn scope(tab: ovis_terminal_core::registry::TabId) -> ovis_terminal_authz::ScopeResource<ovis_terminal_core::registry::RegistryIdentities> { ovis_terminal_authz::ScopeResource::Terminal { id: tab } }
+error[E0308]: mismatched types
+  |                                       ^^^ expected `TerminalId`, found `TabId`
+EXIT=101
+
+$ probe: terminal target built from a registry WorkspaceId
+fn target(workspace: ovis_terminal_core::registry::WorkspaceId, generation: ovis_terminal_core::registry::TerminalGeneration) -> ovis_terminal_authz::TargetResource<ovis_terminal_core::registry::RegistryIdentities> { ovis_terminal_authz::TargetResource::Terminal { placement: None, terminal: workspace, incarnation: generation } }
+error[E0308]: mismatched types
+  |                                 ^^^^^^^^^ expected `TerminalId`, found `WorkspaceId`
+EXIT=101
+
+$ probe: control: terminal scope built from a registry TerminalId
+fn scope(terminal: ovis_terminal_core::registry::TerminalId) -> ovis_terminal_authz::ScopeResource<ovis_terminal_core::registry::RegistryIdentities> { ovis_terminal_authz::ScopeResource::Terminal { id: terminal } }
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+EXIT=0
+

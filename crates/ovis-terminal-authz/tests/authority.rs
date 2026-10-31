@@ -5,6 +5,8 @@
 
 #[path = "authority/issuance.rs"]
 mod issuance;
+#[path = "authority/reclamation.rs"]
+mod reclamation;
 #[path = "authority/revocation.rs"]
 mod revocation;
 #[path = "authority/scoping.rs"]
@@ -14,15 +16,34 @@ use std::error::Error;
 
 use ovis_terminal_authz::{
     AccessRequest, Action, Authority, AuthorityConfig, CommitCheck, CredentialEpoch, CredentialId,
-    EndpointPolicy, FileEvidence, Grant, Issuance, IssueRequest, IssuedCredential, LocalAccount,
-    OwnerSpec, PeerAdmission, PeerEvidence, Permission, Presentation, PrincipalId, ResolvedTarget,
-    ResourceScope, Revocation, RuntimeBinding, ScopeResource, Session, TargetResource,
-    UnixSocketEvidence, UnixUid,
+    EndpointPolicy, FileEvidence, Grant, IdentityFamily, Issuance, IssueRequest, IssuedCredential,
+    LocalAccount, OwnerSpec, PeerAdmission, PeerEvidence, Permission, Presentation, PrincipalId,
+    ResolvedTarget, ResourceScope, Revocation, RuntimeBinding, ScopeResource, Session,
+    TargetResource, UnixSocketEvidence, UnixUid,
 };
 use ovis_terminal_protocol::schema::ids::{
-    DocName, MachineId, RuntimeLifetimeId, TerminalId, WorkspaceId,
+    DocName, MachineId, PaneId, PluginId, RuntimeLifetimeId, TabId, TerminalId, WorkspaceId,
 };
 use ovis_terminal_protocol::schema::scalar::{Incarnation, TimestampMs};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct WireIds;
+
+impl IdentityFamily for WireIds {
+    type Machine = MachineId;
+    type Lifetime = RuntimeLifetimeId;
+    type Workspace = WorkspaceId;
+    type Tab = TabId;
+    type Pane = PaneId;
+    type Terminal = TerminalId;
+    type Incarnation = Incarnation;
+    type Document = DocName;
+    type Plugin = PluginId;
+}
+
+fn target(resource: TargetResource<WireIds>) -> ResolvedTarget<WireIds> {
+    ResolvedTarget::new(machine(), resource)
+}
 
 type TestResult<T = ()> = Result<T, Box<dyn Error>>;
 
@@ -40,7 +61,10 @@ fn terminal_id(id: &str) -> TerminalId {
     TerminalId::new(id.to_owned())
 }
 
-fn grant(permission: ovis_terminal_authz::Permission, resource: ScopeResource) -> Grant {
+fn grant(
+    permission: ovis_terminal_authz::Permission,
+    resource: ScopeResource<WireIds>,
+) -> Grant<WireIds> {
     Grant::new(permission, ResourceScope::new(machine(), resource))
 }
 
@@ -56,7 +80,7 @@ fn local_admission() -> TestResult<PeerAdmission> {
 }
 
 struct Fixture {
-    authority: Authority,
+    authority: Authority<WireIds>,
     owner: Session,
     owner_bearer: String,
 }
@@ -80,7 +104,11 @@ impl Fixture {
         })
     }
 
-    fn issue(&self, principal: &str, grants: Vec<Grant>) -> TestResult<IssuedCredential> {
+    fn issue(
+        &self,
+        principal: &str,
+        grants: Vec<Grant<WireIds>>,
+    ) -> TestResult<IssuedCredential<WireIds>> {
         let request = IssueRequest::new(PrincipalId::parse(principal)?, grants, ISSUED_EXPIRY);
         Ok(self
             .authority
@@ -92,7 +120,7 @@ impl Fixture {
         Ok(self.authority.revoke(&self.owner, &revocation)?)
     }
 
-    fn outcome(&self, session: &Session, request: &AccessRequest) -> &'static str {
+    fn outcome(&self, session: &Session, request: &AccessRequest<WireIds>) -> &'static str {
         match self.authority.authorize(session, request) {
             Ok(_) => "allowed",
             Err(error) => error.kind(),
@@ -102,8 +130,8 @@ impl Fixture {
     fn session(
         &self,
         principal: &str,
-        grants: Vec<Grant>,
-    ) -> TestResult<(Session, IssuedCredential)> {
+        grants: Vec<Grant<WireIds>>,
+    ) -> TestResult<(Session, IssuedCredential<WireIds>)> {
         let issued = self.issue(principal, grants)?;
         let session = self
             .authority
@@ -112,36 +140,27 @@ impl Fixture {
     }
 }
 
-fn terminal(id: &str) -> ResolvedTarget {
-    ResolvedTarget::new(
-        machine(),
-        TargetResource::Terminal {
-            placement: None,
-            terminal: terminal_id(id),
-            incarnation: Incarnation::new(1),
-        },
-    )
+fn terminal(id: &str) -> ResolvedTarget<WireIds> {
+    target(TargetResource::Terminal {
+        placement: None,
+        terminal: terminal_id(id),
+        incarnation: Incarnation::new(1),
+    })
 }
 
-fn workspace(id: &str) -> ResolvedTarget {
-    ResolvedTarget::new(
-        machine(),
-        TargetResource::Workspace {
-            workspace: WorkspaceId::new(id.to_owned()),
-        },
-    )
+fn workspace(id: &str) -> ResolvedTarget<WireIds> {
+    target(TargetResource::Workspace {
+        workspace: WorkspaceId::new(id.to_owned()),
+    })
 }
 
-fn document(name: &str) -> ResolvedTarget {
-    ResolvedTarget::new(
-        machine(),
-        TargetResource::Document {
-            name: DocName::new(name.to_owned()),
-        },
-    )
+fn document(name: &str) -> ResolvedTarget<WireIds> {
+    target(TargetResource::Document {
+        name: DocName::new(name.to_owned()),
+    })
 }
 
-fn terminal_scope(id: &str) -> ScopeResource {
+fn terminal_scope(id: &str) -> ScopeResource<WireIds> {
     ScopeResource::Terminal {
         id: terminal_id(id),
     }

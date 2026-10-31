@@ -2,10 +2,10 @@
 
 use std::fmt;
 
-use ovis_terminal_protocol::schema::ids::RuntimeLifetimeId;
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use serde::{Serialize, Serializer};
 
+use crate::family::IdentityFamily;
 use crate::identity::{CredentialEpoch, CredentialId, PrincipalId};
 use crate::scope::Grant;
 
@@ -27,17 +27,18 @@ impl Serialize for Bearer {
 
 /// A newly issued credential; the bearer text is shown to the issuer exactly here.
 #[derive(Debug, Clone, Serialize)]
-pub struct IssuedCredential {
+#[serde(bound = "")]
+pub struct IssuedCredential<F: IdentityFamily> {
     pub(super) credential: CredentialId,
     pub(super) principal: PrincipalId,
-    pub(super) runtime_lifetime: RuntimeLifetimeId,
+    pub(super) runtime_lifetime: F::Lifetime,
     pub(super) epoch: CredentialEpoch,
     pub(super) expires_at_ms: TimestampMs,
-    pub(super) grants: Vec<Grant>,
+    pub(super) grants: Vec<Grant<F>>,
     pub(super) bearer: Bearer,
 }
 
-impl IssuedCredential {
+impl<F: IdentityFamily> IssuedCredential<F> {
     /// The credential identity used for revocation.
     #[must_use]
     pub const fn id(&self) -> &CredentialId {

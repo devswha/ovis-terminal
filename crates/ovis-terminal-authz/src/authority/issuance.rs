@@ -2,27 +2,28 @@
 
 use std::sync::RwLock;
 
-use ovis_terminal_protocol::schema::ids::MachineId;
-
 use super::table::{CredentialRecord, CredentialTable, NewCredential};
 use super::{AccessRequest, Authority, AuthorityId, IssuedCredential, Session};
 use crate::config::AuthorityConfig;
 use crate::credential::{Issuance, IssueRequest, Revocation};
 use crate::error::{AuthzError, Exceeded, Limit};
+use crate::family::IdentityFamily;
 use crate::identity::CredentialEpoch;
 use crate::permission::{Action, Role};
 use crate::scope::{Grant, ResolvedTarget, ResourceScope, ScopeResource, TargetResource};
 
-impl Authority {
+impl<F: IdentityFamily> Authority<F> {
     /// Creates an authority and its owner credential, which holds every permission over
     /// the whole machine until the configured expiry.
     ///
     /// # Errors
     ///
     /// [`AuthzError::LimitExceeded`] when the limits cannot hold the owner credential.
-    pub fn bootstrap(config: AuthorityConfig) -> Result<(Self, IssuedCredential), AuthzError> {
+    pub fn bootstrap(
+        config: AuthorityConfig<F>,
+    ) -> Result<(Self, IssuedCredential<F>), AuthzError> {
         let machine = config.binding.machine.clone();
-        let grants: Vec<Grant> = Role::Owner
+        let grants: Vec<Grant<F>> = Role::Owner
             .permissions()
             .iter()
             .map(|permission| {
@@ -30,12 +31,12 @@ impl Authority {
                 Grant::new(*permission, scope)
             })
             .collect();
-        if grants.len() > config.limits.max_grants {
+        if grants.len() > config.limits.grants {
             return Err(AuthzError::LimitExceeded {
                 limit: Limit::Grants,
             });
         }
-        let mut table = CredentialTable::new(config.limits.max_credentials);
+        let mut table = CredentialTable::new(config.limits);
         let owner = NewCredential {
             principal: config.owner.principal,
             grants,
@@ -62,8 +63,8 @@ impl Authority {
     pub fn issue(
         &self,
         issuer: &Session,
-        issuance: Issuance,
-    ) -> Result<IssuedCredential, AuthzError> {
+        issuance: Issuance<F>,
+    ) -> Result<IssuedCredential<F>, AuthzError> {
         let Issuance { request, at } = issuance;
         self.own(issuer)?;
         let admin = AccessRequest::new(Action::IssueCredential, self.machine_target(), at);
@@ -74,7 +75,7 @@ impl Authority {
             &request,
             &self.binding.machine,
         )?;
-        if request.grants.len() > self.limits.max_grants {
+        if request.grants.len() > self.limits.grants {
             return Err(AuthzError::LimitExceeded {
                 limit: Limit::Grants,
             });
@@ -112,25 +113,20 @@ impl Authority {
         );
         let mut table = self.write()?;
         table.permit(admin, &request)?;
-        let record = table.records.get_mut(&revocation.credential).ok_or(
-            AuthzError::CredentialNotFound {
-                credential: revocation.credential,
-            },
-        )?;
-        let epoch = record.revoke();
+        let epoch = table.revoke(revocation.credential)?;
         drop(table);
         Ok(epoch)
     }
 
-    fn machine_target(&self) -> ResolvedTarget {
+    fn machine_target(&self) -> ResolvedTarget<F> {
         ResolvedTarget::new(self.binding.machine.clone(), TargetResource::Machine)
     }
 }
 
-fn within_issuer(
-    issuer: &CredentialRecord,
-    request: &IssueRequest,
-    machine: &MachineId,
+fn within_issuer<F: IdentityFamily>(
+    issuer: &CredentialRecord<F>,
+    request: &IssueRequest<F>,
+    machine: &F::Machine,
 ) -> Result<(), AuthzError> {
     for grant in &request.grants {
         let exceeded = if grant.machine() != machine {

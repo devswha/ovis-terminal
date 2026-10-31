@@ -126,6 +126,27 @@
               "test private_socket_admits_only_the_owner_peer ... ok"
             ]
           }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-core",
+            "--test",
+            "authority_scope",
+            "registry_identities_resolve_into_scopes_and_back",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test registry_identities_resolve_into_scopes_and_back ... ok"
+            ]
+          }
         }
       ]
     },
@@ -300,6 +321,69 @@
               "test pipe_namespace_claims_the_name_again_after_every_full_close ... ok"
             ]
           }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "revocation::denied_revocation_leaves_the_target_credential_usable",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test revocation::denied_revocation_leaves_the_target_credential_usable ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-core",
+            "--test",
+            "authority_scope",
+            "issuance_document_rejects_an_identity_of_another_family",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test issuance_document_rejects_an_identity_of_another_family ... ok"
+            ]
+          }
         }
       ]
     }
@@ -357,6 +441,24 @@
       "expected": {
         "kind": "forbidden",
         "granted": false
+      }
+    },
+    {
+      "class": "stale state",
+      "name": "revoked credential's record reclaimed at capacity while its decision is queued",
+      "test": "reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed + reclamation::tombstone_bound_holds_unexpired_revocations_until_one_expires",
+      "expected": {
+        "kind": "credential_revoked",
+        "written": false
+      }
+    },
+    {
+      "class": "malformed input",
+      "name": "registry identity of another family in a scope document",
+      "test": "authority_scope::issuance_document_rejects_an_identity_of_another_family",
+      "expected": {
+        "kind": "invalid_params",
+        "field_path": "grants[0].scope.resource"
       }
     }
   ]

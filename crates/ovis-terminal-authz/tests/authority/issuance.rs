@@ -1,13 +1,13 @@
 use ovis_terminal_authz::{
     AccessRequest, Action, AuthzError, Issuance, IssueRequest, Permission, Presentation,
-    PrincipalId, ResolvedTarget, ScopeResource, TargetResource,
+    PrincipalId, ScopeResource, TargetResource,
 };
 use ovis_terminal_protocol::schema::ids::MachineId;
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use proptest::prelude::{ProptestConfig, any, prop_assert_eq, proptest};
 use serde_json::{Value, json};
 
-use super::{Fixture, NOW, TestResult, grant, local_admission, machine, terminal_scope};
+use super::{Fixture, NOW, TestResult, WireIds, grant, local_admission, target, terminal_scope};
 
 fn request_json(expires: &Value, grants: &Value) -> String {
     json!({ "principal": "agent", "expires_at_ms": expires, "grants": grants }).to_string()
@@ -17,7 +17,9 @@ fn observe_grant() -> Value {
     json!([{ "permission": "observe", "scope": { "machine": "m1", "resource": { "kind": "terminal", "id": "t1" } } }])
 }
 
-fn rejection(result: Result<IssueRequest, AuthzError>) -> TestResult<(&'static str, String)> {
+fn rejection(
+    result: Result<IssueRequest<WireIds>, AuthzError>,
+) -> TestResult<(&'static str, String)> {
     let error = result.err().ok_or("forged request was accepted")?;
     Ok((
         error.kind(),
@@ -121,11 +123,7 @@ fn payload_from_an_unprivileged_principal_grants_nothing() -> TestResult {
     let escalation = fixture.authority.issue(&agent, Issuance::new(request, NOW));
     let administer = fixture.authority.authorize(
         &agent,
-        &AccessRequest::new(
-            Action::Administer,
-            ResolvedTarget::new(machine(), TargetResource::Machine),
-            NOW,
-        ),
+        &AccessRequest::new(Action::Administer, target(TargetResource::Machine), NOW),
     );
 
     assert_eq!(
@@ -256,7 +254,7 @@ proptest! {
     fn expiry_round_trips_every_u64_as_a_decimal_string(expires in any::<u64>()) {
         let text = request_json(&json!(expires.to_string()), &observe_grant());
 
-        let parsed = IssueRequest::from_json(&text).map_err(|error| error.to_string());
+        let parsed = IssueRequest::<WireIds>::from_json(&text).map_err(|error| error.to_string());
 
         prop_assert_eq!(parsed.map(|request| request.expires_at().get()), Ok(expires));
     }
@@ -266,7 +264,7 @@ proptest! {
 fn expiry_preserves_u64_max_exactly() -> TestResult {
     let text = request_json(&json!(u64::MAX.to_string()), &observe_grant());
 
-    let parsed = IssueRequest::from_json(&text)?;
+    let parsed = IssueRequest::<WireIds>::from_json(&text)?;
 
     assert_eq!(parsed.expires_at(), TimestampMs::new(u64::MAX));
     assert_eq!(

@@ -1,10 +1,12 @@
 //! Identity resolution and lifecycle transition tables (plan todo 9).
 
+mod authority;
 mod ids;
 mod lifecycle;
 mod reservation;
 mod resolution;
 
+pub use authority::RegistryIdentities;
 pub use ids::{
     DurableId, HostBootGeneration, HostBootId, IdentityError, LeaseGeneration, LeaseId,
     MachineGeneration, MachineId, PaneGeneration, PaneId, ProcessGeneration, ProcessId, ProcessPid,

@@ -1,5 +1,8 @@
+# Scratch file crates/ovis-terminal-core/tests/forge_probe.rs, compiled once per probe with
+# cargo test -p ovis-terminal-core --test forge_probe, then removed.
+
 $ probe: forge a Decision literal
-fn forge() -> ovis_terminal_authz::Decision { ovis_terminal_authz::Decision { authority: todo!(), claim: todo!(), principal: todo!(), action: todo!(), target: todo!() } }
+fn forge() -> ovis_terminal_authz::Decision<ovis_terminal_core::registry::RegistryIdentities> { ovis_terminal_authz::Decision { authority: todo!(), claim: todo!(), principal: todo!(), action: todo!(), target: todo!() } }
 error[E0451]: fields `authority`, `claim`, `principal`, `action` and `target` of struct `Decision` are private
 EXIT=101
 
@@ -10,7 +13,7 @@ note: `Session` does not implement `Clone`, so `&Session` was cloned instead
 EXIT=101
 
 $ probe: deserialize an IssuedCredential (bearer) from JSON
-fn forge(text: &str) { let _issued: ovis_terminal_authz::IssuedCredential = serde_json::from_str(text).unwrap(); }
-error[E0277]: the trait bound `IssuedCredential: serde::Deserialize<'de>` is not satisfied
+fn forge(text: &str) { let _issued: ovis_terminal_authz::IssuedCredential<ovis_terminal_core::registry::RegistryIdentities> = serde_json::from_str(text).unwrap(); }
+error[E0277]: the trait bound `IssuedCredential<RegistryIdentities>: serde::Deserialize<'de>` is not satisfied
 EXIT=101
 

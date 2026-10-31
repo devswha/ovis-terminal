@@ -7,40 +7,34 @@ use ovis_terminal_protocol::schema::ids::{PaneId, PluginId, TabId, WorkspaceId};
 use ovis_terminal_protocol::schema::scalar::Incarnation;
 
 use super::{
-    Fixture, NOW, TestResult, grant, local_admission, machine, terminal, terminal_id,
+    Fixture, NOW, TestResult, WireIds, grant, local_admission, target, terminal, terminal_id,
     terminal_scope,
 };
 
-fn placed_terminal(id: &str, workspace: &str) -> ResolvedTarget {
+fn placed_terminal(id: &str, workspace: &str) -> ResolvedTarget<WireIds> {
     let placement = Placement::new(
         WorkspaceId::new(workspace.to_owned()),
         TabId::new(format!("{workspace}-tab")),
         PaneId::new(format!("{workspace}-pane")),
     );
-    ResolvedTarget::new(
-        machine(),
-        TargetResource::Terminal {
-            placement: Some(placement),
-            terminal: terminal_id(id),
-            incarnation: Incarnation::new(1),
-        },
-    )
+    target(TargetResource::Terminal {
+        placement: Some(placement),
+        terminal: terminal_id(id),
+        incarnation: Incarnation::new(1),
+    })
 }
 
-fn plugin(id: &str) -> ResolvedTarget {
-    ResolvedTarget::new(
-        machine(),
-        TargetResource::Plugin {
-            plugin: PluginId::new(id.to_owned()),
-        },
-    )
+fn plugin(id: &str) -> ResolvedTarget<WireIds> {
+    target(TargetResource::Plugin {
+        plugin: PluginId::new(id.to_owned()),
+    })
 }
 
-fn machine_target() -> ResolvedTarget {
-    ResolvedTarget::new(machine(), TargetResource::Machine)
+fn machine_target() -> ResolvedTarget<WireIds> {
+    target(TargetResource::Machine)
 }
 
-const fn ask(action: Action, target: ResolvedTarget) -> AccessRequest {
+const fn ask(action: Action, target: ResolvedTarget<WireIds>) -> AccessRequest<WireIds> {
     AccessRequest::new(action, target, NOW)
 }
 

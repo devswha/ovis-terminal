@@ -4,6 +4,7 @@ mod issuance;
 mod issued;
 mod secret;
 mod table;
+mod tombstone;
 
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
@@ -15,6 +16,7 @@ use table::{Claim, CredentialTable};
 use crate::config::{AuthorityLimits, RuntimeBinding};
 use crate::endpoint::{PeerAdmission, Transport};
 use crate::error::{AuthzError, MismatchReason};
+use crate::family::IdentityFamily;
 use crate::identity::PrincipalId;
 use crate::permission::Action;
 use crate::scope::ResolvedTarget;
@@ -35,11 +37,11 @@ impl AuthorityId {
 /// permission, every request needs a grant covering its action and resolved target, and
 /// every commit rechecks the decision it was admitted under.
 #[derive(Debug)]
-pub struct Authority {
+pub struct Authority<F: IdentityFamily> {
     id: AuthorityId,
-    binding: RuntimeBinding,
+    binding: RuntimeBinding<F>,
     limits: AuthorityLimits,
-    table: RwLock<CredentialTable>,
+    table: RwLock<CredentialTable<F>>,
 }
 
 /// An authenticated connection: one principal under one credential epoch. It is not
@@ -69,15 +71,15 @@ impl Session {
 /// Permission to perform one action on one resolved target, bound to the credential epoch
 /// it was granted under. It cannot be built outside this crate or copied.
 #[derive(Debug)]
-pub struct Decision {
+pub struct Decision<F: IdentityFamily> {
     authority: AuthorityId,
     claim: Claim,
     principal: PrincipalId,
     action: Action,
-    target: ResolvedTarget,
+    target: ResolvedTarget<F>,
 }
 
-impl Decision {
+impl<F: IdentityFamily> Decision<F> {
     /// The principal the decision was made for.
     #[must_use]
     pub const fn principal(&self) -> &PrincipalId {
@@ -86,7 +88,7 @@ impl Decision {
 
     /// The target the decision covers.
     #[must_use]
-    pub const fn target(&self) -> &ResolvedTarget {
+    pub const fn target(&self) -> &ResolvedTarget<F> {
         &self.target
     }
 }
@@ -109,25 +111,25 @@ impl<'a> Presentation<'a> {
 /// One action on one resolved target at one instant: what a request asks for, or what a
 /// commit is about to write.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AccessRequest {
+pub struct AccessRequest<F: IdentityFamily> {
     action: Action,
-    target: ResolvedTarget,
+    target: ResolvedTarget<F>,
     at: TimestampMs,
 }
 
-impl AccessRequest {
+impl<F: IdentityFamily> AccessRequest<F> {
     /// Asks to perform `action` on `target` at `at`.
     #[must_use]
-    pub const fn new(action: Action, target: ResolvedTarget, at: TimestampMs) -> Self {
+    pub const fn new(action: Action, target: ResolvedTarget<F>, at: TimestampMs) -> Self {
         Self { action, target, at }
     }
 }
 
 /// The action and target a commit or queued write is about to perform, at the instant of
 /// the write.
-pub type CommitCheck = AccessRequest;
+pub type CommitCheck<F> = AccessRequest<F>;
 
-impl Authority {
+impl<F: IdentityFamily> Authority<F> {
     /// Authenticates bearer text over an admitted endpoint connection.
     ///
     /// # Errors
@@ -175,8 +177,8 @@ impl Authority {
     pub fn authorize(
         &self,
         session: &Session,
-        request: &AccessRequest,
-    ) -> Result<Decision, AuthzError> {
+        request: &AccessRequest<F>,
+    ) -> Result<Decision<F>, AuthzError> {
         self.own(session)?;
         self.read()?.permit(session, request)
     }
@@ -188,7 +190,11 @@ impl Authority {
     /// [`AuthzError::DecisionMismatch`] when the commit is not the decided action and target
     /// of this authority, [`AuthzError::CredentialRevoked`] or
     /// [`AuthzError::CredentialExpired`] when the credential lapsed after the decision.
-    pub fn recheck(&self, decision: &Decision, commit: &CommitCheck) -> Result<(), AuthzError> {
+    pub fn recheck(
+        &self,
+        decision: &Decision<F>,
+        commit: &CommitCheck<F>,
+    ) -> Result<(), AuthzError> {
         let mismatch = if decision.authority != self.id {
             Some(MismatchReason::Authority)
         } else if decision.action != commit.action {
@@ -214,11 +220,11 @@ impl Authority {
         }
     }
 
-    fn read(&self) -> Result<RwLockReadGuard<'_, CredentialTable>, AuthzError> {
+    fn read(&self) -> Result<RwLockReadGuard<'_, CredentialTable<F>>, AuthzError> {
         self.table.read().map_err(|_| AuthzError::Poisoned)
     }
 
-    fn write(&self) -> Result<RwLockWriteGuard<'_, CredentialTable>, AuthzError> {
+    fn write(&self) -> Result<RwLockWriteGuard<'_, CredentialTable<F>>, AuthzError> {
         self.table.write().map_err(|_| AuthzError::Poisoned)
     }
 }

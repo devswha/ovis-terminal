@@ -12,6 +12,7 @@ mod config;
 mod credential;
 mod endpoint;
 mod error;
+mod family;
 mod identity;
 mod permission;
 mod scope;
@@ -27,6 +28,7 @@ pub use endpoint::{
     RemoteTransport, Transport, UnixSocketEvidence, UnixUid, WindowsSid,
 };
 pub use error::{AuthzError, EndpointDefect, Exceeded, Limit, MismatchReason};
+pub use family::{Identity, IdentityFamily};
 pub use identity::{CredentialEpoch, CredentialId, PrincipalId};
 pub use permission::{Action, Permission, Role};
 pub use scope::{Grant, Placement, ResolvedTarget, ResourceScope, ScopeResource, TargetResource};

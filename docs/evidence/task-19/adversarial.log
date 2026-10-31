@@ -1,22 +1,30 @@
 $ cargo test -p ovis-terminal-authz --test authority revocation::revocation_reaches_a_recheck_on_another_thread -- --exact
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
 $ cargo test -p ovis-terminal-authz --test authority revocation::decision_from_another_authority_is_rejected -- --exact
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
 $ cargo test -p ovis-terminal-authz --test authority revocation::commit_must_match_the_decided_action_target_and_incarnation -- --exact
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
 $ cargo test -p ovis-terminal-authz --test authority revocation::expiry_between_decision_and_commit_rejects_the_write -- --exact
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
 $ cargo test -p ovis-terminal-authz --test authority revocation::credential_is_scoped_to_its_runtime_lifetime -- --exact
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
+$ cargo test -p ovis-terminal-authz --test authority revocation::denied_revocation_leaves_the_target_credential_usable -- --exact
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
+$ cargo test -p ovis-terminal-authz --test authority reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed -- --exact
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
+$ cargo test -p ovis-terminal-authz --test authority reclamation::tombstone_bound_holds_unexpired_revocations_until_one_expires -- --exact
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
 $ cargo test -p ovis-terminal-authz --test authority issuance::forged_scope_documents_are_rejected_with_field_paths -- --exact
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
 $ cargo test -p ovis-terminal-authz --test authority issuance::forged_bearer_tokens_are_rejected -- --exact
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
 $ cargo test -p ovis-terminal-authz --test authority issuance::numeric_counter_is_rejected_with_its_field_path -- --exact
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
 $ cargo test -p ovis-terminal-authz --test authority issuance::expiry_preserves_u64_max_exactly -- --exact
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
 $ cargo test -p ovis-terminal-authz --test authority issuance::payload_from_an_unprivileged_principal_grants_nothing -- --exact
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
 $ cargo test -p ovis-terminal-authz --test authority issuance::issuer_cannot_grant_beyond_its_own_authority -- --exact
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 26 filtered out; finished in 0.00s
+$ cargo test -p ovis-terminal-core --test authority_scope issuance_document_rejects_an_identity_of_another_family -- --exact
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s

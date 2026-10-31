@@ -2,13 +2,15 @@
 
 use std::collections::HashMap;
 
-use ovis_terminal_protocol::schema::ids::RuntimeLifetimeId;
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 
 use super::issued::{Bearer, IssuedCredential};
 use super::secret::CredentialSecret;
+use super::tombstone::{Tombstone, Tombstones};
 use super::{AccessRequest, Decision, Session};
+use crate::config::AuthorityLimits;
 use crate::error::{AuthzError, Limit};
+use crate::family::IdentityFamily;
 use crate::identity::{CredentialEpoch, CredentialId, PrincipalId};
 use crate::scope::Grant;
 
@@ -19,10 +21,10 @@ enum Standing {
 }
 
 #[derive(Debug)]
-pub(super) struct CredentialRecord {
+pub(super) struct CredentialRecord<F: IdentityFamily> {
     pub(super) principal: PrincipalId,
     secret: CredentialSecret,
-    pub(super) grants: Vec<Grant>,
+    pub(super) grants: Vec<Grant<F>>,
     pub(super) expires_at: TimestampMs,
     pub(super) epoch: CredentialEpoch,
     standing: Standing,
@@ -35,7 +37,7 @@ pub(super) struct Claim {
     pub(super) epoch: CredentialEpoch,
 }
 
-impl CredentialRecord {
+impl<F: IdentityFamily> CredentialRecord<F> {
     /// Fails unless the credential is still active at the claimed epoch and unexpired at `at`.
     pub(super) const fn check(&self, claim: Claim, at: TimestampMs) -> Result<(), AuthzError> {
         if matches!(self.standing, Standing::Revoked) || self.epoch.get() != claim.epoch.get() {
@@ -66,50 +68,80 @@ impl CredentialRecord {
     const fn live_at(&self, at: TimestampMs) -> bool {
         matches!(self.standing, Standing::Active) && at.get() < self.expires_at.get()
     }
+
+    const fn tombstone(&self, credential: CredentialId) -> Tombstone {
+        Tombstone {
+            credential,
+            epoch: self.epoch,
+            expires_at: self.expires_at,
+        }
+    }
 }
 
-pub(super) struct NewCredential {
+pub(super) struct NewCredential<F: IdentityFamily> {
     pub(super) principal: PrincipalId,
-    pub(super) grants: Vec<Grant>,
+    pub(super) grants: Vec<Grant<F>>,
     pub(super) expires_at: TimestampMs,
 }
 
 #[derive(Debug)]
-pub(super) struct CredentialTable {
+pub(super) struct CredentialTable<F: IdentityFamily> {
     last_issued: u64,
     capacity: usize,
-    pub(super) records: HashMap<CredentialId, CredentialRecord>,
+    pub(super) records: HashMap<CredentialId, CredentialRecord<F>>,
+    tombstones: Tombstones,
 }
 
-impl CredentialTable {
-    pub(super) fn new(capacity: usize) -> Self {
+impl<F: IdentityFamily> CredentialTable<F> {
+    pub(super) fn new(limits: AuthorityLimits) -> Self {
         Self {
             last_issued: 0,
-            capacity,
+            capacity: limits.credentials,
             records: HashMap::new(),
+            tombstones: Tombstones::new(limits.tombstones),
         }
     }
 
-    /// Returns the record behind `claim` if it is still valid at `at`.
+    /// Returns the record behind `claim` if it is still valid at `at`; a claim on a
+    /// reclaimed revoked credential still fails as revoked.
     pub(super) fn check_claim(
         &self,
         claim: Claim,
         at: TimestampMs,
-    ) -> Result<&CredentialRecord, AuthzError> {
-        let record = self
-            .records
-            .get(&claim.credential)
-            .ok_or(AuthzError::InvalidCredential)?;
+    ) -> Result<&CredentialRecord<F>, AuthzError> {
+        let Some(record) = self.records.get(&claim.credential) else {
+            return Err(self.tombstones.get(claim.credential).map_or(
+                AuthzError::InvalidCredential,
+                |tombstone| AuthzError::CredentialRevoked {
+                    credential: claim.credential,
+                    epoch: tombstone.epoch,
+                },
+            ));
+        };
         record.check(claim, at)?;
         Ok(record)
+    }
+
+    /// Revokes `credential`; revoking an already reclaimed revocation reports its epoch.
+    pub(super) fn revoke(
+        &mut self,
+        credential: CredentialId,
+    ) -> Result<CredentialEpoch, AuthzError> {
+        if let Some(record) = self.records.get_mut(&credential) {
+            return Ok(record.revoke());
+        }
+        self.tombstones
+            .get(credential)
+            .map(|tombstone| tombstone.epoch)
+            .ok_or(AuthzError::CredentialNotFound { credential })
     }
 
     /// Decides `request` for a session this table's authority issued.
     pub(super) fn permit(
         &self,
         session: &Session,
-        request: &AccessRequest,
-    ) -> Result<Decision, AuthzError> {
+        request: &AccessRequest<F>,
+    ) -> Result<Decision<F>, AuthzError> {
         let record = self.check_claim(session.claim, request.at)?;
         let required = request.action.required();
         if !record
@@ -132,19 +164,29 @@ impl CredentialTable {
         })
     }
 
-    /// Drops revoked and expired records when the table is full; they can never pass a
-    /// check again, so forgetting them only turns their errors into `invalid_credential`.
+    /// When the table is full, drops records that can never pass a check again. A revoked,
+    /// unexpired record is dropped only after its revocation is buried as a tombstone; if
+    /// the tombstone set is full of unexpired revocations the record stays.
     pub(super) fn make_room(&mut self, at: TimestampMs) {
-        if self.records.len() >= self.capacity {
-            self.records.retain(|_, record| record.live_at(at));
+        if self.records.len() < self.capacity {
+            return;
         }
+        let tombstones = &mut self.tombstones;
+        self.records.retain(|credential, record| {
+            if record.live_at(at) {
+                return true;
+            }
+            let revoked_unexpired =
+                matches!(record.standing, Standing::Revoked) && at.get() < record.expires_at.get();
+            revoked_unexpired && !tombstones.bury(record.tombstone(*credential), at)
+        });
     }
 
     pub(super) fn insert(
         &mut self,
-        lifetime: &RuntimeLifetimeId,
-        new: NewCredential,
-    ) -> Result<IssuedCredential, AuthzError> {
+        lifetime: &F::Lifetime,
+        new: NewCredential<F>,
+    ) -> Result<IssuedCredential<F>, AuthzError> {
         let sequence = self.last_issued.checked_add(1);
         let (Some(sequence), true) = (sequence, self.records.len() < self.capacity) else {
             return Err(AuthzError::LimitExceeded {

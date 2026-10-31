@@ -3,16 +3,14 @@ use std::thread;
 use std::time::Duration;
 
 use ovis_terminal_authz::{
-    AccessRequest, Action, Authority, AuthorityConfig, AuthorityLimits, AuthzError, CommitCheck,
-    Issuance, IssueRequest, OwnerSpec, Permission, Presentation, PrincipalId, ResolvedTarget,
-    Revocation, RuntimeBinding, ScopeResource, TargetResource,
+    AccessRequest, Action, AuthzError, CommitCheck, Permission, Presentation, ResolvedTarget,
+    Revocation, ScopeResource, TargetResource,
 };
-use ovis_terminal_protocol::schema::ids::RuntimeLifetimeId;
 use ovis_terminal_protocol::schema::scalar::Incarnation;
 
 use super::{
-    Fixture, ISSUED_EXPIRY, NOW, OWNER_EXPIRY, TestResult, grant, local_admission, machine,
-    terminal, terminal_id, terminal_scope,
+    Fixture, ISSUED_EXPIRY, NOW, TestResult, WireIds, grant, local_admission, target, terminal,
+    terminal_id, terminal_scope,
 };
 
 fn kind_of<T>(result: Result<T, AuthzError>) -> TestResult<&'static str> {
@@ -23,7 +21,7 @@ fn interact_t1(
     fixture: &Fixture,
 ) -> TestResult<(
     ovis_terminal_authz::Session,
-    ovis_terminal_authz::IssuedCredential,
+    ovis_terminal_authz::IssuedCredential<WireIds>,
 )> {
     fixture.session(
         "agent-t1",
@@ -90,14 +88,11 @@ fn commit_must_match_the_decided_action_target_and_incarnation() -> TestResult {
         &session,
         &AccessRequest::new(Action::Input, terminal("t1"), NOW),
     )?;
-    let replaced = ResolvedTarget::new(
-        machine(),
-        TargetResource::Terminal {
-            placement: None,
-            terminal: terminal_id("t1"),
-            incarnation: Incarnation::new(2),
-        },
-    );
+    let replaced = target(TargetResource::Terminal {
+        placement: None,
+        terminal: terminal_id("t1"),
+        incarnation: Incarnation::new(2),
+    });
 
     let read_as_write = fixture
         .authority
@@ -193,33 +188,35 @@ fn revocation_reaches_a_recheck_on_another_thread() -> TestResult {
 }
 
 #[test]
-fn credential_table_is_bounded_and_reclaims_revoked_entries() -> TestResult {
-    let binding = RuntimeBinding::new(machine(), RuntimeLifetimeId::new("bounded".to_owned()));
-    let owner = OwnerSpec::new(PrincipalId::parse("owner")?, OWNER_EXPIRY);
-    let limits = AuthorityLimits::DEFAULT
-        .with_max_credentials(2)
-        .with_max_grants(8);
-    let (authority, issued) =
-        Authority::bootstrap(AuthorityConfig::new(binding, owner).with_limits(limits))?;
-    let owner =
-        authority.authenticate(&local_admission()?, Presentation::new(issued.bearer(), NOW))?;
-    let request = |grants: usize| -> TestResult<Issuance> {
-        let grants = vec![grant(Permission::Observe, ScopeResource::Machine); grants];
-        Ok(Issuance::new(
-            IssueRequest::new(PrincipalId::parse("agent")?, grants, ISSUED_EXPIRY),
-            NOW,
-        ))
-    };
+fn denied_revocation_leaves_the_target_credential_usable() -> TestResult {
+    let fixture = Fixture::new()?;
+    let (target_session, target_credential) = interact_t1(&fixture)?;
+    let (intruder, _) = fixture.session(
+        "intruder",
+        vec![grant(Permission::Interact, ScopeResource::Machine)],
+    )?;
 
-    let first = authority.issue(&owner, request(1)?)?;
-    let full = authority.issue(&owner, request(1)?);
-    authority.revoke(&owner, &Revocation::new(*first.id(), NOW))?;
-    let reclaimed = authority.issue(&owner, request(1)?);
-    let too_many_grants = authority.issue(&owner, request(9)?);
+    let attempt = fixture
+        .authority
+        .revoke(&intruder, &Revocation::new(*target_credential.id(), NOW));
 
-    assert_eq!(kind_of(full)?, "limit_exceeded");
-    assert!(reclaimed.is_ok(), "revoked entry was not reclaimed");
-    assert_eq!(kind_of(too_many_grants)?, "limit_exceeded");
+    assert_eq!(kind_of(attempt)?, "forbidden");
+    let still_writes = fixture.authority.authorize(
+        &target_session,
+        &AccessRequest::new(Action::Input, terminal("t1"), NOW),
+    );
+    let still_logs_in = fixture.authority.authenticate(
+        &local_admission()?,
+        Presentation::new(target_credential.bearer(), NOW),
+    );
+    assert!(
+        still_writes.is_ok(),
+        "denied revocation changed the credential"
+    );
+    assert!(
+        still_logs_in.is_ok(),
+        "denied revocation changed the credential"
+    );
     Ok(())
 }
 

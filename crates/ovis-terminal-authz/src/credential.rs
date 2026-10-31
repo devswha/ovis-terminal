@@ -4,22 +4,27 @@ use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use serde::Deserialize;
 
 use crate::error::AuthzError;
+use crate::family::IdentityFamily;
 use crate::identity::{CredentialId, PrincipalId};
 use crate::scope::Grant;
 
 /// The closed request document that asks for a new credential.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct IssueRequest {
+#[serde(deny_unknown_fields, bound = "")]
+pub struct IssueRequest<F: IdentityFamily> {
     pub(crate) principal: PrincipalId,
-    pub(crate) grants: Vec<Grant>,
+    pub(crate) grants: Vec<Grant<F>>,
     pub(crate) expires_at_ms: TimestampMs,
 }
 
-impl IssueRequest {
+impl<F: IdentityFamily> IssueRequest<F> {
     /// Asks for a credential of `principal` holding `grants` until `expires_at`.
     #[must_use]
-    pub const fn new(principal: PrincipalId, grants: Vec<Grant>, expires_at: TimestampMs) -> Self {
+    pub const fn new(
+        principal: PrincipalId,
+        grants: Vec<Grant<F>>,
+        expires_at: TimestampMs,
+    ) -> Self {
         Self {
             principal,
             grants,
@@ -57,15 +62,15 @@ impl IssueRequest {
 
 /// An issuance request evaluated at one instant.
 #[derive(Debug, Clone)]
-pub struct Issuance {
-    pub(crate) request: IssueRequest,
+pub struct Issuance<F: IdentityFamily> {
+    pub(crate) request: IssueRequest<F>,
     pub(crate) at: TimestampMs,
 }
 
-impl Issuance {
+impl<F: IdentityFamily> Issuance<F> {
     /// Evaluates `request` at `at`.
     #[must_use]
-    pub const fn new(request: IssueRequest, at: TimestampMs) -> Self {
+    pub const fn new(request: IssueRequest<F>, at: TimestampMs) -> Self {
         Self { request, at }
     }
 }

@@ -18,8 +18,14 @@
     {
       "command": "cargo nextest run -p ovis-terminal-authz",
       "exit": 0,
-      "result": "35 tests run: 35 passed, 0 skipped",
+      "result": "38 tests run: 38 passed, 0 skipped",
       "log": "nextest.log"
+    },
+    {
+      "command": "cargo nextest run -p ovis-terminal-core --test authority_scope",
+      "exit": 0,
+      "result": "2 tests run: 2 passed, 0 skipped",
+      "log": "nextest-core-seam.log"
     },
     {
       "command": "cargo clippy -p ovis-terminal-authz --all-targets -- -D warnings",
@@ -50,7 +56,7 @@
     {
       "command": "every step of conformance/scenarios/part-a/task-19.json executed with its expected exit and stdout lines",
       "exit": 0,
-      "result": "13 of 13 steps PASS",
+      "result": "17 of 17 steps PASS",
       "log": "scenario-steps.log"
     },
     {
@@ -71,17 +77,27 @@
       "revocation::revocation_reaches_a_recheck_on_another_thread",
       "revocation::expiry_between_decision_and_commit_rejects_the_write",
       "revocation::decision_from_another_authority_is_rejected",
-      "revocation::commit_must_match_the_decided_action_target_and_incarnation"
+      "revocation::commit_must_match_the_decided_action_target_and_incarnation",
+      "reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed",
+      "reclamation::tombstone_bound_holds_unexpired_revocations_until_one_expires",
+      "revocation::denied_revocation_leaves_the_target_credential_usable"
     ],
     "malformed_input": [
       "issuance::forged_scope_documents_are_rejected_with_field_paths",
       "issuance::forged_bearer_tokens_are_rejected",
       "issuance::numeric_counter_is_rejected_with_its_field_path",
-      "forge-probe.log (compile-time)"
+      "forge-probe.log (compile-time)",
+      "authority_scope::issuance_document_rejects_an_identity_of_another_family",
+      "identity-probe.log (compile-time E0308 for cross-family registry ids)"
     ],
     "prompt_injection": [
       "issuance::payload_from_an_unprivileged_principal_grants_nothing"
     ],
-    "mutation": "mutation.log"
-  }
+    "mutation": [
+      "mutation.log",
+      "mutation-revoke.log",
+      "mutation-reclaim.log"
+    ]
+  },
+  "round": "gate review round 1 fixes (B1 registry-backed scopes, B2 denied-revocation coverage, B3 revocation survives reclamation)"
 }
