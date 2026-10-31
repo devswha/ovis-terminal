@@ -1,7 +1,10 @@
 //! Typed errors crossing the JSON-RPC protocol boundary.
 
 mod boundary;
+mod candidate;
 mod data;
+mod deadline;
+pub use candidate::TargetCandidate;
 mod identity;
 mod kinds;
 

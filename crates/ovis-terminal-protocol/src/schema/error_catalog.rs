@@ -128,6 +128,9 @@ impl JsonSchema for ErrorData {
                 "field_path": generator.subschema_for::<FieldPath>(),
                 "target": generator.subschema_for::<TargetId>(),
                 "op_id": generator.subschema_for::<OpId>(),
+                "deadline_ms": generator.subschema_for::<super::scalar::DurationMs>(),
+                "elapsed_ms": generator.subschema_for::<super::scalar::DurationMs>(),
+                "candidates": generator.subschema_for::<Vec<crate::errors::TargetCandidate>>(),
             },
             "required": ["kind", "hint", "retryable"],
         })

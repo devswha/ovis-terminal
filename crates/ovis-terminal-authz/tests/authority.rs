@@ -5,6 +5,8 @@
 
 #[path = "authority/issuance.rs"]
 mod issuance;
+#[path = "authority/operations.rs"]
+mod operations;
 #[path = "authority/reclamation.rs"]
 mod reclamation;
 #[path = "authority/revocation.rs"]

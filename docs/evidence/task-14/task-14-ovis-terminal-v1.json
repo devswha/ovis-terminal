@@ -1,0 +1,373 @@
+{
+  "task": 14,
+  "producer": "executor component verification; not the deferred conformance runner",
+  "platform": {
+    "os": "Linux",
+    "kernel": "7.0.0-38-generic",
+    "architecture": "x86_64",
+    "rustc": "1.99.1",
+    "cargo": "1.99.1",
+    "nextest": "0.9.150"
+  },
+  "base": "8db5609",
+  "tests": {
+    "repository_gate": {
+      "command": "bash scripts/check.sh",
+      "exit_code": 0,
+      "passed": 381,
+      "skipped": 1,
+      "skip": "Existing store child-process fixture, invoked by its parent tests."
+    },
+    "server_acceptance": {
+      "commands": [
+        "cargo nextest run -p ovis-terminal-server",
+        "cargo clippy -p ovis-terminal-server --all-targets -- -D warnings"
+      ],
+      "exit_code": 0,
+      "passed": 45
+    },
+    "happy": {
+      "command": "cargo test -p ovis-terminal-server --test dispatch happy -- --exact --nocapture",
+      "exit_code": 0,
+      "passed": 1
+    },
+    "failure": {
+      "command": "cargo test -p ovis-terminal-server --test dispatch failure -- --exact --nocapture",
+      "exit_code": 0,
+      "passed": 1
+    },
+    "adversarial": {
+      "command": "cargo test -p ovis-terminal-server --test dispatch -- --nocapture",
+      "exit_code": 0,
+      "passed": 12
+    },
+    "contracts": {
+      "exit_code": 0,
+      "protocol_tests": 3,
+      "authz_seam_tests": 2
+    }
+  },
+  "happy": {
+    "requests": [
+      {
+        "id": "slow",
+        "jsonrpc": "2.0",
+        "method": "doc.set",
+        "params": {
+          "name": "test",
+          "op_id": "01a19041-ba07-75d9-b509-8f1bea4c2c3c",
+          "value": "payload",
+          "version": "0"
+        }
+      },
+      {
+        "id": "status",
+        "jsonrpc": "2.0",
+        "method": "op.get",
+        "params": {
+          "op_id": "01a19041-ba07-75d9-b509-8f1bea4c2c3c"
+        }
+      },
+      {
+        "id": "inspect",
+        "jsonrpc": "2.0",
+        "method": "op.get",
+        "params": {
+          "op_id": "01a19041-ba07-75d9-b509-8f1bea4c2c3c"
+        }
+      }
+    ],
+    "replies": [
+      {
+        "jsonrpc": "2.0",
+        "id": "hello",
+        "result": {
+          "capabilities": {
+            "framed": true,
+            "stream_modes": [],
+            "transports": [
+              "unix"
+            ]
+          },
+          "endpoint_kind": "unix",
+          "generation": "1",
+          "limits": {
+            "connection_unwritten_bytes": "67108864",
+            "credit_initial_bytes": "262144",
+            "credit_max_bytes": "1048576",
+            "doc_max_bytes": "1048576",
+            "event_replay_bytes": "67108864",
+            "event_replay_events": 10000,
+            "heartbeat_ms": "15000",
+            "history_lines": 100000,
+            "input_queue_bytes": "16777216",
+            "max_frame_bytes": "16777216",
+            "max_in_flight_requests": 64,
+            "op_retention_ms": "86400000",
+            "output_ring_bytes": "67108864",
+            "rpc_default_deadline_ms": "10000",
+            "session_backlog_bytes": "67108864",
+            "session_event_queue_bytes": "67108864",
+            "session_input_bytes": "67108864",
+            "session_retained_bytes": "4294967296",
+            "session_rss_bytes": "1073741824",
+            "session_vt_bytes": "134217728",
+            "stream_backlog_bytes": "4194304",
+            "stream_chunk_bytes": "16384"
+          },
+          "machine_id": "machine:0191f1a2-0000-7000-8000-000000000014",
+          "methods": [
+            "op.get",
+            "op.cancel",
+            "terminal.keep",
+            "doc.set"
+          ],
+          "runtime_lifetime": "runtime:7",
+          "server_boot_id": "boot:1",
+          "server_time_ms": "1793421588998",
+          "version": "0.1.0"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "id": "status",
+        "result": {
+          "error": null,
+          "method": "doc.set",
+          "op_id": "01a19041-ba07-75d9-b509-8f1bea4c2c3c",
+          "result": null,
+          "state": "accepted",
+          "updated_seq": "1"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "id": "slow",
+        "error": {
+          "code": -32000,
+          "message": "operation failed",
+          "data": {
+            "kind": "deadline_exceeded",
+            "hint": "inspect or cancel the operation by op_id",
+            "retryable": false,
+            "op_id": "01a19041-ba07-75d9-b509-8f1bea4c2c3c",
+            "deadline_ms": "10000",
+            "elapsed_ms": "10001"
+          }
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "id": "inspect",
+        "result": {
+          "error": null,
+          "method": "doc.set",
+          "op_id": "01a19041-ba07-75d9-b509-8f1bea4c2c3c",
+          "result": {
+            "value": "payload",
+            "version": "0"
+          },
+          "state": "committed",
+          "updated_seq": "3"
+        }
+      }
+    ],
+    "deadline": {
+      "kind": "deadline_exceeded",
+      "hint": "inspect or cancel the operation by op_id",
+      "retryable": false,
+      "op_id": "01a19041-ba07-75d9-b509-8f1bea4c2c3c",
+      "deadline_ms": "10000",
+      "elapsed_ms": "10001"
+    }
+  },
+  "failure": {
+    "requests": [
+      {
+        "id": "bad",
+        "jsonrpc": "2.0",
+        "method": "pane.split",
+        "params": {
+          "op_id": "01800000-0000-7000-8000-000000000001",
+          "pane_id": "p2"
+        }
+      },
+      {
+        "id": "typo",
+        "jsonrpc": "2.0",
+        "method": "doc.set",
+        "params": {
+          "name": "test",
+          "op_id": "01a19041-ba10-72c8-b87e-5700e055c18c",
+          "pane_id": "p2",
+          "value": "payload",
+          "version": "0"
+        }
+      },
+      {
+        "id": "absent",
+        "jsonrpc": "2.0",
+        "method": "op.get",
+        "params": {
+          "op_id": "01a19041-ba10-72c8-b87e-5700e055c18c"
+        }
+      },
+      {
+        "id": "commit",
+        "jsonrpc": "2.0",
+        "method": "doc.set",
+        "params": {
+          "name": "test",
+          "op_id": "01a19041-ba10-72c8-b87e-5700e055c18c",
+          "value": "payload",
+          "version": "0"
+        }
+      },
+      {
+        "id": "cancel",
+        "jsonrpc": "2.0",
+        "method": "op.cancel",
+        "params": {
+          "op_id": "01a19041-ba10-72c8-b87e-5700e055c18c"
+        }
+      }
+    ],
+    "replies": [
+      {
+        "jsonrpc": "2.0",
+        "id": "hello",
+        "result": {
+          "capabilities": {
+            "framed": true,
+            "stream_modes": [],
+            "transports": [
+              "unix"
+            ]
+          },
+          "endpoint_kind": "unix",
+          "generation": "1",
+          "limits": {
+            "connection_unwritten_bytes": "67108864",
+            "credit_initial_bytes": "262144",
+            "credit_max_bytes": "1048576",
+            "doc_max_bytes": "1048576",
+            "event_replay_bytes": "67108864",
+            "event_replay_events": 10000,
+            "heartbeat_ms": "15000",
+            "history_lines": 100000,
+            "input_queue_bytes": "16777216",
+            "max_frame_bytes": "16777216",
+            "max_in_flight_requests": 64,
+            "op_retention_ms": "86400000",
+            "output_ring_bytes": "67108864",
+            "rpc_default_deadline_ms": "10000",
+            "session_backlog_bytes": "67108864",
+            "session_event_queue_bytes": "67108864",
+            "session_input_bytes": "67108864",
+            "session_retained_bytes": "4294967296",
+            "session_rss_bytes": "1073741824",
+            "session_vt_bytes": "134217728",
+            "stream_backlog_bytes": "4194304",
+            "stream_chunk_bytes": "16384"
+          },
+          "machine_id": "machine:0191f1a2-0000-7000-8000-000000000014",
+          "methods": [
+            "op.get",
+            "op.cancel",
+            "terminal.keep",
+            "doc.set"
+          ],
+          "runtime_lifetime": "runtime:7",
+          "server_boot_id": "boot:1",
+          "server_time_ms": "1793421589007",
+          "version": "0.1.0"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "id": "bad",
+        "error": {
+          "code": -32601,
+          "message": "no such JSON-RPC method",
+          "data": {
+            "kind": "method_not_found",
+            "hint": "consult rpc.discover for supported methods",
+            "retryable": false,
+            "field_path": "method"
+          }
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "id": "typo",
+        "error": {
+          "code": -32602,
+          "message": "method parameters violate the closed schema",
+          "data": {
+            "kind": "invalid_params",
+            "hint": "correct the method parameters",
+            "retryable": false,
+            "field_path": "params.pane_id"
+          }
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "id": "absent",
+        "error": {
+          "code": -32000,
+          "message": "operation failed",
+          "data": {
+            "kind": "not_found",
+            "hint": "query an operation accepted by this principal in this runtime",
+            "retryable": false,
+            "op_id": "01a19041-ba10-72c8-b87e-5700e055c18c"
+          }
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "id": "commit",
+        "result": {
+          "value": "payload",
+          "version": "0"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "id": "cancel",
+        "result": {
+          "error": null,
+          "method": "doc.set",
+          "op_id": "01a19041-ba10-72c8-b87e-5700e055c18c",
+          "outcome": "already_committed",
+          "result": {
+            "value": "payload",
+            "version": "0"
+          },
+          "state": "committed",
+          "updated_seq": "3"
+        }
+      }
+    ],
+    "asserted_effect_bytes_hex": "227061796c6f616422"
+  },
+  "conformance": {
+    "status": "DEFERRED-BY-PLAN",
+    "reason": "DEFERRED VERIFICATION (runner lands in Todo 21)",
+    "command": "uname -srm; cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-14 --isolated --case happy --evidence '/home/devswha/workspace/ovis-terminal-wt/lane-t14/.omo/evidence/ovis-terminal-v1/task-14/task-14-ovis-terminal-v1.json'",
+    "exit_code": 2,
+    "stderr": "conformance: no scenarios are registered in this build (protocol crate ovis-terminal-protocol)",
+    "evidence_file_created_by_runner": false
+  },
+  "seams": [
+    "Protocol ErrorData deadline_ms/elapsed_ms/candidates plus generated OpenRPC and compatibility fixture; deadline_exceeded already existed.",
+    "Authz InspectOperation/CancelOperation and principal-owned operation target; narrower resource credentials can inspect their own ledger without gaining domain authority."
+  ],
+  "verification_limits": [
+    "The test doc.set and terminal.keep adapters exercise real filesystem effects, not the later document or terminal domain implementations.",
+    "No assembled CLI conformance or local macOS/Windows execution is claimed.",
+    "Rust LSP unavailable; compiler, Clippy and repository gates were used."
+  ],
+  "cleanup": "Socket fixtures stop servers, join dispatcher tasks, close the real SQLite coordinator and remove their owned temporary directories."
+}
