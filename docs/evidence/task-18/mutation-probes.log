@@ -1,0 +1,14 @@
+## mutation clamp-ratio -> test failure
+Error: "expected invalid_geometry, got Ok(Change { revision: Revision(DecimalU64(20)), no_op: None, created: [], removed: [], changed: [Split(SplitId(1)), Tab(TabId(1))], released_terminals: [], cleared_selections: [], geometry: [TabGeometry { tab: TabId(1), panes: [PaneGeometry { pane: PaneId(1), rect: Rect { x: 0, y: 0, width: 900000, height: 1000000 }, visible: true }, PaneGeometry { pane: PaneId(2), rect: Rect { x: 900000, y: 0, width: 100000, height: 1000000 }, visible: true }], splits: [SplitGeometry { split: SplitId(1), rect: Rect { x: 0, y: 0, width: 1000000, height: 1000000 } }] }], launch: NotRequested })"
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.08s
+## mutation ignore-group-scope -> test failure
+Error: "expected group_scope_required, got Ok(Change { revision: Revision(DecimalU64(30)), no_op: None, created: [], removed: [Workspace(WorkspaceId(1)), Tab(TabId(1)), Pane(PaneId(1)), Pane(PaneId(2)), Split(SplitId(1)), Workspace(WorkspaceId(2)), Tab(TabId(2)), Pane(PaneId(3))], changed: [], released_terminals: [], cleared_selections: [ClientId(\"phone\")], geometry: [], launch: NotRequested })"
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.15s
+## mutation retarget-selection-on-swap -> test happy (first attempt survived: no client had selected a swapped pane; happy now selects both swapped panes)
+thread 'happy' (2605058) panicked at crates/ovis-terminal-core/tests/../src/layout/qa/behavior.rs:73:5:
+  left: [Selection { client: ClientId("phone"), workspace: Some(WorkspaceId(1)), tab: Some(TabId(1)), pane: Some(PaneId(3)) }, Selection { client: ClientId("desk"), workspace: Some(WorkspaceId(1)), tab: Some(TabId(1)), pane: Some(PaneId(3)) }]
+ right: [Selection { client: ClientId("phone"), workspace: Some(WorkspaceId(1)), tab: Some(TabId(1)), pane: Some(PaneId(1)) }, Selection { client: ClientId("desk"), workspace: Some(WorkspaceId(1)), tab: Some(TabId(1)), pane: Some(PaneId(3)) }]
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.16s
+## mutation launch-failure-hides-creation -> test happy
+Error: LauncherUnavailable
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.20s
