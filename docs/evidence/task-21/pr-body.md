@@ -100,7 +100,7 @@ Shared, language-neutral fixtures:
 
 | Command | Exit | What is asserted |
 |---|---|---|
-| `bash scripts/check.sh` (on the final PR head, which includes origin/integration ef1d8c1) | 0 | fmt, clippy `-D warnings` on the workspace, nextest `529 passed, 1 skipped` (the skip is pre-existing, outside this crate), doctests, hygiene (250 LOC / 3 params), manifests, JSON |
+| `bash scripts/check.sh` (on the final PR head, which includes origin/integration b205dca) | 0 | fmt, clippy `-D warnings` on the workspace, nextest `555 passed, 1 skipped` (the skip is pre-existing, outside this crate), doctests, hygiene (250 LOC / 3 params), manifests, JSON |
 | `cargo nextest run -p ovis-terminal-conformance --all-targets` | 0 | 24 tests: 15 unit, 9 process (below) |
 | `cargo clippy -p ovis-terminal-conformance --all-targets -- -D warnings` | 0 | |
 | `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` | 0 | Windows compile with no warnings. On the earlier head 5bf6fd2 the same Windows-target clippy reproduced the 11 CI errors (unused `fixture::output` items, a never-constructed `RunnerError::Fixture`, 2 needless `async`, 1 needless `mut`) |
