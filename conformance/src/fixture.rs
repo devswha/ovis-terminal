@@ -21,6 +21,8 @@ pub mod serve;
 pub mod terminals;
 #[cfg(unix)]
 pub mod transcripts;
+#[cfg(unix)]
+pub mod tree;
 pub mod wire;
 
 #[cfg(unix)]

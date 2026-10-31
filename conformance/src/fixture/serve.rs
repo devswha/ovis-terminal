@@ -87,12 +87,17 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let (agents, gate) = super::agents::register(&mut dispatch, runtime, Arc::clone(&core))?;
     let directory = Arc::clone(&agents.1);
     super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
+    let tree = super::tree::register(
+        &mut dispatch,
+        (&agents, &gate),
+        (runtime, Arc::clone(&core)),
+    )?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
     let observer = observer(&authority, issued.bearer())?;
     let handler = Arc::new(FixtureHandler::new(
         Arc::new(dispatch),
         root.to_path_buf(),
-        (gate, directory),
+        (gate, directory, tree),
     ));
     let socket = root.join("run").join("s.sock");
     let endpoint = UnixEndpoint::bind(&socket)

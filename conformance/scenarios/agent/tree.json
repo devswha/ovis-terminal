@@ -1,0 +1,1295 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "agent/tree",
+  "title": "Children bound to a parent program incarnation end with it only when they opted in",
+  "todo": 41,
+  "closes": [
+    "GAP-094",
+    "GAP-119"
+  ],
+  "delivers": [
+    "IDEAL-070",
+    "IDEAL-092"
+  ],
+  "excludes": [
+    "EXCL-011",
+    "EXCL-012",
+    "EXCL-021"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the bridge: parent incarnation 1 registers session orchestrator-1 and works; child-a (notify, die_with_parent) opens a prompt and works, child-b (independent) works. The parent exits: exactly child-a receives one incarnation-checked kill, is seen to exit, and its prompt expires; child-b keeps running and working; child-a's end is recorded as unacknowledged news for the parent while the parent's session and incarnation read unchanged.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run-parent",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run-parent",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "parent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "run-parent": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": "terminal:6",
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "register-parent",
+                "method": "agent.register",
+                "params": {
+                  "op_id": "$op:register-parent",
+                  "target": {
+                    "name": "parent"
+                  },
+                  "process_token": "fixture-process-token-parent-1",
+                  "label": "orchestrator",
+                  "session": {
+                    "source": "omo",
+                    "kind": "session",
+                    "value": "orchestrator-1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "register-parent": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "parent-working",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:parent-working",
+                  "target": {
+                    "name": "parent"
+                  },
+                  "process_token": "fixture-process-token-parent-1",
+                  "seq": "1",
+                  "record": {
+                    "state": "working"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "parent-working": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/status/root/report/state": "working"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run-child-a",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run-child-a",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "child-a",
+                  "parent": {
+                    "terminal_id": "terminal:6",
+                    "incarnation": "1"
+                  },
+                  "child_policy": {
+                    "notify": true,
+                    "die_with_parent": true
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "run-child-a": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": "terminal:7",
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run-child-b",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run-child-b",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "child-b",
+                  "parent": {
+                    "terminal_id": "terminal:6",
+                    "incarnation": "1"
+                  },
+                  "child_policy": {
+                    "notify": false,
+                    "die_with_parent": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "run-child-b": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": "terminal:8",
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "child-a-prompt",
+                "method": "prompt.open",
+                "params": {
+                  "op_id": "$op:child-a-prompt",
+                  "target": {
+                    "name": "child-a"
+                  },
+                  "process_token": "fixture-process-token-child-a-1",
+                  "prompt_id": "child-a-question",
+                  "prompt": {
+                    "kind": "question",
+                    "text": "Proceed?",
+                    "choices": [],
+                    "mechanism": "rpc"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "child-a-prompt": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/version": "1",
+                "/result/state": "open"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "child-a-working",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:child-a-working",
+                  "target": {
+                    "name": "child-a"
+                  },
+                  "process_token": "fixture-process-token-child-a-1",
+                  "seq": "1",
+                  "record": {
+                    "state": "working"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "child-a-working": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/status/root/report/state": "working"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "child-b-working",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:child-b-working",
+                  "target": {
+                    "name": "child-b"
+                  },
+                  "process_token": "fixture-process-token-child-b-1",
+                  "seq": "1",
+                  "record": {
+                    "state": "working"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "child-b-working": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/status/root/report/state": "working"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "children-before",
+                "method": "agent.children",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "children-before": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/children/0/terminal_id": "terminal:7",
+                "/result/children/0/process_incarnation": "1",
+                "/result/children/0/unseen_news": 0,
+                "/result/children/1/terminal_id": "terminal:8",
+                "/result/children/2": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "parent-before",
+                "method": "status.get",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "parent-before": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/status/session/value": "orchestrator-1",
+                "/result/status/root/report/state": "working",
+                "/result/status/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "parent-exits",
+                "method": "fixture.exit",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "parent-exits": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/finished": "recorded",
+                "/result/end_orders": [
+                  "terminal:7"
+                ],
+                "/result/ended": [
+                  "terminal:7"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "child-a-program",
+                "method": "fixture.program",
+                "params": {
+                  "target": {
+                    "name": "child-a"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "child-a-program": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/kills": "1",
+                "/result/live": false
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "child-b-program",
+                "method": "fixture.program",
+                "params": {
+                  "target": {
+                    "name": "child-b"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "child-b-program": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/kills": "0",
+                "/result/live": true
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "parent-program",
+                "method": "fixture.program",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "parent-program": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/kills": "0",
+                "/result/live": false
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "prompt-expired",
+                "method": "prompt.get",
+                "params": {
+                  "prompt_id": "child-a-question"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "prompt-expired": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "expired"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "child-b-after",
+                "method": "status.get",
+                "params": {
+                  "target": {
+                    "name": "child-b"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "child-b-after": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/status/root/report/state": "working"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "children-after",
+                "method": "agent.children",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "children-after": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/children/0/terminal_id": "terminal:7",
+                "/result/children/0/unseen_news": 1,
+                "/result/children/1/terminal_id": "terminal:8",
+                "/result/children/1/unseen_news": 0,
+                "/result/children/1/status/root/report/state": "working"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "parent-after",
+                "method": "status.get",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "parent-after": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/status/session/value": "orchestrator-1",
+                "/result/status/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "After parent incarnation 1 exits (ending its opted-in child), the terminal is relaunched as incarnation 2 and child-c links to it. A launch under the finished incarnation 1 is refused as parent_finished and under unknown incarnation 7 as stale_target, and child-b never starts; the plan's injected word incarnation \"retired\" is invalid_params at params.parent.incarnation, a numeric incarnation likewise; a replayed death of incarnation 1 is a no-op that orders nothing, so child-c of the reused address keeps running with zero kills.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run-parent",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run-parent",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "parent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "run-parent": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run-child-a",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run-child-a",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "child-a",
+                  "parent": {
+                    "terminal_id": "terminal:6",
+                    "incarnation": "1"
+                  },
+                  "child_policy": {
+                    "notify": true,
+                    "die_with_parent": true
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "run-child-a": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": "terminal:7"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "parent-exits",
+                "method": "fixture.exit",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "parent-exits": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/finished": "recorded",
+                "/result/ended": [
+                  "terminal:7"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "rerun-parent",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:rerun-parent",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "parent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "rerun-parent": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": "terminal:6",
+                "/result/process_incarnation": "2"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run-child-c",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run-child-c",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "child-c",
+                  "parent": {
+                    "terminal_id": "terminal:6",
+                    "incarnation": "2"
+                  },
+                  "child_policy": {
+                    "notify": true,
+                    "die_with_parent": true
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "run-child-c": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": "terminal:9",
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "finished-parent",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:finished-parent",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "child-b",
+                  "parent": {
+                    "terminal_id": "terminal:6",
+                    "incarnation": "1"
+                  },
+                  "child_policy": {
+                    "notify": true,
+                    "die_with_parent": true
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "finished-parent": {
+                "/error/data/kind": "parent_finished",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stale-parent",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:stale-parent",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "child-b",
+                  "parent": {
+                    "terminal_id": "terminal:6",
+                    "incarnation": "7"
+                  },
+                  "child_policy": {
+                    "notify": true,
+                    "die_with_parent": true
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "stale-parent": {
+                "/error/data/kind": "stale_target",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "bridge",
+            "base": {
+              "op_id": "$op:inject",
+              "program": {
+                "argv": [
+                  "agent"
+                ]
+              },
+              "geometry": {
+                "cols": 80,
+                "rows": 24
+              },
+              "name": "child-b",
+              "child_policy": {
+                "notify": true,
+                "die_with_parent": true
+              }
+            },
+            "planned": [
+              {
+                "request": {
+                  "method": "terminal.run",
+                  "params": {
+                    "parent": {
+                      "terminal_id": "parent",
+                      "incarnation": "retired"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/error/data/field_path": "params.parent.incarnation",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "terminal.run",
+                  "params": {
+                    "parent": {
+                      "terminal_id": "terminal:6",
+                      "incarnation": "1"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "parent_finished",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "child-b-never-started",
+                "method": "fixture.program",
+                "params": {
+                  "target": {
+                    "name": "child-b"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "child-b-never-started": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/incarnation": "0",
+                "/result/live": false
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "children-of-reused",
+                "method": "agent.children",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "children-of-reused": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/children/0/terminal_id": "terminal:9",
+                "/result/children/1": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "replayed-death",
+                "method": "fixture.exit",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  },
+                  "incarnation": "1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "replayed-death": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/finished": "replayed",
+                "/result/end_orders": [],
+                "/result/ended": []
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "child-c-survives",
+                "method": "fixture.program",
+                "params": {
+                  "target": {
+                    "name": "child-c"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "child-c-survives": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/live": true,
+                "/result/kills": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "numeric-incarnation",
+                "method": "fixture.exit",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  },
+                  "incarnation": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "numeric-incarnation": {
+                "/error/data/kind": "invalid_params",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "child-c-still-survives",
+                "method": "fixture.program",
+                "params": {
+                  "target": {
+                    "name": "child-c"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "child-c-still-survives": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/live": true,
+                "/result/kills": "0"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

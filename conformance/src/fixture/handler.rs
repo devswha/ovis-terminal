@@ -1,7 +1,8 @@
 //! The fixture's request handler: the real dispatcher plus methods served directly.
 //!
 //! Those are the read-only protocol methods `rpc.discover` and paged `terminal.output`,
-//! the fixture-only `fixture.transcript` provider write and `fixture.pty` input byte count.
+//! the fixture-only `fixture.transcript` provider write, `fixture.pty` input byte count, and
+//! the `fixture.exit` and `fixture.program` program lifecycle stand-ins.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -20,6 +21,7 @@ use super::agents::Directory;
 use super::output;
 use super::prompts::Gate;
 use super::serve::at;
+use super::tree::{self, Tree};
 use crate::error::RunnerError;
 
 /// Operation outcomes and agent status facts share the fixture's sequence domain.
@@ -34,23 +36,28 @@ const PROVIDER_WRITE: &str = "fixture.transcript";
 /// The PTY stand-in's byte count; served but never advertised.
 const PTY_READ: &str = "fixture.pty";
 
+/// A fixture program's exit, or the replay of an older one; served but never advertised.
+const PROGRAM_EXIT: &str = "fixture.exit";
+
+/// What a fixture terminal's programs received; served but never advertised.
+const PROGRAM_READ: &str = "fixture.program";
+
+/// The prompt gate, the terminal directory and the tree the direct methods serve.
+pub(crate) type Parts = (Arc<Gate>, Arc<Directory>, Arc<Tree>);
+
 #[derive(Debug)]
 pub(crate) struct FixtureHandler {
     dispatch: Arc<Dispatch>,
     root: PathBuf,
-    pty: (Arc<Gate>, Arc<Directory>),
+    parts: Parts,
 }
 
 impl FixtureHandler {
-    pub(crate) const fn new(
-        dispatch: Arc<Dispatch>,
-        root: PathBuf,
-        pty: (Arc<Gate>, Arc<Directory>),
-    ) -> Self {
+    pub(crate) const fn new(dispatch: Arc<Dispatch>, root: PathBuf, parts: Parts) -> Self {
         Self {
             dispatch,
             root,
-            pty,
+            parts,
         }
     }
 
@@ -74,6 +81,7 @@ fn discover(request: &RpcRequest) -> Result<Value, BoundaryError> {
 impl RequestHandler for FixtureHandler {
     fn methods(&self) -> Vec<&'static str> {
         let mut methods = self.dispatch.methods();
+        methods.retain(|method| *method != tree::LAUNCH_STAND_IN);
         methods.extend(DIRECT);
         methods
     }
@@ -83,7 +91,9 @@ impl RequestHandler for FixtureHandler {
             "rpc.discover" => discover(&call.request),
             "terminal.output" => output::page(&call.request),
             PROVIDER_WRITE => super::transcripts::write(&self.root, &call.request),
-            PTY_READ => super::prompts::pty((&self.pty.0, &self.pty.1), &call.request),
+            PTY_READ => super::prompts::pty((&self.parts.0, &self.parts.1), &call.request),
+            PROGRAM_EXIT => tree::exit(&self.parts.2, &call.request).await,
+            PROGRAM_READ => tree::program(&self.parts.2, &call.request),
             _ => self.dispatch.call(call).await,
         }
     }
