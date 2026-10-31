@@ -133,7 +133,9 @@ impl HelloError {
             Self::HelloRequired => "send hello first and wait for its result",
             Self::AlreadyEstablished => "open a new connection to negotiate again",
             Self::Params(_) => "correct the field at field_path",
-            Self::UnsupportedGeneration { .. } => "reconnect speaking the generation in the hint",
+            Self::UnsupportedGeneration { .. } => {
+                "reconnect with a client built for this runtime's protocol generation"
+            }
             Self::Admission(error) | Self::Credential(error) => error.hint(),
             Self::Clock => "correct the server clock",
         }
