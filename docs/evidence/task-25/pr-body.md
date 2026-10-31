@@ -78,7 +78,7 @@ QA_FAILURE_EXIT=0
 
 Gate: `bash scripts/check.sh` exit 0 on the final tree (`check.log`: 531 tests run, 531 passed, 1 skipped; hygiene 0 violations in 535 files; 47 JSON files checked). Acceptance commands: `cargo nextest run -p ovis-terminal-core` (`core-nextest.log`: 177 tests run, 177 passed, `NEXTEST_EXIT=0`) and `cargo clippy -p ovis-terminal-core --all-targets -- -D warnings` (`core-clippy.log`: `CLIPPY_EXIT=0`).
 
-macOS: `probe-stress-macos` gains an `input` option repeating `cargo nextest run -p ovis-terminal-core --test input` 100 times on macos-latest. Run: MACOS_RUN_URL
+macOS: `probe-stress-macos` gains an `input` option repeating `cargo nextest run -p ovis-terminal-core --test input` 100 times on macos-latest. Run: https://github.com/devswha/ovis-terminal/actions/runs/41203080631 (dispatched with `gh workflow run probe-stress-macos.yml --ref lane/t25-ordered-input-fencing -f probe=input`; result recorded in the DoneClaim)
 
 ## Adversarial
 
