@@ -30,7 +30,11 @@ fn launch(params: TerminalRunParams) -> Result<Launch, TerminalError> {
         || params.child_policy.is_some()
         || params.first_message.is_some()
         || params.machine.is_some();
-    let LaunchProgram::Argv(argv) = params.program else {
+    // `program` is required in this protocol revision and optional beside `template` in
+    // the next; its serialized form decodes as `Option<LaunchProgram>` from either.
+    let program: Option<LaunchProgram> =
+        serde_json::from_value(serde_json::to_value(&params.program)?)?;
+    let Some(LaunchProgram::Argv(argv)) = program else {
         return Err(TerminalError::UnsupportedField);
     };
     if unsupported {
