@@ -1,5 +1,9 @@
 //! Windows process records: the process object's creation time and exit state.
 //!
+//! A process object outlives its process while any handle to it is open, so exit is
+//! read from the object's exit code; an absent PID fails `OpenProcess` with
+//! `ERROR_INVALID_PARAMETER`.
+//!
 //! Windows has no process groups or controlling terminals, so terminal membership,
 //! process-table enumeration, argv and cwd are reported as unsupported.
 
@@ -7,31 +11,13 @@ use std::io;
 use std::os::windows::io::{AsRawHandle as _, FromRawHandle as _, OwnedHandle};
 use std::path::PathBuf;
 
-use windows_sys::Win32::Foundation::{
-    ERROR_ACCESS_DENIED, ERROR_INVALID_PARAMETER, FILETIME, HANDLE, STILL_ACTIVE,
-};
+use windows_sys::Win32::Foundation::{ERROR_ACCESS_DENIED, ERROR_INVALID_PARAMETER, STILL_ACTIVE};
 use windows_sys::Win32::System::Threading::{
-    GetExitCodeProcess, GetProcessTimes, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+    GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
 };
 
 use super::table::{Membership, ProbeError, ProcessEntry};
-use super::{ProcessId, StartTokenError};
-use crate::protocol::ProcessStartToken;
-
-/// `windows-created:<FILETIME>`: the creation time in 100 ns units since 1601, read
-/// through an open process handle.
-fn creation_token(handle: HANDLE) -> io::Result<ProcessStartToken> {
-    let mut times = [FILETIME::default(); 4];
-    let [created, exited, kernel, user] = &mut times;
-    // SAFETY: the caller keeps `handle` open for the call, and each pointer names a
-    // distinct live local FILETIME the call writes once.
-    let succeeded = unsafe { GetProcessTimes(handle, created, exited, kernel, user) };
-    if succeeded == 0 {
-        return Err(io::Error::last_os_error());
-    }
-    let ticks = (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime);
-    Ok(ProcessStartToken::new(format!("windows-created:{ticks}")))
-}
+use super::{ProcessId, creation_token};
 
 fn os_error(pid: ProcessId, source: io::Error) -> ProbeError {
     let code = source
@@ -62,11 +48,6 @@ fn running(pid: ProcessId, handle: &OwnedHandle) -> Result<bool, ProbeError> {
         return Err(os_error(pid, io::Error::last_os_error()));
     }
     Ok(i32::try_from(code).is_ok_and(|code| code == STILL_ACTIVE))
-}
-
-pub(super) fn start_token(pid: ProcessId) -> Result<ProcessStartToken, StartTokenError> {
-    let handle = open(pid)?;
-    creation_token(handle.as_raw_handle()).map_err(|source| StartTokenError::Unreadable { source })
 }
 
 /// Reads the record of `pid`.

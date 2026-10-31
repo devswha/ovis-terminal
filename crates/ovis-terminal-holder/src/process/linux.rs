@@ -3,8 +3,8 @@
 use std::io;
 use std::path::PathBuf;
 
+use super::ProcessId;
 use super::table::{Membership, ProbeError, ProcessEntry, TerminalMembership};
-use super::{ProcessId, StartTokenError};
 use crate::protocol::ProcessStartToken;
 
 /// Fields after the command name, which may itself contain spaces or parentheses.
@@ -44,11 +44,6 @@ fn token(start_ticks: u64) -> Result<ProcessStartToken, ProbeError> {
         "linux:{}:{start_ticks}",
         boot_id.trim()
     )))
-}
-
-pub(super) fn start_token(pid: ProcessId) -> Result<ProcessStartToken, StartTokenError> {
-    let stat = read_stat(pid).map_err(StartTokenError::from)?;
-    token(stat.start_ticks).map_err(StartTokenError::from)
 }
 
 /// Reads the record of `pid`.

@@ -56,21 +56,51 @@ impl StartTokenError {
     }
 }
 
+/// Reads the start token of a running process.
+///
+/// An ended process has no start token, whether its record is gone, it is an unreaped
+/// zombie, or (on Windows) its process object is still held open by a handle.
+///
+/// # Errors
+///
+/// Returns [`StartTokenError::ProcessGone`] when the PID names no running process, and
+/// a read or layout error when the operating-system record is unusable.
+#[cfg(any(target_os = "linux", target_os = "macos", windows))]
+pub fn read_start_token(pid: ProcessId) -> Result<ProcessStartToken, StartTokenError> {
+    let entry = super::read_entry(pid)?;
+    if entry.running {
+        Ok(entry.start_token)
+    } else {
+        Err(StartTokenError::ProcessGone { pid: pid.get() })
+    }
+}
+
 /// Reads the start token of a live process.
 ///
 /// # Errors
 ///
 /// Returns [`StartTokenError::ProcessGone`] when the PID names no process, and
 /// a read or layout error when the operating-system record is unusable.
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 pub fn read_start_token(pid: ProcessId) -> Result<ProcessStartToken, StartTokenError> {
     super::os::start_token(pid)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::process::Command;
+    use std::process::{Child, Command, Stdio};
 
     use super::{ProcessId, read_start_token};
+
+    /// A child that exits at once on every operating system: this test binary,
+    /// re-invoked to list its tests.
+    fn exiting_child() -> Child {
+        Command::new(std::env::current_exe().expect("test binary path"))
+            .arg("--list")
+            .stdout(Stdio::null())
+            .spawn()
+            .expect("spawn child")
+    }
 
     #[test]
     fn token_is_stable_while_the_process_lives() {
@@ -83,16 +113,16 @@ mod tests {
     }
 
     #[test]
-    fn reaped_process_reports_process_gone() {
-        let mut child = Command::new("/bin/sh")
-            .args(["-c", "exit 0"])
-            .spawn()
-            .expect("spawn child");
+    fn an_exited_child_reports_process_gone() {
+        let mut child = exiting_child();
         let pid = ProcessId::new(child.id());
         assert!(child.wait().expect("child exit").success());
 
-        let error = read_start_token(pid).expect_err("reaped pid has no token");
+        // Unix reaped the PID; Windows still holds the process handle in `child`, so the
+        // object exists and only its exit code shows that the process ended.
+        let error = read_start_token(pid).expect_err("an ended process has no token");
 
         assert_eq!(error.kind(), "process_gone");
+        drop(child);
     }
 }

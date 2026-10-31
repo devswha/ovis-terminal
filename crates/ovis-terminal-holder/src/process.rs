@@ -31,3 +31,28 @@ pub use table::{Membership, ProbeError, ProcessEntry, TerminalMembership};
 use windows as os;
 
 pub use crate::protocol::ProcessId;
+
+/// `windows-created:<FILETIME>`: the creation time in 100 ns units since 1601, read
+/// through an open process handle. It identifies the process even after it exited, so
+/// the ConPTY holder and [`read_start_token`] produce the same token.
+#[cfg(windows)]
+pub(crate) fn creation_token(
+    handle: windows_sys::Win32::Foundation::HANDLE,
+) -> std::io::Result<crate::protocol::ProcessStartToken> {
+    let mut times = [windows_sys::Win32::Foundation::FILETIME::default(); 4];
+    let [created, exited, kernel, user] = &mut times;
+    // SAFETY: the caller keeps `handle` open for the call, and each pointer names a
+    // distinct live local FILETIME the call writes once.
+    let succeeded = unsafe {
+        windows_sys::Win32::System::Threading::GetProcessTimes(
+            handle, created, exited, kernel, user,
+        )
+    };
+    if succeeded == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    let ticks = (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime);
+    Ok(crate::protocol::ProcessStartToken::new(format!(
+        "windows-created:{ticks}"
+    )))
+}

@@ -49,11 +49,10 @@ impl ProcessHandle {
         Ok(pid)
     }
 
-    /// `windows-created:<FILETIME>`, read through the PID by `process::read_start_token`;
-    /// this handle keeps the PID from being reused while it is open.
+    /// `windows-created:<FILETIME>`, read through this held handle, so a program that
+    /// already exited at spawn still has its identity; liveness is a separate question.
     pub(super) fn start_token(&self) -> io::Result<ProcessStartToken> {
-        let pid = crate::process::ProcessId::new(self.pid()?);
-        crate::process::read_start_token(pid).map_err(io::Error::other)
+        crate::process::creation_token(self.handle.as_raw_handle())
     }
 }
 

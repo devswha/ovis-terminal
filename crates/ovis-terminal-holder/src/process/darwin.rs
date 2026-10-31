@@ -5,8 +5,8 @@ use std::io;
 use std::mem::{MaybeUninit, size_of, size_of_val};
 use std::path::PathBuf;
 
+use super::ProcessId;
 use super::table::{Membership, ProbeError, ProcessEntry, TerminalMembership};
-use super::{ProcessId, StartTokenError};
 use crate::protocol::ProcessStartToken;
 
 /// `SZOMB` from `<sys/proc.h>`: exited, not yet reaped.
@@ -52,11 +52,6 @@ fn token(info: &libc::proc_bsdinfo) -> ProcessStartToken {
         "darwin:{}.{:06}",
         info.pbi_start_tvsec, info.pbi_start_tvusec
     ))
-}
-
-pub(super) fn start_token(pid: ProcessId) -> Result<ProcessStartToken, StartTokenError> {
-    let info: libc::proc_bsdinfo = pidinfo(pid, libc::PROC_PIDTBSDINFO)?;
-    Ok(token(&info))
 }
 
 /// Reads the record of `pid`.
