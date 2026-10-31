@@ -7,11 +7,10 @@ use ovis_terminal_protocol::schema::scalar::EventSeq;
 use ovis_terminal_vt::Geometry;
 
 use super::{
-    Committing, Dispatch, GeometryEpoch, GeometryError, GeometryEvent, Outcome, Requested,
-    Superseded,
+    Committed, Dispatch, GeometryAuthorization, GeometryEpoch, GeometryError, GeometryEvent,
+    Outcome, Requested, Superseded,
 };
-use crate::events::Cursor;
-use crate::leases::{Authorization, LeaseError};
+use crate::leases::Authorization;
 use crate::registry::{LeaseId, TerminalId};
 use crate::screen::Screen;
 
@@ -51,6 +50,8 @@ pub struct GeometryController {
     pub(super) flight: Option<Flight>,
     pub(super) queued: Option<Queued>,
     pub(super) focused: Option<LeaseId>,
+    /// Sequence of the newest applied change; a receipt must be newer.
+    pub(super) last_change: Option<EventSeq>,
 }
 
 impl GeometryController {
@@ -76,10 +77,11 @@ impl GeometryController {
             flight: None,
             queued: None,
             focused: None,
+            last_change: None,
         })
     }
 
-    /// Admits a resize the geometry owner was authorized for.
+    /// Admits a resize under a geometry-lease authorization.
     ///
     /// With no transition in progress a different grid starts one; during a transition
     /// the request waits, replacing (superseding) any older waiting request.
@@ -90,7 +92,7 @@ impl GeometryController {
     /// epoch cannot advance, or the screen's refusal.
     pub fn request(
         &mut self,
-        admitted: Authorization,
+        authorization: GeometryAuthorization,
         params: &AttachResizeParams,
     ) -> Result<Requested, GeometryError> {
         let (cols, rows) = (params.geometry.cols, params.geometry.rows);
@@ -99,10 +101,7 @@ impl GeometryController {
             rows,
             source,
         })?;
-        let owner = admitted
-            .lease()
-            .map(|lease| lease.lease_id)
-            .ok_or(GeometryError::Lease(LeaseError::NoLease))?;
+        let GeometryAuthorization { admitted, owner } = authorization;
         let op = params.op_id.clone();
         let Some(flight) = &self.flight else {
             let outcome = if grid == self.grid {
@@ -166,29 +165,35 @@ impl GeometryController {
         })
     }
 
-    /// After the change event committed at `receipt`, applies the grid to the VT and
-    /// returns the holder message; nothing at the new grid exists before this call, and a
-    /// second call for the same transition is refused.
+    /// After the change event committed, applies the grid to the VT and returns the holder
+    /// message; nothing at the new grid exists before this call, and a second call for the
+    /// same transition is refused.
     ///
     /// # Errors
     ///
-    /// Returns `stale_geometry` for a superseded or finished epoch, or the screen's refusal.
-    pub fn apply(
-        &mut self,
-        committing: &Committing,
-        receipt: Cursor,
-    ) -> Result<Resize, GeometryError> {
-        let epoch = committing.epoch;
+    /// Returns `stale_geometry` for a superseded or finished epoch, `invalid_params` for a
+    /// receipt not newer than the last applied change, or the screen's refusal.
+    pub fn apply(&mut self, committed: &Committed) -> Result<Resize, GeometryError> {
+        let (epoch, receipt) = (committed.epoch, committed.receipt);
         let misplaced = self.misplaced(epoch);
+        let last_change = self.last_change;
         let flight = self
             .flight
             .as_mut()
             .filter(|flight| flight.epoch == epoch && flight.changed.is_none())
             .ok_or(misplaced)?;
+        if let Some(last) = last_change.filter(|last| receipt.seq <= *last) {
+            return Err(GeometryError::ForeignReceipt {
+                epoch,
+                seq: receipt.seq,
+                last,
+            });
+        }
         self.screen
             .resize(flight.grid)
             .map_err(GeometryError::Screen)?;
         flight.changed = Some(receipt.seq);
+        self.last_change = Some(receipt.seq);
         self.grid = flight.grid;
         Ok(Resize {
             target: self.screen.target().clone(),

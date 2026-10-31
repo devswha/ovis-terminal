@@ -9,11 +9,15 @@ type TestResult<T = ()> = Result<T, Box<dyn Error>>;
 
 #[path = "../src/geometry/qa/adversarial.rs"]
 mod adversarial;
+#[path = "../src/geometry/qa/authority.rs"]
+mod authority;
 #[cfg(unix)]
 #[path = "../src/geometry/qa/bash.rs"]
 pub mod bash;
 #[path = "../src/input/sequencer/qa/fixture.rs"]
 pub mod fixture;
+#[path = "../src/leases/qa/fixture.rs"]
+pub mod lease_fixture;
 #[path = "../src/geometry/qa/model.rs"]
 mod model;
 #[cfg(unix)]
@@ -25,7 +29,7 @@ pub mod rig;
 mod wire;
 
 use fixture::OBSERVER;
-use rig::{Rig, dispatched, holder_target, op, screen, store_op};
+use rig::{Rig, dispatched, holder_target, op, screen};
 
 #[cfg(unix)]
 #[test]
@@ -52,14 +56,13 @@ fn failure() -> TestResult {
 
     // When input and repaint arrive before the VT applied and the holder acknowledged 100x30.
     let dispatch = dispatched(rig.resize(&op(), (100, 30))??)?;
-    let (unit, committing) = dispatch.into_commit(store_op());
-    let receipt = rig.core()?.commit(unit)?;
+    let committed_change = rig.commit(dispatch)?;
     let committed = [
         rig.geometry.input_ready().err(),
         rig.geometry.repaint().err(),
     ];
     let early_ack = rig.acknowledged(GeometryEpoch::new(1)).err();
-    rig.geometry.apply(&committing, receipt)?;
+    rig.geometry.apply(&committed_change)?;
     let applied = rig.geometry.input_ready().err();
 
     // Then each is not_ready for epoch 1; no output silence makes them ready.
@@ -69,7 +72,7 @@ fn failure() -> TestResult {
 
     // When the holder acknowledges, then old and unissued epochs arrive.
     rig.acknowledged(GeometryEpoch::new(1))?;
-    let reapplied = rig.geometry.apply(&committing, receipt).err();
+    let reapplied = rig.geometry.apply(&committed_change).err();
     let repeated = rig.acknowledged(GeometryEpoch::new(1)).err();
     let ahead = rig.acknowledged(GeometryEpoch::new(7)).err();
 

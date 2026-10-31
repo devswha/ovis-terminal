@@ -1,5 +1,7 @@
 //! Reads of the geometry state: input readiness, unchanged-grid repaint and focus.
 
+use ovis_terminal_authz::Session;
+use ovis_terminal_protocol::schema::ids::ClientId;
 use ovis_terminal_vt::{FirstPaint, Geometry};
 
 use super::controller::GeometryController;
@@ -63,17 +65,19 @@ impl GeometryController {
         Ok(Repaint { epoch, paint })
     }
 
-    /// Records that `owner`'s client holding `lease` has focus.
+    /// Records that the authenticated `session`'s `client`, holding `lease`, has focus; the
+    /// owner is derived from the session's principal, never supplied by the caller.
     ///
     /// # Errors
     ///
-    /// Returns `no_lease` unless `owner` holds `lease` in `view`.
+    /// Returns `no_lease` unless that principal and client hold `lease` in `view`.
     pub fn focus(
         &mut self,
         view: &LeaseView,
-        claim: (&Owner, LeaseId),
+        claim: (&Session, &ClientId, LeaseId),
     ) -> Result<Focused, GeometryError> {
-        let (owner, lease) = claim;
+        let (session, client, lease) = claim;
+        let owner = &Owner::new(session.principal().clone(), client.clone());
         let held = view
             .interact
             .iter()

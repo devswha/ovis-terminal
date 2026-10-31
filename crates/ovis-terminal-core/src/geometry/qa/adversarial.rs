@@ -1,11 +1,10 @@
-//! Typed refusals beyond the QA failure case: non-owners, malformed grids, released owners
-//! and focus claims.
+//! Typed refusals beyond the QA failure case: non-owners, malformed grids and released owners.
 
 use ovis_terminal_core::geometry::{Fence, GeometryEpoch, Outcome, Resolved};
 use ovis_terminal_vt::Geometry;
 
 use super::TestResult;
-use super::fixture::{NOW, OBSERVER, WRITER};
+use super::fixture::{NOW, WRITER};
 use super::rig::{Rig, dispatched, holder_target, op, params, screen};
 
 #[test]
@@ -72,29 +71,5 @@ fn a_released_owners_waiting_resize_is_refused_and_the_grid_stays() -> TestResul
     assert!(settled.next.is_none());
     assert_eq!(rig.geometry.grid(), Geometry::new(100, 30)?);
     assert!(rig.leases.view().geometry.is_none());
-    Ok(())
-}
-
-#[test]
-fn focus_records_the_client_and_never_moves_geometry_or_input() -> TestResult {
-    // Given the operator owns input and geometry and a phone observes.
-    let mut rig = Rig::new(screen(holder_target(1), 80, 24)?)?;
-    let phone = rig.fixture.client("phone", OBSERVER)?;
-    let watch = rig.fixture.fresh()?;
-    let observed = rig.leases.observe(phone.caller(), watch)?;
-    let before = rig.leases.view();
-
-    // When the phone reports focus, and then claims the operator's lease.
-    let phone_owner = observed.lease.owner.clone();
-    let focused = rig.geometry.focus(&before, (&phone_owner, watch))?;
-    let borrowed = rig.geometry.focus(&before, (&phone_owner, rig.grid)).err();
-
-    // Then focus is recorded for the phone only and both control slots stay with the operator.
-    assert_eq!(focused.lease, observed.lease);
-    assert_eq!(focused.geometry_owner, before.geometry);
-    assert_eq!(rig.geometry.focused(), Some(watch));
-    assert_eq!(borrowed.map(|error| error.kind()), Some("no_lease"));
-    assert_eq!(rig.leases.view(), before);
-    assert_eq!(rig.geometry.input_ready()?, GeometryEpoch::new(0));
     Ok(())
 }

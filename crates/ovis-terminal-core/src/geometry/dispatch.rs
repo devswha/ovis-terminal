@@ -3,7 +3,7 @@
 use ovis_terminal_store::OpId;
 
 use super::{GeometryEpoch, GeometryEvent};
-use crate::events::{Commit, ResourceId};
+use crate::events::{Commit, Cursor, ResourceId};
 use crate::registry::TerminalId;
 
 /// A started transition; only committing its `geometry.changed` event leads to the holder.
@@ -14,12 +14,20 @@ pub struct Dispatch {
     pub(super) change: GeometryEvent,
 }
 
-/// Proof that a transition's change event was handed to the commit path.
+/// A transition whose change event committed, bound to the receipt of that very commit.
 ///
-/// [`super::GeometryController::apply`] takes it together with the commit receipt.
+/// [`super::GeometryController::apply`] takes it to release the holder message.
 #[derive(Debug)]
-pub struct Committing {
+pub struct Committed {
     pub(super) epoch: GeometryEpoch,
+    pub(super) receipt: Cursor,
+}
+
+impl Committed {
+    /// The receipt the commit of this transition's change event returned.
+    pub const fn receipt(&self) -> Cursor {
+        self.receipt
+    }
 }
 
 impl Dispatch {
@@ -33,10 +41,21 @@ impl Dispatch {
         &self.change
     }
 
-    /// The durable unit to commit first, and the token that releases the holder message.
-    pub fn into_commit(self, op: OpId) -> (Commit<GeometryEvent>, Committing) {
+    /// Hands the change event's durable unit to `commit` and binds the receipt it returns.
+    ///
+    /// # Errors
+    ///
+    /// Returns the commit path's error; nothing was applied.
+    pub fn commit<E>(
+        self,
+        op: OpId,
+        commit: impl FnOnce(Commit<GeometryEvent>) -> Result<Cursor, E>,
+    ) -> Result<Committed, E> {
         let affected = vec![ResourceId::Terminal(self.terminal)];
-        let committing = Committing { epoch: self.epoch };
-        (Commit::new(op, self.change, affected), committing)
+        let receipt = commit(Commit::new(op, self.change, affected))?;
+        Ok(Committed {
+            epoch: self.epoch,
+            receipt,
+        })
     }
 }

@@ -1,5 +1,6 @@
 //! The geometry boundary error, its stable kinds and recovery hints.
 
+use ovis_terminal_protocol::schema::scalar::EventSeq;
 use ovis_terminal_vt::VtError;
 
 use super::GeometryEpoch;
@@ -40,6 +41,16 @@ pub enum GeometryError {
         /// Newest epoch issued.
         current: GeometryEpoch,
     },
+    /// The receipt is not the commit of this transition's change event.
+    #[error("receipt seq {} for epoch {} is not newer than the last applied change at seq {}", seq.get(), epoch.get(), last.get())]
+    ForeignReceipt {
+        /// Epoch being applied.
+        epoch: GeometryEpoch,
+        /// Sequence the receipt names.
+        seq: EventSeq,
+        /// Sequence of the newest applied change.
+        last: EventSeq,
+    },
     /// A grid change is still being applied; input and repaint wait for its completion.
     #[error("geometry epoch {} is still being applied", pending.get())]
     NotReady {
@@ -61,7 +72,7 @@ impl GeometryError {
             Self::Lease(source) => source.kind(),
             Self::InvalidGeometry { .. } => "invalid_geometry",
             Self::StaleGeometry { .. } => "stale_geometry",
-            Self::UnknownEpoch { .. } => "invalid_params",
+            Self::UnknownEpoch { .. } | Self::ForeignReceipt { .. } => "invalid_params",
             Self::NotReady { .. } => "not_ready",
             Self::Screen(source) => source.kind(),
             Self::Exhausted => "limit_exceeded",
@@ -75,6 +86,9 @@ impl GeometryError {
             Self::InvalidGeometry { .. } => "request at least two columns and one row",
             Self::StaleGeometry { .. } => "act on the newest geometry.changed epoch",
             Self::UnknownEpoch { .. } => "name an epoch from a geometry.changed event",
+            Self::ForeignReceipt { .. } => {
+                "apply with the receipt this transition's commit returned"
+            }
             Self::NotReady { .. } => "wait for geometry.input_ready at the pending epoch",
             Self::Screen(source) => source.hint(),
             Self::Exhausted => "recover the terminal to start a new incarnation",

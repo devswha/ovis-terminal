@@ -4,8 +4,8 @@ use std::path::PathBuf;
 
 use ovis_terminal_core::events::{Coordinator, Cursor, EventError, Filter, SnapshotProducer};
 use ovis_terminal_core::geometry::{
-    Dispatch, Fence, GeometryController, GeometryEpoch, GeometryError, GeometryEvent, Outcome,
-    Requested, Settled,
+    Committed, Dispatch, Fence, GeometryAuthorization, GeometryController, GeometryEpoch,
+    GeometryError, GeometryEvent, Outcome, Requested, Settled,
 };
 use ovis_terminal_core::leases::{Acquire, ControlSlot, TerminalLeases};
 use ovis_terminal_core::registry::{
@@ -177,12 +177,21 @@ impl Rig {
         op: &OpId,
         size: (u32, u32),
     ) -> TestResult<Result<Requested, GeometryError>> {
-        let admitted = self
-            .leases
-            .authorize_resize(self.operator.caller(), self.grid)?;
+        let admitted =
+            GeometryAuthorization::admit(&self.leases, self.operator.caller(), self.grid)?;
         Ok(self
             .geometry
             .request(admitted, &params(op, self.grid, size)?))
+    }
+
+    /// Commits the change event through the coordinator, binding its receipt.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the commit fails.
+    pub fn commit(&self, dispatch: Dispatch) -> TestResult<Committed> {
+        let core = self.core()?;
+        Ok(dispatch.commit(store_op(), |unit| core.commit(unit))?)
     }
 
     /// Commits the change event, then applies the grid; returns the holder message.
@@ -191,10 +200,9 @@ impl Rig {
     ///
     /// Fails when the commit or the controller refuses.
     pub fn start(&mut self, dispatch: Dispatch) -> TestResult<(Resize, Cursor)> {
-        let (unit, committing) = dispatch.into_commit(store_op());
-        let receipt = self.core()?.commit(unit)?;
-        let resize = self.geometry.apply(&committing, receipt)?;
-        Ok((resize, receipt))
+        let committed = self.commit(dispatch)?;
+        let resize = self.geometry.apply(&committed)?;
+        Ok((resize, committed.receipt()))
     }
 
     /// The holder acknowledged `epoch`.

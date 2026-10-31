@@ -16,17 +16,17 @@ That line is a mode reset followed by a first paint. It is a keeper for first pa
 
 `crates/ovis-terminal-core/src/geometry/` adds `GeometryController`, one per terminal incarnation:
 
-- **Authority.** `request(Authorization, &AttachResizeParams)` takes only the token returned by `TerminalLeases::authorize_resize` (todo 24), so an anonymous resize is not representable. Observers get `forbidden`, non-owners `not_geometry_owner`. A grid below 2x1 gets `invalid_geometry`. A grid above u16 is refused when `attach.resize` decodes.
+- **Authority.** `request(GeometryAuthorization, &AttachResizeParams)` accepts only a `GeometryAuthorization`. Its sole constructor, `GeometryAuthorization::admit(&TerminalLeases, Caller, LeaseId)`, calls `TerminalLeases::authorize_resize` (todo 24) and requires the admitted lease's slot to be `Geometry`. A write authorization or any other token cannot be passed (round 3, B1; rounds 1-2 accepted any `leases::Authorization`). Observers get `forbidden`, non-owners `not_geometry_owner`. A grid below 2x1 gets `invalid_geometry`. A grid above u16 is refused when `attach.resize` decodes.
 - **Order.**
-  1. `Dispatch::into_commit` produces the `geometry.changed` durable unit and a `Committing` token.
-  2. `apply(&Committing, receipt)` needs the commit receipt, resizes the VT (`Screen::resize`) and only then returns the holder `Resize` message.
+  1. `Dispatch::commit(op, |unit| core.commit(unit))` hands the `geometry.changed` durable unit to the commit path and binds the receipt that call returned into a `Committed` token.
+  2. `apply(&Committed)` requires that token, refuses a receipt not newer than the last applied change (`invalid_params`), resizes the VT (`Screen::resize`) and only then returns the holder `Resize` message.
   3. `acknowledged(epoch, Fence)` runs after the holder acknowledged delivery. The runtime records `geometry.checkpoint` (grid, offset, revision, `changed_seq`) and itself commits `geometry.input_ready`.
   
   No producer report and no output silence is consulted. Agent-declared readiness (todo 35) is untouched.
 - **Readiness gate.** `input_ready()` and `repaint()` return `not_ready{pending}` from dispatch until the acknowledgement. Acknowledging an epoch that is not in flight is `stale_geometry`, and an unissued one is `invalid_params`.
 - **Storms.** One transition runs at a time. Requests during it coalesce: the newest waits, and each older waiting request resolves as `Superseded{op, grid, by}`. On completion the waiting request is rechecked against the lease table (`TerminalLeases::recheck`). A released or taken-over owner's request resolves `Refused(lease_revoked)`, either via `lease_changed` or at resume.
 - **Repaint.** `repaint()` returns a `FirstPaint` at the unchanged grid. It sends no holder message, so no shrink/restore and no injected keys.
-- **Focus.** `focus()` records the focused lease (`no_lease` unless the caller owns it). It returns the geometry owner unchanged and never moves input or geometry (EXCL-004).
+- **Focus.** `focus(view, (&Session, &ClientId, LeaseId))` derives the owner from the authenticated session's principal and client label, never from a caller-supplied `Owner`, and records the focused lease (`no_lease` unless that owner holds it). It returns the geometry owner unchanged and never moves input or geometry (EXCL-004).
 - **Errors.** `GeometryError` is one thiserror enum with `kind()`/`hint()` and `#[source]` on wrapped lease, VT and screen errors.
 - **Wire form.** `GeometryEpoch` wraps `DecimalU64`.
 
@@ -126,7 +126,7 @@ macOS: `probe-stress-macos.yml` gains the option `geometry` and a job running `-
 
 ## Seams
 
-- New public API: `ovis_terminal_core::geometry::{GeometryController, Dispatch, Committing, GeometryEpoch, GeometryError, GeometryEvent, Fence, Outcome, Requested, Resolution, Resolved, Settled, Superseded, Repaint, Focused}`. No landed crate's public API changed.
+- New public API: `ovis_terminal_core::geometry::{GeometryController, GeometryAuthorization, Dispatch, Committed, GeometryEpoch, GeometryError, GeometryEvent, Fence, Outcome, Requested, Resolution, Resolved, Settled, Superseded, Repaint, Focused}`. No landed crate's public API changed.
 - New core event types: `geometry.changed`, `geometry.checkpoint`, `geometry.input_ready`. They are not yet in the protocol `event_catalog` (which has `terminal.size`), and the `stale_geometry` kind is not in the protocol error catalog. Todo 31 maps them onto the wire and the stream `attach.control` checkpoint/input_ready records. Streams files are untouched.
 - The runtime (todo 31) must call `input_ready()` before sequencer admission and feed the holder's resize result into `acknowledged`. The landed sequencer has no geometry readiness input of its own, and this lane does not touch `input/`.
 - Tests reuse `src/input/sequencer/qa/fixture.rs` read-only via `#[path]`.
@@ -150,10 +150,23 @@ Fix (structural, all geometry rigs):
   - `bash scripts/check.sh` exits 0, 840 passed (`check-r2.log`).
   - `cargo nextest run -p ovis-terminal-core --test geometry`: 14 passed, and no `ovis-geometry-*` directory is left in the temp dir.
 
+## Round 3: authority bypass and binding (gate review B1, N1, N2, N3)
+
+- **B1 (blocker).** In rounds 1-2 `request()` accepted any `leases::Authorization`. A typist holding only the interact lease could present `authorize_write`'s token and get a resize dispatched while `authorize_resize` said `not_geometry_owner`. Fixed at the type level inside the write scope, with no leases API change:
+  - `request` takes `GeometryAuthorization`.
+  - The only constructor, `admit`, calls `authorize_resize` and checks `slot == Geometry` (else `not_geometry_owner` naming the owner).
+  - Test `authority::a_write_authorization_never_becomes_a_resize`: the operator keeps geometry; the typist holds interact and its write authorization is `Ok`. `admit` with the typist's interact lease and with the operator's grid lease both give `not_geometry_owner`. No event is committed (subscriber `try_recv` is empty), the grid stays 80x24 and readiness stays at epoch 0. Passing the write authorization to `request` does not compile.
+- **N1.** `focus` derives `Owner` from the authenticated `Session` principal plus `ClientId`. Test `authority::focus_is_bound_to_the_authenticated_session_and_moves_nothing`: the phone's session claiming the operator's client label and interact lease gets `no_lease`, and the lease view is unchanged.
+- **N2.** `apply` takes a `Committed`, which only `Dispatch::commit` builds from the receipt its own commit closure returned. A receipt not newer than the last applied change gets the typed `invalid_params` (`ForeignReceipt`). Test `authority::a_receipt_from_an_earlier_commit_does_not_release_the_holder_message`: the VT keeps 100x30 and the gate stays `not_ready`. Mutation check: disabling the receipt check fails exactly that test.
+- **N3.** Risks below are refreshed.
+- **Verification:**
+  - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` (`windows-check-r3.log`): exit 0.
+  - `bash scripts/check.sh` (`check-r3.log`): exit 0, 854 passed.
+  - `cargo nextest run -p ovis-terminal-core --test geometry`: 16 passed.
+  - `happy` and `failure` rerun: `geometry-happy-r3.log`, `geometry-failure-r3.log`.
+
 ## Risks
 
-- **PR status: CONFLICTING (no pull_request CI yet).** `git merge-tree HEAD origin/integration` reports exactly one conflict, in `.github/workflows/probe-stress-macos.yml`: todo 78's `ops-digest` and this lane's `geometry` option/job were both appended at the end of the same lists. Resolution is the orchestrator's union merge; this lane does not merge (hard process rule).
-
-- origin/integration moved to `b1c68ef` (todo 78) after dispatch. No merge was done in this lane, per the hard process rule. The only overlapping file is `.github/workflows/probe-stress-macos.yml` (append-only union).
+- Merge status: CI ran green on `80785ab` (orchestrator merge of integration 436506e). The PR is CONFLICTING again against integration `1c21d63` only through the shared append-only workflow file. The orchestrator union-merges; this lane does not merge.
 - After a control restart the controller starts at a caller-supplied epoch. Todo 48 must pass the holder's applied epoch, or the holder answers `stale_geometry`.
 - If a dispatched transition is never committed or acknowledged (holder link lost), the gate stays `not_ready`. Recovery belongs to the link-loss path (todos 31/48).

@@ -7,7 +7,7 @@ use ovis_terminal_vt::Geometry;
 use proptest::prelude::*;
 
 use super::TestResult;
-use super::rig::{Rig, dispatched, holder_target, op, screen, store_op};
+use super::rig::{Rig, dispatched, holder_target, op, screen};
 
 const BOUND: Duration = Duration::from_secs(5);
 
@@ -20,11 +20,11 @@ fn the_change_commits_before_the_grid_exists_and_ready_follows_the_acknowledgeme
     // When the operator asks for 100x30 and the transition runs step by step.
     let dispatch = dispatched(rig.resize(&op(), (100, 30))??)?;
     let epoch = dispatch.epoch();
-    let (unit, committing) = dispatch.into_commit(store_op());
-    let receipt = rig.core()?.commit(unit)?;
+    let committed = rig.commit(dispatch)?;
+    let receipt = committed.receipt();
     let grid_at_commit = rig.screen.first_paint()?.geometry;
     let gate_at_commit = rig.geometry.input_ready().err().map(|error| error.kind());
-    let resize = rig.geometry.apply(&committing, receipt)?;
+    let resize = rig.geometry.apply(&committed)?;
     let gate_at_apply = rig.geometry.input_ready().err().map(|error| error.kind());
     let settled = rig.acknowledged(epoch)?;
     rig.publish(&settled)?;
