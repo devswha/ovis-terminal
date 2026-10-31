@@ -1,5 +1,4 @@
-use super::{Membership, ProcessId, read_entry};
-use crate::process::read_start_token;
+use crate::process::{Membership, ProcessId, read_entry, read_start_token};
 
 fn own() -> ProcessId {
     ProcessId::new(std::process::id())
@@ -17,8 +16,8 @@ fn a_live_record_carries_the_same_start_token_as_the_token_reader() {
 #[cfg(unix)]
 #[test]
 fn argv_and_cwd_describe_this_process() {
-    let argv = super::read_argv(own()).expect("own argv");
-    let cwd = super::read_cwd(own()).expect("own cwd");
+    let argv = crate::process::read_argv(own()).expect("own argv");
+    let cwd = crate::process::read_cwd(own()).expect("own cwd");
 
     assert_eq!(argv, std::env::args().collect::<Vec<_>>());
     assert_eq!(
@@ -41,8 +40,12 @@ fn a_reaped_pid_is_gone_for_every_read() {
 
     let kinds = [
         read_entry(pid).err().map(|error| error.kind()),
-        super::read_argv(pid).err().map(|error| error.kind()),
-        super::read_cwd(pid).err().map(|error| error.kind()),
+        crate::process::read_argv(pid)
+            .err()
+            .map(|error| error.kind()),
+        crate::process::read_cwd(pid)
+            .err()
+            .map(|error| error.kind()),
     ];
 
     assert_eq!(kinds, [Some("process_gone"); 3]);
@@ -91,7 +94,9 @@ fn windows_reports_membership_and_listing_as_unsupported() {
 
     assert_eq!(entry.terminal, Membership::Unsupported);
     assert_eq!(
-        super::list_terminal_pids(0).err().map(|error| error.kind()),
+        crate::process::list_terminal_pids(0)
+            .err()
+            .map(|error| error.kind()),
         Some("unsupported_platform")
     );
 }
@@ -131,7 +136,7 @@ fn a_pty_session_leader_is_listed_on_its_own_controlling_terminal() {
     let listed = match entry.terminal {
         Membership::Controlling(member) => Some((
             member,
-            super::list_terminal_pids(member.tty).expect("tty listing"),
+            crate::process::list_terminal_pids(member.tty).expect("tty listing"),
         )),
         Membership::Detached | Membership::Unsupported => None,
     };

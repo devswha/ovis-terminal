@@ -59,7 +59,12 @@ pub(super) fn start_token(pid: ProcessId) -> Result<ProcessStartToken, StartToke
     Ok(token(&info))
 }
 
-pub(super) fn entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
+/// Reads the record of `pid`.
+///
+/// # Errors
+///
+/// Returns [`ProbeError::Gone`] when no process has the PID, or a typed read failure.
+pub fn read_entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
     let info: libc::proc_bsdinfo = pidinfo(pid, libc::PROC_PIDTBSDINFO)?;
     let terminal = if info.e_tdev == NO_DEVICE {
         Membership::Detached
@@ -78,9 +83,13 @@ pub(super) fn entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
     })
 }
 
-/// PIDs whose controlling terminal is `tty`, from the kernel's own per-tty index, so
-/// processes of other users and terminals are never read.
-pub(super) fn terminal_pids(tty: u64) -> Result<Vec<ProcessId>, ProbeError> {
+/// Lists the PIDs that may have `tty` as their controlling terminal; callers re-check
+/// each record's membership.
+///
+/// # Errors
+///
+/// Returns [`ProbeError::Unsupported`] where the table cannot be enumerated.
+pub fn list_terminal_pids(tty: u64) -> Result<Vec<ProcessId>, ProbeError> {
     let device = u32::try_from(tty).map_err(|_| ProbeError::Malformed)?;
     let unreadable = || ProbeError::Unreadable {
         source: io::Error::last_os_error(),
@@ -111,7 +120,12 @@ pub(super) fn terminal_pids(tty: u64) -> Result<Vec<ProcessId>, ProbeError> {
         .collect())
 }
 
-pub(super) fn cwd(pid: ProcessId) -> Result<PathBuf, ProbeError> {
+/// Reads the current working directory of `pid`.
+///
+/// # Errors
+///
+/// Returns a typed read failure, or [`ProbeError::Unsupported`] where unavailable.
+pub fn read_cwd(pid: ProcessId) -> Result<PathBuf, ProbeError> {
     let info: libc::proc_vnodepathinfo = pidinfo(pid, libc::PROC_PIDVNODEPATHINFO)?;
     let raw = &info.pvi_cdir.vip_path;
     // SAFETY: `raw` is a plain byte array inside `info`, borrowed for this scope only.
@@ -157,8 +171,12 @@ fn gone_or(pid: ProcessId, error: ProbeError) -> ProbeError {
     }
 }
 
-/// `KERN_PROCARGS2`: argc, the executable path, padding, then argc strings.
-pub(super) fn argv(pid: ProcessId) -> Result<Vec<String>, ProbeError> {
+/// Reads the current argument vector of `pid`.
+///
+/// # Errors
+///
+/// Returns [`ProbeError::Malformed`] for a non-UTF-8 argument, or a typed read failure.
+pub fn read_argv(pid: ProcessId) -> Result<Vec<String>, ProbeError> {
     let mut limit = [0_u8; size_of::<c_int>()];
     sysctl(&mut [libc::CTL_KERN, libc::KERN_ARGMAX], &mut limit)?;
     let limit = usize::try_from(c_int::from_ne_bytes(limit)).map_err(|_| ProbeError::Malformed)?;

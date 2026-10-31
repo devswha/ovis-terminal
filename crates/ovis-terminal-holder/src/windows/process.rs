@@ -49,9 +49,11 @@ impl ProcessHandle {
         Ok(pid)
     }
 
-    /// `windows-created:<FILETIME>`, in the form `process::read_start_token` reads.
+    /// `windows-created:<FILETIME>`, read through the PID by `process::read_start_token`;
+    /// this handle keeps the PID from being reused while it is open.
     pub(super) fn start_token(&self) -> io::Result<ProcessStartToken> {
-        crate::process::creation_token(self.handle.as_raw_handle())
+        let pid = crate::process::ProcessId::new(self.pid()?);
+        crate::process::read_start_token(pid).map_err(io::Error::other)
     }
 }
 

@@ -20,7 +20,7 @@ use crate::protocol::ProcessStartToken;
 
 /// `windows-created:<FILETIME>`: the creation time in 100 ns units since 1601, read
 /// through an open process handle.
-pub(crate) fn creation_token(handle: HANDLE) -> io::Result<ProcessStartToken> {
+fn creation_token(handle: HANDLE) -> io::Result<ProcessStartToken> {
     let mut times = [FILETIME::default(); 4];
     let [created, exited, kernel, user] = &mut times;
     // SAFETY: the caller keeps `handle` open for the call, and each pointer names a
@@ -69,7 +69,12 @@ pub(super) fn start_token(pid: ProcessId) -> Result<ProcessStartToken, StartToke
     creation_token(handle.as_raw_handle()).map_err(|source| StartTokenError::Unreadable { source })
 }
 
-pub(super) fn entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
+/// Reads the record of `pid`.
+///
+/// # Errors
+///
+/// Returns [`ProbeError::Gone`] when no process has the PID, or a typed read failure.
+pub fn read_entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
     let handle = open(pid)?;
     let start_token =
         creation_token(handle.as_raw_handle()).map_err(|source| os_error(pid, source))?;
@@ -81,14 +86,30 @@ pub(super) fn entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
     })
 }
 
-pub(super) const fn terminal_pids(_: u64) -> Result<Vec<ProcessId>, ProbeError> {
+/// Lists the PIDs that may have `tty` as their controlling terminal; callers re-check
+/// each record's membership.
+///
+/// # Errors
+///
+/// Returns [`ProbeError::Unsupported`] where the table cannot be enumerated.
+pub const fn list_terminal_pids(_: u64) -> Result<Vec<ProcessId>, ProbeError> {
     Err(ProbeError::Unsupported)
 }
 
-pub(super) const fn argv(_: ProcessId) -> Result<Vec<String>, ProbeError> {
+/// Reads the current argument vector of `pid`.
+///
+/// # Errors
+///
+/// Returns [`ProbeError::Malformed`] for a non-UTF-8 argument, or a typed read failure.
+pub const fn read_argv(_: ProcessId) -> Result<Vec<String>, ProbeError> {
     Err(ProbeError::Unsupported)
 }
 
-pub(super) const fn cwd(_: ProcessId) -> Result<PathBuf, ProbeError> {
+/// Reads the current working directory of `pid`.
+///
+/// # Errors
+///
+/// Returns a typed read failure, or [`ProbeError::Unsupported`] where unavailable.
+pub const fn read_cwd(_: ProcessId) -> Result<PathBuf, ProbeError> {
     Err(ProbeError::Unsupported)
 }

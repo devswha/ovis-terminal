@@ -5,11 +5,10 @@
 //! [`ProbeError::Unsupported`] or [`Membership::Unsupported`], never guessed.
 
 use std::io;
-use std::path::PathBuf;
 
 use thiserror::Error;
 
-use super::{ProcessId, StartTokenError, os};
+use super::{ProcessId, StartTokenError};
 use crate::protocol::ProcessStartToken;
 
 /// The controlling-terminal facts of one process.
@@ -122,45 +121,6 @@ impl From<ProbeError> for StartTokenError {
             ProbeError::Malformed => Self::Malformed,
         }
     }
-}
-
-/// Reads the record of `pid`.
-///
-/// # Errors
-///
-/// Returns [`ProbeError::Gone`] when no process has the PID, or a typed read failure.
-pub fn read_entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
-    os::entry(pid)
-}
-
-/// Lists the PIDs that may have `tty` as their controlling terminal.
-///
-/// macOS answers from the kernel's per-terminal index; Linux lists every PID, since
-/// `/proc` has none. Callers re-check each record's membership.
-///
-/// # Errors
-///
-/// Returns [`ProbeError::Unsupported`] where the table cannot be enumerated.
-pub fn list_terminal_pids(tty: u64) -> Result<Vec<ProcessId>, ProbeError> {
-    os::terminal_pids(tty)
-}
-
-/// Reads the current argument vector of `pid`.
-///
-/// # Errors
-///
-/// Returns [`ProbeError::Malformed`] for a non-UTF-8 argument, or a typed read failure.
-pub fn read_argv(pid: ProcessId) -> Result<Vec<String>, ProbeError> {
-    os::argv(pid)
-}
-
-/// Reads the current working directory of `pid`.
-///
-/// # Errors
-///
-/// Returns a typed read failure, or [`ProbeError::Unsupported`] where unavailable.
-pub fn read_cwd(pid: ProcessId) -> Result<PathBuf, ProbeError> {
-    os::cwd(pid)
 }
 
 #[cfg(test)]

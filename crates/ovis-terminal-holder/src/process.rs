@@ -20,18 +20,14 @@ mod windows;
 use darwin as os;
 #[cfg(target_os = "linux")]
 use linux as os;
+pub use os::{list_terminal_pids, read_argv, read_cwd, read_entry};
 #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 use other as os;
 #[cfg(unix)]
 pub use signal::{SignalError, SignalScope, send_hangup, send_signal};
 pub use start_token::{StartTokenError, read_start_token};
-pub use table::{
-    Membership, ProbeError, ProcessEntry, TerminalMembership, list_terminal_pids, read_argv,
-    read_cwd, read_entry,
-};
+pub use table::{Membership, ProbeError, ProcessEntry, TerminalMembership};
 #[cfg(windows)]
 use windows as os;
-#[cfg(windows)]
-pub(crate) use windows::creation_token;
 
 pub use crate::protocol::ProcessId;

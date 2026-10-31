@@ -51,7 +51,12 @@ pub(super) fn start_token(pid: ProcessId) -> Result<ProcessStartToken, StartToke
     token(stat.start_ticks).map_err(StartTokenError::from)
 }
 
-pub(super) fn entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
+/// Reads the record of `pid`.
+///
+/// # Errors
+///
+/// Returns [`ProbeError::Gone`] when no process has the PID, or a typed read failure.
+pub fn read_entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
     let stat = read_stat(pid)?;
     let running = match stat.state.as_str() {
         "Z" | "X" | "x" => false,
@@ -74,8 +79,13 @@ pub(super) fn entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
     })
 }
 
-/// Every PID: `/proc` has no per-terminal index, so callers re-check membership.
-pub(super) fn terminal_pids(_: u64) -> Result<Vec<ProcessId>, ProbeError> {
+/// Lists the PIDs that may have `tty` as their controlling terminal; callers re-check
+/// each record's membership.
+///
+/// # Errors
+///
+/// Returns [`ProbeError::Unsupported`] where the table cannot be enumerated.
+pub fn list_terminal_pids(_: u64) -> Result<Vec<ProcessId>, ProbeError> {
     let mut pids = Vec::new();
     for entry in std::fs::read_dir("/proc").map_err(|source| ProbeError::Unreadable { source })? {
         let entry = entry.map_err(|source| ProbeError::Unreadable { source })?;
@@ -90,7 +100,12 @@ pub(super) fn terminal_pids(_: u64) -> Result<Vec<ProcessId>, ProbeError> {
     Ok(pids)
 }
 
-pub(super) fn argv(pid: ProcessId) -> Result<Vec<String>, ProbeError> {
+/// Reads the current argument vector of `pid`.
+///
+/// # Errors
+///
+/// Returns [`ProbeError::Malformed`] for a non-UTF-8 argument, or a typed read failure.
+pub fn read_argv(pid: ProcessId) -> Result<Vec<String>, ProbeError> {
     let bytes = std::fs::read(format!("/proc/{}/cmdline", pid.get()))
         .map_err(|source| ProbeError::from_io(pid, source))?;
     if bytes.is_empty() {
@@ -104,7 +119,12 @@ pub(super) fn argv(pid: ProcessId) -> Result<Vec<String>, ProbeError> {
         .collect()
 }
 
-pub(super) fn cwd(pid: ProcessId) -> Result<PathBuf, ProbeError> {
+/// Reads the current working directory of `pid`.
+///
+/// # Errors
+///
+/// Returns a typed read failure, or [`ProbeError::Unsupported`] where unavailable.
+pub fn read_cwd(pid: ProcessId) -> Result<PathBuf, ProbeError> {
     std::fs::read_link(format!("/proc/{}/cwd", pid.get()))
         .map_err(|source| ProbeError::from_io(pid, source))
 }
