@@ -97,6 +97,11 @@
       "reason": "ovis_terminal_core::waits is a core seam that no RPC route serves yet: terminal.wait_output, turn.wait, events.wait and input.interrupt are wired to it by todos 28-31 (real-binary serving lands with todo 31). Until then the behavior runs as cargo nextest run -p ovis-terminal-core --test waits (happy/failure on a real holder PTY)."
     },
     {
+      "file": "part-a/task-28.json",
+      "owner_todo": "28",
+      "reason": "ovis_terminal_server::ws::serve_websocket serves any RequestHandler over ws:// and is proven against the local socket by crates/ovis-terminal-server/tests/ws.rs; the todo-21 runner speaks only the Unix endpoint through the ovis-terminal bridge, its fixture opens no WebSocket listener and registers no attach routes, and no served binary binds a WebSocket endpoint until todo 31 assembles the server."
+    },
+    {
       "file": "part-a/task-3.json",
       "owner_todo": "3",
       "reason": "Free-form descriptor written by todo 3 before the runner existed; it runs once its steps are rewritten as ovis-conformance/1 over RPC routes wired by todos 23, 25 and 28-31 (real-binary serving lands with todo 31)."
@@ -145,6 +150,11 @@
       "file": "platform/windows-service.json",
       "owner_todo": "54",
       "reason": "The named-pipe listener (ovis-terminal-server listen::pipe), the Windows service host (ovis-terminal-holder service::windows) and the service verbs exist, but the todo-21 runner's fixture serves only a Unix socket and its isolated environment clears the variables a Windows pipe name and service need, so a windows-only case would be skipped on every runner it has; terminal.run, attach and leases over the pipe are served only once todo 31 assembles the binary. Covered meanwhile by the native Windows tests in the descriptor, run by ci.yml on windows-2025 and by the windows-service job of probe-stress-macos.yml with a CI-owned service account; todo 60 runs this scenario in Windows smoke CI."
+    },
+    {
+      "file": "recovery/restart.json",
+      "owner_todo": "48",
+      "reason": "server.restart and server.stop are routed by dispatch::lanes::restart over ovis_terminal_core::restart::Control, but no served binary registers the lane or replaces its listener at the restart boundary until todo 31 assembles it, and the runner's only fixture (todo 21) holds no holder-owned program and asserts server.stop is unserved. Covered meanwhile by the real-holder core tests (restart) and the real-socket lane tests (lanes::restart)."
     },
     {
       "file": "remote/identity.json",

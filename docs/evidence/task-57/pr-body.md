@@ -185,4 +185,31 @@ and register the credential lane with a `QueuedWrites` over the runtime's sequen
   it was not merged here. Only `Cargo.lock` overlaps (separate hunks).
 - The macOS stress job is not in this PR's workflow file (integration's a74fba7 rewrote it);
   the job block is in `docs/evidence/task-57/stress-job.yml` for the orchestrator union and
-  was dispatched from a stress-only branch: run https://github.com/devswha/ovis-terminal/actions/runs/41247294624 (branch `lane/t57-stress` = this head + integration a74fba7's workflow + the job; result recorded after it finishes).
+  was dispatched from a stress-only branch: run https://github.com/devswha/ovis-terminal/actions/runs/41247294624 passed (RESULT 25/25).
+
+## Addendum: merge of origin/integration 759c85a
+
+Merged `origin/integration` (759c85a: t28 WebSocket, t40 prompt bridge, t48 restart) into
+the lane on request. Conflicts were only in `conformance/src/fixture/handler.rs` and
+`serve.rs`; both sides kept: integration's `Probes` struct (gate, directory, bridge
+extension) gains `sequenced`, `fixture.bridge` and `fixture.deliver` are both served, and
+`authn::Revalidated` wraps integration's `Gated` prompt-bridge handler as the outermost
+layer. `suite.rs` EXECUTABLE is 18 sorted entries (adds `agent/bridge.json`), `declared.json`
+is integration's, the regenerated OpenRPC is byte-identical (`openrpc check` and `compat`
+exit 0). The `credential-rotation` option and job are appended last in
+`.github/workflows/probe-stress-macos.yml` (`yaml.safe_load` passes); the earlier
+stress-only branch run 41247294624 passed 25/25 and the branch was deleted.
+
+Gates after the merge (`docs/evidence/task-57/merge-gates.log`):
+
+```
+build: exit=0
+windows-check: exit=0
+windows-clippy: exit=0
+clippy: exit=0
+hygiene: exit=0
+check: exit=0
+Summary [ 148.537s] 975 tests run: 975 passed (1 slow), 1 skipped
+{"case":"all","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t57/.omo/evidence/ovis-terminal-v1/task-57/merge/rotation.json","evidence_written":null,"result":"passed","scenario":"security/rotation","totals":{"assertions":"140","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
+rotation all: exit=0
+```
