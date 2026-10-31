@@ -1,21 +1,25 @@
 //! `doc.get` and `doc.set` over the core document service (plan todo 50).
 //!
-//! Each call is one coordinator unit: the read or compare-and-swap, its `doc.changed` event
-//! and the operation receipt commit together, and a rejected write is retained as the
-//! operation's typed failure.
+//! `doc.set` is one coordinator unit: the compare-and-swap, its `doc.changed` event and the
+//! operation receipt commit together, and a rejected write is retained as the operation's
+//! typed failure. `doc.get` is an unrecorded read of one committed snapshot: no receipt, no
+//! events, so a document of any accepted size reads back.
 
 use ovis_terminal_authz::{Action, ResolvedTarget, Session, TargetResource};
-use ovis_terminal_core::docs::{DocChanged, get_unit, set_unit};
+use ovis_terminal_core::docs::{self, DocChanged, set_unit};
 use ovis_terminal_core::events::{EventData, SnapshotProducer};
 use ovis_terminal_core::ops::{OperationEvent, OperationSnapshot};
 use ovis_terminal_core::registry::{MachineId, RuntimeIdentity, TargetResolutionError};
+use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::schema::common::MachineRef;
 use ovis_terminal_protocol::schema::ids::DocName;
 use ovis_terminal_protocol::schema::methods::doc::{DocGetParams, DocSetParams};
+use ovis_terminal_store::Snapshot;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde_json::Value;
 
-use crate::dispatch::{Access, Completed, DispatchError, Dispatcher, Execution, Method};
+use crate::dispatch::{Access, Completed, DispatchError, Dispatcher, Execution, Method, Read};
 
 /// `doc.set`: compare-and-swap of one document on this machine.
 #[derive(Debug)]
@@ -70,12 +74,7 @@ where
     }
 }
 
-impl<D, P> Method<D, P> for DocGet
-where
-    D: EventData + From<OperationEvent> + Clone + Serialize + DeserializeOwned + Send + 'static,
-    P: SnapshotProducer + Send + Sync + 'static,
-    P::Sections: AsRef<OperationSnapshot> + DeserializeOwned,
-{
+impl Read for DocGet {
     const NAME: &'static str = "doc.get";
     type Params = DocGetParams;
 
@@ -87,14 +86,12 @@ where
         )
     }
 
-    async fn run(
-        &self,
-        params: Self::Params,
-        execution: Execution<D, P>,
-    ) -> Result<Completed, DispatchError> {
-        execution
-            .commit_unit(move |snapshot| Ok(get_unit(&params.name, snapshot)))
-            .await
+    fn read(&self, params: Self::Params, snapshot: &Snapshot) -> Result<Value, BoundaryError> {
+        docs::read(snapshot, &params.name)
+            .and_then(|record| Ok(serde_json::to_value(record)?))
+            .map_err(|error| BoundaryError::Domain {
+                data: Box::new(error.error_data()),
+            })
     }
 }
 
@@ -114,6 +111,6 @@ where
     P::Sections: AsRef<OperationSnapshot> + DeserializeOwned,
 {
     let machine = runtime.machine_id();
-    dispatch.register(DocGet { machine })?;
+    dispatch.register_read(DocGet { machine })?;
     dispatch.register(DocSet { machine })
 }

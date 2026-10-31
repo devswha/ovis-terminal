@@ -14,4 +14,4 @@ mod qa;
 
 pub use error::DocError;
 pub use event::{DocChanged, DocumentsRetentionEvent};
-pub use service::{DOC_MAX_BYTES, DocWrite, get_unit, read, set_unit};
+pub use service::{DOC_MAX_BYTES, DocWrite, read, set_unit};

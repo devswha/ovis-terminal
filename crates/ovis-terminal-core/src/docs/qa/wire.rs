@@ -88,18 +88,23 @@ fn the_policy_advertises_every_class_with_its_v1_bound() -> TestResult {
 
 proptest! {
     #[test]
-    fn a_floor_reports_expired_and_gap_exactly_below_itself(floor in any::<u64>(), at in any::<u64>()) {
-        let floor = RetentionFloor::new(RetentionClass::Receipts, RetentionPosition::new(floor));
-        let position = RetentionPosition::new(at);
-        let expected_lookup = if at < floor.floor.get() {
-            Retained::Expired { floor: floor.floor }
-        } else {
-            Retained::Available
+    fn a_floor_reports_expired_and_gap_exactly_at_its_boundary(floor in 2_u64..u64::MAX) {
+        // Given: a floor and the positions around it.
+        let edge = RetentionFloor::new(RetentionClass::Receipts, RetentionPosition::new(floor));
+        let at = |offset: u64, below: bool| {
+            RetentionPosition::new(if below { floor.saturating_sub(offset) } else { floor.saturating_add(offset) })
         };
-        prop_assert_eq!(floor.lookup(position), expected_lookup);
-        let gap = at.checked_add(1).is_some_and(|next| next < floor.floor.get());
-        prop_assert_eq!(floor.resume_after(position) == Retained::Available, !gap);
-        let encoded = serde_json::to_value(floor.resume_after(position)).map_err(|error| TestCaseError::fail(error.to_string()))?;
-        prop_assert_eq!(serde_json::from_value::<Retained>(encoded).ok(), Some(floor.resume_after(position)));
+        let expired = Retained::Expired { floor: edge.floor };
+        let gap = Retained::Gap { floor: edge.floor };
+
+        // Then: the floor itself is retained and the position just below it expired.
+        prop_assert_eq!(edge.lookup(at(0, false)), Retained::Available);
+        prop_assert_eq!(edge.lookup(at(1, true)), expired);
+        prop_assert_eq!(edge.lookup(at(1, false)), Retained::Available);
+        // And: resuming right below the floor continues; two below leaves a gap.
+        prop_assert_eq!(edge.resume_after(at(1, true)), Retained::Available);
+        prop_assert_eq!(edge.resume_after(at(2, true)), gap);
+        let encoded = serde_json::to_value(gap).map_err(|error| TestCaseError::fail(error.to_string()))?;
+        prop_assert_eq!(serde_json::from_value::<Retained>(encoded).ok(), Some(gap));
     }
 }

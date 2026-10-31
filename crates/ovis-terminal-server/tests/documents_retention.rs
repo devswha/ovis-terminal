@@ -2,6 +2,8 @@
 //! (plan todo 50). `happy` and `failure` are the QA entry points named by the plan.
 #![cfg(unix)]
 
+#[path = "documents_retention/large.rs"]
+mod large;
 #[path = "../src/dispatch/qa/socket.rs"]
 pub mod socket;
 
@@ -200,18 +202,24 @@ async fn adversarial_inputs_fail_typed_and_leave_the_version_unchanged() -> Test
         ),
     )
     .await?;
+    // A 1 MiB + 1 byte value. Over the socket the 256 KiB canonical-params bound of the
+    // operation ledger refuses it before admission, so the reply carries no op_id; the
+    // inclusive 1 MiB document bound itself is asserted by the core bounds tests.
     let oversized = Value::String("x".repeat(1_048_575));
-
-    // When: an oversized value, an expired op id, a numeric version, a bad name and a
-    // foreign machine are each presented.
-    let cases = [
-        (
-            set(
-                &op(0)?,
-                json!({"name": "shared", "version": "1", "value": oversized}),
-            ),
-            "too_large",
+    let refused = call(
+        &mut client,
+        &set(
+            &op(0)?,
+            json!({"name": "shared", "version": "1", "value": oversized}),
         ),
+    )
+    .await?;
+    assert_eq!(error_kind(&refused), "too_large", "{refused}");
+    assert_eq!(at(&refused, "/error/data/op_id"), &Value::Null, "{refused}");
+
+    // When: an expired op id, a numeric version, a bad name and a foreign machine are each
+    // presented.
+    let cases = [
         (
             set(
                 &op(86_400_000 + 60_000)?,

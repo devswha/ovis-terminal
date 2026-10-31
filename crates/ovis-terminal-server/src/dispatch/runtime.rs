@@ -10,8 +10,10 @@ use ovis_terminal_core::ops::{OperationEvent, OperationSnapshot};
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::schema::decode_params;
+use ovis_terminal_protocol::schema::method::{Effect, MethodSpec};
 use ovis_terminal_protocol::schema::methods::all_methods;
 use ovis_terminal_protocol::schema::methods::server::OpRefParams;
+use schemars::JsonSchema;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -22,9 +24,10 @@ use super::control::{self, Control};
 use super::deadline::{receive, wait};
 use super::execution::{State, now};
 use super::job::Job;
+use super::read::{self, ReadRoute, Reader};
 use super::registry::{Registered, Route};
 use super::tasks::{Active, Tasks};
-use super::{DispatchError, Method};
+use super::{DispatchError, Method, Read};
 use crate::conn::{Call, RequestHandler};
 
 /// Strict dispatcher sharing the core's actual operation/event coordinator.
@@ -35,6 +38,7 @@ use crate::conn::{Call, RequestHandler};
 pub struct Dispatcher<D, P> {
     state: Arc<State<D, P>>,
     routes: BTreeMap<&'static str, Box<dyn Route<D, P>>>,
+    reads: BTreeMap<&'static str, Box<dyn ReadRoute>>,
     tasks: Mutex<Tasks>,
     work: Arc<Semaphore>,
     control: Arc<Semaphore>,
@@ -44,6 +48,7 @@ impl<D, P> fmt::Debug for Dispatcher<D, P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Dispatcher")
             .field("methods", &self.routes.keys())
+            .field("reads", &self.reads.keys())
             .finish_non_exhaustive()
     }
 }
@@ -67,6 +72,7 @@ where
                 core,
             }),
             routes: BTreeMap::new(),
+            reads: BTreeMap::new(),
             tasks: Mutex::new(Tasks::default()),
             work: Arc::new(Semaphore::new(128)),
             control: Arc::new(Semaphore::new(16)),
@@ -79,20 +85,7 @@ where
     ///
     /// Rejects unknown, duplicate, hello and built-in operation-control methods.
     pub fn register<M: Method<D, P>>(&mut self, method: M) -> Result<(), DispatchError> {
-        let spec = all_methods()
-            .find(|spec| spec.name == M::NAME)
-            .ok_or(DispatchError::Registration)?;
-        if ["hello", "op.get", "op.cancel"].contains(&M::NAME) || self.routes.contains_key(M::NAME)
-        {
-            return Err(DispatchError::Registration);
-        }
-        let mut declared = schemars::SchemaGenerator::default();
-        let mut registered = schemars::SchemaGenerator::default();
-        if (spec.params)(&mut declared) != registered.subschema_for::<M::Params>()
-            || declared.definitions() != registered.definitions()
-        {
-            return Err(DispatchError::Registration);
-        }
+        let spec = self.declared::<M::Params>(M::NAME)?;
         self.routes.insert(
             M::NAME,
             Box::new(Registered {
@@ -102,6 +95,41 @@ where
             }),
         );
         Ok(())
+    }
+
+    /// Registers a query answered from a committed snapshot, outside the operation ledger.
+    ///
+    /// # Errors
+    ///
+    /// Rejects unknown, duplicate, non-query, hello and built-in operation-control methods.
+    pub fn register_read<R: Read>(&mut self, reader: R) -> Result<(), DispatchError> {
+        if !matches!(self.declared::<R::Params>(R::NAME)?.effect, Effect::Query) {
+            return Err(DispatchError::Registration);
+        }
+        self.reads
+            .insert(R::NAME, Box::new(Reader(Arc::new(reader))));
+        Ok(())
+    }
+
+    /// The catalog entry of `name`, if it is unregistered and declares exactly `T` as params.
+    fn declared<T: JsonSchema>(&self, name: &str) -> Result<&'static MethodSpec, DispatchError> {
+        let spec = all_methods()
+            .find(|spec| spec.name == name)
+            .ok_or(DispatchError::Registration)?;
+        if ["hello", "op.get", "op.cancel"].contains(&name)
+            || self.routes.contains_key(name)
+            || self.reads.contains_key(name)
+        {
+            return Err(DispatchError::Registration);
+        }
+        let mut declared = schemars::SchemaGenerator::default();
+        let mut registered = schemars::SchemaGenerator::default();
+        if (spec.params)(&mut declared) != registered.subschema_for::<T>()
+            || declared.definitions() != registered.definitions()
+        {
+            return Err(DispatchError::Registration);
+        }
+        Ok(spec)
     }
 
     /// Cooperatively cancels outstanding work and joins every task, including blocking effects.
@@ -137,6 +165,9 @@ where
         let is_control = matches!(call.request.method(), "op.get" | "op.cancel");
         if is_control {
             return self.control_call(call, start).await;
+        }
+        if let Some(reader) = self.reads.get(call.request.method()) {
+            return read::serve(&self.state, reader.as_ref(), call).await;
         }
         let route = self
             .routes
@@ -237,6 +268,7 @@ where
         ["op.get", "op.cancel"]
             .into_iter()
             .chain(self.routes.keys().copied())
+            .chain(self.reads.keys().copied())
             .collect()
     }
 

@@ -14,7 +14,7 @@ use ovis_terminal_store::{Snapshot, Store, StoreOptions};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::docs::{DocumentsRetentionEvent, get_unit, set_unit};
+use crate::docs::{DocumentsRetentionEvent, read, set_unit};
 use crate::events::{Coordinator, EventError, Filter, SnapshotProducer};
 use crate::ops::{
     Context, OperationError, OperationProducer, OperationSnapshot, Operations, Request,
@@ -143,21 +143,10 @@ pub(super) fn set(
     Ok(operations.commit_unit(permit, |snapshot| Ok(set_unit(typed, snapshot))))
 }
 
-/// Reads one document through a `doc.get` operation unit.
+/// Reads one document from a committed snapshot, as `doc.get` does: no receipt, no event.
 pub(super) fn get(core: &Core, name: &str) -> TestResult<DocRecord> {
-    let operations = operations(core)?;
-    let op_id = op_minted(0)?;
-    let request = Request::new(
-        op_id.clone(),
-        "doc.get".to_owned(),
-        serde_json::json!({"name": name}),
-    )?;
-    operations.accept(&request)?;
-    let permit = operations.start(&op_id)?;
     let name = DocName::new(name.to_owned());
-    let record = operations.commit_unit(permit, |snapshot| Ok(get_unit(&name, snapshot)))?;
-    let result = record.result.ok_or("doc.get failed")?;
-    Ok(serde_json::from_value(result)?)
+    Ok(core.read_view(|snapshot| Ok::<_, EventError>(read(snapshot, &name)))??)
 }
 
 /// The JSON value at `pointer`, or null.

@@ -121,13 +121,3 @@ pub fn set_unit<D: From<DocChanged>>(params: DocSetParams, snapshot: &Snapshot) 
         .and_then(|write| write.plan(snapshot))
         .unwrap_or_else(|error| Completion::failed(error.error_data()))
 }
-
-/// The `doc.get` unit for `name` at `snapshot`: the record as its result, or a typed failure.
-pub fn get_unit<D>(name: &DocName, snapshot: &Snapshot) -> Completion<D> {
-    read(snapshot, name)
-        .and_then(|record| Ok(serde_json::to_value(record)?))
-        .map_or_else(
-            |error| Completion::failed(error.error_data()),
-            Completion::new,
-        )
-}
