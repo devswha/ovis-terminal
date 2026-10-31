@@ -40,6 +40,8 @@ pub(crate) struct Session<'a> {
     pub(crate) fixture_report: Option<Value>,
     /// Whether an inject step ran the `--inject` request.
     pub(crate) injected: bool,
+    /// Bearers replies handed out, by the name a `keep_bearer` gave them.
+    pub(crate) kept: BTreeMap<String, String>,
 }
 
 impl<'a> Session<'a> {
@@ -56,6 +58,7 @@ impl<'a> Session<'a> {
             processes: Vec::new(),
             fixture_report: None,
             injected: false,
+            kept: BTreeMap::new(),
         })
     }
 
@@ -83,6 +86,22 @@ impl<'a> Session<'a> {
             .ok_or_else(|| RunnerError::UnknownConnection {
                 conn: name.as_str().to_owned(),
             })
+    }
+
+    /// Keeps the bearer a reply handed out under `name`; the assertion records only whether
+    /// one was there, never its text.
+    pub(crate) fn keep_bearer(&mut self, (scope, record): (&str, &Value), name: &str) -> Assertion {
+        let bearer = record
+            .pointer("/result/issued/bearer")
+            .and_then(Value::as_str);
+        if let Some(bearer) = bearer {
+            self.kept.insert(name.to_owned(), bearer.to_owned());
+        }
+        Assertion::equal(
+            format!("{scope}/keep_bearer[{name}]"),
+            Value::Bool(true),
+            Value::Bool(bearer.is_some()),
+        )
     }
 
     /// Records every assertion; the first one that failed ends the step.

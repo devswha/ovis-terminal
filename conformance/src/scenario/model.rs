@@ -147,6 +147,8 @@ pub(crate) enum Principal {
     Owner,
     /// A principal that may only observe the machine.
     Observe,
+    /// A principal that may observe, type and answer prompts, and nothing else.
+    Writer,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -156,6 +158,10 @@ pub(crate) struct Connect {
     pub(crate) via: Via,
     #[serde(default)]
     pub(crate) principal: Principal,
+    /// Presents the bearer an earlier `keep_bearer` reply kept under this name instead of
+    /// the principal's fixture credential.
+    #[serde(default)]
+    pub(crate) bearer: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -209,6 +215,10 @@ pub(crate) struct Replies {
     pub(crate) expect: BTreeMap<String, Expect>,
     #[serde(default)]
     pub(crate) within_ms: Option<u64>,
+    /// Reply id to the name under which its `/result/issued/bearer` is kept for a later
+    /// `connect`; the reply must carry one.
+    #[serde(default)]
+    pub(crate) keep_bearer: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

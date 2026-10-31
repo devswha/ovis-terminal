@@ -6,15 +6,19 @@ use std::sync::Arc;
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 
 use super::cell::RevocationCell;
+use super::epochs::PrincipalEpochs;
 use super::issued::{Bearer, IssuedCredential};
 use super::secret::CredentialSecret;
 use super::tombstone::{Tombstone, Tombstones};
+
+mod lapse;
 use super::{AccessRequest, Decision, Session};
 use crate::config::AuthorityLimits;
 use crate::error::{AuthzError, Limit};
 use crate::family::IdentityFamily;
 use crate::identity::{CredentialEpoch, CredentialId, PrincipalId};
 use crate::permission::Action;
+use crate::rotation::PrincipalEpoch;
 use crate::scope::{Grant, TargetResource};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,28 +44,9 @@ pub(super) struct CredentialRecord<F: IdentityFamily> {
 pub(super) struct Claim {
     pub(super) credential: CredentialId,
     pub(super) epoch: CredentialEpoch,
+    principal: PrincipalId,
     expires_at: TimestampMs,
     revocation: Arc<RevocationCell>,
-}
-
-impl Claim {
-    /// Fails with the bound cause, without consulting the table, so reclaiming the record or
-    /// its tombstone cannot turn a revoked or expired claim into an unknown one.
-    fn check_bound(&self, at: TimestampMs) -> Result<(), AuthzError> {
-        if let Some(epoch) = self.revocation.revoked_at() {
-            return Err(AuthzError::CredentialRevoked {
-                credential: self.credential,
-                epoch,
-            });
-        }
-        if at.get() >= self.expires_at.get() {
-            return Err(AuthzError::CredentialExpired {
-                credential: self.credential,
-                expired_at: self.expires_at,
-            });
-        }
-        Ok(())
-    }
 }
 
 impl<F: IdentityFamily> CredentialRecord<F> {
@@ -69,26 +54,10 @@ impl<F: IdentityFamily> CredentialRecord<F> {
         Claim {
             credential,
             epoch: self.epoch,
+            principal: self.principal.clone(),
             expires_at: self.expires_at,
             revocation: Arc::clone(&self.revocation),
         }
-    }
-
-    /// Fails unless the credential is still active at the claimed epoch and unexpired at `at`.
-    pub(super) const fn check(&self, claim: &Claim, at: TimestampMs) -> Result<(), AuthzError> {
-        if matches!(self.standing, Standing::Revoked) || self.epoch.get() != claim.epoch.get() {
-            return Err(AuthzError::CredentialRevoked {
-                credential: claim.credential,
-                epoch: self.epoch,
-            });
-        }
-        if at.get() >= self.expires_at.get() {
-            return Err(AuthzError::CredentialExpired {
-                credential: claim.credential,
-                expired_at: self.expires_at,
-            });
-        }
-        Ok(())
     }
 
     /// The bearer text this record was issued as, the key of its attestations.
@@ -100,7 +69,7 @@ impl<F: IdentityFamily> CredentialRecord<F> {
         self.secret.matches(presented)
     }
 
-    pub(super) fn revoke(&mut self) -> CredentialEpoch {
+    fn revoke(&mut self) -> CredentialEpoch {
         self.epoch = self.epoch.next();
         self.standing = Standing::Revoked;
         self.revocation.revoke(self.epoch);
@@ -111,10 +80,11 @@ impl<F: IdentityFamily> CredentialRecord<F> {
         matches!(self.standing, Standing::Active) && at.get() < self.expires_at.get()
     }
 
-    const fn tombstone(&self, credential: CredentialId) -> Tombstone {
+    fn tombstone(&self, credential: CredentialId) -> Tombstone {
         Tombstone {
             credential,
             epoch: self.epoch,
+            principal: self.principal.clone(),
             expires_at: self.expires_at,
         }
     }
@@ -132,6 +102,7 @@ pub(super) struct CredentialTable<F: IdentityFamily> {
     capacity: usize,
     pub(super) records: HashMap<CredentialId, CredentialRecord<F>>,
     tombstones: Tombstones,
+    pub(super) principals: PrincipalEpochs,
 }
 
 impl<F: IdentityFamily> CredentialTable<F> {
@@ -141,42 +112,28 @@ impl<F: IdentityFamily> CredentialTable<F> {
             capacity: limits.credentials,
             records: HashMap::new(),
             tombstones: Tombstones::new(limits.tombstones),
+            principals: PrincipalEpochs::default(),
         }
     }
 
-    /// Returns the record behind `claim` if it is still valid at `at`; a claim on a
-    /// reclaimed revoked credential still fails as revoked.
-    pub(super) fn check_claim(
-        &self,
-        claim: &Claim,
-        at: TimestampMs,
-    ) -> Result<&CredentialRecord<F>, AuthzError> {
-        claim.check_bound(at)?;
-        let Some(record) = self.records.get(&claim.credential) else {
-            return Err(self.tombstones.get(claim.credential).map_or(
-                AuthzError::InvalidCredential,
-                |tombstone| AuthzError::CredentialRevoked {
-                    credential: claim.credential,
-                    epoch: tombstone.epoch,
-                },
-            ));
-        };
-        record.check(claim, at)?;
-        Ok(record)
-    }
-
-    /// Revokes `credential`; revoking an already reclaimed revocation reports its epoch.
+    /// Revokes `credential` and advances its principal's epoch; revoking an already
+    /// reclaimed revocation reports the epochs it left.
     pub(super) fn revoke(
         &mut self,
         credential: CredentialId,
-    ) -> Result<CredentialEpoch, AuthzError> {
+    ) -> Result<(CredentialEpoch, PrincipalId, PrincipalEpoch), AuthzError> {
         if let Some(record) = self.records.get_mut(&credential) {
-            return Ok(record.revoke());
+            let epoch = record.revoke();
+            let principal = record.principal.clone();
+            let principal_epoch = self.principals.advance(&principal);
+            return Ok((epoch, principal, principal_epoch));
         }
-        self.tombstones
+        let tombstone = self
+            .tombstones
             .get(credential)
-            .map(|tombstone| tombstone.epoch)
-            .ok_or(AuthzError::CredentialNotFound { credential })
+            .ok_or(AuthzError::CredentialNotFound { credential })?;
+        let principal_epoch = self.principals.current(&tombstone.principal);
+        Ok((tombstone.epoch, tombstone.principal, principal_epoch))
     }
 
     /// Decides `request` for a session this table's authority issued.
@@ -275,6 +232,7 @@ impl<F: IdentityFamily> CredentialTable<F> {
             },
         );
         self.last_issued = sequence;
+        self.principals.enroll(&issued.principal);
         Ok(issued)
     }
 }

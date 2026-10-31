@@ -103,6 +103,15 @@ decimal_newtype!(
     RecordVersion
 );
 decimal_newtype!(
+    /// Epoch of one principal's authority; advances when any of its credentials is
+    /// rotated or revoked.
+    PrincipalEpoch
+);
+decimal_newtype!(
+    /// Epoch of one credential; advances when it is withdrawn.
+    CredentialEpoch
+);
+decimal_newtype!(
     /// Line number in retained terminal history.
     LineNumber
 );

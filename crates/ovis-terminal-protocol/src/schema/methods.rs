@@ -38,6 +38,7 @@ const NAMESPACES: &[&[MethodSpec]] = &[
     service::METHODS,
     update::METHODS,
     discovery::METHODS,
+    crate::domain::credential_rotation::METHODS,
 ];
 
 /// Every method of the full v1 catalog, in publication order.
