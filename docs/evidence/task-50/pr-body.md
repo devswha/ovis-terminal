@@ -8,14 +8,14 @@ Closes GAP-128. Delivers IDEAL-098, IDEAL-101. Enforces EXCL-020, EXCL-021 and E
 
 ## After
 
-Host: Linux x86_64 (`uname -sm`), toolchain 1.99.1. Base: `origin/integration` b280ac9, which had not moved at push time. `target/debug/ovis-terminal` sha256 `f72aedd458f63e9b37671393911fe359ab6d83ad3e54adcdf5cfa789d8599ba3` (`docs/evidence/task-50/binary.sha256`).
+Host: Linux x86_64 (`uname -sm`), toolchain 1.99.1. Branch head contains integration 2e2cc07 through the orchestrator merges listed under Merges; current `origin/integration` is b9be58f, not merged here. Round-3 `target/debug/ovis-terminal` sha256 `df83a7ad13b530e81d6bb82e04903b8ea016d6a29ff0abe04fa41792144588a5` (`docs/evidence/task-50/binary.sha256`; a local build, so other hosts' hashes differ).
 
 | command | exit |
 |---|---|
 | `cargo build --locked -p ovis-terminal-cli --bin ovis-terminal` | 0 |
-| `bash scripts/check.sh` (nightly fmt, workspace clippy `-D warnings`, nextest 579 run / 579 passed / 1 skipped, doctests, hygiene, json) | 0 |
+| `bash scripts/check.sh` (nightly fmt, workspace clippy `-D warnings`, nextest 692 run / 692 passed / 1 skipped, doctests, hygiene, json) | 0 |
 | `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` | 0 |
-| `cargo nextest run -p ovis-terminal-server --locked --test documents_retention --no-capture` (4 tests) | 0 |
+| `cargo nextest run -p ovis-terminal-server --locked --test documents_retention --no-capture` (5 tests) | 0 |
 | `cargo nextest run -p ovis-terminal-core --locked -E 'test(/docs::/)'` (20 tests; the retention suites are mounted under `docs::qa`) | 0 |
 | `cargo run … --scenario all/all --isolated --case all` | 0 (16 passed, 0 failed, 0 skipped, 24 declared_only) |
 
@@ -67,7 +67,17 @@ Note that the plan's literal inject carries `"version":0` as a JSON number. Unde
 5. No `#[allow]`, no placeholders, no prose pins.
 6. Holder wire generation is still 2. Contract checklist items are unchanged.
 
+## Merges
+
+The orchestrator union-merged integration into this branch three times on top of b0b1da8: f649283, bc28077 and b1ef937 (the last brings integration 2e2cc07: T77 PR #34 and T43 PR #32). Resolutions:
+- `dispatch/runtime.rs`: the new `reads: BTreeMap<&'static str, Box<dyn ReadRoute>>` map sits beside T77's shared `tasks: Arc<Mutex<Tasks>>`. Read routes still bypass the task table and ledger; mutations use T77's table.
+- `docs/qa/wire.rs` and the retention policy: `u64::from(limits.event_replay_events)` became `limits.event_replay_events.get()` after T22 made that limit a decimal-string `Count`. The value is unchanged; `the_policy_advertises_every_class_with_its_v1_bound` still pins `"10000"`.
+- nightly rustfmt.
+- f649283 left an empty `impl<D, P> Execution<D, P> {}` block in `dispatch/execution.rs`. Round 3 removes it.
+
 ## Seams
+
+- Round 3 (R2-B1): `tests/documents_retention/scope.rs::doc_get_requires_observe_on_that_document`. Over a real socket, a principal with Observe on another document and a principal with only Interact on `shared` both get `forbidden` from doc.get; Observe on `shared` reads `{version:"1", value:{x:1}}`. Mutant check: with `authority.authorize` removed from `dispatch/read.rs` this test fails at scope.rs:92 and the other four pass (`.omo` log `mutant-no-read-authz.log`); reverted.
 
 - Round 2, B1: `doc.get` is served as an unrecorded read. New `ovis_terminal_server::dispatch::Read` trait and `Dispatcher::register_read`: catalog query, same todo-19 authorization at resolve time, an observe-level action enforced, answered off the executor from one committed snapshot. No operation receipt, no op events, no deadline ledger. New `ovis_terminal_core::events::Coordinator::read_view(read)` opens a snapshot under the commit lock and releases the lock before reading. The receipt cap (16 KiB, `ops/context.rs`) is unchanged. `docs::get_unit` was removed.
 
@@ -92,4 +102,6 @@ Note that the plan's literal inject carries `"version":0` as a JSON number. Unde
 - 16521cc: run 41211321607 failed only `test (windows-latest)`. The docs::qa fixture cleanup hit Os error 32 because the coordinator was not closed before the temp root was removed. Every other check passed.
 - 4e609d1 ("fix(docs): make the document fixture platform-neutral"): runs 41212297861 and 41212297841, all 11 checks green including `test (windows-latest)`.
 - macOS stress `docs-retention` (50 iterations): https://github.com/devswha/ovis-terminal/actions/runs/41211325520, success.
-- Round 2 head ("fix(docs): serve doc.get as an unrecorded read so large documents round-trip"): see the PR checks.
+- b0b1da8 (round 2 code): PR ci not triggered while the PR was CONFLICTING; macOS stress run 41216932611 success.
+- b1ef937 (orchestrator merge of 2e2cc07 on b0b1da8): ci 41221362114 and platform-probes 41221362091, both success.
+- Round 3 head ("test(docs): prove doc.get refuses principals without Read scope"): see the PR checks.

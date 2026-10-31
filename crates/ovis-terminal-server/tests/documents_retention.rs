@@ -4,6 +4,8 @@
 
 #[path = "documents_retention/large.rs"]
 mod large;
+#[path = "documents_retention/scope.rs"]
+mod scope;
 #[path = "../src/dispatch/qa/socket.rs"]
 pub mod socket;
 

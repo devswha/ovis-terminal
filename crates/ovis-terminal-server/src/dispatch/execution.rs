@@ -182,14 +182,6 @@ where
     }
 }
 
-impl<D, P> Execution<D, P>
-where
-    D: EventData + From<OperationEvent> + Clone + Serialize + DeserializeOwned + Send + 'static,
-    P: SnapshotProducer + Send + Sync + 'static,
-    P::Sections: AsRef<OperationSnapshot> + DeserializeOwned,
-{
-}
-
 pub(super) fn now() -> Result<TimestampMs, DispatchError> {
     let elapsed = SystemTime::now().duration_since(UNIX_EPOCH)?;
     Ok(TimestampMs::new(u64::try_from(elapsed.as_millis())?))
