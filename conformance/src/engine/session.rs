@@ -23,6 +23,8 @@ pub(crate) struct Context {
     pub(crate) binary: PathBuf,
     /// This runner's own executable, re-run in fixture mode.
     pub(crate) runner: PathBuf,
+    /// The `--inject` request, which a failure case's inject step must plan.
+    pub(crate) inject: Option<Value>,
 }
 
 pub(crate) struct Session<'a> {
@@ -36,6 +38,8 @@ pub(crate) struct Session<'a> {
     pub(crate) connections: Vec<ConnectionReport>,
     pub(crate) processes: Vec<ProcessReport>,
     pub(crate) fixture_report: Option<Value>,
+    /// Whether an inject step ran the `--inject` request.
+    pub(crate) injected: bool,
 }
 
 impl<'a> Session<'a> {
@@ -51,6 +55,7 @@ impl<'a> Session<'a> {
             connections: Vec::new(),
             processes: Vec::new(),
             fixture_report: None,
+            injected: false,
         })
     }
 

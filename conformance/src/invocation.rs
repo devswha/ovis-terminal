@@ -29,6 +29,8 @@ struct Invocation {
     require_no_skips: bool,
     manual_transcript: bool,
     scenario_root: Option<PathBuf>,
+    inject: Option<serde_json::Value>,
+    append: bool,
 }
 
 impl Invocation {
@@ -39,11 +41,21 @@ impl Invocation {
             .scenario
             .ok_or_else(|| missing("--scenario is required"))?;
         let evidence = cli
+            .output
             .evidence
             .ok_or_else(|| missing("--evidence is required"))?;
         if !cli.isolated {
             return Err(RunnerError::IsolationRequired);
         }
+        let inject = match cli.inject {
+            None => None,
+            Some(text) => Some(
+                serde_json::from_str::<serde_json::Value>(&text)
+                    .ok()
+                    .filter(serde_json::Value::is_object)
+                    .ok_or_else(|| missing("--inject takes one JSON object"))?,
+            ),
+        };
         Ok(Self {
             binary,
             scenario: ScenarioId::parse(&scenario)?,
@@ -56,6 +68,8 @@ impl Invocation {
             require_no_skips: cli.require_no_skips,
             manual_transcript: cli.manual_transcript,
             scenario_root: cli.scenario_root,
+            inject,
+            append: cli.output.append,
         })
     }
 }
@@ -141,7 +155,7 @@ pub(crate) async fn main(cli: Cli) -> ExitCode {
     if invocation.manual_transcript {
         transcript(&evidence.cases);
     }
-    let written = write_evidence(&invocation.evidence, &evidence);
+    let written = write_evidence(&invocation.evidence, &evidence, invocation.append);
     summary(&json!({
         "result": evidence.result,
         "scenario": evidence.scenario,
@@ -189,6 +203,7 @@ async fn prepare(invocation: &Invocation) -> Result<Prepared, RunnerError> {
         repo,
         binary: invocation.binary.clone(),
         runner,
+        inject: invocation.inject.clone(),
     };
     let planned = plan(&ctx.repo, &invocation.scenario, invocation.case)?;
     let mut cases = Vec::with_capacity(planned.cases.len());

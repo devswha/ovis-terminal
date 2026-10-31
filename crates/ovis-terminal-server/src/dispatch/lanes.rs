@@ -1,4 +1,5 @@
-//! Domain lanes registered with the dispatcher by their owning todos.
+//! Typed domain routes registered on the dispatcher by assembly.
 
-#[cfg(unix)]
+pub mod agent_status;
+pub mod plugins;
 pub mod unix_service;
