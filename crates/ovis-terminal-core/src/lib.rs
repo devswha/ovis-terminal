@@ -11,6 +11,7 @@ pub mod launch;
 pub mod layout;
 pub mod leases;
 pub mod ops;
+pub mod recovery;
 pub mod registry;
 pub mod restart;
 pub mod retention;

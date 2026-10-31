@@ -10,6 +10,7 @@ pub mod machine_identity;
 pub mod plugins;
 pub mod prompt_bridge;
 pub mod prompts;
+pub mod recovery;
 pub mod restart;
 
 pub mod session_binding;
