@@ -95,7 +95,7 @@ QA_FAILURE_EXIT=0
 
 Gate on the merged tree (`origin/integration` be44e01 merged in): `bash scripts/check.sh` exit 0 (`check.log`: 505 tests run, 505 passed, 1 skipped; hygiene 0 violations in 507 files; 46 JSON files checked). Acceptance commands: `cargo nextest run -p ovis-terminal-core` (`core-nextest.log`: 151 tests run, 151 passed, `NEXTEST_EXIT=0`) and `cargo clippy -p ovis-terminal-core --all-targets -- -D warnings` (`core-clippy.log`: `CLIPPY_EXIT=0`). The TDD red run before the module existed is in `tdd-red.log` (unresolved `input::encoding::*` imports, exit 101).
 
-macOS: the `probe-stress-macos` workflow gains an `encoding` input that repeats `cargo nextest run -p ovis-terminal-core --test encoding` 100 times on macos-latest. Run: dispatched after the PR opens; URL recorded in the next update
+macOS: the `probe-stress-macos` workflow gains an `encoding` input that repeats `cargo nextest run -p ovis-terminal-core --test encoding` 100 times on macos-latest. Run: https://github.com/devswha/ovis-terminal/actions/runs/41199291391 (dispatched with `gh workflow run probe-stress-macos.yml --ref lane/t32-literal-keys-paste -f probe=encoding`)
 
 ## Adversarial
 
