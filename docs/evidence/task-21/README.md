@@ -36,7 +36,7 @@ A file without `"format": "ovis-conformance/1"` is a declaration and is reported
 
 `all/all` classifies every file under `conformance/scenarios/` and reports it in `inventory`:
 - **executed**: it carries `"format": "ovis-conformance/1"` and loads; there are 9 today.
-- **declared_only**: a JSON file with no `format` key, which must be listed in `conformance/scenarios/declared.json` with `{file, owner_todo, reason}`; there are 22 today, `part-a/task-{1..20,24,32}.json`.
+- **declared_only**: a JSON file with no `format` key, which must be listed in `conformance/scenarios/declared.json` with `{file, owner_todo, reason}`; there are 23 today, `part-a/task-{1..20,24,25,32}.json`.
 - **invalid**: a misspelled marker, a name outside the id grammar, a non-JSON file, or a parse or schema error. This gives `scenario_invalid` with the file path and fails the run.
 
 A declaration missing from the list fails with `declaration_unlisted`. A listed file that became executable, vanished or changed owner fails with `declaration_stale`. `--require-no-skips` fails with `declared_only_present` while the list is non-empty; the F3 final wave empties it.
