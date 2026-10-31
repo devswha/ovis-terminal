@@ -1,6 +1,8 @@
 //! Exact operation admission and parameter bounds.
 
+use ovis_terminal_core::ops::{OperationError, PARAMS_ENVELOPE_BYTES, ParamsBound};
 use ovis_terminal_protocol::errors::OpId;
+use ovis_terminal_protocol::schema::limits::Limits;
 use serde_json::{Value, json};
 
 use super::{Fixture, Operations, Request, TestResult, context};
@@ -78,21 +80,52 @@ fn capacity_accepts_1024_and_rejects_1025_without_eviction() -> TestResult {
     Ok(())
 }
 
-#[test]
-fn canonical_parameters_accept_262144_bytes_and_reject_262145() -> TestResult {
-    // Given canonical parameter objects exactly at and one byte above the bound.
-    let accepted_params = params_with_encoded_len(262_144)?;
-    let rejected_params = params_with_encoded_len(262_145)?;
-    assert_eq!(serde_json::to_vec(&accepted_params)?.len(), 262_144);
-    assert_eq!(serde_json::to_vec(&rejected_params)?.len(), 262_145);
+fn assert_bound(method: &str, bound: ParamsBound) -> TestResult {
+    // Given canonical parameter objects exactly at and one byte above the method's bound.
+    let limit = usize::try_from(bound.bytes().get())?;
+    let accepted_params = params_with_encoded_len(limit)?;
+    let rejected_params = params_with_encoded_len(limit.checked_add(1).ok_or("limit")?)?;
+    assert_eq!(serde_json::to_vec(&accepted_params)?.len(), limit);
 
     // When each object crosses Request's parse-once boundary.
-    let accepted = Request::new(op_id(1), "terminal.run".into(), accepted_params)?;
-    let rejected =
-        Request::new(op_id(2), "terminal.run".into(), rejected_params).expect_err("one byte over");
+    let accepted = Request::new(op_id(1), method.into(), accepted_params)?;
+    let Err(rejected) = Request::new(op_id(2), method.into(), rejected_params) else {
+        return Err("one byte over the bound was accepted".into());
+    };
 
-    // Then the exact boundary is usable and the next byte is typed too_large.
+    // Then the exact boundary is usable and the next byte is too_large naming the bound.
     assert_eq!(accepted.op_id(), &op_id(1));
     assert_eq!(rejected.kind(), "too_large");
+    assert_eq!(rejected.hint(), bound.hint());
+    let OperationError::ParamsTooLarge {
+        bound: named,
+        actual,
+    } = rejected
+    else {
+        return Err(format!("{rejected:?}").into());
+    };
+    assert_eq!(
+        (named, actual.get()),
+        (bound, bound.bytes().get().saturating_add(1))
+    );
     Ok(())
+}
+
+#[test]
+fn canonical_parameters_accept_262144_bytes_and_reject_262145() -> TestResult {
+    assert_eq!(ParamsBound::of("terminal.run"), ParamsBound::Default);
+    assert_eq!(ParamsBound::Default.bytes().get(), 262_144);
+    assert_bound("terminal.run", ParamsBound::Default)
+}
+
+#[test]
+fn doc_set_params_are_bounded_by_the_advertised_document_bound() -> TestResult {
+    // The doc.set bound is derived from hello's doc_max_bytes plus the envelope allowance.
+    let advertised = Limits::v1().doc_max_bytes.get();
+    assert_eq!(ParamsBound::of("doc.set"), ParamsBound::Document);
+    assert_eq!(
+        ParamsBound::Document.bytes().get(),
+        advertised + PARAMS_ENVELOPE_BYTES.get()
+    );
+    assert_bound("doc.set", ParamsBound::Document)
 }

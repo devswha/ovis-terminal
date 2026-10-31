@@ -1,31 +1,27 @@
-//! Documents read back byte-exact up to the largest value `doc.set` accepts today.
+//! Documents read back byte-exact up to the advertised 1 MiB document bound.
 
-use serde_json::{Value, json};
+use serde_json::json;
 
 use super::socket::{at, error_kind};
 use super::{Served, TestResult, call, get, op, set};
 
-/// Characters of a string value whose canonical `doc.set` params (op id removed, keys
-/// sorted, `machine: null` included) are exactly `bytes` long for a three-letter name.
-fn value_chars_for_params(bytes: usize) -> TestResult<usize> {
-    let skeleton = json!({"machine": null, "name": "big", "value": "", "version": "0"});
-    Ok(bytes
-        .checked_sub(serde_json::to_vec(&skeleton)?.len())
-        .ok_or("params bound below the skeleton")?)
+/// Characters of a string value whose compact JSON encoding is `bytes` long.
+fn chars_encoding_to(bytes: usize) -> TestResult<usize> {
+    Ok(bytes.checked_sub(2).ok_or("shorter than the quotes")?)
 }
 
 #[tokio::test]
 async fn documents_read_back_byte_exact_up_to_the_largest_accepted_write() -> TestResult {
-    // Given: the old 16 KiB receipt failure point and the largest value doc.set accepts
-    // today, whose canonical params are exactly the 262144-byte ledger bound.
+    // Given: the old 16 KiB receipt failure point, the old 256 KiB ledger params bound, and
+    // a value encoding to exactly doc_max_bytes.
     let served = Served::start().await?;
     let mut client = served.client().await?;
-    let largest = value_chars_for_params(262_144)?;
-    assert_eq!(largest, 262_090, "encoded value of 262092 bytes");
-    let canonical =
-        json!({"machine": null, "name": "big", "value": "x".repeat(largest), "version": "0"});
-    assert_eq!(serde_json::to_vec(&canonical)?.len(), 262_144);
-    let sizes = [("edge", "e".repeat(16_382)), ("big", "x".repeat(largest))];
+    let largest = chars_encoding_to(1 << 20)?;
+    let sizes = [
+        ("edge", "e".repeat(16_382)),
+        ("ledger", "l".repeat(262_090)),
+        ("big", "x".repeat(largest)),
+    ];
 
     for (name, text) in &sizes {
         // When: each is written at version 0, then read with a subscriber watching.
@@ -55,17 +51,18 @@ async fn documents_read_back_byte_exact_up_to_the_largest_accepted_write() -> Te
         );
     }
 
-    // And: one more character exceeds the ledger bound before admission.
+    // And: one more character is admitted by the ledger and refused by the document bound.
+    let over_op = op(0)?;
     let over = call(
         &mut client,
         &set(
-            &op(0)?,
+            &over_op,
             json!({"name": "big", "version": "1", "value": "x".repeat(largest + 1)}),
         ),
     )
     .await?;
     assert_eq!(error_kind(&over), "too_large", "{over}");
-    assert_eq!(at(&over, "/error/data/op_id"), &Value::Null);
+    assert_eq!(at(&over, "/error/data/op_id"), &json!(over_op));
     drop(client);
     served.close().await
 }
