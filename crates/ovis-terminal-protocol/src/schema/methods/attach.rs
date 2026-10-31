@@ -8,7 +8,7 @@ use crate::schema::common::{Geometry, Target};
 use crate::schema::ids::{ClientId, LeaseId, StreamId};
 use crate::schema::limits::StreamMode;
 use crate::schema::method::{MethodSpec, method};
-use crate::schema::records::{Checkpoint, LeaseRecord, LeaseRole};
+use crate::schema::records::{AttachedTerminal, Checkpoint, LeaseRecord, LeaseRole, RetryBoundary};
 use crate::schema::scalar::{ByteCount, ByteOffset, EventSeq, LeaseEpoch, OpenEnum, Revision};
 
 /// Explicit takeover request bound to the epoch the caller observed.
@@ -80,6 +80,14 @@ pub struct AttachOpenResult {
     pub first_paint: Option<Checkpoint>,
     /// Output credit granted at open.
     pub credit_initial: ByteCount,
+    /// Terminal and program incarnations the stream is bound to.
+    pub terminal: Option<AttachedTerminal>,
+    /// What to wait for before retrying a held or recovering attach.
+    pub retry: Option<RetryBoundary>,
+    /// Stable reason token of a refused or ended outcome.
+    pub reason: Option<String>,
+    /// Raw output offset of the final byte of an ended terminal.
+    pub final_output_offset: Option<ByteOffset>,
 }
 
 /// Parameters of `attach.resize`.

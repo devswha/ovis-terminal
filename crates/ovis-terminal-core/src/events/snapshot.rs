@@ -217,6 +217,8 @@ pub struct SnapshotPage {
 pub(super) struct Pinned {
     // Keep the WAL read transaction alive for the full page lease.
     pub _view: Snapshot,
+    // Returns the pinned-snapshot slot to the queue when the lease ends.
+    pub _slot: super::admission::SnapshotSlot,
     pub token: SnapshotToken,
     pub cursor: Cursor,
     pub bytes: Vec<u8>,

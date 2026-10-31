@@ -52,7 +52,8 @@ fn child_processes() -> TestResult<usize> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn happy() -> TestResult {
     let fixture = Fixture::new()?;
-    let server = fixture.serve(1, Arc::new(Recorder::default())).await?;
+    let recorder = Arc::new(Recorder::default());
+    let server = fixture.serve(1, Arc::clone(&recorder)).await?;
     let mut client = fixture.connect().await?;
     let hello = client.hello_framed("1", &fixture.bearer).await?;
     let first = hello_result(&hello)?;
@@ -79,14 +80,13 @@ async fn happy() -> TestResult {
     client
         .send(&request("m", "doc.set", &json!({ "name": "x" })))
         .await?;
-    let (mut order, mut events, mut replies) = (Vec::new(), Vec::new(), BTreeMap::new());
+    let (mut events, mut replies) = (Vec::new(), BTreeMap::new());
     while replies.len() < 3 || events.is_empty() {
         let message = client.expect_next().await?;
         if at(&message, "/method") == "event" {
             events.push(message);
         } else {
             let id = at(&message, "/id").as_str().unwrap_or_default().to_owned();
-            order.push(id.clone());
             replies.insert(id, message);
         }
     }
@@ -94,8 +94,13 @@ async fn happy() -> TestResult {
     assert_eq!(at(&reply("a"), "/result/name"), "a");
     assert_eq!(at(&reply("b"), "/result/name"), "b");
     assert_eq!(at(&reply("m"), "/result/version"), "1");
-    let position = |id: &str| order.iter().position(|seen| seen == id);
-    assert!(position("b") < position("a"), "a waited for b: {order:?}");
+    // Replies are written as requests settle, in no promised order: once `b` wakes `a`,
+    // either may settle first. The handler sees the causal order.
+    assert_eq!(
+        recorder.journal()?,
+        ["b released a", "a resumed"],
+        "a waited for b"
+    );
     assert_eq!(events.len(), 1);
     let event = events.first().cloned().unwrap_or_default();
     assert_eq!(at(&event, "/params/subscription_id"), &subscription);

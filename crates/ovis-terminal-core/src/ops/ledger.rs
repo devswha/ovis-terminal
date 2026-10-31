@@ -8,7 +8,7 @@ use ovis_terminal_store::{ResourceKey, ResourceLookup, Snapshot};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 
-use super::request::ParamsDigest;
+use super::params::Params;
 use crate::events::{EventData, EventError, Filter, SnapshotProducer};
 use crate::registry::{RuntimeId, ServerBootId};
 
@@ -24,6 +24,11 @@ impl OperationKey {
 
     pub(super) fn resource(&self, runtime: RuntimeId) -> ResourceKey {
         ResourceKey::new("operation", format!("{runtime}/{}", self.0))
+    }
+
+    /// The inspection copy of this operation's canonical params.
+    pub(super) fn params_resource(&self, runtime: RuntimeId) -> ResourceKey {
+        ResourceKey::new("operation_params", format!("{runtime}/{}", self.0))
     }
 }
 
@@ -45,7 +50,8 @@ impl Default for Index {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct Entry {
     pub principal: PrincipalId,
-    pub params: ParamsDigest,
+    #[serde(flatten)]
+    pub params: Params,
     pub accepted_at: TimestampMs,
     pub boot: ServerBootId,
     pub record: OpRecord,

@@ -37,7 +37,7 @@ fn inspection_enforces_the_snapshot_lease_byte_budget() -> TestResult {
 }
 
 #[test]
-fn inspection_requires_an_available_snapshot_lease() -> TestResult {
+fn inspection_waits_for_a_real_snapshot_lease() -> TestResult {
     // Given a coordinator whose only pinned-snapshot slot is occupied.
     let fixture = Fixture::new();
     let identity = identity(1)?;
@@ -51,20 +51,36 @@ fn inspection_requires_an_available_snapshot_lease() -> TestResult {
     .with_limits(limits)?;
     let lease = core.pin_snapshot()?;
 
-    // When inspection runs before and after releasing the sole lease.
-    let blocked = core.read_snapshot();
-    core.release_snapshot(&lease.token)?;
-    let released = core.read_snapshot();
-    core.close()?;
+    // When inspection runs while the sole lease is held, and the lease is then released.
+    std::thread::scope(|scope| -> TestResult {
+        let (seen, observed) = mpsc::sync_channel(1);
+        let reader_core = &core;
+        let ticket = core.snapshot_queue().enqueue();
+        let reader = scope.spawn(move || {
+            let read = ticket.wait().and_then(|slot| {
+                drop(slot);
+                reader_core.read_snapshot()
+            });
+            seen.send(read.map(|snapshot| snapshot.cursor))
+                .expect("reader result");
+        });
+        let refused = core.pin_snapshot();
+        assert!(matches!(
+            observed.try_recv(),
+            Err(mpsc::TryRecvError::Empty)
+        ));
+        core.release_snapshot(&lease.token)?;
 
-    // Then the accessor consumes real lease capacity and succeeds once capacity returns.
-    assert_eq!(
-        blocked
-            .expect_err("inspection must reserve a real snapshot lease")
-            .kind(),
-        "limit_exceeded"
-    );
-    assert!(released.is_ok());
+        // Then it consumed real lease capacity, waited instead of failing, and read in turn.
+        assert_eq!(
+            refused.expect_err("the sole slot is held").kind(),
+            "limit_exceeded"
+        );
+        assert!(observed.recv_timeout(Duration::from_secs(30))?.is_ok());
+        reader.join().expect("reader joined");
+        Ok(())
+    })?;
+    core.close()?;
     Ok(())
 }
 
