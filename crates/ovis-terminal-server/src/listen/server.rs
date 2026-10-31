@@ -10,7 +10,7 @@ use tokio::sync::watch;
 use tokio::task::{JoinError, JoinHandle, JoinSet};
 
 use super::{EndpointError, UnixEndpoint};
-use crate::conn::{ConnectionError, Connections, RequestHandler};
+use crate::conn::{ConnectionError, Connections, Ending, RequestHandler};
 
 const DEFAULT_MAX_CONNECTIONS: usize = 64;
 const DEFAULT_SHUTDOWN_GRACE: Duration = Duration::from_secs(5);
@@ -102,7 +102,7 @@ impl ServeReport {
 /// A running server; dropping it cancels the server and every connection.
 #[derive(Debug)]
 pub struct ServerHandle {
-    signal: watch::Sender<bool>,
+    signal: watch::Sender<Option<Ending>>,
     progress: watch::Receiver<ServeReport>,
     task: JoinHandle<Result<ServeReport, EndpointError>>,
 }
@@ -120,8 +120,23 @@ impl ServerHandle {
     ///
     /// The accept failure that stopped the server early, [`EndpointError::Io`] when the
     /// socket file cannot be removed and [`EndpointError::ServerTask`] if the task panicked.
-    pub async fn shutdown(mut self) -> Result<ServeReport, EndpointError> {
-        self.signal.send_replace(true);
+    pub async fn shutdown(self) -> Result<ServeReport, EndpointError> {
+        self.end(Ending::Shutdown).await
+    }
+
+    /// Stops accepting for a planned control restart: every connection is closed with
+    /// `$/closing{reason: "server_restart", incarnations_preserved: true}`, never with
+    /// `server_shutdown`, and joined.
+    ///
+    /// # Errors
+    ///
+    /// As [`ServerHandle::shutdown`].
+    pub async fn restart(self) -> Result<ServeReport, EndpointError> {
+        self.end(Ending::Restart).await
+    }
+
+    async fn end(mut self, ending: Ending) -> Result<ServeReport, EndpointError> {
+        self.signal.send_replace(Some(ending));
         (&mut self.task).await.map_err(EndpointError::ServerTask)?
     }
 }
@@ -134,7 +149,7 @@ impl Drop for ServerHandle {
 
 struct Serving<H> {
     connections: Connections<H>,
-    shutdown: watch::Receiver<bool>,
+    shutdown: watch::Receiver<Option<Ending>>,
     progress: watch::Sender<ServeReport>,
     max_connections: usize,
     grace: Duration,
@@ -153,7 +168,7 @@ pub fn serve_unix<H: RequestHandler>(
     handler: Arc<H>,
 ) -> Result<ServerHandle, EndpointError> {
     let connections = Connections::new(config.authority, config.runtime, handler)?;
-    let (signal, shutdown) = watch::channel(false);
+    let (signal, shutdown) = watch::channel(None);
     let (progress, observed) = watch::channel(ServeReport::default());
     let serving = Serving {
         connections,
@@ -212,7 +227,8 @@ async fn accept_loop<H: RequestHandler>(
             }
         }
     };
-    serving.connections.shutdown();
+    let ending = (*serving.shutdown.borrow()).unwrap_or(Ending::Shutdown);
+    serving.connections.end(ending);
     #[cfg(test)]
     if let Some(gate) = &serving.gate {
         gate.stopping.notify_one();

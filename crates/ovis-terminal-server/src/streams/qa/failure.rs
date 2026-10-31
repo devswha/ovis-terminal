@@ -196,7 +196,7 @@ pub(crate) async fn failure() -> TestResult {
     );
     assert!(at(&waiting.result, "/result/stream_id").is_null());
     fx.hub.recovered()?;
-    let fresh = Viewer::open(
+    let mut fresh = Viewer::open(
         fx.connect("owner").await?,
         &open_params("f-5", "tui", "interact"),
         true,
@@ -207,5 +207,39 @@ pub(crate) async fn failure() -> TestResult {
         fresh.stream, ready.stream,
         "a recovered terminal never reuses a stream identity"
     );
+    planned_restart(&fx, &mut fresh).await?;
     fx.close().await
+}
+
+/// A planned restart closes the stream `server_restart`, never `lost`; the successor
+/// serves the same terminal on a new stream identity.
+async fn planned_restart(fx: &Fixture, live: &mut Viewer) -> TestResult {
+    let hub = std::sync::Arc::clone(&fx.hub);
+    tokio::task::spawn_blocking(move || hub.restarting(&OpId::new("restart-1"))).await??;
+    live.until(|viewer| !viewer.kinds("close").is_empty())
+        .await?;
+    assert_eq!(
+        at(&live.first("close")?, "/params/close/reason"),
+        "server_restart"
+    );
+    let waiting = Viewer::open(
+        fx.connect("owner").await?,
+        &open_params("f-6", "tui", "interact"),
+        true,
+    )
+    .await?;
+    assert_eq!(outcome(&waiting), "recovering");
+    fx.hub.recovered()?;
+    let successor = Viewer::open(
+        fx.connect("owner").await?,
+        &open_params("f-7", "tui", "interact"),
+        true,
+    )
+    .await?;
+    assert_eq!(outcome(&successor), "ready");
+    assert_ne!(
+        successor.stream, live.stream,
+        "a restart never reuses a stream identity"
+    );
+    Ok(())
 }

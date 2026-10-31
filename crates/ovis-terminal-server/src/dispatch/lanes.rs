@@ -8,6 +8,8 @@ pub mod machine_identity;
 pub mod plugins;
 pub mod prompt_bridge;
 pub mod prompts;
+#[cfg(unix)]
+pub mod restart;
 
 pub mod session_binding;
 #[cfg(unix)]
