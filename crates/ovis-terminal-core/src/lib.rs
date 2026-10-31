@@ -7,6 +7,7 @@ pub mod docs;
 pub mod events;
 pub mod geometry;
 pub mod input;
+pub mod launch;
 pub mod layout;
 pub mod leases;
 pub mod ops;

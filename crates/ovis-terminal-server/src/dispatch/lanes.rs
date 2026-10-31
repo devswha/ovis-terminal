@@ -8,6 +8,7 @@ pub mod machine_identity;
 pub mod plugins;
 
 pub mod session_binding;
+pub mod template_launch;
 #[cfg(unix)]
 pub mod unix_service;
 pub mod worktrees;

@@ -1,0 +1,915 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "agent/launch",
+  "title": "Versioned templates launch through terminal.run and release a first message only on declared readiness",
+  "todo": 35,
+  "closes": [
+    "GAP-083",
+    "GAP-116"
+  ],
+  "delivers": [
+    "IDEAL-060",
+    "IDEAL-089"
+  ],
+  "excludes": [
+    "EXCL-023",
+    "EXCL-024",
+    "EXCL-025"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the bridge: template.list/get by name and version; terminal.run of pinned build@1 with a first message answers accepted with zero input; a working declaration does not release it; the idle declaration releases exactly one submission and the state becomes sent; a repeated launch under the same op_id answers the retained receipt without a second spawn or submission.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "list",
+                "method": "template.list",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "latest",
+                "method": "template.get",
+                "params": {
+                  "name": "build"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "pinned",
+                "method": "template.get",
+                "params": {
+                  "name": "build",
+                  "version": "1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "list": {
+                "/result/templates/0/name": "build",
+                "/result/templates/0/version": "1",
+                "/result/templates/1/version": "2",
+                "/result/templates/2/name": "silent",
+                "/result/templates/0/readiness": {
+                  "by": "declared",
+                  "states": [
+                    "idle"
+                  ]
+                },
+                "/error": {
+                  "$present": false
+                }
+              },
+              "latest": {
+                "/result/version": "2",
+                "/result/argv": [
+                  "/usr/bin/env",
+                  "build-agent",
+                  "--target",
+                  "release"
+                ]
+              },
+              "pinned": {
+                "/result/version": "1",
+                "/result/argv": [
+                  "/usr/bin/env",
+                  "build-agent",
+                  "--target",
+                  "debug"
+                ],
+                "/result/env": {
+                  "ROLE": "build"
+                },
+                "/result/ready_deadline_ms": "30000"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "launch",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:launch",
+                  "template": {
+                    "name": "build",
+                    "version": "1"
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/",
+                  "name": "builder",
+                  "first_message": {
+                    "text": "run the build",
+                    "deadline_ms": "10000"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "launch": {
+                "/result/terminal/terminal_id": "terminal:100",
+                "/result/terminal/name": "builder",
+                "/result/terminal/process/argv": [
+                  "/usr/bin/env",
+                  "build-agent",
+                  "--target",
+                  "debug"
+                ],
+                "/result/spawn": "spawned",
+                "/result/first_message/state": "accepted",
+                "/result/first_message/launch_op": "$op:launch",
+                "/result/first_message/terminal_id": "terminal:100",
+                "/result/first_message/process_incarnation": "1",
+                "/result/first_message/queued_seq": null,
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "spawn-terminal:100.json": {
+                "argv": [
+                  "/usr/bin/env",
+                  "build-agent",
+                  "--target",
+                  "debug"
+                ],
+                "env": {
+                  "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100",
+                  "ROLE": "build"
+                },
+                "cwd": "/",
+                "name": "builder",
+                "parent": null
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "working",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:working",
+                  "target": {
+                    "name": "builder"
+                  },
+                  "process_token": "fixture-launch-token-terminal:100",
+                  "seq": "1",
+                  "record": {
+                    "state": "working"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "working": {
+                "/result/status/root/report/state": "working",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "still",
+                "method": "terminal.first_message",
+                "params": {
+                  "launch_op": "$op:launch",
+                  "settled_within_ms": "300"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "still": {
+                "/result/state": "accepted",
+                "/result/queued_seq": null,
+                "/result/reason": null
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "spawn-terminal:100.json": {
+                "argv": [
+                  "/usr/bin/env",
+                  "build-agent",
+                  "--target",
+                  "debug"
+                ],
+                "env": {
+                  "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100",
+                  "ROLE": "build"
+                },
+                "cwd": "/",
+                "name": "builder",
+                "parent": null
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "idle",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:idle",
+                  "target": {
+                    "name": "builder"
+                  },
+                  "process_token": "fixture-launch-token-terminal:100",
+                  "seq": "2",
+                  "record": {
+                    "state": "idle"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "idle": {
+                "/result/status/root/report/state": "idle",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "sent",
+                "method": "terminal.first_message",
+                "params": {
+                  "launch_op": "$op:launch",
+                  "settled_within_ms": "5000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "sent": {
+                "/result/state": "sent",
+                "/result/queued_seq": "1",
+                "/result/reason": null,
+                "/result/launch_op": "$op:launch"
+              }
+            },
+            "within_ms": 10000
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "spawn-terminal:100.json": {
+                "argv": [
+                  "/usr/bin/env",
+                  "build-agent",
+                  "--target",
+                  "debug"
+                ],
+                "env": {
+                  "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100",
+                  "ROLE": "build"
+                },
+                "cwd": "/",
+                "name": "builder",
+                "parent": null
+              },
+              "input-terminal:100.json": [
+                {
+                  "queued_seq": "1",
+                  "text": "run the build\r"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "again",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:launch",
+                  "template": {
+                    "name": "build",
+                    "version": "1"
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/",
+                  "name": "builder",
+                  "first_message": {
+                    "text": "run the build",
+                    "deadline_ms": "10000"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "again": {
+                "/result/terminal/terminal_id": "terminal:100",
+                "/result/first_message/launch_op": "$op:launch"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "idle-again",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:idle-again",
+                  "target": {
+                    "name": "builder"
+                  },
+                  "process_token": "fixture-launch-token-terminal:100",
+                  "seq": "3",
+                  "record": {
+                    "state": "idle"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "after",
+                "method": "terminal.first_message",
+                "params": {
+                  "launch_op": "$op:launch"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "idle-again": {
+                "/error": {
+                  "$present": false
+                }
+              },
+              "after": {
+                "/result/state": "sent",
+                "/result/queued_seq": "1"
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "spawn-terminal:100.json": {
+                "argv": [
+                  "/usr/bin/env",
+                  "build-agent",
+                  "--target",
+                  "debug"
+                ],
+                "env": {
+                  "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100",
+                  "ROLE": "build"
+                },
+                "cwd": "/",
+                "name": "builder",
+                "parent": null
+              },
+              "input-terminal:100.json": [
+                {
+                  "queued_seq": "1",
+                  "text": "run the build\r"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "A missing template version is template_not_found before any spawn; quiet readiness is not a launch field; program plus template is invalid_params; an unknown launch is not_found; silent@1 never declares readiness and expires with zero input; task text $(touch PWNED) reaches only the first message, literally, never argv.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "bridge",
+            "base": {
+              "op_id": "$op:inject",
+              "geometry": {
+                "cols": 80,
+                "rows": 24
+              },
+              "cwd": "/"
+            },
+            "planned": [
+              {
+                "request": {
+                  "method": "terminal.run",
+                  "params": {
+                    "template": {
+                      "name": "build",
+                      "version": "missing"
+                    },
+                    "first_message": {
+                      "text": "x"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "template_not_found",
+                  "/error/data/op_id": {
+                    "$present": true
+                  },
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "terminal.run",
+                  "params": {
+                    "template": {
+                      "name": "build",
+                      "version": "1"
+                    },
+                    "first_message": {
+                      "text": "x",
+                      "ready_by": "quiet"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/error/data/field_path": "params.first_message.ready_by",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "effects": {
+            "entries": {}
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "both",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:both",
+                  "program": {
+                    "argv": [
+                      "/bin/true"
+                    ]
+                  },
+                  "template": {
+                    "name": "build"
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "unknown",
+                "method": "terminal.first_message",
+                "params": {
+                  "launch_op": "$op:never-launched"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "both": {
+                "/error/data/kind": "invalid_params",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "unknown": {
+                "/error/data/kind": "not_found",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {}
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "silent",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:silent",
+                  "template": {
+                    "name": "silent"
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/",
+                  "name": "silent",
+                  "first_message": {
+                    "text": "never typed"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "silent": {
+                "/result/first_message/state": "accepted",
+                "/result/terminal/terminal_id": "terminal:100",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "expired",
+                "method": "terminal.first_message",
+                "params": {
+                  "launch_op": "$op:silent",
+                  "settled_within_ms": "5000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "expired": {
+                "/result/state": "expired",
+                "/result/reason": "deadline_passed",
+                "/result/queued_seq": null
+              }
+            },
+            "within_ms": 10000
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "spawn-terminal:100.json": {
+                "argv": [
+                  "/usr/bin/env",
+                  "silent-agent"
+                ],
+                "env": {
+                  "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100"
+                },
+                "cwd": "/",
+                "name": "silent",
+                "parent": null
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "inject",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:inject-task",
+                  "template": {
+                    "name": "build",
+                    "version": "1",
+                    "task": "$(touch PWNED)"
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/",
+                  "name": "inject"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "inject": {
+                "/result/first_message/state": "accepted",
+                "/result/terminal/terminal_id": "terminal:101",
+                "/result/terminal/process/argv": [
+                  "/usr/bin/env",
+                  "build-agent",
+                  "--target",
+                  "debug"
+                ],
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "inject-idle",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:inject-idle",
+                  "target": {
+                    "name": "inject"
+                  },
+                  "process_token": "fixture-launch-token-terminal:101",
+                  "seq": "1",
+                  "record": {
+                    "state": "idle"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "inject-idle": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "inject-sent",
+                "method": "terminal.first_message",
+                "params": {
+                  "launch_op": "$op:inject-task",
+                  "settled_within_ms": "5000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "inject-sent": {
+                "/result/state": "sent",
+                "/result/queued_seq": "1"
+              }
+            },
+            "within_ms": 10000
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "spawn-terminal:100.json": {
+                "argv": [
+                  "/usr/bin/env",
+                  "silent-agent"
+                ],
+                "env": {
+                  "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100"
+                },
+                "cwd": "/",
+                "name": "silent",
+                "parent": null
+              },
+              "spawn-terminal:101.json": {
+                "argv": [
+                  "/usr/bin/env",
+                  "build-agent",
+                  "--target",
+                  "debug"
+                ],
+                "env": {
+                  "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:101",
+                  "ROLE": "build"
+                },
+                "cwd": "/",
+                "name": "inject",
+                "parent": null
+              },
+              "input-terminal:101.json": [
+                {
+                  "queued_seq": "1",
+                  "text": "$(touch PWNED)\r"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

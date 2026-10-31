@@ -80,6 +80,8 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .register(TerminalKeep::new(&effects, runtime)?)
         .map_err(at("register terminal.keep"))?;
     let agents = super::agents::register(&mut dispatch, runtime, Arc::clone(&core))?;
+    let parts = (&authority, &*core, agents.clone());
+    super::template_lane::register(&mut dispatch, (runtime, root), parts)?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
     let handler = Arc::new(FixtureHandler::new(Arc::new(dispatch), root.to_path_buf()));
     let socket = root.join("run").join("s.sock");

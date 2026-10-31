@@ -39,12 +39,43 @@ const TERMINALS: [(u64, &str, &str); 2] = [
 
 type Core = Coordinator<Event, OperationProducer>;
 
-/// The fixture's terminal registry; it never selects a focused terminal.
+/// The fixture's terminal registry; it never selects a focused terminal. Launched
+/// terminals join it under their names.
 #[derive(Debug)]
 pub(crate) struct Directory {
-    index: TargetIndex,
+    targets: Mutex<Vec<ResourceTarget>>,
     scope: MachineRuntime,
     generation: TerminalGeneration,
+}
+
+impl Directory {
+    /// Adds a launched terminal named `name`.
+    pub(crate) fn add(&self, terminal: TerminalId, name: ResourceName) {
+        let target = ResourceTarget::new(self.scope, terminal, name);
+        self.targets
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(target);
+    }
+
+    /// Whether a terminal already carries `name`.
+    pub(crate) fn named(&self, name: &str) -> bool {
+        ResourceName::new(name).is_ok_and(|name| {
+            TargetIndex::from_targets(self.snapshot())
+                .resolve(TargetRequest::Name {
+                    machine: None,
+                    name,
+                })
+                .is_ok()
+        })
+    }
+
+    fn snapshot(&self) -> Vec<ResourceTarget> {
+        self.targets
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
 }
 
 impl TerminalDirectory for Directory {
@@ -59,7 +90,7 @@ impl TerminalDirectory for Directory {
             },
             _ => return Err(TargetResolutionError::NotFound),
         };
-        let resolved = self.index.resolve(request)?;
+        let resolved = TargetIndex::from_targets(self.snapshot()).resolve(request)?;
         Ok(ResolvedTerminal::new(
             resolved.machine_id(),
             resolved.terminal_id(),
@@ -92,7 +123,7 @@ fn directory(runtime: RuntimeIdentity) -> Result<Directory, RunnerError> {
         ));
     }
     Ok(Directory {
-        index: TargetIndex::from_targets(targets),
+        targets: Mutex::new(targets),
         scope,
         generation: TerminalGeneration::new(1).map_err(at("build a generation"))?,
     })
