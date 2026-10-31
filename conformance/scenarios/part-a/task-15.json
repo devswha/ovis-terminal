@@ -91,10 +91,11 @@
     },
     {
       "class": "snapshot accessor mutation",
-      "test": "inspection::inspection_enforces_the_snapshot_lease_byte_budget",
+      "test": "inspection accessor regressions",
       "assertions": [
         "read-only inspection enforces the configured pinned-snapshot byte budget",
-        "replacing SnapshotLease and SnapshotAssembler with direct store capture makes the shipped test fail"
+        "read-only inspection reports limit_exceeded while the sole SnapshotLease slot is occupied and succeeds after release",
+        "a direct store capture preserving the byte budget still fails the occupied-lease regression"
       ]
     },
     {

@@ -1,0 +1,32 @@
+AdversarialVerify round 3 local verification
+Platform: Linux 7.0.0-38-generic x86_64
+
+$ cargo test -p ovis-terminal-core --test ops inspection:: -- --nocapture
+inspection::maximum_sequence_round_trips_and_numeric_form_is_invalid_params ... ok
+inspection::receipt_round_trip_preserves_arbitrary_decimal_sequences ... ok
+inspection::inspection_enforces_the_snapshot_lease_byte_budget ... ok
+inspection::inspection_requires_an_available_snapshot_lease ... ok
+inspection::inspection_exposes_only_a_committed_revision ... ok
+inspection::store_round_trip_preserves_canonical_retry ... ok
+test result: ok. 6 passed; 0 failed; 18 filtered out
+EXIT_CODE=0
+
+Budget-preserving direct-store mutation:
+$ cargo test -p ovis-terminal-core --test ops inspection::inspection_requires_an_available_snapshot_lease -- --exact --nocapture
+test inspection::inspection_requires_an_available_snapshot_lease ... FAILED
+test result: FAILED. 0 passed; 1 failed; 23 filtered out
+EXIT_CODE=101
+Full transcript: docs/evidence/task-15/mutation-accessor-budget.log
+
+Production accessor restored through apply_patch.
+
+$ bash scripts/check.sh
+fmt: PASS
+workspace clippy: PASS
+workspace nextest: 327 passed; 1 existing subprocess fixture skipped
+doctests: PASS
+workspace-hygiene: 0 violations in 332 files
+manifests: 16 checked
+JSON: 31 checked
+check.sh: all steps passed
+EXIT_CODE=0

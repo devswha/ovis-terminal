@@ -37,6 +37,38 @@ fn inspection_enforces_the_snapshot_lease_byte_budget() -> TestResult {
 }
 
 #[test]
+fn inspection_requires_an_available_snapshot_lease() -> TestResult {
+    // Given a coordinator whose only pinned-snapshot slot is occupied.
+    let fixture = Fixture::new();
+    let identity = identity(1)?;
+    let mut limits = ovis_terminal_core::events::Limits::default();
+    limits.pinned_snapshots = 1;
+    let core: super::Core = Coordinator::new(
+        Store::open(&fixture.0, StoreOptions::default())?,
+        identity,
+        OperationProducer::new(identity.runtime_id()),
+    )
+    .with_limits(limits)?;
+    let lease = core.pin_snapshot()?;
+
+    // When inspection runs before and after releasing the sole lease.
+    let blocked = core.read_snapshot();
+    core.release_snapshot(&lease.token)?;
+    let released = core.read_snapshot();
+    core.close()?;
+
+    // Then the accessor consumes real lease capacity and succeeds once capacity returns.
+    assert_eq!(
+        blocked
+            .expect_err("inspection must reserve a real snapshot lease")
+            .kind(),
+        "limit_exceeded"
+    );
+    assert!(released.is_ok());
+    Ok(())
+}
+
+#[test]
 fn inspection_exposes_only_a_committed_revision() -> TestResult {
     // Given a writer suspended after its rows change but before COMMIT.
     let fixture = Fixture::new();

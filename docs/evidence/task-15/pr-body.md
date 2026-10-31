@@ -6,7 +6,7 @@ absent (GAP-013, GAP-144, GAP-147). No comparable new-runtime capability is clai
 
 Persisted accepted, running, committed, failed, cancelled and outcome_unknown records through the existing event coordinator. The principal/runtime/op_id key binds method plus canonical parameters. Identical retries return the retained outcome; changed work returns op_reused with the prior receipt; expired UUIDv7 IDs cannot execute as fresh work. The advertised window is 86400000 ms after acceptance. Intent commits before a single-use running permission is granted. Actual holder write and exit evidence are independent facts. SQLite does not roll back a PTY write.
 
-AdversarialVerify round 1 corrections make concurrent admission a join rather than a leaked CAS conflict: eight identical callers receive the same inspectable record and still obtain one execution permission, while changed payloads under the same ID receive op_reused with the winning receipt. A running permit can now be consumed by a proven no-effect failure, preserving its typed error across reboot; cancellation of that Failed record returns cancelled_before_commit. The read-only accessor has a shipped lease-byte-budget regression that fails if SnapshotLease/SnapshotAssembler are replaced by direct store capture.
+AdversarialVerify corrections make concurrent admission a join rather than a leaked CAS conflict: eight identical callers receive the same inspectable record and still obtain one execution permission, while changed payloads under the same ID receive op_reused with the winning receipt. A running permit can now be consumed by a proven no-effect failure, preserving its typed error across reboot; cancellation of that Failed record returns cancelled_before_commit. Read-only inspection has separate shipped regressions for its aggregate byte budget and live SnapshotLease capacity. A direct-store implementation that preserves the byte budget still fails the occupied-lease regression.
 
 **DEFERRED VERIFICATION (runner lands in Todo 21).** The actual command below exited 2. No assembled CLI/socket success is claimed. Rerun the checked-in part-a/task-15 scenario after assembly.
 
@@ -55,13 +55,14 @@ The happy case asserts exactly one EFFECT:one marker, four acknowledged input by
 - `cargo clippy -p ovis-terminal-core --all-targets -- -D warnings`: exit 0.
 - `cargo nextest run -p ovis-terminal-core`: exit 0; 66 passed, 0 skipped, including 24 operation-focused tests.
 - Both exact named QA commands above: exit 0; each ran one assertion-bearing case.
-- `bash scripts/check.sh`: exit 0; workspace Clippy, formatting, 326 passing tests, doctests, 0 hygiene violations across 332 files, and 31 JSON artifacts validated. The one existing ignored test is ovis-terminal-store::transactions::crash_child, a subprocess fixture invoked by its parent crash tests, not a disabled operation test.
+- `bash scripts/check.sh`: exit 0; workspace Clippy, formatting, 327 passing tests, doctests, 0 hygiene violations across 332 files, and 31 JSON artifacts validated. The one existing ignored test is ovis-terminal-store::transactions::crash_child, a subprocess fixture invoked by its parent crash tests, not a disabled operation test.
 - TDD began with the new ops integration target failing on absent operation types, exit 101; see tdd-red.log. Intermediate strict-gate failures were fixed without suppressing or weakening tests. The final full log is verification.log.
 - Regenerated schema/ovis-terminal.openrpc.json; released.openrpc.json is unchanged. Existing compatibility/catalog tests and three new cancellation contract tests pass, including unknown future outcome tokens and numeric-counter rejection.
 - Property tests exercise 32 arbitrary decimal revisions and 32 generated real-store reopen/retry cases. Existing wire/holder fragmentation properties also pass in the full gate.
 - Concurrent admission regressions deterministically force eight callers to capture the same empty revision: identical payloads return eight equal records and one effect; changed payloads return one record plus seven receipt-bearing op_reused errors.
 - Exact shipped bounds cover 1024 accepted operations versus backpressure at 1025, a 16384-byte persisted receipt versus too_large at 16385, and 262144-byte canonical params versus too_large at 262145.
-- `inspection::inspection_enforces_the_snapshot_lease_byte_budget` passes on the production accessor. Replacing it with direct store capture makes that test fail; the mutation transcript is `docs/evidence/task-15/mutation-accessor.log`.
+- `inspection::inspection_enforces_the_snapshot_lease_byte_budget` proves the aggregate serialized-byte bound. `inspection::inspection_requires_an_available_snapshot_lease` proves inspection consumes live SnapshotLease capacity. The plain and byte-budget-preserving direct-store mutation transcripts are `docs/evidence/task-15/mutation-accessor.log` and `docs/evidence/task-15/mutation-accessor-budget.log`.
+- All six shipped inspection regressions pass together on the restored production accessor; round-three verification is recorded in `docs/evidence/task-15/round-3-verification.log`.
 
 ## Adversarial
 
@@ -72,7 +73,7 @@ The happy case asserts exactly one EFFECT:one marker, four acknowledged input by
 - Principal isolation, canonical object-key reuse, changed arrays/methods, 24-hour expiry, and a persisted acceptance floor across pruning/reopen/clock rollback are asserted.
 - Foreign holder sequence/target evidence returns stale_target. Missing delivery proof cannot become committed input success. Actual InputWritten and Exit are independent facts.
 - A proven holder/spawn rejection after running intent persists Failed plus its typed error through reboot instead of becoming outcome_unknown. Cancelling that known no-effect failure preserves the Failed record and returns cancelled_before_commit.
-- The snapshot accessor honors the pinned representation byte budget; a direct-store implementation bypasses the bound and is killed by the shipped mutation test.
+- The snapshot accessor honors both the pinned representation byte budget and the configured live-lease count. A budget-preserving direct-store implementation is killed by the occupied-lease regression.
 
 ## Contract checklist
 

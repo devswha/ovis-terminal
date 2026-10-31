@@ -1,0 +1,19 @@
+$ cargo test -p ovis-terminal-core --test ops inspection::inspection_requires_an_available_snapshot_lease -- --exact --nocapture
+# mutation: Coordinator::read_snapshot replaced SnapshotLease/page/SnapshotAssembler
+# with direct state.store.snapshot() + producer.capture(), while preserving the
+# aggregate serialized snapshot-byte budget against existing pinned page bytes.
+
+running 1 test
+test inspection::inspection_requires_an_available_snapshot_lease ... FAILED
+
+failures:
+
+---- inspection::inspection_requires_an_available_snapshot_lease stdout ----
+thread 'inspection::inspection_requires_an_available_snapshot_lease' panicked:
+inspection must reserve a real snapshot lease: StateSnapshot { cursor: Cursor { machine_id: MachineId(00000000-0000-0000-0000-000000000001), runtime_id: RuntimeId(1), seq: EventSeq(DecimalU64(0)) }, sections: OperationSnapshot { index: Index { floor: TimestampMs(DecimalU64(0)), keys: [] }, version: RecordVersion(DecimalU64(0)), rows: [] } }
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 23 filtered out
+EXIT_CODE=101
+
+# The failure is behavioral: the mutant returned a snapshot while the only
+# configured SnapshotLease slot was occupied. Production returns limit_exceeded.
