@@ -3,7 +3,7 @@
 use ovis_terminal_core::events::EventData;
 use ovis_terminal_core::ops::OperationEvent;
 use ovis_terminal_protocol::domain::session_binding::SessionBindingRecord;
-use ovis_terminal_protocol::schema::methods::status::TurnRecord;
+use ovis_terminal_protocol::schema::methods::status::{PromptRecord, TurnRecord};
 use ovis_terminal_protocol::schema::records::{AgentBinding, StatusSnapshot};
 use ovis_terminal_protocol::schema::scalar::EventSeq;
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,12 @@ pub enum AgentStatusEvent {
     AgentRegistered(Box<AgentBinding>),
     /// An owning process bound, resumed, branched or replaced its session.
     SessionBound(Box<SessionBindingRecord>),
+    /// A program opened a prompt.
+    PromptOpened(Box<PromptRecord>),
+    /// A program republished an open prompt at a new version.
+    PromptUpdated(Box<PromptRecord>),
+    /// A prompt was answered, dismissed or expired.
+    PromptClosed(Box<PromptRecord>),
     /// Retains the released operation event's unwrapped representation.
     #[serde(untagged)]
     Operation(Box<OperationEvent>),
@@ -39,6 +45,9 @@ impl EventData for AgentStatusEvent {
             Self::TurnEnded(_) => "turn.ended",
             Self::AgentRegistered(_) => "agent.registered",
             Self::SessionBound(_) => "agent.session_bound",
+            Self::PromptOpened(_) => "prompt.opened",
+            Self::PromptUpdated(_) => "prompt.updated",
+            Self::PromptClosed(_) => "prompt.closed",
             Self::Operation(event) => event.event_type(),
         }
     }
@@ -49,7 +58,10 @@ impl EventData for AgentStatusEvent {
             Self::StatusChanged(_)
             | Self::TurnEnded(_)
             | Self::AgentRegistered(_)
-            | Self::SessionBound(_) => {}
+            | Self::SessionBound(_)
+            | Self::PromptOpened(_)
+            | Self::PromptUpdated(_)
+            | Self::PromptClosed(_) => {}
         }
     }
 }

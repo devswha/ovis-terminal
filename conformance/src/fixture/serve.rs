@@ -5,11 +5,16 @@ use std::io::Write as _;
 use std::path::Path;
 use std::sync::Arc;
 
-use ovis_terminal_authz::{Authority, AuthorityConfig, OwnerSpec, PrincipalId, RuntimeBinding};
+use ovis_terminal_authz::{
+    Authority, AuthorityConfig, EndpointPolicy, Grant, Issuance, IssueRequest, LocalAccount,
+    OwnerSpec, PeerEvidence, Permission, Presentation, PrincipalId, RemoteTransport, ResourceScope,
+    RuntimeBinding, ScopeResource, UnixUid,
+};
 use ovis_terminal_core::events::Coordinator;
 use ovis_terminal_core::ops::OperationProducer;
 use ovis_terminal_core::registry::{
-    HostBootId, HostIdentity, MachineId, RuntimeId, RuntimeIdentity, ServerBootId,
+    HostBootId, HostIdentity, MachineId, RegistryIdentities, RuntimeId, RuntimeIdentity,
+    ServerBootId,
 };
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_server::listen::{ServerConfig, UnixEndpoint, serve_unix};
@@ -79,16 +84,25 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     dispatch
         .register(TerminalKeep::new(&effects, runtime)?)
         .map_err(at("register terminal.keep"))?;
-    let agents = super::agents::register(&mut dispatch, runtime, Arc::clone(&core))?;
+    let (agents, gate) = super::agents::register(&mut dispatch, runtime, Arc::clone(&core))?;
+    let directory = Arc::clone(&agents.1);
+    super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
-    let handler = Arc::new(FixtureHandler::new(Arc::new(dispatch), root.to_path_buf()));
+    let observer = observer(&authority, issued.bearer())?;
+    let handler = Arc::new(FixtureHandler::new(
+        Arc::new(dispatch),
+        root.to_path_buf(),
+        (gate, directory),
+    ));
     let socket = root.join("run").join("s.sock");
     let endpoint = UnixEndpoint::bind(&socket)
         .await
         .map_err(at("bind the socket"))?;
     let config = ServerConfig::new(authority, runtime);
     let server = serve_unix(endpoint, config, Arc::clone(&handler)).map_err(at("serve"))?;
-    announce(&json!({"ready": {"socket": socket, "bearer": issued.bearer()}}))?;
+    announce(&json!({"ready": {
+        "socket": socket, "bearer": issued.bearer(), "observer": observer,
+    }}))?;
     let mut sink = Vec::new();
     tokio::io::stdin()
         .read_to_end(&mut sink)
@@ -115,6 +129,26 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         "failures": failures,
         "panicked": report.panicked().to_string(),
     }}))
+}
+
+/// A bearer that may only observe the machine, issued by the owner.
+fn observer(authority: &Authority<RegistryIdentities>, owner: &str) -> Result<String, RunnerError> {
+    let failed = at("issue the observer credential");
+    let now = TimestampMs::new(1);
+    let admission = EndpointPolicy::new(LocalAccount::Unix(UnixUid::new(1000)))
+        .admit(&PeerEvidence::Remote(RemoteTransport::Ssh))
+        .map_err(at("admit the issuing owner"))?;
+    let owner = authority
+        .authenticate(&admission, Presentation::new(owner, now))
+        .map_err(at("authenticate the issuing owner"))?;
+    let scope = ResourceScope::new(identity()?.machine_id(), ScopeResource::Machine);
+    let observer = PrincipalId::parse("observer").map_err(at("parse the observer principal"))?;
+    let grants = vec![Grant::new(Permission::Observe, scope)];
+    let request = IssueRequest::new(observer, grants, TimestampMs::new(u64::MAX));
+    let issued = authority
+        .issue(&owner, Issuance::new(request, now))
+        .map_err(failed)?;
+    Ok(issued.bearer().to_owned())
 }
 
 fn announce(line: &Value) -> Result<(), RunnerError> {

@@ -26,6 +26,9 @@ pub mod support;
 /// Explicit and ambiguous registry targets.
 pub mod targeting;
 
+#[path = "../src/dispatch/lanes/prompts/qa.rs"]
+/// The prompt lane's independent answer authorization over a real socket.
+pub mod prompts;
 #[path = "../src/dispatch/lanes/session_binding/qa.rs"]
 /// The session binding lane over a real dispatcher and socket.
 pub mod session_binding;

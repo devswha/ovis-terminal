@@ -6,9 +6,10 @@ use serde_json::Value;
 
 use super::support::{TestResult, Tree, conformance, field, scenario, strings};
 
-const EXECUTABLE: [&str; 15] = [
+const EXECUTABLE: [&str; 16] = [
     "_runner/self-test.json",
     "agent/binding.json",
+    "agent/prompts.json",
     "agent/status.json",
     "all/all.json",
     "part-a/task-21.json",
