@@ -7,8 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, geometry]
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, agent-tree]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, agent-tree]
 
 permissions:
   contents: read
@@ -785,6 +784,40 @@ jobs:
           name: windows-service-${{ github.run_id }}
           path: windows-service.log
           if-no-files-found: error
+
+  prompts:
+    if: inputs.probe == 'prompts'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat prompt tests and scenario 25 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              cargo nextest run -p ovis-terminal-agent --locked --no-tests=fail -E 'test(prompts::)'
+              cargo nextest run -p ovis-terminal-server --test dispatch --locked --no-tests=fail -E 'test(prompts::)'
+              cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/prompts --isolated --case all --evidence "prompts-$iteration.json"
+              printf 'PASS %s/25\n' "$iteration"
+            done
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee prompts-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prompts-stress-macos-${{ github.run_id }}
+          path: prompts-stress-macos.log
+          if-no-files-found: error
   geometry:
     if: inputs.probe == 'geometry'
     runs-on: macos-latest
@@ -815,22 +848,6 @@ jobs:
           name: geometry-stress-${{ github.run_id }}
           path: geometry-stress.log
           if-no-files-found: error
-  prompts:
-    if: inputs.probe == 'prompts'
-    timeout-minutes: 60
-      - name: repeat prompt tests and scenario 25 times
-          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
-            for iteration in $(seq 1 25); do
-              printf '\nITERATION %s/25\n' "$iteration"
-              cargo nextest run -p ovis-terminal-agent --locked --no-tests=fail -E 'test(prompts::)'
-              cargo nextest run -p ovis-terminal-server --test dispatch --locked --no-tests=fail -E 'test(prompts::)'
-              cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/prompts --isolated --case all --evidence "prompts-$iteration.json"
-              printf 'PASS %s/25\n' "$iteration"
-            printf 'RESULT 25/25\n'
-          } 2>&1 | tee prompts-stress-macos.log
-          name: prompts-stress-macos-${{ github.run_id }}
-          path: prompts-stress-macos.log
-
   agent-tree:
     if: inputs.probe == 'agent-tree'
     runs-on: macos-latest
