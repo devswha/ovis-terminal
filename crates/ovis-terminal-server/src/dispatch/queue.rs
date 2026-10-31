@@ -35,4 +35,18 @@ impl Queued {
 pub(super) struct Admission {
     pub ticket: QueueTicket,
     pub permit: OwnedSemaphorePermit,
+    pub queued: Queued,
+}
+
+/// Withdraws the ticket if the job's future is dropped before its blocking wait returns.
+///
+/// A dropped future cannot stop the blocking worker that waits for the slot; without the
+/// withdrawal it would wait forever and block runtime shutdown.
+#[derive(Debug)]
+pub(super) struct WithdrawOnDrop(pub Queued);
+
+impl Drop for WithdrawOnDrop {
+    fn drop(&mut self) {
+        self.0.withdraw();
+    }
 }

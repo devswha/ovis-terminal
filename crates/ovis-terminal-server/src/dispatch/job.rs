@@ -17,7 +17,7 @@ use serde_json::Value;
 use tokio::sync::watch;
 
 use super::execution::{State, now};
-use super::queue::Admission;
+use super::queue::{Admission, WithdrawOnDrop};
 use super::registry::Prepared;
 use super::reservation::Reservation;
 use super::{DispatchError, Execution};
@@ -62,7 +62,12 @@ where
         let accepted_context = context.clone();
         let reservation = Arc::clone(&self.reservation);
         let request = Arc::clone(&prepared.request);
-        let Admission { ticket, permit } = self.admission;
+        let Admission {
+            ticket,
+            permit,
+            queued,
+        } = self.admission;
+        let abandoned = WithdrawOnDrop(queued);
         let record = tokio::task::spawn_blocking(move || {
             // Waits in FIFO order; the connection's queue place is freed once admitted.
             let slot = ticket.wait().map_err(OperationError::from)?;
@@ -92,7 +97,9 @@ where
             drop(acceptance);
             accepted
         })
-        .await??;
+        .await;
+        drop(abandoned);
+        let record = record??;
         match record.state {
             OpenEnum::Known(OpState::Accepted) => {}
             OpenEnum::Known(OpState::Committed) => {

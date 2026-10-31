@@ -18,3 +18,8 @@ async fn happy() -> TestResult {
 async fn failure() -> TestResult {
     admission::failure().await
 }
+
+#[test]
+fn abandoned_waits_end() -> TestResult {
+    admission::abandoned()
+}

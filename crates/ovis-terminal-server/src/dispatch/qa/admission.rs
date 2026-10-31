@@ -17,6 +17,13 @@ fn one_through(last: u64) -> BTreeSet<u64> {
     (1..=last).collect()
 }
 
+fn deadline_position(reply: &Value, queued: &[&String]) -> TestResult<u64> {
+    assert_eq!(error_kind(reply), "deadline_exceeded", "{reply}");
+    let op = at(reply, "/error/data/op_id");
+    assert!(queued.iter().any(|queued| op == queued.as_str()), "{reply}");
+    decimal(at(reply, "/error/data/queued_position"))
+}
+
 /// 32 writers on one document, four times the pinned-snapshot budget, all commit.
 pub(crate) async fn happy() -> TestResult {
     // Given 32 writers, each on its own authenticated connection to one document.
@@ -102,19 +109,22 @@ pub(crate) async fn failure() -> TestResult {
     let refused_op = ops.get(refused_index).ok_or("refused op")?.clone();
     let queued: Vec<&String> = ops.iter().filter(|op| **op != refused_op).collect();
 
-    // And every other operation is inspectable as queued at a distinct FIFO place.
-    for op in &queued {
-        client
-            .send(&request(
-                &format!("get-{op}"),
-                "op.get",
-                &json!({"op_id": op}),
-            ))
-            .await?;
-    }
+    // And every other operation is inspectable as queued at a distinct FIFO place;
+    // inspections go one at a time, within the dispatcher's control budget.
     let mut positions = BTreeSet::new();
-    for _ in &queued {
-        let status = client.expect_next().await?;
+    let mut expired = BTreeSet::new();
+    for op in &queued {
+        let id = format!("get-{op}");
+        client
+            .send(&request(&id, "op.get", &json!({"op_id": op})))
+            .await?;
+        let status = loop {
+            let reply = client.expect_next().await?;
+            if at(&reply, "/id") == id.as_str() {
+                break reply;
+            }
+            expired.insert(deadline_position(&reply, &queued)?);
+        };
         assert_eq!(at(&status, "/result/state"), "queued", "{status}");
         assert_eq!(at(&status, "/result/method"), "doc.set");
         positions.insert(decimal(at(&status, "/result/queued_position"))?);
@@ -122,16 +132,8 @@ pub(crate) async fn failure() -> TestResult {
     assert_eq!(positions, one_through(bound));
 
     // When the request deadline passes while they are still queued.
-    let mut expired = BTreeSet::new();
-    for _ in &queued {
-        let reply = client.expect_next().await?;
-        assert_eq!(error_kind(&reply), "deadline_exceeded", "{reply}");
-        assert!(
-            queued
-                .iter()
-                .any(|op| at(&reply, "/error/data/op_id") == op.as_str())
-        );
-        expired.insert(decimal(at(&reply, "/error/data/queued_position"))?);
+    while expired.len() < queued.len() {
+        expired.insert(deadline_position(&client.expect_next().await?, &queued)?);
     }
 
     // Then each deadline carried its place, and releasing the slots admits all of them.
@@ -157,4 +159,45 @@ pub(crate) async fn failure() -> TestResult {
     drop(client);
     server.shutdown().await?;
     fixture.close().await
+}
+
+/// A runtime dropped while jobs wait for a slot ends instead of hanging on their workers.
+pub(crate) fn abandoned() -> TestResult {
+    // Given a full admission queue behind pinned slots that are never released.
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()?;
+    let queued = runtime.block_on(async {
+        let fixture = Fixture::new()?;
+        let server = fixture
+            .socket
+            .serve(1, Arc::clone(&fixture.dispatch))
+            .await?;
+        let (mut client, hello) = fixture.client().await?;
+        let bound = decimal(at(&hello, "/result/limits/queued_operations"))?;
+        let leases = fixture.pin_all()?;
+        for index in 0..=bound {
+            let id = format!("q-{index}");
+            client.send(&set(&id, &op_id(), &id)).await?;
+        }
+        // The one refusal proves every other request already holds a queue place.
+        let refused = client.expect_next().await?;
+        // When the runtime goes away without a dispatcher shutdown; dropping the lease
+        // tokens does not release their pinned slots.
+        drop((leases, client, server, fixture));
+        Ok::<_, Box<dyn std::error::Error>>(error_kind(&refused).to_owned())
+    });
+    let (dropped, done) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        drop(runtime);
+        // A closed observer means the bounded wait below already failed the test.
+        dropped.send(()).ok();
+    });
+
+    // Then every waiting worker is withdrawn and the runtime finishes dropping.
+    let dropped = done.recv_timeout(std::time::Duration::from_secs(30));
+    assert_eq!(queued?, "limit_exceeded");
+    dropped?;
+    Ok(())
 }

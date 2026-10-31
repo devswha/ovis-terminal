@@ -201,6 +201,7 @@ where
             admission: Admission {
                 ticket,
                 permit: queue_place,
+                queued: queued.clone(),
             },
         };
         let task = tasks.set.spawn(async move {
