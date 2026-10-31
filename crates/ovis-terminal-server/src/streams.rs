@@ -26,6 +26,7 @@ mod resync;
 mod upstream;
 mod viewer;
 
+pub use control::wire_modes;
 pub use credit::CreditRefusal;
 pub use error::StreamError;
 pub use handler::AttachHandler;

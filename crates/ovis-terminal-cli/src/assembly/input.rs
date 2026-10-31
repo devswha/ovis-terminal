@@ -18,6 +18,7 @@ use super::actor::Runtime;
 use super::directory::Directory;
 use super::error::refusal;
 use super::live::Live;
+use super::records::unreported;
 
 fn internal<E: std::fmt::Debug>(cause: E) -> BoundaryError {
     super::error::internal("input admission")(cause)
@@ -69,11 +70,7 @@ fn result(receipt: &Receipt) -> Result<Value, BoundaryError> {
             "output_cursor": {"offset": receipt.output_cursor},
             "mode_revision": receipt.mode_revision,
         },
-        "status_at_send": {
-            "reported": false, "root": null, "records": {}, "turn": "0",
-            "process_incarnation": null, "report_seq": null, "finish_generation": "0",
-            "last_turn": null, "agent_id": null, "session": null,
-        },
+        "status_at_send": unreported(),
     });
     let checked: InputResult = serde_json::from_value(value).map_err(internal)?;
     serde_json::to_value(checked).map_err(internal)

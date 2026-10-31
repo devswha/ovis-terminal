@@ -6,13 +6,15 @@ use ovis_terminal_core::leases::{Acquire, Caller, ControlSlot, LeaseError, Termi
 use ovis_terminal_core::screen::Screen;
 use ovis_terminal_protocol::schema::common::Target;
 use ovis_terminal_protocol::schema::methods::attach::AttachLeasesResult;
-use ovis_terminal_protocol::schema::records::LeaseRecord;
+use ovis_terminal_protocol::schema::records::{LeaseRecord, Modes};
+use ovis_terminal_protocol::schema::scalar::Revision;
 use ovis_terminal_store::OpId;
+use ovis_terminal_vt::{ModeRevision, TerminalModes};
 
 use super::error::StreamError;
 use super::hub::TerminalStreams;
 use super::lane::AttachLane;
-use super::records::lease_record;
+use super::records::{enabled, lease_record};
 use crate::dispatch::lanes::agent_status::TerminalDirectory;
 
 impl TerminalStreams {
@@ -82,4 +84,14 @@ impl<T: TerminalDirectory> AttachLane<T> {
         hub.setup.journal.record(op, granted.transition)?;
         Ok(Some(record))
     }
+}
+
+/// The wire record of a VT's modes at `revision`, as checkpoints and screen reads carry it.
+#[must_use]
+pub fn wire_modes(modes: &TerminalModes, revision: ModeRevision) -> Modes {
+    Modes::new(
+        enabled(modes),
+        modes.keyboard.kitty_flags,
+        Revision::new(revision.get()),
+    )
 }

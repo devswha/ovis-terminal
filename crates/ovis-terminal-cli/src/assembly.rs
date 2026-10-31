@@ -14,6 +14,7 @@ mod handler;
 mod input;
 mod live;
 mod mutations;
+mod reads;
 mod records;
 mod resize;
 mod routes;

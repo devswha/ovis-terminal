@@ -27,7 +27,7 @@ pub(super) fn lease_record(lease: &Lease) -> LeaseRecord {
     )
 }
 
-fn enabled(modes: &TerminalModes) -> Vec<OpenEnum<TerminalMode>> {
+pub(super) fn enabled(modes: &TerminalModes) -> Vec<OpenEnum<TerminalMode>> {
     let flags = [
         (
             modes.paste == PasteMode::Bracketed,

@@ -38,7 +38,7 @@ fn finished(record: &Record) -> Value {
 }
 
 /// The status of a program that never reported one.
-fn unreported() -> Value {
+pub(super) fn unreported() -> Value {
     json!({
         "reported": false, "root": null, "records": {}, "turn": "0",
         "process_incarnation": null, "report_seq": null, "finish_generation": "0",

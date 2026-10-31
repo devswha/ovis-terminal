@@ -12,6 +12,7 @@ use ovis_terminal_core::registry::{
     ProcessGeneration, RegistryIdentities, TerminalGeneration, TerminalId,
 };
 use ovis_terminal_core::screen::{QueryReply, ReplyBatch, Screen, ScreenBounds, ScreenConfig};
+use ovis_terminal_core::waits::Waits;
 use ovis_terminal_holder::protocol::{Message, Spawned, TerminalTarget};
 use ovis_terminal_protocol::schema::common::Geometry as WireGeometry;
 use ovis_terminal_protocol::schema::methods::server::WriteSequence;
@@ -35,6 +36,7 @@ pub(super) struct Live {
     pub(super) spawned_ms: TimestampMs,
     pub(super) generation: TerminalGeneration,
     pub(super) ended: bool,
+    pub(super) waits: Arc<Waits>,
 }
 
 impl Live {
@@ -92,7 +94,11 @@ impl Runtime {
             Geometry::new(grid.cols, grid.rows)?,
             HistoryLimit::new(HISTORY_LINES),
         );
-        let screen = Screen::new(target, ScreenConfig::new(vt, ScreenBounds::DEFAULT))?;
+        let screen = Screen::new(target.clone(), ScreenConfig::new(vt, ScreenBounds::DEFAULT))?;
+        let waits = Arc::new(Waits::new(Screen::new(
+            target,
+            ScreenConfig::new(vt, ScreenBounds::DEFAULT),
+        )?));
         let resolved = ResolvedTarget::new(
             self.identity.machine_id(),
             TargetResource::Terminal {
@@ -123,6 +129,7 @@ impl Runtime {
             spawned_ms: now()?,
             generation,
             ended: false,
+            waits,
         };
         self.live.insert(terminal, live);
         Ok(())
@@ -142,6 +149,7 @@ impl Runtime {
         };
         match message {
             Message::Output(output) => {
+                live.waits.ingest(output)?;
                 let replies = live.hub.publish(output)?;
                 live.replies(replies)?;
             }
@@ -149,6 +157,7 @@ impl Runtime {
                 live.sequencer.acknowledge(written)?;
             }
             Message::Exit(exit) => {
+                live.waits.finish(exit)?;
                 live.hub.finish(exit)?;
                 live.sequencer.exited();
                 live.ended = true;
