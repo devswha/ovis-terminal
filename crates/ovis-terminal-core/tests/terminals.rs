@@ -88,7 +88,7 @@ fn holder_publishes_hangup_before_exit() {
     holder.shutdown().expect("join owned workers");
 
     // Then: Hangup is distinct from reaped Exit, which covers all final bytes.
-    assert!(hung_up, "missing distinct pre-reap hangup evidence");
+    assert!(hung_up, "missing distinct hangup evidence before Exit");
     assert_eq!(bytes, b"final");
     assert_eq!(exit.code, Some(7));
     assert_eq!(exit.final_offset, 5);
@@ -103,10 +103,11 @@ fn generation_two_ignores_optional_envelope_evidence() {
         .to_vec();
     frame.extend_from_slice(payload);
 
-    // When: today's decoder receives the extended envelope.
-    let decoded = decode_message(&frame).expect("additive envelope is ignored");
+    // When: the current decoder receives the extended envelope.
+    let decoded = decode_message(&frame).expect("additive envelope is accepted");
 
-    // Then: an old reader retains the output boundary without claiming exit.
+    // Then: the output boundary is unchanged and no exit is claimed. Legacy
+    // generation-two readers are covered by the holder's hangup_tests.
     let Message::Output(output) = decoded else {
         panic!("an optional envelope field must not change the legacy message");
     };

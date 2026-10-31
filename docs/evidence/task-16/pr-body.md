@@ -291,6 +291,12 @@ The two orchestrator decisions are applied without exposing the raw store or add
 - crates/ovis-terminal-holder/src/unix/pty_io.rs (`read_chunk`): POLLHUP readiness only marks the master hung up, and output ends at a read that reports EOF/EIO or finds nothing, so bytes queued behind the slave close still precede Exit. PumpStop ends output immediately. Tests moved to unix/pty_io/tests.rs for the 250-LOC rule.
 - crates/ovis-terminal-holder/src/unix/holder/hangup.rs:20, holder/signalling.rs:34 and process/signal.rs:94: the local holder SIGHUP method requires the exact process incarnation and goes through the reap-serialized, start-token-checked `signal_with` and the reserved-PID-refusing `send_hangup`, without changing the frozen Signal wire enum. The Unix-only rustix process dependency is recorded in Cargo.lock.
 
+- crates/ovis-terminal-core/src/registry/lifecycle/terminal.rs:156 (todo-9 transition change): `Relaunch` now sets `current_process` and keeps `previous_process`. Before, it moved the current process into `previous_process`. With the new `ProcessEnded` transition (:92), the ended process is already in `previous_process` when a relaunch arrives, so the old replace would have overwritten it with `None`.
+- crates/ovis-terminal-core/src/ops/error.rs: `OperationError` gains `Clock`, `Authority` and `Reservation` variants (kind/hint delegate to the inner typed error). ops/context.rs: `encode_entry` becomes `pub(super)` for the commit unit.
+- crates/ovis-terminal-holder/Cargo.toml: the unix `rustix` requirement rises from 1.1 (base a9a4ed4) to 1.1.6.
+- conformance/scenarios/part-a/task-5.json:20-28 and task-6.json:185-187 (round-2 fixture alignment): the Hangup evidence no longer asserts a pre-reap barrier (`process_reaped_at_publication: false` and `hangup_before_reap: true` are removed). It now states the shipped contract. The Hangup is built from the spawn-time pid + start token, its reap order is not asserted (it may follow the leader's reap), it precedes Exit, and Exit is last. These fixtures are validated by scripts/hygiene/json.sh and are not loaded by Rust tests.
+- crates/ovis-terminal-core/tests/terminals.rs (wording only): the assertion message drops "pre-reap". The `generation_two_ignores_optional_envelope_evidence` comments now say it runs the current decoder and point to the holder's `hangup_tests` for legacy-reader coverage.
+
 Todo-5/6 scenarios, property examples, counter tests, and the task-16 scenario are updated. No todo-10/15 test was weakened; additive rollback and crash-replay tests run beside them.
 
 ## Risks
@@ -300,10 +306,26 @@ Todo-5/6 scenarios, property examples, counter tests, and the task-16 scenario a
 - The shell role is explicitly undeclared for arbitrary executable launches; no process-name or agent-brand heuristic invents that role.
 - Rust LSP diagnostics could not run because rust-analyzer is missing; compiler, Clippy and source hygiene checks passed. No new unsafe block was introduced.
 - Holder loss remains uncertain until native old-process absence or replacement is proven; recovery refuses to duplicate an unproven surviving process.
+- Darwin product gap, carried to todos 53/55 (not a regression against base a9a4ed4, whose pump/waiter ordering is the same): on Darwin the PTY master reports EOF when the session leader exits, so the holder publishes Hangup and Exit and releases the terminal while a HUP-ignoring same-group descendant still holds the slave. From then on, `hangup()`/`signal()` return `ProcessExited`, and neither the kill escalation nor holder shutdown can reach that descendant. On Linux the group stays held and killable until the descendant closes the slave.
 
 ## Cleanup
 
 All real-process fixtures join their owned holder/control workers and remove their isolated temporary roots. No merge, force-push, unrelated worktree edit or external person-message is part of this change. Resume decisions are recorded per file in resume-assessment.md.
+
+## CI history
+
+| Head | CI run(s) | Result and cause | Fixed by |
+| --- | --- | --- | --- |
+| 8692f70 | 41174536844 | test (macos-latest) failed to compile: `error: unused import: Field` in core test target `terminals`. `Field` was only used by a Linux-only (`cfg(target_os = "linux")`) test path (job 124459245556). | fbe8384 gates the `Field` import with `#[cfg(target_os = "linux")]` |
+| fbe8384 | 41177294484, rerun 41177534895 | test (macos-latest): `happy` panicked at terminals/qa/behavior.rs:47. The program printed `cwd=/private/var/folders/...` but the test expected the requested `/var/folders/...`, because macOS's temp dir sits behind the `/var -> /private/var` symlink and the recorded launch cwd was not canonical (job 124468084166). The first run's scripts/check.sh (ubuntu) also failed, on the unrelated server test `bound::an_overflow_at_a_record_boundary_sends_a_readable_closing` (job 124467379535). It passed on the rerun. | c501322 canonicalizes the cwd before operation admission. `happy` now launches through a symlinked `cwd-alias` and asserts the recorded cwd is canonical |
+| c501322 | 41178324576 | test (macos-latest): `program_stop_names_every_reaped_incarnation_and_leaves_control_available` got `EPERM` from `killpg` after a group leader was reaped | Todo 76 (integration a9a4ed4) |
+| dfa7de2 | 41185364365 | Textual merge of todo 76: three todo-76 shutdown tests timed out (the waiter was gated on output completion) | 10888e3 |
+| 10888e3 | 41186784963 | ubuntu `each_launch_gets_its_own_cwd_and_environment_over_the_socket`: Exit arrived with no output (POLLHUP with queued bytes) | 3a70728 |
+| 3a70728 | 41187968614 | test (macos-latest): reap test premise (Darwin early EOF) | a77c562 |
+| a77c562 | 41188520630 | test (macos-latest): two reap tests, Darwin Hangup + Exit before the descendant dies, then `hangup()` returns `ProcessExited` | 848d846 |
+| 848d846 | 41189267858, platform-probes 41189267861 | success on every job | - |
+
+Round 2 (fixture, wording and PR-history alignment after gate review): `cargo nextest run -p ovis-terminal-core -p ovis-terminal-holder --locked` exited 0 with 150/150 passed. The first local `bash scripts/check.sh` attempt exited 100 on the unrelated server test `ovis-terminal-server::connection happy` (connection.rs:98, "a waited for b": concurrent responses arrived as m, a, b), which this round does not touch. The single rerun exited 0: 434 passed / 1 skipped, 0 hygiene violations in 429 files, json.sh 41 files.
 
 ## CI refresh
 
