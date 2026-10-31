@@ -1,0 +1,148 @@
+{
+  "task": 10,
+  "kind": "component_evidence_not_socket_conformance",
+  "base_sha": "c1dd6cf3389a27a2027f4e6b203f82ee75fce8a4",
+  "platform": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "rustc": "1.99.1 (58cf8f9c3 2026-10-13)"
+  },
+  "tests": [
+    {
+      "command": "cargo test -p ovis-terminal-core --test events happy -- --exact --nocapture",
+      "exit": 0,
+      "assertion_bearing_cases": 1
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test events failure -- --exact --nocapture",
+      "exit": 0,
+      "assertion_bearing_cases": 1
+    },
+    {
+      "command": "cargo nextest run -p ovis-terminal-core",
+      "exit": 0,
+      "passed": 40,
+      "skipped": 0,
+      "event_tests": 22
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test events integrity:: -- --nocapture",
+      "exit": 0,
+      "passed": 9,
+      "properties": 2
+    },
+    {
+      "command": "cargo clippy -p ovis-terminal-core --all-targets -- -D warnings",
+      "exit": 0
+    },
+    {
+      "command": "bash scripts/check.sh",
+      "exit": 0,
+      "skipped": 1,
+      "files_checked": 290,
+      "json_files_checked": 26,
+      "preexisting_skip": "ovis-terminal-store::transactions crash_child is an ignored child-process fixture launched explicitly by parent tests"
+    }
+  ],
+  "happy": {
+    "assertion": "snapshot R plus strictly later delivery reconstructs one mutation exactly once; no publication before COMMIT",
+    "parsed_records": [
+      {
+        "schema_version": 1,
+        "machine_id": "machine:00000000-0000-0000-0000-000000000001",
+        "runtime_id": "runtime:1",
+        "seq": "1",
+        "boot_id": "boot:1",
+        "type": "terminal.updated",
+        "affected": [
+          {
+            "kind": "terminal",
+            "id": "terminal:1"
+          }
+        ],
+        "origin": null,
+        "data": {
+          "value": "one"
+        }
+      },
+      {
+        "cursor": {
+          "machine_id": "machine:00000000-0000-0000-0000-000000000001",
+          "runtime_id": "runtime:1",
+          "seq": "1"
+        },
+        "sections": {
+          "layout": {
+            "availability": "unavailable"
+          },
+          "terminals": {
+            "availability": "complete",
+            "records": [
+              "one"
+            ]
+          },
+          "agents": {
+            "availability": "unavailable"
+          },
+          "services": {
+            "availability": "unavailable"
+          }
+        }
+      }
+    ]
+  },
+  "failure": {
+    "missed": "lifetime_mismatch",
+    "fresh_snapshot": true,
+    "page_kind": "stale_snapshot",
+    "cas_kind": "conflict"
+  },
+  "adversarial": [
+    "disconnect then replay across core restart",
+    "local commit order independent of remote u64::MAX sequence",
+    "old-core and released page tokens rejected",
+    "17 MiB record reconstructed byte-identically through the checked assembler",
+    "missing interior and final pages reject with snapshot_torn and the missing index",
+    "duplicated and reordered pages reject with snapshot_torn",
+    "one-byte final truncation rejects with snapshot_torn",
+    "random page removals never expose complete state",
+    "same-length interior byte corruption rejects with DigestMismatch",
+    "random interior page and byte corruption rejects with DigestMismatch",
+    "digest-removal mutation is killed by a shipped assertion-bearing test",
+    "page indices and counts are decimal strings and numeric forms reject",
+    "every page and lease carry one SHA-256 end-to-end digest",
+    "constant page revision across a concurrent mutation",
+    "expired cursor receives fresh snapshot",
+    "numeric and noncanonical sequences reject with invalid_params",
+    "arbitrary u64 cursor round trips",
+    "random typed records round trip through store close/reopen",
+    "second subscription preserves first delivery",
+    "queue overflow reports missed",
+    "disconnect releases aggregate queued-byte charges",
+    "unimplemented snapshot sections remain unavailable"
+  ],
+  "source_audit": {
+    "command": "cargo run --locked --quiet -p workspace-hygiene -- check --root .",
+    "violations": 0,
+    "files_checked": 290
+  },
+  "conformance": {
+    "status": "DEFERRED VERIFICATION (runner lands in Todo 21)",
+    "command": "cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-10 --isolated --case happy --evidence \"$ATTEMPT_DIR/task-10-ovis-terminal-v1.json\"",
+    "exit": 2,
+    "stdout": "conformance: no scenarios are registered in this build (protocol crate ovis-terminal-protocol)",
+    "runner_generated_evidence": false,
+    "socket_transcript_available": false
+  },
+  "diagnostics": {
+    "rust_analyzer": "not installed; compiler and strict Clippy used",
+    "biome": "not installed; scenario JSON parsed and repository JSON gate passed"
+  },
+  "logs": [
+    "verification.log",
+    "conformance.log",
+    "tdd.log",
+    "mutation-digest.log"
+  ],
+  "unmet_foundation_requirements": []
+}

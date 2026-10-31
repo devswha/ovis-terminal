@@ -1,0 +1,36 @@
+$ cargo test -p ovis-terminal-core --test events happy -- --exact --nocapture
+Before implementation, the events module contained only its scaffold comment.
+Compiler output excerpt:
+error[E0432]: unresolved imports `ovis_terminal_core::events::Commit`, `ovis_terminal_core::events::Coordinator`, `ovis_terminal_core::events::Cursor`, `ovis_terminal_core::events::EventData`, `ovis_terminal_core::events::EventError`, `ovis_terminal_core::events::Limits`, `ovis_terminal_core::events::ResourceId`, `ovis_terminal_core::events::Section`, `ovis_terminal_core::events::SnapshotProducer`, `ovis_terminal_core::events::SnapshotSections`
+For more information about this error, try `rustc --explain E0432`.
+error: could not compile `ovis-terminal-core` (test "events") due to 1 previous error
+exit: 101
+
+$ cargo test -p ovis-terminal-core --test events integrity::missing_interior_page_is_snapshot_torn -- --exact --nocapture
+Before the integrity implementation, the new regression failed to compile because
+`SnapshotAssembler` and `SnapshotTornReason` did not exist.
+error[E0432]: unresolved import `ovis_terminal_core::events::SnapshotAssembler`
+error[E0432]: unresolved imports `ovis_terminal_core::events::SnapshotAssembler`, `ovis_terminal_core::events::SnapshotTornReason`
+exit: 101
+
+$ cargo test -p ovis-terminal-core --test events integrity:: -- --nocapture
+running 7 tests
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured
+exit: 0
+
+$ digest-removal mutation
+Removed only the final SHA-256 comparison from SnapshotAssembler::finish.
+
+$ cargo test -p ovis-terminal-core --test events integrity::corrupted_interior_byte_is_snapshot_torn -- --exact --nocapture
+corrupted bytes must fail: StateSnapshot { ... }
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured
+exit: 101
+
+$ restore digest verification
+git diff --exit-code -- crates/ovis-terminal-core/src/events/snapshot_assembly.rs
+DIGEST_IMPLEMENTATION_RESTORED
+exit: 0
+
+$ cargo test -p ovis-terminal-core --test events integrity::corrupted_interior_byte_is_snapshot_torn -- --exact --nocapture
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+exit: 0
