@@ -1,0 +1,32 @@
+# Plan todo 80 pre-fix race sampling (tree 846a2101e935ef3147f81448bfe8a9c252aafa05, unmodified)
+# command: bash sample.sh target/debug/deps/connection-<hash> 64 200 sample-pre
+#   = 64 parallel loops x 200 runs of `connection happy --exact --test-threads 1` on 128 CPUs
+samples 12800 failures 25
+# assertion texts:
+      3 a waited for b: ["a", "b", "m"]
+     22 a waited for b: ["m", "a", "b"]
+# first failing run, full output:
+
+running 1 test
+test happy ... <- {"id":"hello","jsonrpc":"2.0","result":{"boot_proof":null,"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":"10000","heartbeat_ms":"15000","history_lines":"100000","input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":"64","op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793469222284","version":"0.1.0"}}
+<- {"id":"s1","jsonrpc":"2.0","result":{"subscription_id":"sub-1"}}
+<- {"jsonrpc":"2.0","method":"event","params":{"seq":"1","subscription_id":"sub-1","type":"doc.changed"}}
+<- {"id":"m","jsonrpc":"2.0","result":{"version":"1"}}
+<- {"id":"a","jsonrpc":"2.0","result":{"name":"a"}}
+<- {"id":"b","jsonrpc":"2.0","result":{"name":"b"}}
+FAILED
+
+failures:
+
+---- happy stdout ----
+
+thread 'happy' (2836248) panicked at crates/ovis-terminal-server/tests/connection.rs:98:5:
+a waited for b: ["m", "a", "b"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    happy
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 22 filtered out; finished in 0.01s
+
