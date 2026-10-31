@@ -56,23 +56,24 @@ impl StartTokenError {
     }
 }
 
-/// Reads the start token of a running process.
+/// Reads the start token of a process that has not ended for its owner.
 ///
-/// An ended process has no start token, whether its record is gone, it is an unreaped
-/// zombie, or (on Windows) its process object is still held open by a handle.
+/// On Unix a process keeps its token until its parent reaps it, so the holder can still
+/// read the token of a child that exited before spawn completed. Windows has no reaping
+/// step and any open handle keeps the process object alive, so there an exited process
+/// is gone as soon as its exit code is set.
 ///
 /// # Errors
 ///
-/// Returns [`StartTokenError::ProcessGone`] when the PID names no running process, and
-/// a read or layout error when the operating-system record is unusable.
+/// Returns [`StartTokenError::ProcessGone`] when the PID names no such process, and a
+/// read or layout error when the operating-system record is unusable.
 #[cfg(any(target_os = "linux", target_os = "macos", windows))]
 pub fn read_start_token(pid: ProcessId) -> Result<ProcessStartToken, StartTokenError> {
     let entry = super::read_entry(pid)?;
-    if entry.running {
-        Ok(entry.start_token)
-    } else {
-        Err(StartTokenError::ProcessGone { pid: pid.get() })
+    if cfg!(windows) && !entry.running {
+        return Err(StartTokenError::ProcessGone { pid: pid.get() });
     }
+    Ok(entry.start_token)
 }
 
 /// Reads the start token of a live process.
