@@ -230,15 +230,20 @@ async fn sixteen_ptys_eight_clients_keep_every_control_within_100_ms() {
         parsed >= OUTPUT_TARGET && parsed <= output_bytes,
         "the target was parsed; output still queued at stop is never parsed"
     );
+    assert_within_bound(&samples, &events, max_turn);
+}
+
+/// Every sample within the control bound; a failure prints what was measured.
+fn assert_within_bound(samples: &Samples, events: &[Duration], max_turn: Duration) {
     let measured = format!(
         "admission {:?}, control {:?}, event {:?}; longest parse turn {max_turn:?} (a turn of \
          {DEBUG_PARSE_BUDGET} bytes costs well under 10 ms of CPU, so a longer one means the \
          host descheduled the worker)",
         max(&samples.admission),
         max(&samples.control),
-        max(&events),
+        max(events),
     );
     assert!(max(&samples.admission) <= CONTROL_BOUND, "{measured}");
     assert!(max(&samples.control) <= CONTROL_BOUND, "{measured}");
-    assert!(max(&events) <= CONTROL_BOUND, "{measured}");
+    assert!(max(events) <= CONTROL_BOUND, "{measured}");
 }
