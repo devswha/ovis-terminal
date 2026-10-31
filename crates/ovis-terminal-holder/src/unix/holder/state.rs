@@ -10,6 +10,7 @@ use super::super::input::{InputQueue, QueuedInput};
 use super::super::io_error::TerminalIoError;
 use super::super::link::{LinkClosed, Outbox};
 use super::super::tail::RetainedTail;
+use super::ending::Completion;
 use crate::process::ProcessId;
 use crate::protocol::{
     AdoptionError, AdoptionTable, HeldTerminal, InputWritten, Message, ProcessIncarnation,
@@ -33,6 +34,7 @@ pub(super) struct Terminal {
     pub(super) io_errors: Vec<Arc<TerminalIoError>>,
     /// Wire form of the first failure before exit, carried by the exit record.
     pub(super) first_io_failure: Option<PtyIoFailure>,
+    pub(super) completion: Completion,
 }
 
 impl Terminal {

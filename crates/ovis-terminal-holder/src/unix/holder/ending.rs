@@ -34,6 +34,13 @@ pub(super) struct Ending {
     pub(super) output: Option<TerminalIoError>,
 }
 
+/// Output and input may finish in either order; the second side publishes Exit.
+pub(super) enum Completion {
+    Running,
+    OutputEnded(Ending),
+    InputEnded,
+}
+
 impl HolderState {
     /// Keeps a failure with its source; the first one before exit reaches the core.
     pub(super) fn record_io_error(&mut self, terminal_id: &TerminalId, error: TerminalIoError) {
@@ -46,11 +53,38 @@ impl HolderState {
         terminal.io_errors.push(Arc::new(error));
     }
 
-    /// Records exit after output ended, so `final_offset` covers every recorded byte.
-    pub(super) fn record_exit(&mut self, terminal_id: &TerminalId, ending: Ending) {
-        if let Some(error) = ending.output {
+    /// Closes admission at EOF, retaining exit evidence until every input is acknowledged.
+    pub(super) fn record_exit(&mut self, terminal_id: &TerminalId, mut ending: Ending) {
+        if let Some(error) = ending.output.take() {
             self.record_io_error(terminal_id, error);
         }
+        let Some(terminal) = self.terminals.get_mut(terminal_id) else {
+            return;
+        };
+        if let Some(live) = terminal.live.take() {
+            live.input.close();
+        }
+        match terminal.completion {
+            Completion::Running | Completion::OutputEnded(_) => {
+                terminal.completion = Completion::OutputEnded(ending);
+            }
+            Completion::InputEnded => self.publish_exit(terminal_id, ending),
+        }
+    }
+
+    /// Called only after the writer drained the closed queue and published its last ack.
+    pub(super) fn finish_input(&mut self, terminal_id: &TerminalId) {
+        let Some(terminal) = self.terminals.get_mut(terminal_id) else {
+            return;
+        };
+        match std::mem::replace(&mut terminal.completion, Completion::InputEnded) {
+            Completion::OutputEnded(ending) => self.publish_exit(terminal_id, ending),
+            Completion::Running | Completion::InputEnded => {}
+        }
+    }
+
+    /// Both workers are finished; the FIFO socket writer preserves this publication order.
+    fn publish_exit(&mut self, terminal_id: &TerminalId, ending: Ending) {
         let Some(terminal) = self.terminals.get_mut(terminal_id) else {
             return;
         };
@@ -70,25 +104,30 @@ impl HolderState {
             terminal.io_errors.push(Arc::new(error));
         }
         terminal.held.exit = Some(exit.clone());
-        if let Some(live) = terminal.live.take() {
-            live.input.close();
-        }
         self.publish(Message::Exit(exit));
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::io;
+    use std::fs::File;
+    use std::sync::{Arc, mpsc};
+    use std::{io, thread};
 
+    use super::super::Holder;
     use super::super::state::{HolderState, Terminal};
-    use super::{Ending, ExitEvidence};
+    use super::super::threads::{InputSink, write_input};
+    use super::{Completion, Ending, ExitEvidence};
     use crate::protocol::{
-        ExitUnknown, ExitUnknownReason, HeldTerminal, PtyIoFailure, PtyOperation, TerminalId,
-        TerminalIncarnation,
+        ExitUnknown, ExitUnknownReason, HOLDER_PROTOCOL_GENERATION, HeldTerminal, Message,
+        ProcessIncarnation, PtyIoFailure, PtyOperation, TerminalId, TerminalIncarnation,
+        WriteGrant,
     };
+    use crate::unix::config::QueueLimits;
+    use crate::unix::input::{InputQueue, QueuedInput};
     use crate::unix::io_error::TerminalIoError;
     use crate::unix::tail::RetainedTail;
+    use crate::unix::test_fixtures::{WAIT, config, hello_record};
 
     fn holding(terminal_id: &TerminalId) -> HolderState {
         let held = HeldTerminal {
@@ -109,6 +148,7 @@ mod tests {
             admitted_sequence: None,
             io_errors: Vec::new(),
             first_io_failure: None,
+            completion: Completion::Running,
         };
         let mut state = HolderState::default();
         state.terminals.insert(terminal_id.clone(), terminal);
@@ -116,10 +156,93 @@ mod tests {
     }
 
     #[test]
+    fn exit_waits_for_gated_writer_to_acknowledge_closed_queue() {
+        // Given: two admitted entries whose real input writer is held at a gate.
+        let terminal_id = TerminalId::new("t-exit-order".to_owned());
+        let holder = Holder::new(config());
+        *holder.shared.lock() = holding(&terminal_id);
+        let link = holder
+            .adopt(&hello_record(HOLDER_PROTOCOL_GENERATION))
+            .expect("adopt");
+        assert!(matches!(link.recv_timeout(WAIT), Ok(Message::Welcome(_))));
+        let queue = Arc::new(InputQueue::new(QueueLimits::new(16, 2)));
+        for sequence in 1..=2 {
+            let admission = queue.push(QueuedInput {
+                sequence,
+                grant: WriteGrant {
+                    grant_epoch: 1,
+                    fence_epoch: 1,
+                    process_incarnation: ProcessIncarnation::new(1),
+                },
+                bytes: b"go\n".to_vec(),
+            });
+            assert!(admission.outcome.is_ok());
+        }
+        let sink = InputSink {
+            terminal_id: terminal_id.clone(),
+            queue: Arc::clone(&queue),
+            file: File::options().write(true).open("/dev/null").expect("sink"),
+        };
+        let (release, gate) = mpsc::sync_channel(1);
+        let (done, finished) = mpsc::sync_channel(1);
+        let shared = Arc::clone(&holder.shared);
+        let writer = thread::spawn(move || {
+            gate.recv_timeout(WAIT).expect("release writer");
+            write_input(&shared, sink);
+            done.send(()).expect("writer completed");
+        });
+
+        // When: output ends and exit is recorded before the writer can acknowledge.
+        queue.close();
+        {
+            let mut state = holder.shared.lock();
+            state.record_output(&terminal_id, b"final").expect("output");
+            state.record_exit(
+                &terminal_id,
+                Ending {
+                    evidence: ExitEvidence::Status {
+                        code: Some(7),
+                        signal: None,
+                    },
+                    output: None,
+                },
+            );
+        }
+        release.send(()).expect("release gate");
+        finished
+            .recv_timeout(WAIT)
+            .expect("bounded writer completion");
+        writer.join().expect("writer joined");
+
+        // Then: output and both actual unwritten acknowledgements precede Exit.
+        let mut exited = false;
+        let mut sequences = Vec::new();
+        for _ in 0..4 {
+            let message = link.recv_timeout(WAIT).expect("terminal event");
+            assert!(!exited, "{:?} followed Exit", message.kind());
+            match message {
+                Message::Output(output) => assert_eq!(output.bytes, b"final"),
+                Message::InputWritten(ack) => {
+                    assert_eq!(ack.written_bytes, 0);
+                    sequences.push(ack.sequence);
+                }
+                Message::Exit(exit) => {
+                    assert_eq!((exit.code, exit.final_offset), (Some(7), 5));
+                    exited = true;
+                }
+                other => panic!("unexpected {:?}", other.kind()),
+            }
+        }
+        assert_eq!(sequences, [1, 2]);
+        assert!(exited);
+    }
+
+    #[test]
     fn failed_wait_and_read_are_typed_exit_evidence_not_a_null_exit() {
         // Given: a held terminal.
         let terminal_id = TerminalId::new("t-ending".to_owned());
         let mut state = holding(&terminal_id);
+        state.finish_input(&terminal_id);
 
         // When: waiting failed with ECHILD and output ended with EISDIR.
         let ending = Ending {

@@ -13,6 +13,7 @@ use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
 
+use self::ending::Completion;
 use self::state::{HolderState, LiveTerminal, Terminal};
 use super::config::{HolderConfig, ProcessEnvironment};
 use super::error::HolderError;
@@ -189,6 +190,7 @@ impl Holder {
                 admitted_sequence: None,
                 io_errors: Vec::new(),
                 first_io_failure: None,
+                completion: Completion::Running,
             },
         );
         if let Err(source) = workers::start(&self.shared, &request.terminal_id, parts.threads) {
