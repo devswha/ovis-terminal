@@ -50,6 +50,17 @@ pub enum DispatchError {
     /// The monotonic clock cannot represent the deadline.
     #[error("the monotonic clock cannot represent the dispatch deadline")]
     DeadlineOverflow,
+    /// A registered domain refused the request with its own stable kind.
+    #[error("the domain refused the request")]
+    Domain {
+        /// The domain's stable kind.
+        kind: &'static str,
+        /// The domain's recovery guidance.
+        hint: &'static str,
+        /// The domain's typed failure.
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
 }
 
 impl DispatchError {
@@ -69,6 +80,7 @@ impl DispatchError {
             Self::Registration => "method_not_found",
             Self::Backpressure => "backpressure",
             Self::Closed => "unavailable",
+            Self::Domain { kind, .. } => kind,
         }
     }
 
@@ -87,6 +99,7 @@ impl DispatchError {
             Self::Closed => "connect to an available runtime",
             Self::Clock(_) | Self::DeadlineOverflow => "correct the runtime clock",
             Self::Range(_) => "use a quantity supported by this platform",
+            Self::Domain { hint, .. } => hint,
         }
     }
 
