@@ -11,6 +11,7 @@ use super::events::{EventEnvelope, Heartbeat, MissedNotice};
 use super::limits::{Capabilities, Limits};
 use super::method::{Effect, MethodSpec, Targeting};
 use super::methods::all_methods;
+use super::records::{AttachControl, AttachData};
 use super::scalar::{OPEN_ENUM_EXTENSION, ProtocolGeneration};
 use super::stream::stream_layout;
 use super::verify::verify_document;
@@ -132,6 +133,14 @@ pub fn openrpc_document() -> Result<Value, SchemaError> {
         notification(
             "missed",
             generator.subschema_for::<MissedNotice>().as_value(),
+        ),
+        notification(
+            "attach.data",
+            generator.subschema_for::<AttachData>().as_value(),
+        ),
+        notification(
+            "attach.control",
+            generator.subschema_for::<AttachControl>().as_value(),
         ),
     ];
     let error_kinds: Vec<Value> = catalog(&mut generator)

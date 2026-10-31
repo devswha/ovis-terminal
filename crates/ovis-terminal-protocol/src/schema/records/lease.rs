@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::schema::common::Geometry;
 use crate::schema::ids::{ClientId, LeaseId};
-use crate::schema::scalar::{ByteOffset, LeaseEpoch, OpenEnum, Revision};
+use crate::schema::scalar::{ByteOffset, Count, LeaseEpoch, OpenEnum, Revision};
 
 /// Authority a lease grants.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -91,4 +91,6 @@ pub struct Checkpoint {
     pub modes: Modes,
     /// Cursor state.
     pub cursor: ScreenCursor,
+    /// Primary-screen history lines readable behind the paint: the history cursor.
+    pub history_lines: Count,
 }

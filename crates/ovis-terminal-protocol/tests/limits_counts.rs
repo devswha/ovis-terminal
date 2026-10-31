@@ -7,10 +7,11 @@ use serde_json::{Value, json};
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 
-const COUNTS: [&str; 3] = [
+const COUNTS: [&str; 4] = [
     "event_replay_events",
     "history_lines",
     "max_in_flight_requests",
+    "queued_operations",
 ];
 
 proptest! {
@@ -39,7 +40,8 @@ fn advertised_count_limits_are_decimal_strings_and_numbers_are_refused() -> Test
         vec![
             Some(&json!("10000")),
             Some(&json!("100000")),
-            Some(&json!("64"))
+            Some(&json!("64")),
+            Some(&json!("32"))
         ]
     );
     assert_eq!(serde_json::from_value::<Limits>(encoded)?, Limits::v1());

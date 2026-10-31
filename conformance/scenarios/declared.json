@@ -72,6 +72,11 @@
       "reason": "events.subscribe/update/unsubscribe are implemented in ovis-terminal-core (crates/ovis-terminal-core/src/subscriptions/) and proven by tests/subscriptions.rs; no serving fixture or binary routes events.* yet. The scenario runs once todo 31 wires the subscription hub into the served dispatcher and the connection notifier."
     },
     {
+      "file": "part-a/task-23.json",
+      "owner_todo": "23",
+      "reason": "attach.open/credit/close/repaint are served by ovis_terminal_server::streams::AttachHandler and proven over a real socket by crates/ovis-terminal-server/tests/streams.rs; the todo-21 fixture registers no attach routes and no served binary feeds holder output into TerminalStreams until todo 31 assembles them."
+    },
+    {
       "file": "part-a/task-24.json",
       "owner_todo": "24",
       "reason": "Free-form descriptor written by todo 24 before the runner existed; it runs once its steps are rewritten as ovis-conformance/1 over RPC routes wired by todos 23, 25 and 28-31 (real-binary serving lands with todo 31)."
@@ -130,6 +135,11 @@
       "file": "platform/conpty.json",
       "owner_todo": "53",
       "reason": "The ConPTY terminal (ovis-terminal-holder windows::ConptyTerminal) and terminal.run admission (lanes::conpty::admit/spawn) exist, but no served binary routes terminal.run to them: todo 54 serves named pipes and the Windows service host that owns ConPTY holders, todo 31 assembles the served terminal.run, and the todo-21 runner's fixture serves only a Unix socket, so a windows-only case would be skipped on every runner it has. Covered meanwhile by the native Windows tests listed in the descriptor, run by ci.yml on windows-2025; todo 60 runs this scenario in Windows smoke CI."
+    },
+    {
+      "file": "platform/windows-service.json",
+      "owner_todo": "54",
+      "reason": "The named-pipe listener (ovis-terminal-server listen::pipe), the Windows service host (ovis-terminal-holder service::windows) and the service verbs exist, but the todo-21 runner's fixture serves only a Unix socket and its isolated environment clears the variables a Windows pipe name and service need, so a windows-only case would be skipped on every runner it has; terminal.run, attach and leases over the pipe are served only once todo 31 assembles the binary. Covered meanwhile by the native Windows tests in the descriptor, run by ci.yml on windows-2025 and by the windows-service job of probe-stress-macos.yml with a CI-owned service account; todo 60 runs this scenario in Windows smoke CI."
     },
     {
       "file": "remote/identity.json",

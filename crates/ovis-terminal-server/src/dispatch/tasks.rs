@@ -12,6 +12,7 @@ use tokio::task::{Id, JoinSet};
 
 use super::DispatchError;
 use super::deadline::Response;
+use super::queue::Queued;
 use super::reservation::Reservation;
 
 pub(super) struct Active {
@@ -20,13 +21,27 @@ pub(super) struct Active {
     pub cancel: watch::Sender<bool>,
     pub response: Response,
     pub reservation: Arc<Reservation>,
+    pub queued: Queued,
+}
+
+/// One connection's in-flight budget and its bounded admission queue.
+pub(super) struct Connection {
+    session: Weak<Session>,
+    in_flight: Arc<Semaphore>,
+    queued: Arc<Semaphore>,
+}
+
+/// A request's in-flight slot and its place in the connection's admission queue.
+pub(super) struct Permits {
+    pub in_flight: OwnedSemaphorePermit,
+    pub queued: OwnedSemaphorePermit,
 }
 
 #[derive(Default)]
 pub(super) struct Tasks {
     pub set: JoinSet<()>,
     pub active: HashMap<Id, Active>,
-    pub connections: Vec<(Weak<Session>, Arc<Semaphore>)>,
+    pub connections: Vec<Connection>,
     pub closed: bool,
 }
 
@@ -35,7 +50,7 @@ impl Tasks {
         &self,
         principal: &PrincipalId,
         request: &Request,
-    ) -> Result<Option<Response>, BoundaryError> {
+    ) -> Result<Option<(Response, Queued)>, BoundaryError> {
         if self.closed {
             return Err(DispatchError::Closed.boundary());
         }
@@ -43,7 +58,9 @@ impl Tasks {
             &active.principal == principal && active.request.op_id() == request.op_id()
         });
         match active {
-            Some(active) if active.request.as_ref() == request => Ok(Some(active.response.clone())),
+            Some(active) if active.request.as_ref() == request => {
+                Ok(Some((active.response.clone(), active.queued.clone())))
+            }
             Some(_) => Err(
                 BoundaryError::domain(ErrorKind::from("op_reused".to_owned()), false)
                     .with_hint(
@@ -102,32 +119,42 @@ impl Tasks {
         Ok(())
     }
 
-    pub(super) fn permit(
-        &mut self,
-        session: &Arc<Session>,
-    ) -> Result<OwnedSemaphorePermit, DispatchError> {
+    pub(super) fn permit(&mut self, session: &Arc<Session>) -> Result<Permits, DispatchError> {
         self.reap()?;
         if self.closed {
             return Err(DispatchError::Closed);
         }
-        let limit = usize::try_from(Limits::v1().max_in_flight_requests.get())?;
-        self.connections.retain(|(session, permits)| {
-            session.strong_count() > 0 || permits.available_permits() < limit
+        let limits = Limits::v1();
+        let limit = usize::try_from(limits.max_in_flight_requests.get())?;
+        let bound = usize::try_from(limits.queued_operations.get())?;
+        self.connections.retain(|connection| {
+            connection.session.strong_count() > 0
+                || connection.in_flight.available_permits() < limit
         });
-        let permits = if let Some((_, permits)) = self.connections.iter().find(|(candidate, _)| {
-            candidate
+        let index = self.connections.iter().position(|connection| {
+            connection
+                .session
                 .upgrade()
                 .is_some_and(|s| Arc::ptr_eq(&s, session))
-        }) {
-            Arc::clone(permits)
+        });
+        let connection = if let Some(connection) = index.and_then(|at| self.connections.get(at)) {
+            connection
         } else {
-            let permits = Arc::new(Semaphore::new(limit));
-            self.connections
-                .push((Arc::downgrade(session), Arc::clone(&permits)));
-            permits
+            self.connections.push(Connection {
+                session: Arc::downgrade(session),
+                in_flight: Arc::new(Semaphore::new(limit)),
+                queued: Arc::new(Semaphore::new(bound)),
+            });
+            self.connections.last().ok_or(DispatchError::Closed)?
         };
-        permits
+        let in_flight = Arc::clone(&connection.in_flight)
             .try_acquire_owned()
-            .map_err(|_| DispatchError::Backpressure)
+            .map_err(|_| DispatchError::Backpressure)?;
+        let queued = Arc::clone(&connection.queued)
+            .try_acquire_owned()
+            .map_err(|_| DispatchError::QueueFull {
+                bound: limits.queued_operations,
+            })?;
+        Ok(Permits { in_flight, queued })
     }
 }

@@ -1,31 +1,43 @@
-//! Validated `UUIDv7` requests and canonical parameter fingerprints.
+//! Validated `UUIDv7` requests and canonical parameter digests.
 
 use ovis_terminal_protocol::errors::OpId;
 use ovis_terminal_protocol::schema::ids::MethodName;
-use ovis_terminal_protocol::schema::scalar::TimestampMs;
-use serde::{Deserialize, Serialize};
+use ovis_terminal_protocol::schema::scalar::{ByteCount, TimestampMs};
 use serde_json::Value;
-use sha2::{Digest as _, Sha256};
 use uuid::Uuid;
 
 use super::OperationError;
+use super::ledger::OperationKey;
+use super::params::{CopyBytes, Params, ParamsBound, ParamsDigest};
+use crate::registry::RuntimeId;
 
 #[cfg(test)]
 mod tests;
 
-/// Fingerprint of canonical method parameters, not raw request formatting.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(super) struct ParamsDigest(Vec<u8>);
-
 /// An operation identity, method and already schema-validated parameter object.
-#[derive(Debug, PartialEq, Eq)]
+///
+/// Two requests are the same work when identity, method and params digest match; the
+/// retained copy never takes part in the comparison.
+#[derive(Debug)]
 pub struct Request {
     /// Client-minted `UUIDv7` operation identity.
     pub(super) op_id: OpId,
     pub(super) method: MethodName,
-    pub(super) params: ParamsDigest,
+    pub(super) params: Params,
     pub(super) minted_at: TimestampMs,
+    copy: CopyBytes,
 }
+
+impl PartialEq for Request {
+    fn eq(&self, other: &Self) -> bool {
+        self.op_id == other.op_id
+            && self.method == other.method
+            && self.params == other.params
+            && self.minted_at == other.minted_at
+    }
+}
+
+impl Eq for Request {}
 
 impl Request {
     /// Borrows the validated operation identity without allowing it to be replaced.
@@ -41,7 +53,7 @@ impl Request {
     /// # Errors
     ///
     /// Returns `invalid_params` for a noncanonical `UUIDv7`, empty method or non-object
-    /// params, and `too_large` above the 256 KiB canonical parameter bound.
+    /// params, and `too_large` above the method's [`ParamsBound`].
     pub fn new(op_id: OpId, method: String, mut params: Value) -> Result<Self, OperationError> {
         let minted_at = minted_at(&op_id)?;
         if method.is_empty() || method.len() > 128 || !params.is_object() {
@@ -49,15 +61,32 @@ impl Request {
         }
         canonicalize(&mut params);
         let bytes = serde_json::to_vec(&params)?;
-        if bytes.len() > 256 << 10 {
-            return Err(OperationError::TooLarge);
+        let bound = ParamsBound::of(&method);
+        let actual = ByteCount::new(u64::try_from(bytes.len()).unwrap_or(u64::MAX));
+        if actual > bound.bytes() {
+            return Err(OperationError::ParamsTooLarge { bound, actual });
         }
+        let digest = ParamsDigest::sha256(&bytes);
+        let (copy, extent) = CopyBytes::retain(bytes);
         Ok(Self {
             op_id,
             method: MethodName::new(method),
-            params: ParamsDigest(Sha256::digest(bytes).to_vec()),
+            params: Params {
+                digest,
+                extent: Some(extent),
+            },
             minted_at,
+            copy,
         })
+    }
+
+    /// The write that stores this request's params copy beside its new ledger row.
+    pub(super) fn copy_write(
+        &self,
+        key: &OperationKey,
+        runtime: RuntimeId,
+    ) -> ovis_terminal_store::CasWrite {
+        self.copy.write(key, runtime)
     }
 }
 

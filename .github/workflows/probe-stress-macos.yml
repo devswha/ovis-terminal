@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, process-info]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, process-info]
 
 permissions:
   contents: read
@@ -626,6 +626,163 @@ jobs:
         with:
           name: conpty-windows-${{ github.run_id }}
           path: conpty-windows.log
+          if-no-files-found: error
+  ops-digest:
+    if: inputs.probe == 'ops-digest'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat 1 MiB digest dedup tests 25 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              cargo nextest run -p ovis-terminal-server --test ops_digest --test documents_retention --locked --no-tests=fail
+              cargo nextest run -p ovis-terminal-core --locked --no-tests=fail -E 'test(/digest|params/)'
+              printf 'PASS %s/25\n' "$iteration"
+            done
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee ops-digest-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ops-digest-stress-macos-${{ github.run_id }}
+          path: ops-digest-stress-macos.log
+          if-no-files-found: error
+  ops-admission:
+    if: inputs.probe == 'ops-admission'
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat fair-admission tests 20 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 20); do
+              printf '\nITERATION %s/20\n' "$iteration"
+              cargo nextest run -p ovis-terminal-server --test ops_admission --locked --no-tests=fail --no-capture
+              cargo nextest run -p ovis-terminal-core --test events --test ops --locked --no-tests=fail -E 'test(/admission::|fairness::/)'
+              printf 'PASS %s/20\n' "$iteration"
+            done
+            printf 'RESULT 20/20\n'
+          } 2>&1 | tee ops-admission-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ops-admission-stress-macos-${{ github.run_id }}
+          path: ops-admission-stress-macos.log
+          if-no-files-found: error
+  connection:
+    if: inputs.probe == 'connection'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat server connection tests 200 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 200); do
+              printf '\nITERATION %s/200\n' "$iteration"
+              cargo nextest run -p ovis-terminal-server --test connection --locked --no-tests=fail
+              printf 'PASS %s/200\n' "$iteration"
+            done
+            printf 'RESULT 200/200\n'
+          } 2>&1 | tee connection-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: connection-stress-macos-${{ github.run_id }}
+          path: connection-stress-macos.log
+          if-no-files-found: error
+  windows-service:
+    if: inputs.probe == 'windows-service'
+    runs-on: windows-2025
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: pin C toolchain (Windows MSVC 14.44)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          toolset: "14.44"
+      - name: use the pinned MSVC linker
+        shell: bash
+        run: |
+          linker="${VCToolsInstallDir}bin\HostX64\x64\link.exe"
+          test -f "$linker"
+          echo "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$linker" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - name: CI-owned service account and binary location (no interactive login)
+        shell: pwsh
+        run: |
+          $password = "Ov1s-" + [guid]::NewGuid().ToString("N") + "!a"
+          Write-Output "::add-mask::$password"
+          $secure = ConvertTo-SecureString $password -AsPlainText -Force
+          New-LocalUser -Name ovis54ci -Password $secure -PasswordNeverExpires | Out-Null
+          Add-LocalGroupMember -Group Users -Member ovis54ci
+          New-Item -ItemType Directory -Force C:\ovis54\state | Out-Null
+          icacls C:\ovis54 /grant "ovis54ci:(OI)(CI)M" | Out-Null
+          "OVIS54_ACCOUNT=.\ovis54ci" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "OVIS54_PASSWORD=$password" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "OVIS54_BINARY=C:\ovis54\ovis-terminal.exe" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "OVIS54_STATE=C:\ovis54\state" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - name: native pipe listener, service host and service fixture tests, repeated
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+            cp target/debug/ovis-terminal.exe /c/ovis54/ovis-terminal.exe
+            for iteration in $(seq 1 3); do
+              printf '\nITERATION %s/3\n' "$iteration"
+              cargo test --locked -p ovis-terminal-holder --lib service::windows:: -- --nocapture
+              cargo test --locked -p ovis-terminal-server --lib -- listen::pipe dispatch::lanes::windows_service
+              cargo test --locked -p ovis-terminal-cli --lib service::windows::fixture_tests -- --ignored --nocapture
+            done
+            printf 'RESULT pass\n'
+          } 2>&1 | tee windows-service.log
+      - name: remove the fixture service and account
+        if: always()
+        shell: pwsh
+        run: |
+          sc.exe stop ovis-terminal-holder-ci54 | Out-Null
+          sc.exe delete ovis-terminal-holder-ci54 | Out-Null
+          Remove-LocalUser -Name ovis54ci -ErrorAction SilentlyContinue
+          exit 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-service-${{ github.run_id }}
+          path: windows-service.log
           if-no-files-found: error
   process-info:
     if: inputs.probe == 'process-info'

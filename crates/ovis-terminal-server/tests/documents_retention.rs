@@ -6,99 +6,14 @@
 mod large;
 #[path = "documents_retention/scope.rs"]
 mod scope;
+#[path = "documents_retention/served.rs"]
+pub mod served;
 #[path = "../src/dispatch/qa/socket.rs"]
 pub mod socket;
 
-use std::sync::Arc;
-
-use ovis_terminal_core::docs::DocumentsRetentionEvent;
-use ovis_terminal_core::events::Coordinator;
-use ovis_terminal_core::ops::OperationProducer;
-use ovis_terminal_server::dispatch::Dispatcher;
-use ovis_terminal_server::dispatch::lanes::documents_retention;
-use ovis_terminal_server::listen::ServerHandle;
-use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
-use socket::{Client, at, error_kind, request, runtime};
-
-type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
-type Core = Coordinator<DocumentsRetentionEvent, OperationProducer>;
-
-struct Served {
-    socket: socket::Fixture,
-    core: Arc<Core>,
-    dispatch: Arc<Dispatcher<DocumentsRetentionEvent, OperationProducer>>,
-    server: ServerHandle,
-}
-
-impl Served {
-    async fn start() -> TestResult<Self> {
-        let socket = socket::Fixture::new()?;
-        let identity = runtime(1)?;
-        let store = Store::open(&socket.path("db"), StoreOptions::default())?;
-        let producer = OperationProducer::new(identity.runtime_id());
-        let core = Arc::new(Coordinator::new(store, identity, producer));
-        let mut dispatch =
-            Dispatcher::new(Arc::clone(&socket.authority), identity, Arc::clone(&core));
-        documents_retention::register(&mut dispatch, identity)?;
-        let dispatch = Arc::new(dispatch);
-        let server = socket.serve(1, Arc::clone(&dispatch)).await?;
-        Ok(Self {
-            socket,
-            core,
-            dispatch,
-            server,
-        })
-    }
-
-    async fn client(&self) -> TestResult<Client> {
-        let mut client = self.socket.connect().await?;
-        client.hello("1", &self.socket.bearer).await?;
-        Ok(client)
-    }
-
-    async fn close(self) -> TestResult {
-        self.server.shutdown().await?;
-        self.dispatch.shutdown().await?;
-        drop(self.dispatch);
-        let core = Arc::try_unwrap(self.core).map_err(|_| "core still shared")?;
-        tokio::task::spawn_blocking(move || core.close()).await??;
-        Ok(())
-    }
-}
-
-/// A `UUIDv7` minted `age_ms` before the wall clock.
-fn op(age_ms: u64) -> TestResult<String> {
-    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?;
-    let at = u64::try_from(now.as_millis())?
-        .checked_sub(age_ms)
-        .ok_or("before epoch")?;
-    let stamp = uuid::Timestamp::from_unix(
-        uuid::NoContext,
-        at / 1000,
-        u32::try_from(at % 1000)?
-            .checked_mul(1_000_000)
-            .ok_or("nanos")?,
-    );
-    Ok(uuid::Uuid::new_v7(stamp).to_string())
-}
-
-fn set(op_id: &str, mut params: Value) -> Value {
-    if let Some(object) = params.as_object_mut() {
-        object.insert("op_id".to_owned(), json!(op_id));
-    }
-    request(op_id, "doc.set", &params)
-}
-
-async fn call(client: &mut Client, message: &Value) -> TestResult<Value> {
-    client.send(message).await?;
-    client.expect_next().await
-}
-
-async fn get(client: &mut Client, name: &str) -> TestResult<Value> {
-    let reply = call(client, &request("get", "doc.get", &json!({"name": name}))).await?;
-    Ok(at(&reply, "/result").clone())
-}
+use served::{Served, TestResult, call, get, op, set};
+use socket::{at, error_kind};
 
 #[tokio::test]
 async fn happy() -> TestResult {
@@ -204,20 +119,24 @@ async fn adversarial_inputs_fail_typed_and_leave_the_version_unchanged() -> Test
         ),
     )
     .await?;
-    // A 1 MiB + 1 byte value. Over the socket the 256 KiB canonical-params bound of the
-    // operation ledger refuses it before admission, so the reply carries no op_id; the
-    // inclusive 1 MiB document bound itself is asserted by the core bounds tests.
+    // A 1 MiB + 1 byte value fits the doc.set params bound, so the operation is admitted and
+    // the document bound refuses it: too_large retained under its op_id.
     let oversized = Value::String("x".repeat(1_048_575));
+    let oversized_op = op(0)?;
     let refused = call(
         &mut client,
         &set(
-            &op(0)?,
+            &oversized_op,
             json!({"name": "shared", "version": "1", "value": oversized}),
         ),
     )
     .await?;
     assert_eq!(error_kind(&refused), "too_large", "{refused}");
-    assert_eq!(at(&refused, "/error/data/op_id"), &Value::Null, "{refused}");
+    assert_eq!(
+        at(&refused, "/error/data/op_id"),
+        &json!(oversized_op),
+        "{refused}"
+    );
 
     // When: an expired op id, a numeric version, a bad name and a foreign machine are each
     // presented.

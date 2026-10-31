@@ -1,0 +1,773 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "part-a/task-79",
+  "title": "Concurrent operations are admitted in FIFO order under the pinned-snapshot bound",
+  "todo": 79,
+  "closes": [],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "32 mutations pipelined on one connection, four times the eight pinned-snapshot slots, all commit: hello advertises queued_operations as the decimal string 32, no reply is limit_exceeded, and all 32 file effects exist.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "client",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "client",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021",
+              "/result/limits/queued_operations": "32"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w0",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w0",
+                  "name": "w0",
+                  "value": "v0",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w1",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w1",
+                  "name": "w1",
+                  "value": "v1",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w2",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w2",
+                  "name": "w2",
+                  "value": "v2",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w3",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w3",
+                  "name": "w3",
+                  "value": "v3",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w4",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w4",
+                  "name": "w4",
+                  "value": "v4",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w5",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w5",
+                  "name": "w5",
+                  "value": "v5",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w6",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w6",
+                  "name": "w6",
+                  "value": "v6",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w7",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w7",
+                  "name": "w7",
+                  "value": "v7",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w8",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w8",
+                  "name": "w8",
+                  "value": "v8",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w9",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w9",
+                  "name": "w9",
+                  "value": "v9",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w10",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w10",
+                  "name": "w10",
+                  "value": "v10",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w11",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w11",
+                  "name": "w11",
+                  "value": "v11",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w12",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w12",
+                  "name": "w12",
+                  "value": "v12",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w13",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w13",
+                  "name": "w13",
+                  "value": "v13",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w14",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w14",
+                  "name": "w14",
+                  "value": "v14",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w15",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w15",
+                  "name": "w15",
+                  "value": "v15",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w16",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w16",
+                  "name": "w16",
+                  "value": "v16",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w17",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w17",
+                  "name": "w17",
+                  "value": "v17",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w18",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w18",
+                  "name": "w18",
+                  "value": "v18",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w19",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w19",
+                  "name": "w19",
+                  "value": "v19",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w20",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w20",
+                  "name": "w20",
+                  "value": "v20",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w21",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w21",
+                  "name": "w21",
+                  "value": "v21",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w22",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w22",
+                  "name": "w22",
+                  "value": "v22",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w23",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w23",
+                  "name": "w23",
+                  "value": "v23",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w24",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w24",
+                  "name": "w24",
+                  "value": "v24",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w25",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w25",
+                  "name": "w25",
+                  "value": "v25",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w26",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w26",
+                  "name": "w26",
+                  "value": "v26",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w27",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w27",
+                  "name": "w27",
+                  "value": "v27",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w28",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w28",
+                  "name": "w28",
+                  "value": "v28",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w29",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w29",
+                  "name": "w29",
+                  "value": "v29",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w30",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w30",
+                  "name": "w30",
+                  "value": "v30",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "w31",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:w31",
+                  "name": "w31",
+                  "value": "v31",
+                  "version": "0"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "w0": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v0"
+              },
+              "w1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v1"
+              },
+              "w2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v2"
+              },
+              "w3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v3"
+              },
+              "w4": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v4"
+              },
+              "w5": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v5"
+              },
+              "w6": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v6"
+              },
+              "w7": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v7"
+              },
+              "w8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v8"
+              },
+              "w9": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v9"
+              },
+              "w10": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v10"
+              },
+              "w11": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v11"
+              },
+              "w12": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v12"
+              },
+              "w13": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v13"
+              },
+              "w14": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v14"
+              },
+              "w15": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v15"
+              },
+              "w16": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v16"
+              },
+              "w17": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v17"
+              },
+              "w18": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v18"
+              },
+              "w19": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v19"
+              },
+              "w20": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v20"
+              },
+              "w21": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v21"
+              },
+              "w22": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v22"
+              },
+              "w23": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v23"
+              },
+              "w24": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v24"
+              },
+              "w25": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v25"
+              },
+              "w26": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v26"
+              },
+              "w27": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v27"
+              },
+              "w28": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v28"
+              },
+              "w29": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v29"
+              },
+              "w30": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v30"
+              },
+              "w31": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "v31"
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "w0.json": "v0",
+              "w1.json": "v1",
+              "w2.json": "v2",
+              "w3.json": "v3",
+              "w4.json": "v4",
+              "w5.json": "v5",
+              "w6.json": "v6",
+              "w7.json": "v7",
+              "w8.json": "v8",
+              "w9.json": "v9",
+              "w10.json": "v10",
+              "w11.json": "v11",
+              "w12.json": "v12",
+              "w13.json": "v13",
+              "w14.json": "v14",
+              "w15.json": "v15",
+              "w16.json": "v16",
+              "w17.json": "v17",
+              "w18.json": "v18",
+              "w19.json": "v19",
+              "w20.json": "v20",
+              "w21.json": "v21",
+              "w22.json": "v22",
+              "w23.json": "v23",
+              "w24.json": "v24",
+              "w25.json": "v25",
+              "w26.json": "v26",
+              "w27.json": "v27",
+              "w28.json": "v28",
+              "w29.json": "v29",
+              "w30.json": "v30",
+              "w31.json": "v31"
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "client"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "Queued state is never invented: an identity that was never dispatched is not_found without a queued_position, and a committed operation reports committed without a queued_position.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "client",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "client",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "unknown",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:unknown"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "done",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:done",
+                  "name": "done",
+                  "value": "kept",
+                  "version": "0"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "unknown": {
+                "/error/data/kind": "not_found",
+                "/error/data/queued_position": {
+                  "$present": false
+                },
+                "/result": {
+                  "$present": false
+                }
+              },
+              "done": {
+                "/result/value": "kept"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "inspect",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:done"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "inspect": {
+                "/result/op_id": "$op:done",
+                "/result/state": "committed",
+                "/result/queued_position": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "done.json": "kept"
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "client"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
