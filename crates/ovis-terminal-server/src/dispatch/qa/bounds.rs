@@ -18,8 +18,9 @@ async fn timed_out_work_keeps_its_connection_budget_and_control_remains_availabl
     let hello = client.hello("1", &fixture.socket.bearer).await?;
     let limit = usize::try_from(
         at(&hello, "/result/limits/max_in_flight_requests")
-            .as_u64()
-            .ok_or("limit")?,
+            .as_str()
+            .ok_or("limit is a decimal string")?
+            .parse::<u64>()?,
     )?;
     let mut entered = fixture.gate.entered.subscribe();
     let operations: Vec<_> = (0..limit).map(|_| op_id()).collect();
