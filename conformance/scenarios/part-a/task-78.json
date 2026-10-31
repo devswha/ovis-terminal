@@ -1,0 +1,299 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "part-a/task-78",
+  "title": "A retried op_id is deduplicated by its canonical params digest",
+  "todo": 78,
+  "closes": [],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "doc.set commits once; the identical retry under the same op_id replays the receipt and op.get shows it committed; one effect exists.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "client",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "client",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "first",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:write",
+                  "name": "digest",
+                  "value": "kept",
+                  "version": "0"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "first": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "kept"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "retry",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:write",
+                  "name": "digest",
+                  "value": "kept",
+                  "version": "0"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "retry": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value": "kept"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "inspect",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:write"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "inspect": {
+                "/result/op_id": "$op:write",
+                "/result/state": "committed",
+                "/result/result/value": "kept"
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "digest.json": "kept"
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "client"
+          }
+        },
+        {
+          "closed": {
+            "conn": "client"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "The same op_id with one changed byte is op_reused naming the original op; a numeric version is invalid_params; the effect keeps the first value.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "client",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "client",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "first",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:write",
+                  "name": "digest",
+                  "value": "kept",
+                  "version": "0"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "first": {
+                "/result/value": "kept"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "changed",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:write",
+                  "name": "digest",
+                  "value": "kepT",
+                  "version": "0"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "changed": {
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/kind": "op_reused",
+                "/error/data/op_id": "$op:write"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "client",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "numeric",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:numeric",
+                  "name": "digest",
+                  "value": "kepT",
+                  "version": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "client",
+            "expect": {
+              "numeric": {
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/kind": "invalid_params"
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "digest.json": "kept"
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "client"
+          }
+        },
+        {
+          "closed": {
+            "conn": "client"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

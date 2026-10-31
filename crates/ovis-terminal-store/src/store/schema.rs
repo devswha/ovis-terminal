@@ -11,12 +11,20 @@ use crate::error::StoreError;
 use crate::evidence::RecoveryCause;
 
 /// The newest schema version this build reads and writes.
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
 const SQLITE_MAGIC: &[u8; 16] = b"SQLite format 3\0";
 
+#[cfg(test)]
+mod tests;
+
 /// Migration `n` upgrades schema version `n` to `n + 1`.
-const MIGRATIONS: [&str; 1] = ["
+///
+/// Version 2 changes no table: operation rows written from then on name their params
+/// digest algorithm and drop the bare pre-v2 digest field, so a build that only knows
+/// version 1 must refuse the file (`Probe::Newer`) instead of failing to decode its rows.
+const MIGRATIONS: [&str; 2] = [
+    "
     CREATE TABLE head (
         id INTEGER PRIMARY KEY CHECK (id = 0),
         revision INTEGER NOT NULL
@@ -51,7 +59,9 @@ const MIGRATIONS: [&str; 1] = ["
         id TEXT PRIMARY KEY,
         evidence TEXT NOT NULL
     ) WITHOUT ROWID;
-"];
+",
+    "-- v2: operation rows carry {algorithm, hex} params digests; no table changes.",
+];
 
 /// What an existing database file turned out to be, decided before any write.
 #[derive(Debug)]
