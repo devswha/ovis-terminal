@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, ops-digest]
 
 permissions:
   contents: read
@@ -553,4 +553,35 @@ jobs:
         with:
           name: docs-retention-stress-macos-${{ github.run_id }}
           path: docs-retention-stress-macos.log
+          if-no-files-found: error
+  ops-digest:
+    if: inputs.probe == 'ops-digest'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat 1 MiB digest dedup tests 25 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              cargo nextest run -p ovis-terminal-server --test ops_digest --test documents_retention --locked --no-tests=fail
+              cargo nextest run -p ovis-terminal-core --locked --no-tests=fail -E 'test(/digest|params/)'
+              printf 'PASS %s/25\n' "$iteration"
+            done
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee ops-digest-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ops-digest-stress-macos-${{ github.run_id }}
+          path: ops-digest-stress-macos.log
           if-no-files-found: error
