@@ -93,7 +93,9 @@ fn two_writers_racing_version_zero_commit_exactly_one_version_and_one_event() ->
     let document = get(&core, "shared")?;
     assert_eq!(document.version.get(), 1);
     assert_eq!(&document.value, &winner_value(winner, &records)?);
-    Ok(())
+    Ok(Arc::try_unwrap(core)
+        .map_err(|_| "core still shared")?
+        .close()?)
 }
 
 fn winner_value(winner: &Value, records: &[Value]) -> TestResult<Value> {
@@ -136,7 +138,7 @@ fn a_conflicting_write_leaves_version_one_and_a_retry_replays_the_same_failure()
         (1, json!({"x": 1}))
     );
     assert_eq!(changes(&drain(&observer.delivery)).len(), 0);
-    Ok(())
+    Ok(core.close()?)
 }
 
 #[test]
@@ -169,7 +171,7 @@ fn null_deletes_but_keeps_the_version_and_absence_reads_as_null_at_zero() -> Tes
         json!({"name": "gone", "version": "0", "value": 3}),
     )??;
     assert_eq!(failed_kind(&stale).as_deref(), Some("conflict"));
-    Ok(())
+    Ok(core.close()?)
 }
 
 #[test]
@@ -195,5 +197,5 @@ fn an_expired_op_id_cannot_become_a_new_document_write() -> TestResult {
         Err(EventError::TryReceive(std::sync::mpsc::TryRecvError::Empty))
     ));
     assert_eq!(get(&core, "late")?.version.get(), 0);
-    Ok(())
+    Ok(core.close()?)
 }

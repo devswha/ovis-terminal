@@ -132,7 +132,7 @@ fn advancing_virtual_expiry_moves_all_five_floors_with_a_tombstone_and_one_event
     // And: the evicted plugin run is a tombstone whose version still advances, not an absence.
     let tombstone = get(&core, "plugin-run-1")?;
     assert_eq!((tombstone.value, tombstone.version.get()), (Value::Null, 2));
-    Ok(())
+    Ok(core.close()?)
 }
 
 #[test]
@@ -157,7 +157,7 @@ fn a_repeat_or_older_sweep_never_moves_a_floor_back_and_commits_nothing() -> Tes
     };
     assert_eq!((again, older), (unchanged, unchanged));
     assert!(observer.delivery.try_recv().is_err());
-    Ok(())
+    Ok(core.close()?)
 }
 
 #[test]
@@ -185,7 +185,7 @@ fn a_stale_tombstone_version_rolls_the_whole_sweep_back() -> TestResult {
     assert_eq!(error.kind(), "conflict");
     assert!(floors(&core)?.contains(&(RetentionClass::PluginRuns, 0)));
     assert_eq!(get(&core, "run")?.version.get(), 1);
-    Ok(())
+    Ok(core.close()?)
 }
 
 #[test]
@@ -235,7 +235,7 @@ fn a_pinned_snapshot_keeps_its_floors_while_a_later_sweep_compacts() -> TestResu
         current.resume_after(RetentionPosition::new(3)),
         Retained::Available
     );
-    Ok(())
+    Ok(core.close()?)
 }
 
 #[test]
@@ -276,5 +276,5 @@ fn store_trim_floors_surface_for_events_and_receipts_and_old_cursors_miss() -> T
         core.subscribe(Some(stale))?.missed,
         Some(MissedReason::CursorExpired)
     );
-    Ok(())
+    Ok(core.close()?)
 }

@@ -64,7 +64,7 @@ fn one_mebibyte_plus_one_byte_is_too_large_and_leaves_the_version_unchanged() ->
         (document.version.get(), document.value),
         (1, json!("small"))
     );
-    Ok(())
+    Ok(core.close()?)
 }
 
 #[test]
@@ -98,7 +98,7 @@ fn malformed_names_fail_typed_without_writing() -> TestResult {
         json!({"name": "n".repeat(128), "version": "0", "value": 1}),
     )??;
     assert_eq!(longest.state, OpenEnum::Known(OpState::Committed));
-    Ok(())
+    Ok(core.close()?)
 }
 
 proptest! {
@@ -130,7 +130,7 @@ proptest! {
                 let document = get(&core, "model")?;
                 assert_eq!((document.version.get(), &document.value), (version, &value));
             }
-            Ok(())
+            Ok(core.close()?)
         };
         check().map_err(|error| TestCaseError::fail(error.to_string()))?;
     }
