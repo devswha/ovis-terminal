@@ -29,6 +29,10 @@ mod atomic;
 mod bounds;
 #[path = "../src/ops/qa/concurrency.rs"]
 mod concurrency;
+#[path = "../src/ops/qa/digest.rs"]
+mod digest;
+#[path = "../src/ops/qa/fairness.rs"]
+mod fairness;
 #[cfg(unix)]
 #[path = "../src/ops/qa/holder.rs"]
 pub mod holder;

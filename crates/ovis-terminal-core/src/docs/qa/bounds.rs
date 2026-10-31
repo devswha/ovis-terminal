@@ -57,8 +57,9 @@ fn one_mebibyte_plus_one_byte_is_too_large_and_leaves_the_version_unchanged() ->
         json!({"name": "big", "version": "1", "value": value}),
     )?;
 
-    // Then: it is refused as too_large and the stored document is untouched.
-    assert_eq!(over.err().map(|error| error.kind()), Some("too_large"));
+    // Then: the ledger admits it (doc.set params bound) and the document bound retains
+    // too_large as the operation's failure; the stored document is untouched.
+    assert_eq!(failed_kind(&over?).as_deref(), Some("too_large"));
     let document = get(&core, "big")?;
     assert_eq!(
         (document.version.get(), document.value),

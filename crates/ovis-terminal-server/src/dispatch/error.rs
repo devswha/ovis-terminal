@@ -4,9 +4,12 @@ use ovis_terminal_authz::AuthzError;
 use ovis_terminal_core::ops::OperationError;
 use ovis_terminal_core::registry::TargetResolutionError;
 use ovis_terminal_protocol::domain::worktrees::AffectedResource;
-use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind, TargetCandidate};
+use ovis_terminal_protocol::errors::{
+    BoundaryError, ErrorKind, ExceededBound, LimitName, TargetCandidate,
+};
 use ovis_terminal_protocol::schema::ParamsError;
 use ovis_terminal_protocol::schema::ids::{MachineId, RuntimeLifetimeId, TerminalId};
+use ovis_terminal_protocol::schema::scalar::Count;
 use ovis_terminal_services::worktrees::WorktreeError;
 
 /// A dispatch failure; inner diagnostics are retained as sources, not sent as raw prose.
@@ -40,6 +43,12 @@ pub enum DispatchError {
     /// Work exceeded its bounded admission budget.
     #[error("the dispatch admission budget is exhausted")]
     Backpressure,
+    /// The connection already holds its advertised number of queued operations.
+    #[error("the connection's operation admission queue is full")]
+    QueueFull {
+        /// The advertised `queued_operations` bound.
+        bound: Count,
+    },
     /// Dispatch has shut down.
     #[error("the dispatcher has stopped accepting work")]
     Closed,
@@ -85,6 +94,7 @@ impl DispatchError {
             | Self::DeadlineOverflow => "internal",
             Self::Registration => "method_not_found",
             Self::Backpressure => "backpressure",
+            Self::QueueFull { .. } => "limit_exceeded",
             Self::Closed => "unavailable",
             Self::Domain { kind, .. } => kind,
         }
@@ -103,6 +113,9 @@ impl DispatchError {
             }
             Self::Registration => "register an implemented method from the published catalog",
             Self::Backpressure => "inspect or cancel outstanding operations before retrying",
+            Self::QueueFull { .. } => {
+                "wait for this connection's queued operations to be admitted before retrying"
+            }
             Self::Closed => "connect to an available runtime",
             Self::Clock(_) | Self::DeadlineOverflow => "correct the runtime clock",
             Self::Range(_) => "use a quantity supported by this platform",
@@ -128,12 +141,18 @@ impl DispatchError {
             return BoundaryError::invalid_params(Some("params.op_id"));
         }
         let retryable = match self {
-            Self::Backpressure => true,
+            Self::Backpressure | Self::QueueFull { .. } => true,
             Self::Worktree(source) => source.retryable(),
             _ => false,
         };
         let mut error = BoundaryError::domain(ErrorKind::from(self.kind().to_owned()), retryable)
             .with_hint(self.hint());
+        if let Self::QueueFull { bound } = self {
+            error = error.with_bound(ExceededBound::new(
+                LimitName::new("queued_operations".to_owned()),
+                *bound,
+            ));
+        }
         if let Self::Worktree(source) = self {
             let affected = source.affected().iter().map(AffectedResource::target_id);
             error = error.with_affected(affected.collect());

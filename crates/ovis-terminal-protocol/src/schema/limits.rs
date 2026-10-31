@@ -43,6 +43,8 @@ pub struct Limits {
     pub output_ring_bytes: ByteCount,
     /// Requests in flight on one connection.
     pub max_in_flight_requests: Count,
+    /// Operations one connection may hold waiting for FIFO admission; one more is refused.
+    pub queued_operations: Count,
     /// Encoded bytes queued for one connection but not yet written; past it the
     /// connection closes with `$/closing{reason: backpressure}`.
     pub connection_unwritten_bytes: ByteCount,
@@ -80,6 +82,7 @@ impl Limits {
             history_lines: Count::new(100_000),
             output_ring_bytes: ByteCount::new(64 * MIB),
             max_in_flight_requests: Count::new(64),
+            queued_operations: Count::new(32),
             connection_unwritten_bytes: ByteCount::new(64 * MIB),
             session_rss_bytes: ByteCount::new(GIB),
             session_retained_bytes: ByteCount::new(4 * GIB),
