@@ -8,6 +8,7 @@ on:
         type: choice
         default: platform
         options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, geometry]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts]
 
 permissions:
   contents: read
@@ -814,3 +815,18 @@ jobs:
           name: geometry-stress-${{ github.run_id }}
           path: geometry-stress.log
           if-no-files-found: error
+  prompts:
+    if: inputs.probe == 'prompts'
+    timeout-minutes: 60
+      - name: repeat prompt tests and scenario 25 times
+          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              cargo nextest run -p ovis-terminal-agent --locked --no-tests=fail -E 'test(prompts::)'
+              cargo nextest run -p ovis-terminal-server --test dispatch --locked --no-tests=fail -E 'test(prompts::)'
+              cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/prompts --isolated --case all --evidence "prompts-$iteration.json"
+              printf 'PASS %s/25\n' "$iteration"
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee prompts-stress-macos.log
+          name: prompts-stress-macos-${{ github.run_id }}
+          path: prompts-stress-macos.log
