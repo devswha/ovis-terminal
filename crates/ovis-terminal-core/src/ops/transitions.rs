@@ -75,15 +75,32 @@ where
     ///
     /// Returns a receipt-bearing rejection if work has already started.
     pub fn fail(&self, op: &OpId, error: ErrorData) -> Result<OpRecord, OperationError> {
-        let mut row = self.current(op)?;
+        let row = self.current(op)?;
         match row.entry.record.state {
-            OpenEnum::Known(OpState::Accepted) => {
-                row.entry.record.state = OpenEnum::Known(OpState::Failed);
-                row.entry.record.error = Some(error);
-                self.update(row)
-            }
+            OpenEnum::Known(OpState::Accepted) => self.store_failure(row, error),
             _ => Err(OperationError::Settled(Box::new(row.entry.record))),
         }
+    }
+
+    /// Retains a proven failure after intent but before any external effect occurred.
+    ///
+    /// The caller must use `outcome_unknown` instead when the external effect may
+    /// have begun or its absence cannot be proven.
+    ///
+    /// # Errors
+    ///
+    /// Returns typed persistence errors or a stale-permission rejection.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "consume the single-use effect permission when committing a proven failure"
+    )]
+    pub fn fail_running(
+        &self,
+        permit: RunningOperation,
+        error: ErrorData,
+    ) -> Result<OpRecord, OperationError> {
+        let row = self.permitted(&permit)?;
+        self.store_failure(row, error)
     }
 
     /// Retains uncertainty when an external effect could have begun.
@@ -118,8 +135,9 @@ where
                 ));
             }
             OpenEnum::Known(OpState::Committed) => CancelOutcome::AlreadyCommitted,
-            OpenEnum::Known(OpState::Cancelled) => CancelOutcome::CancelledBeforeCommit,
-            OpenEnum::Known(OpState::Failed) => CancelOutcome::AlreadyFinished,
+            OpenEnum::Known(OpState::Cancelled | OpState::Failed) => {
+                CancelOutcome::CancelledBeforeCommit
+            }
             OpenEnum::Known(OpState::Running | OpState::OutcomeUnknown) => {
                 row.entry
                     .record
@@ -134,6 +152,16 @@ where
             OpenEnum::Known(_) | OpenEnum::Unknown(_) => return Err(OperationError::InvalidLedger),
         };
         Ok(OpCancelResult::new(row.entry.record, outcome))
+    }
+
+    fn store_failure(
+        &self,
+        mut row: super::ledger::Row,
+        error: ErrorData,
+    ) -> Result<OpRecord, OperationError> {
+        row.entry.record.state = OpenEnum::Known(OpState::Failed);
+        row.entry.record.error = Some(error);
+        self.update(row)
     }
 
     pub(super) fn permitted(

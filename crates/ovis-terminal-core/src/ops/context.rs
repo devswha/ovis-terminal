@@ -14,6 +14,9 @@ use super::{OP_RETENTION_MS, OperationError, OperationEvent, OperationSnapshot, 
 use crate::events::{Commit, Coordinator, EventData, ResourceId, SnapshotProducer};
 use crate::registry::RuntimeIdentity;
 
+#[cfg(test)]
+mod tests;
+
 /// Authenticated principal, owning runtime and boundary-supplied clock reading.
 #[derive(Debug, Clone)]
 pub struct Context {
@@ -79,6 +82,15 @@ where
     ///
     /// Returns `op_reused`, `op_expired`, bounded admission or persistence errors.
     pub fn accept(&self, request: &Request) -> Result<OpRecord, OperationError> {
+        loop {
+            match self.accept_once(request) {
+                Err(error) if error.is_conflict() => {}
+                outcome => return outcome,
+            }
+        }
+    }
+
+    fn accept_once(&self, request: &Request) -> Result<OpRecord, OperationError> {
         let mut snapshot = self.snapshot()?;
         let key = OperationKey::new(&self.context.principal, &request.op_id)?;
         if let Some(row) = snapshot.rows.iter().find(|row| row.key == key) {
@@ -183,10 +195,7 @@ where
     }
 
     pub(super) fn update(&self, row: Row) -> Result<OpRecord, OperationError> {
-        let bytes = serde_json::to_vec(&row.entry)?;
-        if bytes.len() > 16 << 10 {
-            return Err(OperationError::TooLarge);
-        }
+        let bytes = encode_entry(&row.entry)?;
         let write = CasWrite::new(
             row.key.resource(self.context.identity.runtime_id()),
             Version::new(row.version.get()),
@@ -237,4 +246,12 @@ where
             _ => Ok(row.entry.record),
         }
     }
+}
+
+fn encode_entry(entry: &Entry) -> Result<Vec<u8>, OperationError> {
+    let bytes = serde_json::to_vec(entry)?;
+    if bytes.len() > 16 << 10 {
+        return Err(OperationError::TooLarge);
+    }
+    Ok(bytes)
 }

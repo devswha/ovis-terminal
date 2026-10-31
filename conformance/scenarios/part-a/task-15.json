@@ -50,7 +50,17 @@
       "assertions": [
         "accepted cancellation persists and never grants execution after reopen",
         "running cancellation returns pending and cannot retract committed work",
-        "failed records and typed error kinds survive reopen"
+        "failed records and typed error kinds survive reopen",
+        "a proven running failure remains failed after reboot and cancellation returns cancelled_before_commit"
+      ]
+    },
+    {
+      "class": "concurrent admission",
+      "test": "admission",
+      "assertions": [
+        "eight identical concurrent accepts return eight identical inspectable records",
+        "execution permission still produces exactly one real effect",
+        "eight changed payloads produce one winning record and seven op_reused errors carrying that record"
       ]
     },
     {
@@ -77,6 +87,23 @@
       "assertions": [
         "inspection cannot expose Applied rows before COMMIT",
         "snapshot revision and operation event revision equal the committed receipt"
+      ]
+    },
+    {
+      "class": "snapshot accessor mutation",
+      "test": "inspection::inspection_enforces_the_snapshot_lease_byte_budget",
+      "assertions": [
+        "read-only inspection enforces the configured pinned-snapshot byte budget",
+        "replacing SnapshotLease and SnapshotAssembler with direct store capture makes the shipped test fail"
+      ]
+    },
+    {
+      "class": "exact admission bounds",
+      "test": "bounds and context unit tests",
+      "assertions": [
+        "1024 retained operations are accepted and operation 1025 returns backpressure without eviction",
+        "a 16384-byte persisted receipt is accepted and 16385 bytes returns too_large",
+        "262144-byte canonical params are accepted and 262145 bytes returns too_large"
       ]
     },
     {

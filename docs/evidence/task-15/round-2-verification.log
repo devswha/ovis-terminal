@@ -1,0 +1,39 @@
+AdversarialVerify round 2 local verification
+Platform: Linux 7.0.0-38-generic x86_64
+
+$ cargo nextest run -p ovis-terminal-core
+Nextest run ID: 9a0fc331-9cfc-4981-b1b8-824910409fc9
+Summary: 66 tests run; 66 passed; 0 skipped
+Capacity boundary: PASS in 122.608s
+EXIT_CODE=0
+
+$ cargo clippy -p ovis-terminal-core --all-targets -- -D warnings
+Finished dev profile with no warnings.
+EXIT_CODE=0
+
+$ cargo test -p ovis-terminal-core --test ops happy -- --exact --nocapture
+holder_bytes=[65,82,77,69,68,13,10,69,70,70,69,67,84,58,111,110,101,13,10]
+test result: ok. 1 passed; 0 failed; 22 filtered out
+EXIT_CODE=0
+
+$ cargo test -p ovis-terminal-core --test ops failure -- --exact --nocapture
+reused=op_reused; expired=op_expired; state=outcome_unknown
+test result: ok. 1 passed; 0 failed; 22 filtered out
+EXIT_CODE=0
+
+$ bash scripts/check.sh
+fmt: PASS
+workspace clippy: PASS
+workspace nextest: 326 passed; 1 existing subprocess fixture skipped
+doctests: PASS
+workspace-hygiene: 0 violations in 332 files
+manifests: 16 checked
+JSON: 31 checked
+check.sh: all steps passed
+EXIT_CODE=0
+
+Mutation evidence:
+docs/evidence/task-15/mutation-accessor.log records the direct-store accessor
+mutation failing inspection::inspection_enforces_the_snapshot_lease_byte_budget
+with exit 101. The production SnapshotLease/page/SnapshotAssembler accessor was
+restored and passed both focused and full gates.

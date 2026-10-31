@@ -172,8 +172,6 @@ pub enum CancelOutcome {
     CancelledBeforeCommit,
     /// The committed outcome cannot be undone.
     AlreadyCommitted,
-    /// The retained record is terminal and was not changed.
-    AlreadyFinished,
     /// Work may have begun; inspect the operation rather than replaying it.
     Pending,
 }

@@ -19,8 +19,12 @@ use uuid::Uuid;
 type TestResult = Result<(), Box<dyn Error>>;
 type Core = Coordinator<OperationEvent, OperationProducer>;
 
+#[path = "../src/ops/qa/admission.rs"]
+mod admission;
 #[path = "../src/ops/qa/adversarial.rs"]
 mod adversarial;
+#[path = "../src/ops/qa/bounds.rs"]
+mod bounds;
 #[path = "../src/ops/qa/concurrency.rs"]
 mod concurrency;
 #[cfg(unix)]

@@ -6,6 +6,8 @@ absent (GAP-013, GAP-144, GAP-147). No comparable new-runtime capability is clai
 
 Persisted accepted, running, committed, failed, cancelled and outcome_unknown records through the existing event coordinator. The principal/runtime/op_id key binds method plus canonical parameters. Identical retries return the retained outcome; changed work returns op_reused with the prior receipt; expired UUIDv7 IDs cannot execute as fresh work. The advertised window is 86400000 ms after acceptance. Intent commits before a single-use running permission is granted. Actual holder write and exit evidence are independent facts. SQLite does not roll back a PTY write.
 
+AdversarialVerify round 1 corrections make concurrent admission a join rather than a leaked CAS conflict: eight identical callers receive the same inspectable record and still obtain one execution permission, while changed payloads under the same ID receive op_reused with the winning receipt. A running permit can now be consumed by a proven no-effect failure, preserving its typed error across reboot; cancellation of that Failed record returns cancelled_before_commit. The read-only accessor has a shipped lease-byte-budget regression that fails if SnapshotLease/SnapshotAssembler are replaced by direct store capture.
+
 **DEFERRED VERIFICATION (runner lands in Todo 21).** The actual command below exited 2. No assembled CLI/socket success is claimed. Rerun the checked-in part-a/task-15 scenario after assembly.
 
 Platform: Linux 7.0.0-38-generic, x86_64. Cargo 1.99.1; rustc 1.99.1.
@@ -51,12 +53,15 @@ The happy case asserts exactly one EFFECT:one marker, four acknowledged input by
 ## QA
 
 - `cargo clippy -p ovis-terminal-core --all-targets -- -D warnings`: exit 0.
-- `cargo nextest run -p ovis-terminal-core`: exit 0; 59 passed, 0 skipped, including 17 assertion-bearing operation tests.
+- `cargo nextest run -p ovis-terminal-core`: exit 0; 66 passed, 0 skipped, including 24 operation-focused tests.
 - Both exact named QA commands above: exit 0; each ran one assertion-bearing case.
-- `bash scripts/check.sh`: exit 0; workspace Clippy, formatting, 319 passing tests, doctests, 0 hygiene violations across 329 files, and JSON validation. The one existing ignored test is ovis-terminal-store::transactions::crash_child, a subprocess fixture invoked by its parent crash tests, not a disabled operation test.
+- `bash scripts/check.sh`: exit 0; workspace Clippy, formatting, 326 passing tests, doctests, 0 hygiene violations across 332 files, and 31 JSON artifacts validated. The one existing ignored test is ovis-terminal-store::transactions::crash_child, a subprocess fixture invoked by its parent crash tests, not a disabled operation test.
 - TDD began with the new ops integration target failing on absent operation types, exit 101; see tdd-red.log. Intermediate strict-gate failures were fixed without suppressing or weakening tests. The final full log is verification.log.
 - Regenerated schema/ovis-terminal.openrpc.json; released.openrpc.json is unchanged. Existing compatibility/catalog tests and three new cancellation contract tests pass, including unknown future outcome tokens and numeric-counter rejection.
 - Property tests exercise 32 arbitrary decimal revisions and 32 generated real-store reopen/retry cases. Existing wire/holder fragmentation properties also pass in the full gate.
+- Concurrent admission regressions deterministically force eight callers to capture the same empty revision: identical payloads return eight equal records and one effect; changed payloads return one record plus seven receipt-bearing op_reused errors.
+- Exact shipped bounds cover 1024 accepted operations versus backpressure at 1025, a 16384-byte persisted receipt versus too_large at 16385, and 262144-byte canonical params versus too_large at 262145.
+- `inspection::inspection_enforces_the_snapshot_lease_byte_budget` passes on the production accessor. Replacing it with direct store capture makes that test fail; the mutation transcript is `docs/evidence/task-15/mutation-accessor.log`.
 
 ## Adversarial
 
@@ -66,6 +71,8 @@ The happy case asserts exactly one EFFECT:one marker, four acknowledged input by
 - An Applied barrier holds a transaction before COMMIT: inspection cannot expose its revision. The eventual snapshot, event envelope and embedded operation sequence equal the committed receipt.
 - Principal isolation, canonical object-key reuse, changed arrays/methods, 24-hour expiry, and a persisted acceptance floor across pruning/reopen/clock rollback are asserted.
 - Foreign holder sequence/target evidence returns stale_target. Missing delivery proof cannot become committed input success. Actual InputWritten and Exit are independent facts.
+- A proven holder/spawn rejection after running intent persists Failed plus its typed error through reboot instead of becoming outcome_unknown. Cancelling that known no-effect failure preserves the Failed record and returns cancelled_before_commit.
+- The snapshot accessor honors the pinned representation byte budget; a direct-store implementation bypasses the bound and is killed by the shipped mutation test.
 
 ## Contract checklist
 
@@ -73,8 +80,8 @@ The happy case asserts exactly one EFFECT:one marker, four acknowledged input by
 2. The operation boundary uses thiserror::Error with stable kind()/hint() and retained source errors. Failed transitions carry the operation ID.
 3. Principal, runtime, boot, method and operation identities reuse landed types. Holder write sequence, grant/fence/ack epochs, byte counts and offsets remain distinct semantic types.
 4. Tests assert effects, transitions, receipts, rejections, commit visibility and actual store reopen behavior. No prose-pinning tests or mocked operation store/holder.
-5. No allow attributes, crate-wide expectations, placeholder TODOs or weakened tests. One function-scoped needless_pass_by_value expectation documents intentional consumption of the single-use uncertain-effect permission.
-6. Conformance exit 2 is recorded verbatim and is DEFERRED-BY-PLAN until Todo 21, not reported as a pass.
+5. No allow attributes, crate-wide expectations, placeholder TODOs or weakened tests. Two function-scoped needless_pass_by_value expectations document intentional consumption of the single-use effect permission for proven-failure and uncertain-outcome transitions.
+6. Conformance exit 2 is recorded verbatim and is DEFERRED-BY-PLAN until Todo 21, not reported as a pass. Cancellation exposes only cancelled_before_commit, already_committed or pending, matching IDEAL-011.
 
 ## Seams
 
@@ -82,6 +89,7 @@ The happy case asserts exactly one EFFECT:one marker, four acknowledged input by
 - crates/ovis-terminal-core/src/events/record.rs:123 adds EventData::at_sequence; coordinator.rs:178 stamps embedded operation revisions under the existing commit exclusion boundary before durable serialization. The store remains the sequence allocator. The barrier test asserts embedded and envelope revisions agree. Composite assembly event enums must forward this hook.
 - crates/ovis-terminal-protocol/src/schema/methods/server/receipt.rs:43 adds optional typed OperationEvidence to OpRecord without changing released field names. Types remain re-exported from methods::server.
 - crates/ovis-terminal-protocol/src/schema/methods/server/operation.rs:184 adds OpCancelResult: all released OpRecord fields remain flattened, plus an open typed cancellation outcome. Supporting evidence is typed, not a string blob. The event catalog adds accepted/running/cancelled/outcome_unknown. Generated OpenRPC, the additive fixture and contract tests are included.
+- crates/ovis-terminal-core/src/ops/context.rs retries typed compare-and-swap conflicts by rereading the committed ledger. This converges identical submissions on the retained record and classifies changed work from the winner rather than returning a receipt-less store conflict.
 
 ## Risks
 

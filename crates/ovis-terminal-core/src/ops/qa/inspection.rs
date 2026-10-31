@@ -12,6 +12,31 @@ use super::{
 };
 
 #[test]
+fn inspection_enforces_the_snapshot_lease_byte_budget() -> TestResult {
+    // Given a coordinator whose pinned-snapshot budget cannot hold its typed representation.
+    let fixture = Fixture::new();
+    let identity = identity(1)?;
+    let mut limits = ovis_terminal_core::events::Limits::default();
+    limits.snapshot_bytes = 1;
+    let core: super::Core = Coordinator::new(
+        Store::open(&fixture.0, StoreOptions::default())?,
+        identity,
+        OperationProducer::new(identity.runtime_id()),
+    )
+    .with_limits(limits)?;
+
+    // When read-only operation inspection uses its production accessor.
+    let error = core
+        .read_snapshot()
+        .expect_err("snapshot lease budget must apply");
+
+    // Then the lease/paging path rejects before exposing a direct store capture.
+    assert_eq!(error.kind(), "limit_exceeded");
+    core.close()?;
+    Ok(())
+}
+
+#[test]
 fn inspection_exposes_only_a_committed_revision() -> TestResult {
     // Given a writer suspended after its rows change but before COMMIT.
     let fixture = Fixture::new();

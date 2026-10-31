@@ -19,7 +19,7 @@
     {
       "command": "cargo nextest run -p ovis-terminal-core",
       "exit": 0,
-      "passed": "59",
+      "passed": "66",
       "skipped": "0"
     },
     {
@@ -35,10 +35,47 @@
     {
       "command": "bash scripts/check.sh",
       "exit": 0,
-      "workspace_passed": "319",
+      "workspace_passed": "326",
       "existing_child_fixtures_skipped": "1",
       "hygiene_violations": "0",
-      "hygiene_files": "329"
+      "hygiene_files": "332",
+      "json_files": "31"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops admission::concurrent_identical_accepts_return_one_record_and_grant_one_effect -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops admission::concurrent_changed_payloads_return_the_winner_and_seven_reuse_errors -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops adversarial::running_failure_is_durable_and_cancellation_reports_no_effect -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops inspection::inspection_enforces_the_snapshot_lease_byte_budget -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1",
+      "mutation": "direct store capture fails this assertion; see mutation-accessor.log"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops bounds::capacity_accepts_1024_and_rejects_1025_without_eviction -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops bounds::canonical_parameters_accept_262144_bytes_and_reject_262145 -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core ops::context::tests::persisted_receipt_accepts_16384_bytes_and_rejects_16385 -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
     }
   ],
   "deduplication_window_ms": "86400000",

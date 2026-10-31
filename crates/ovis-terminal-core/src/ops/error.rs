@@ -2,6 +2,7 @@
 
 use ovis_terminal_protocol::errors::OpId;
 use ovis_terminal_protocol::schema::methods::server::OpRecord;
+use ovis_terminal_store::StoreError;
 
 use crate::events::EventError;
 
@@ -125,5 +126,16 @@ impl OperationError {
             Self::Reused(record) | Self::Settled(record) => Some(&record.op_id),
             _ => None,
         }
+    }
+
+    pub(super) const fn is_conflict(&self) -> bool {
+        matches!(
+            self,
+            Self::Event(EventError::Store(StoreError::Conflict { .. }))
+                | Self::Transition {
+                    source: EventError::Store(StoreError::Conflict { .. }),
+                    ..
+                }
+        )
     }
 }

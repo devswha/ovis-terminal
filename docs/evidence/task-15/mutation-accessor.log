@@ -1,0 +1,18 @@
+$ cargo test -p ovis-terminal-core --test ops inspection::inspection_enforces_the_snapshot_lease_byte_budget -- --exact --nocapture
+# mutation: Coordinator::read_snapshot replaced SnapshotLease/page/SnapshotAssembler with direct state.store.snapshot() + producer.capture()
+
+running 1 test
+test inspection::inspection_enforces_the_snapshot_lease_byte_budget ... FAILED
+
+failures:
+
+---- inspection::inspection_enforces_the_snapshot_lease_byte_budget stdout ----
+thread 'inspection::inspection_enforces_the_snapshot_lease_byte_budget' panicked:
+snapshot lease budget must apply: StateSnapshot { cursor: Cursor { machine_id: MachineId(00000000-0000-0000-0000-000000000001), runtime_id: RuntimeId(1), seq: EventSeq(DecimalU64(0)) }, sections: OperationSnapshot { index: Index { floor: TimestampMs(DecimalU64(0)), keys: [] }, version: RecordVersion(DecimalU64(0)), rows: [] } }
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 22 filtered out
+EXIT_CODE=101
+
+# restoration verification
+# The production SnapshotLease/page/SnapshotAssembler implementation was restored with apply_patch.
+# A subsequent focused run passed before the full repository gate.

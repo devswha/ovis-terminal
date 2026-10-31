@@ -60,9 +60,47 @@ fn failure_and_completion_remain_queryable_and_cancellation_never_undoes_them() 
     // Then the original typed failure remains inspectable and cannot start again.
     assert_eq!(
         cancelled.outcome,
-        OpenEnum::Known(CancelOutcome::AlreadyFinished)
+        OpenEnum::Known(CancelOutcome::CancelledBeforeCommit)
     );
     assert_eq!(cancelled.operation, failed);
+    assert_eq!(operations.accept(&req)?, failed);
+    assert_eq!(
+        failed.error.as_ref().map(|error| error.kind.token()),
+        Some("spawn_failed")
+    );
+    assert!(operations.start(req.op_id()).is_err());
+    core.close()?;
+    Ok(())
+}
+
+#[test]
+fn running_failure_is_durable_and_cancellation_reports_no_effect() -> TestResult {
+    use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind};
+
+    // Given an operation whose intent committed before a holder rejected the work.
+    let fixture = Fixture::new();
+    let core = fixture.open(1)?;
+    let operations = Operations::new(&core, context(1)?);
+    let req = request("missing-program")?;
+    operations.accept(&req)?;
+    let permit = operations.start(req.op_id())?;
+    let error = BoundaryError::domain(ErrorKind::from("spawn_failed".to_owned()), false)
+        .with_op_id(req.op_id().clone());
+
+    // When the proven no-effect failure is committed and the core reopens.
+    let failed = operations.fail_running(permit, error.data().clone())?;
+    assert_eq!(failed.state, OpenEnum::Known(OpState::Failed));
+    core.close()?;
+    let core = fixture.open(2)?;
+    let operations = Operations::new(&core, context(2)?);
+    let cancellation = operations.cancel(req.op_id())?;
+
+    // Then failure facts remain queryable and cancellation claims only that no effect began.
+    assert_eq!(
+        cancellation.outcome,
+        OpenEnum::Known(CancelOutcome::CancelledBeforeCommit)
+    );
+    assert_eq!(cancellation.operation, failed);
     assert_eq!(operations.accept(&req)?, failed);
     assert_eq!(
         failed.error.as_ref().map(|error| error.kind.token()),
