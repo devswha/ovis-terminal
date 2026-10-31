@@ -140,7 +140,7 @@ What each test asserts:
 - **Repeated interruptions (filter replacement never kills peers):**
   - `happy` and `independence` cover replace, unsubscribe and the limit.
   - The whole subscription test binary ran 100 consecutive times, 16 threads per run, with 0 failures (`stress-100.log`).
-  - The macOS stress job `subscriptions` repeats the suite 100 times: RUN_URL_PLACEHOLDER.
+  - The macOS stress job `subscriptions` repeats the suite 100 times: https://github.com/devswha/ovis-terminal/actions/runs/41211905797 (triggered on 4c5ea95; result reported in the DoneClaim).
 - **Timing:** there are no fixed sleeps. Every wait registers first (witness subscriptions, gate channels) and is bounded at 5 s. Only the heartbeat test measures time, because time is the behaviour under test.
 
 ## Contract checklist
