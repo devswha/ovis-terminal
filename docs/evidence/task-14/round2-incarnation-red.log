@@ -1,0 +1,41 @@
+    Blocking waiting for file lock on build directory
+   Compiling ovis-terminal-authz v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t14/crates/ovis-terminal-authz)
+   Compiling ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t14/crates/ovis-terminal-core)
+   Compiling ovis-terminal-agent v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t14/crates/ovis-terminal-agent)
+   Compiling ovis-terminal-services v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t14/crates/ovis-terminal-services)
+   Compiling ovis-terminal-remote v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t14/crates/ovis-terminal-remote)
+   Compiling ovis-terminal-agent-adapters v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t14/crates/ovis-terminal-agent-adapters)
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t14/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.14s
+     Running tests/dispatch.rs (target/debug/deps/dispatch-c42f9e89dd7d8f77)
+
+running 1 test
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793424157004","version":"0.1.0"}}
+
+-> {"id":"stale","jsonrpc":"2.0","method":"terminal.kill","params":{"escalation":{"hup_ms":"0","term_ms":"0"},"expect":{"terminal_incarnation":"1"},"op_id":"01a19068-e94d-7630-81ba-d96fc760611a","target":{"terminal_id":"terminal:2"}}}
+<- {"jsonrpc":"2.0","id":"stale","result":{"incarnation":"2","observed":"unknown"}}
+
+-> {"id":"stale-op","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19068-e94d-7630-81ba-d96fc760611a"}}
+<- {"jsonrpc":"2.0","id":"stale-op","result":{"error":null,"method":"terminal.kill","op_id":"01a19068-e94d-7630-81ba-d96fc760611a","result":{"incarnation":"2","observed":"unknown"},"state":"committed","updated_seq":"3"}}
+
+-> {"id":"current","jsonrpc":"2.0","method":"terminal.kill","params":{"escalation":{"hup_ms":"0","term_ms":"0"},"expect":{"terminal_incarnation":"2"},"op_id":"01a19068-e95c-7359-9837-566faec15bd0","target":{"terminal_id":"terminal:2"}}}
+<- {"jsonrpc":"2.0","id":"current","result":{"incarnation":"2","observed":"unknown"}}
+
+
+thread 'incarnation::stale_incarnation_is_rejected_before_admission_or_effect' (1213786) panicked at crates/ovis-terminal-server/tests/../src/dispatch/qa/incarnation.rs:66:5:
+assertion `left == right` failed
+  left: ""
+ right: "stale_target"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test incarnation::stale_incarnation_is_rejected_before_admission_or_effect ... FAILED
+
+failures:
+
+failures:
+    incarnation::stale_incarnation_is_rejected_before_admission_or_effect
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `-p ovis-terminal-server --test dispatch`
+
+EXIT_CODE=101

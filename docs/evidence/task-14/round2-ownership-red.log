@@ -1,0 +1,42 @@
+    Blocking waiting for file lock on build directory
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.21s
+     Running tests/dispatch.rs (target/debug/deps/dispatch-c42f9e89dd7d8f77)
+
+running 1 test
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793423900537","version":"0.1.0"}}
+
+-> {"id":"denied","jsonrpc":"2.0","method":"doc.set","params":{"name":"other","op_id":"01a19064-ff79-77e2-9b79-abd5f2392872","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"denied","error":{"code":-32000,"message":"operation failed","data":{"kind":"forbidden","hint":"ask an administrator for a grant covering this target","retryable":false}}}
+
+-> {"id":"allowed","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19064-ff79-77e2-9b79-abd63fe601b2","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"allowed","result":{"op_id":"01a19064-ff79-77e2-9b79-abd63fe601b2","value":"payload","version":"0"}}
+
+-> {"id":"inspect","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19064-ff79-77e2-9b79-abd63fe601b2"}}
+<- {"jsonrpc":"2.0","id":"inspect","result":{"error":null,"method":"doc.set","op_id":"01a19064-ff79-77e2-9b79-abd63fe601b2","result":{"op_id":"01a19064-ff79-77e2-9b79-abd63fe601b2","value":"payload","version":"0"},"state":"committed","updated_seq":"3"}}
+
+-> {"id":"cancel","jsonrpc":"2.0","method":"op.cancel","params":{"op_id":"01a19064-ff79-77e2-9b79-abd63fe601b2"}}
+<- {"jsonrpc":"2.0","id":"cancel","result":{"error":null,"method":"doc.set","op_id":"01a19064-ff79-77e2-9b79-abd63fe601b2","outcome":"already_committed","result":{"op_id":"01a19064-ff79-77e2-9b79-abd63fe601b2","value":"payload","version":"0"},"state":"committed","updated_seq":"3"}}
+
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793423900557","version":"0.1.0"}}
+
+-> {"id":"foreign","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19064-ff79-77e2-9b79-abd63fe601b2"}}
+<- {"jsonrpc":"2.0","id":"foreign","error":{"code":-32000,"message":"operation failed","data":{"kind":"not_found","hint":"query an operation accepted by this principal in this runtime","retryable":false,"op_id":"01a19064-ff79-77e2-9b79-abd63fe601b2"}}}
+
+
+thread 'authority::resource_scope_is_checked_before_handlers_and_receipts_are_principal_bound' (1181872) panicked at crates/ovis-terminal-server/tests/../src/dispatch/qa/authority.rs:96:9:
+assertion `left == right` failed
+  left: "not_found"
+ right: "forbidden"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test authority::resource_scope_is_checked_before_handlers_and_receipts_are_principal_bound ... FAILED
+
+failures:
+
+failures:
+    authority::resource_scope_is_checked_before_handlers_and_receipts_are_principal_bound
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `-p ovis-terminal-server --test dispatch`
+
+EXIT_CODE=101

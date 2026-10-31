@@ -1,0 +1,42 @@
+{
+  "scenario": "part-a/task-14",
+  "todo": 14,
+  "title": "Strict typed dispatch with inspectable deadline and cancellation outcomes",
+  "closes": ["GAP-008", "GAP-011", "GAP-012", "GAP-134"],
+  "delivers": ["IDEAL-008", "IDEAL-009", "IDEAL-010", "IDEAL-011", "IDEAL-107"],
+  "runner": "shell",
+  "note": "DEFERRED VERIFICATION (runner lands in Todo 21). Component tests use the real Unix connection, authority, registry resolver, SQLite operation coordinator and filesystem effects. Domain test adapters are fixtures, not implementations of the document or terminal services. The binding deadline override requires a deadline_exceeded error, never success-shaped pending.",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        "Start the assembled binary in isolated state and authenticate one persistent connection.",
+        "Submit a registered mutation whose preparation is held at a named precommit barrier.",
+        "Use an unrelated op.get status request on the same connection and assert its accepted state arrives before the held mutation settles.",
+        "At the advertised default 10000 ms, assert exactly one error for the held request: kind deadline_exceeded, op_id, deadline_ms as canonical decimal string, elapsed_ms as canonical decimal string.",
+        "Release the barrier and inspect the same op_id until its committed event arrives; assert the actual effect and retained result, with no second reply to the original request.",
+        "Record literal requests, replies, process identities, expected bytes, monotonic duration, OS/architecture and exit status."
+      ]
+    },
+    {
+      "case": "failure",
+      "inject": {"jsonrpc":"2.0","id":"bad","method":"pane.split","params":{"pane_id":"p2","op_id":"01800000-0000-7000-8000-000000000001"}},
+      "steps": [
+        "Reject the unavailable legacy method as method_not_found at method, without advertising it in hello.",
+        "Send an unknown targeting field to a registered typed method; assert invalid_params at the offending params path and no admitted operation or wrong-target effect.",
+        "Resolve an ambiguous name and assert fully qualified candidates without acting.",
+        "Cancel at the before-commit barrier and assert cancelled_before_commit with no effect.",
+        "Cancel after running intent and assert pending without a rollback claim.",
+        "Cancel after durable commit and assert already_committed with the retained receipt.",
+        "Revoke a credential between admission and the effect boundary; assert credential_revoked and no effect."
+      ]
+    }
+  ],
+  "adversarial_cases": [
+    {"class":"malformed input","assertions":["unknown nested target field rejected before handler","numeric version rejected","noncanonical UUIDv7 rejected with field path"]},
+    {"class":"cancel/resume","assertions":["before-commit cancellation prevents effects","after-start cancellation retains uncertainty","after-commit cancellation preserves receipt","disconnect does not abandon accepted work"]},
+    {"class":"hung commands","assertions":["deadline produces error and durable operation handle","timed-out work retains per-connection permits","reserved op.get and op.cancel capacity remains available"]},
+    {"class":"misleading success","assertions":["no focused-target fallback","unregistered methods excluded from hello","exactly one terminal response per accepted request","errors after effects retain outcome_unknown"]},
+    {"class":"principal scope","assertions":["authorization precedes domain execution","commit rechecks revocation","operation inspection is principal-bound","own operations remain inspectable with resource-scoped grants"]}
+  ]
+}
