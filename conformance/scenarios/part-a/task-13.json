@@ -1,0 +1,533 @@
+{
+  "scenario": "part-a/task-13",
+  "todo": 13,
+  "title": "Serve authenticated persistent endpoints and negotiated hello",
+  "closes": [
+    "GAP-001",
+    "GAP-002",
+    "GAP-003",
+    "GAP-004",
+    "GAP-005",
+    "GAP-017",
+    "GAP-120"
+  ],
+  "delivers": [
+    "IDEAL-001",
+    "IDEAL-002",
+    "IDEAL-003",
+    "IDEAL-004",
+    "IDEAL-005",
+    "IDEAL-014",
+    "IDEAL-102"
+  ],
+  "runner": "shell",
+  "note": "Component tests drive a real Unix socket served by ovis-terminal-server. The real-binary socket transcript is deferred until the conformance runner and binary assembly land (todos 21 and 31); this scenario does not claim that deferred run.",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "happy",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test happy ... ok",
+              "test result: ok. 1 passed; 0 failed"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--lib",
+            "conn::core::tests::framed_upgrade_parses_identically_under_every_split",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test conn::core::tests::framed_upgrade_parses_identically_under_every_split ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "descriptor::the_override_wins_and_is_reported_as_such",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test descriptor::the_override_wins_and_is_reported_as_such ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "descriptor::windows_names_a_local_pipe_per_user_and_session",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test descriptor::windows_names_a_local_pipe_per_user_and_session ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "endpoint::a_bound_socket_and_its_directory_are_private",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test endpoint::a_bound_socket_and_its_directory_are_private ... ok"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "failure",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test failure ... ok",
+              "test result: ok. 1 passed; 0 failed"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--lib",
+            "conn::core::tests::refused_generation_does_not_upgrade_the_bytes_behind_it",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test conn::core::tests::refused_generation_does_not_upgrade_the_bytes_behind_it ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--lib",
+            "conn::core::tests::generation_is_an_exact_decimal_string",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test conn::core::tests::generation_is_an_exact_decimal_string ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--lib",
+            "conn::core::tests::foreign_peer_is_answered_with_its_refusal_and_closed",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test conn::core::tests::foreign_peer_is_answered_with_its_refusal_and_closed ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "adversarial::credentials_are_checked_before_hello_exposes_identity",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test adversarial::credentials_are_checked_before_hello_exposes_identity ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "adversarial::requests_beyond_the_in_flight_bound_get_backpressure_and_cancel_on_shutdown",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test adversarial::requests_beyond_the_in_flight_bound_get_backpressure_and_cancel_on_shutdown ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "adversarial::unknown_frame_kind_after_upgrade_closes_with_its_kind",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test adversarial::unknown_frame_kind_after_upgrade_closes_with_its_kind ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "adversarial::correlatable_bad_requests_are_answered_and_the_rest_close",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test adversarial::correlatable_bad_requests_are_answered_and_the_rest_close ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "adversarial::a_second_hello_and_a_duplicate_in_flight_id_are_refused",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test adversarial::a_second_hello_and_a_duplicate_in_flight_id_are_refused ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "endpoint::a_live_socket_is_never_taken_over",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test endpoint::a_live_socket_is_never_taken_over ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "endpoint::a_stale_socket_is_replaced_and_a_plain_file_never_is",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test endpoint::a_stale_socket_is_replaced_and_a_plain_file_never_is ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "endpoint::a_directory_other_accounts_can_enter_is_refused",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test endpoint::a_directory_other_accounts_can_enter_is_refused ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "endpoint::a_socket_that_never_answers_hello_is_unreachable",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test endpoint::a_socket_that_never_answers_hello_is_unreachable ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "endpoint::a_rejected_probe_reports_the_typed_refusal",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test endpoint::a_rejected_probe_reports_the_typed_refusal ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-server",
+            "--test",
+            "connection",
+            "descriptor::unsafe_values_are_refused_before_anything_is_touched",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test descriptor::unsafe_values_are_refused_before_anything_is_touched ... ok"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "adversarial_cases": [
+    {
+      "class": "malformed input",
+      "name": "hello generation 999, numeric, non-canonical and u64::MAX+1 generations",
+      "test": "conn::core::tests::generation_is_an_exact_decimal_string + failure",
+      "expected": {
+        "kind": "unsupported_generation|invalid_params",
+        "mutations": 0
+      }
+    },
+    {
+      "class": "malformed input",
+      "name": "unknown frame kind after the framed upgrade",
+      "test": "adversarial::unknown_frame_kind_after_upgrade_closes_with_its_kind",
+      "expected": {
+        "closing_reason": "unknown_kind"
+      }
+    },
+    {
+      "class": "malformed input",
+      "name": "bad envelope with a string id, then a line that is not JSON",
+      "test": "adversarial::correlatable_bad_requests_are_answered_and_the_rest_close",
+      "expected": {
+        "kind": "invalid_request",
+        "closing_reason": "parse_error"
+      }
+    },
+    {
+      "class": "stale state",
+      "name": "socket path nobody listens on, or a plain marker file",
+      "test": "failure + endpoint::a_stale_socket_is_replaced_and_a_plain_file_never_is",
+      "expected": {
+        "state": "stale_endpoint",
+        "processes_started": 0
+      }
+    },
+    {
+      "class": "stale state",
+      "name": "reconnect after a control-server restart",
+      "test": "happy",
+      "expected": {
+        "continuity": "control_restarted",
+        "runtime_lifetime": "unchanged"
+      }
+    },
+    {
+      "class": "stale state",
+      "name": "expired, forged and absent credentials",
+      "test": "adversarial::credentials_are_checked_before_hello_exposes_identity",
+      "expected": {
+        "kind": "credential_expired|invalid_credential|unauthenticated",
+        "identity_exposed": false
+      }
+    },
+    {
+      "class": "cancel/resume",
+      "name": "hello split at every byte with framed bytes behind it, and a half hello",
+      "test": "conn::core::tests::framed_upgrade_parses_identically_under_every_split + conn::core::tests::partial_hello_establishes_nothing_until_its_line_completes",
+      "expected": {
+        "steps": [
+          "ok:h",
+          "upgrade",
+          "dispatch:r1",
+          "dispatch:r2"
+        ]
+      }
+    },
+    {
+      "class": "cancel/resume",
+      "name": "held requests at the in-flight bound when the server shuts down",
+      "test": "adversarial::requests_beyond_the_in_flight_bound_get_backpressure_and_cancel_on_shutdown",
+      "expected": {
+        "kind": "backpressure",
+        "cancelled": "all",
+        "closing_reason": "server_shutdown"
+      }
+    }
+  ]
+}
