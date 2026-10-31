@@ -121,7 +121,7 @@ async fn server(gate: Arc<Gate>) -> (SocketRoot, ServerHandle, String) {
     )
     .unwrap();
     let endpoint = UnixEndpoint::bind(&root.0.join("s.sock")).await.unwrap();
-    let (signal, shutdown) = watch::channel(false);
+    let (signal, shutdown) = watch::channel(None);
     let (progress, observed) = watch::channel(ServeReport::default());
     let serving = Serving {
         connections,

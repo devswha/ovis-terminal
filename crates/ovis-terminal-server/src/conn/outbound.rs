@@ -6,7 +6,7 @@ use ovis_terminal_protocol::rpc::{DecimalU64, RpcReply};
 use serde::Serialize;
 use serde_json::Value;
 use thiserror::Error;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 
 use super::ConnectionError;
 use super::budget::Budget;
@@ -23,6 +23,19 @@ pub(super) struct Closing {
     limit_bytes: Option<DecimalU64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     queued_bytes: Option<DecimalU64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    incarnations_preserved: Option<bool>,
+}
+
+/// Why a server ends every connection it serves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Ending {
+    /// The server stops.
+    Shutdown,
+    /// A planned control restart: held programs keep their incarnations and a successor
+    /// serves the same endpoint under a new boot identity.
+    Restart,
 }
 
 impl Closing {
@@ -31,7 +44,25 @@ impl Closing {
         hint: "reconnect once the server is running again",
         limit_bytes: None,
         queued_bytes: None,
+        incarnations_preserved: None,
     };
+
+    pub(super) const SERVER_RESTART: Self = Self {
+        reason: "server_restart",
+        hint: "reconnect to the same endpoint; hello reports the new server_boot_id and the server.restart receipt lists every preserved incarnation",
+        limit_bytes: None,
+        queued_bytes: None,
+        incarnations_preserved: Some(true),
+    };
+
+    /// The closing record a server ending (`None` until one is signalled) sends.
+    pub(super) fn ending(ending: &watch::Receiver<Option<Ending>>) -> Self {
+        let ending = *ending.borrow();
+        match ending {
+            Some(Ending::Restart) => Self::SERVER_RESTART,
+            Some(Ending::Shutdown) | None => Self::SERVER_SHUTDOWN,
+        }
+    }
 
     pub(super) fn of(error: &ConnectionError) -> Self {
         let (limit_bytes, queued_bytes) =
@@ -48,6 +79,7 @@ impl Closing {
             hint: error.hint(),
             limit_bytes,
             queued_bytes,
+            incarnations_preserved: None,
         }
     }
 }

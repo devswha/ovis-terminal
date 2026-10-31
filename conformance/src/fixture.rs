@@ -7,10 +7,14 @@
 #[cfg(unix)]
 pub mod agents;
 #[cfg(unix)]
+pub mod bridge;
+#[cfg(unix)]
 pub mod documents;
 #[cfg(unix)]
 pub mod handler;
 pub mod launch;
+#[cfg(unix)]
+pub mod launches;
 #[cfg(unix)]
 pub mod output;
 #[cfg(unix)]
@@ -20,9 +24,13 @@ pub mod prompts;
 #[cfg(unix)]
 pub mod serve;
 #[cfg(unix)]
+pub mod template_lane;
+#[cfg(unix)]
 pub mod terminals;
 #[cfg(unix)]
 pub mod transcripts;
+#[cfg(unix)]
+pub mod tree;
 pub mod wire;
 
 #[cfg(unix)]

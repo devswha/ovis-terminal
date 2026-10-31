@@ -188,13 +188,31 @@ impl TerminalStreams {
     ///
     /// Returns a lease or journal failure; readiness is revoked before either.
     pub fn recovering(&self, op: &OpId) -> Result<(), StreamError> {
+        self.suspend(op, StreamCloseReason::Lost)
+    }
+
+    /// A planned control restart begins: input readiness is revoked and every stream
+    /// closes `server_restart`, never `lost` or a shutdown, ahead of undelivered bytes.
+    /// Attaches wait for `server.recovery`; the successor serves new stream identities
+    /// for the same program incarnation.
+    ///
+    /// Blocks on the durable commit of the revocations; call it from a blocking context.
+    ///
+    /// # Errors
+    ///
+    /// Returns a lease or journal failure; readiness is revoked before either.
+    pub fn restarting(&self, op: &OpId) -> Result<(), StreamError> {
+        self.suspend(op, StreamCloseReason::ServerRestart)
+    }
+
+    fn suspend(&self, op: &OpId, reason: StreamCloseReason) -> Result<(), StreamError> {
         let mut state = self.lock()?;
         state.phase = Phase::Recovering;
         let mut owners = Vec::new();
         for viewer in state.viewers.values_mut() {
             revoke_input(viewer);
             let offset = viewer.next_offset().wire();
-            viewer.close_now(StreamClose::new(StreamCloseReason::Lost, offset));
+            viewer.close_now(StreamClose::new(reason, offset));
             viewer.wake.notify_one();
             owners.push(viewer.owner.clone());
         }

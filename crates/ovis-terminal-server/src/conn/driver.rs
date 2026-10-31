@@ -17,7 +17,7 @@ use super::cause::resolve_connection;
 use super::core::{ConnectionCore, Step};
 use super::outbound::{Closing, NotifyError, OUTBOUND_CAPACITY, Outbound, Outlet};
 use super::writer::write_loop;
-use super::{Call, ConnectionError, Notifier, RequestHandler};
+use super::{Call, ConnectionError, Ending, Notifier, RequestHandler};
 use crate::peer_gone;
 
 const READ_CHUNK: usize = 64 * 1024;
@@ -26,7 +26,7 @@ const READ_CHUNK: usize = 64 * 1024;
 #[derive(Debug)]
 pub(super) struct DriverContext<H> {
     pub(super) handler: Arc<H>,
-    pub(super) shutdown: watch::Receiver<bool>,
+    pub(super) shutdown: watch::Receiver<Option<Ending>>,
     pub(super) max_in_flight: usize,
     pub(super) unwritten_bytes: u64,
 }
@@ -203,7 +203,7 @@ impl<H: RequestHandler> Requests<H> {
     async fn finish(
         &mut self,
         end: End,
-        shutdown: &mut watch::Receiver<bool>,
+        shutdown: &mut watch::Receiver<Option<Ending>>,
     ) -> Result<(), ConnectionError> {
         let failed = match end {
             End::PeerClosed => match self.drain_after_eof(shutdown).await {
@@ -212,7 +212,9 @@ impl<H: RequestHandler> Requests<H> {
             },
             End::Shutdown => {
                 self.tasks.shutdown().await;
-                return self.send(Outbound::Closing(Closing::SERVER_SHUTDOWN)).await;
+                return self
+                    .send(Outbound::Closing(Closing::ending(shutdown)))
+                    .await;
             }
             End::Failed(error) => error,
         };
@@ -228,14 +230,14 @@ impl<H: RequestHandler> Requests<H> {
     /// The peer stopped sending but may still read: settle what it already asked for.
     async fn drain_after_eof(
         &mut self,
-        shutdown: &mut watch::Receiver<bool>,
+        shutdown: &mut watch::Receiver<Option<Ending>>,
     ) -> Result<(), ConnectionError> {
         while !self.tasks.is_empty() {
             tokio::select! {
                 biased;
                 _ = shutdown.changed() => {
                     self.tasks.shutdown().await;
-                    return self.send(Outbound::Closing(Closing::SERVER_SHUTDOWN)).await;
+                    return self.send(Outbound::Closing(Closing::ending(shutdown))).await;
                 }
                 Some(joined) = self.tasks.join_next_with_id() => self.settle(joined).await?,
             }

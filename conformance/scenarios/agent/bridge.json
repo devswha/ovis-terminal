@@ -1,0 +1,1192 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "agent/bridge",
+  "title": "In-process prompt widgets answered as typed extension events, acknowledged by version, behind process-token authentication",
+  "todo": 40,
+  "closes": [
+    "GAP-085"
+  ],
+  "delivers": [
+    "IDEAL-062",
+    "IDEAL-105",
+    "IDEAL-106"
+  ],
+  "excludes": [
+    "EXCL-017",
+    "EXCL-023"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "The fixture extension attaches with its program's process token; the program opens an extension form, which blocks an ordinary send with zero PTY bytes; the form is answered once with declared fields, the extension receives one typed event carrying the answered version and the answer's operation id and acknowledges it at that version; the delivery reads acknowledged, the answer receipt is committed with extension delivery, and the PTY still holds zero bytes.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "attach",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "attach",
+                  "process_token": "fixture-process-token-agent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "attach": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": "terminal:4",
+                "/result/process_incarnation": "1",
+                "/result/queue_limit": "2"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "prompt.open",
+                "params": {
+                  "op_id": "$op:open",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "prompt_id": "form-1",
+                  "prompt": {
+                    "kind": "form",
+                    "text": "Release details",
+                    "choices": [],
+                    "fields": [
+                      {
+                        "name": "branch",
+                        "required": true
+                      },
+                      {
+                        "name": "note",
+                        "required": false
+                      }
+                    ],
+                    "mechanism": "extension"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/prompt_id": "form-1",
+                "/result/version": "1",
+                "/result/state": "open",
+                "/result/kind": "form",
+                "/result/mechanism": "extension",
+                "/result/fields/0/name": "branch"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "blocked-send",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:blocked-send",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "text": "main\r",
+                  "submit": "none"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "pty-open",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "blocked-send": {
+                "/error/data/kind": "blocked",
+                "/error/data/prompt_ids": [
+                  "form-1"
+                ],
+                "/result": {
+                  "$present": false
+                }
+              },
+              "pty-open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "answer",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:answer",
+                  "prompt_id": "form-1",
+                  "version": "1",
+                  "answer": {
+                    "fields": {
+                      "branch": "main"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "answer": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "answered",
+                "/result/version": "2",
+                "/result/answer/delivery": "extension",
+                "/result/answer/op_id": "$op:answer",
+                "/result/answer/answer": {
+                  "fields": {
+                    "branch": "main"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "take",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "take",
+                  "ack": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "take": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/received/0/prompt_id": "form-1",
+                "/result/received/0/version": "2",
+                "/result/received/0/kind": "form",
+                "/result/received/0/answer": {
+                  "fields": {
+                    "branch": "main"
+                  }
+                },
+                "/result/received/0/answer_op_id": "$op:answer",
+                "/result/received/0/process_incarnation": "1",
+                "/result/received/1": {
+                  "$present": false
+                },
+                "/result/acked/0/prompt_id": "form-1",
+                "/result/acked/0/version": "2",
+                "/result/acked/0/state": "acknowledged",
+                "/result/acked/0/answer_op_id": "$op:answer"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "state",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "state",
+                  "prompt_id": "form-1"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "receipt",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:answer"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "pty-after",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "state": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/delivery/state": "acknowledged",
+                "/result/delivery/version": "2",
+                "/result/received": "1"
+              },
+              "receipt": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "committed",
+                "/result/result/answer/delivery": "extension",
+                "/result/result/version": "2"
+              },
+              "pty-after": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "0"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "prompt.open and prompt.close presenting another process's token are forbidden before decoding while the owner's prompt and the bound conversation's records and revision stay unchanged, and a forged attach is forbidden; answers outside the form's schema are answer_invalid with nothing delivered; an ack naming version 1 of an answer committed at version 2 is version_conflict; the extension drops its session before acknowledging, op.get still settles committed, the retried answer returns its retained receipt, and a resumed session receives nothing: the answer was delivered exactly once, with zero PTY bytes throughout.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "register",
+                "method": "agent.register",
+                "params": {
+                  "op_id": "$op:register",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "label": "custom-agent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "register": {
+                "/result/agent/label": "custom-agent",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "write-h1",
+                "method": "fixture.transcript",
+                "params": {
+                  "file": "one.jsonl",
+                  "mode": "write",
+                  "text": "{\"id\":\"r1\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-r1\"}]}\n{\"id\":\"r2\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-r2\"}]}\n{\"id\":\"r3\",\"role\":\"user\",\"blocks\":[{\"text\":\"t-r3\"}]}\n"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "write-h1": {
+                "/result/bytes": {
+                  "$present": true
+                },
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "bind-h1",
+                "method": "agent.update_session",
+                "params": {
+                  "op_id": "$op:bind-h1",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "session": {
+                    "source": "fixture-store",
+                    "kind": "path",
+                    "value": "one.jsonl"
+                  },
+                  "history_id": "h1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "bind-h1": {
+                "/result/agent/history_id": "h1",
+                "/result/agent/session/value": "one.jsonl",
+                "/result/agent/process_incarnation": "1",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "attach",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "attach",
+                  "process_token": "fixture-process-token-agent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "attach": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": "terminal:4",
+                "/result/process_incarnation": "1",
+                "/result/queue_limit": "2"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "prompt.open",
+                "params": {
+                  "op_id": "$op:open",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "prompt_id": "form-1",
+                  "prompt": {
+                    "kind": "form",
+                    "text": "Release details",
+                    "choices": [],
+                    "fields": [
+                      {
+                        "name": "branch",
+                        "required": true
+                      },
+                      {
+                        "name": "note",
+                        "required": false
+                      }
+                    ],
+                    "mechanism": "extension"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/version": "1",
+                "/result/state": "open"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "conversation-before",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  },
+                  "page": {
+                    "after": null,
+                    "limit": 2
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "conversation-before": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/records/0/record_id": "r1",
+                "/result/records/1/record_id": "r2",
+                "/result/records/2": {
+                  "$present": false
+                },
+                "/result/history_id": "h1",
+                "/result/revision": "1",
+                "/result/active": true,
+                "/result/page/total": 3
+              }
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "bridge",
+            "base": {
+              "op_id": "$op:inject",
+              "target": {
+                "name": "agent"
+              },
+              "prompt_id": "form-1"
+            },
+            "planned": [
+              {
+                "request": {
+                  "method": "prompt.open",
+                  "params": {
+                    "process_token": "other-process",
+                    "prompt": {
+                      "kind": "form",
+                      "mechanism": "extension"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "forbidden",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "prompt.close",
+                  "params": {
+                    "process_token": "other-process",
+                    "outcome": "dismissed"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "forbidden",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "owner-prompt",
+                "method": "prompt.list",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "conversation-after",
+                "method": "agent.conversation",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  },
+                  "page": {
+                    "after": null,
+                    "limit": 2
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "forged-attach",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "attach",
+                  "process_token": "other-process"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "owner-prompt": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/prompts/0/prompt_id": "form-1",
+                "/result/prompts/0/version": "1",
+                "/result/prompts/0/state": "open",
+                "/result/prompts/0/text": "Release details",
+                "/result/prompts/0/process_incarnation": "1",
+                "/result/prompts/1": {
+                  "$present": false
+                },
+                "/result/prompts/0/session/value": "one.jsonl"
+              },
+              "conversation-after": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/records/0/record_id": "r1",
+                "/result/records/1/record_id": "r2",
+                "/result/records/2": {
+                  "$present": false
+                },
+                "/result/history_id": "h1",
+                "/result/revision": "1",
+                "/result/active": true,
+                "/result/page/total": 3
+              },
+              "forged-attach": {
+                "/error/data/kind": "forbidden",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "outside-fields",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:outside-fields",
+                  "prompt_id": "form-1",
+                  "version": "1",
+                  "answer": {
+                    "fields": {
+                      "undeclared": "x"
+                    }
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "outside-text",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:outside-text",
+                  "prompt_id": "form-1",
+                  "version": "1",
+                  "answer": {
+                    "text": "main"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "outside-fields": {
+                "/error/data/kind": "answer_invalid",
+                "/error/data/field_path": "params.answer.fields",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "outside-text": {
+                "/error/data/kind": "answer_invalid",
+                "/error/data/field_path": "params.answer",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "take-nothing",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "take",
+                  "ack": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "still-open",
+                "method": "prompt.get",
+                "params": {
+                  "prompt_id": "form-1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "take-nothing": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/received/0": {
+                  "$present": false
+                }
+              },
+              "still-open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "open",
+                "/result/version": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "answer",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:answer",
+                  "prompt_id": "form-1",
+                  "version": "1",
+                  "answer": {
+                    "fields": {
+                      "branch": "main"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "answer": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "answered",
+                "/result/version": "2",
+                "/result/answer/delivery": "extension"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "hold",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "take",
+                  "ack": false
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "hold": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/received/0/prompt_id": "form-1",
+                "/result/received/0/version": "2",
+                "/result/acked/0": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stale-ack",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "ack",
+                  "prompt_id": "form-1",
+                  "version": "1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "stale-ack": {
+                "/error/data/kind": "version_conflict",
+                "/error/data/current_version": "2",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "drop",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "drop"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "drop": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/received/0": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "dropped",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "state",
+                  "prompt_id": "form-1"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "receipt",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:answer"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "late-ack",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "ack",
+                  "prompt_id": "form-1",
+                  "version": "2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "dropped": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/delivery/state": "outcome_unknown",
+                "/result/received": "1"
+              },
+              "receipt": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "committed",
+                "/result/result/version": "2"
+              },
+              "late-ack": {
+                "/error/data/kind": "forbidden",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "retry",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:answer",
+                  "prompt_id": "form-1",
+                  "version": "1",
+                  "answer": {
+                    "fields": {
+                      "branch": "main"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "retry": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/version": "2",
+                "/result/answer/op_id": "$op:answer"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "attach",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "attach",
+                  "process_token": "fixture-process-token-agent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "attach": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "resume",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "take",
+                  "ack": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "resume": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/received/0": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "settled",
+                "method": "fixture.bridge",
+                "params": {
+                  "action": "state",
+                  "prompt_id": "form-1"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "pty-final",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "settled": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/delivery/state": "outcome_unknown",
+                "/result/received": "1"
+              },
+              "pty-final": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "0"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
