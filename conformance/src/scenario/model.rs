@@ -138,11 +138,24 @@ pub(crate) enum Via {
     Socket,
 }
 
+/// The fixture credential a connection's hello presents.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum Principal {
+    /// The bootstrap owner, holding every permission.
+    #[default]
+    Owner,
+    /// A principal that may only observe the machine.
+    Observe,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Connect {
     pub(crate) conn: ConnName,
     pub(crate) via: Via,
+    #[serde(default)]
+    pub(crate) principal: Principal,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -7,6 +7,7 @@ pub mod documents_retention;
 pub mod machine_identity;
 pub mod plugins;
 pub mod process_info;
+pub mod prompts;
 
 pub mod session_binding;
 #[cfg(unix)]

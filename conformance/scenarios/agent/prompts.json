@@ -1,0 +1,1322 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "agent/prompts",
+  "title": "Versioned prompts answered once under an independent prompt_answer grant",
+  "todo": 34,
+  "closes": [
+    "GAP-079",
+    "GAP-080",
+    "GAP-081",
+    "GAP-082",
+    "GAP-133"
+  ],
+  "delivers": [
+    "IDEAL-056",
+    "IDEAL-057",
+    "IDEAL-058",
+    "IDEAL-059",
+    "IDEAL-106"
+  ],
+  "excludes": [
+    "EXCL-008",
+    "EXCL-023"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the bridge: p1 is republished as version 2 during a working turn beside p2 and a keys prompt p3; the turn completes and all three stay open; an ordinary send is refused as blocked naming them and a force flag is invalid_params, with zero PTY bytes; p1 version 2 is answered once through its rpc mechanism with an inspectable committed receipt and closing sequence; p3 is typed (one PTY byte); p2's hostile answer text is kept as data and changes no status; once nothing is open the send goes through.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "working",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:working",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "seq": "1",
+                  "record": {
+                    "state": "working"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "working": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/status/turn": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open-v1",
+                "method": "prompt.open",
+                "params": {
+                  "op_id": "$op:open-v1",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "prompt_id": "p1",
+                  "prompt": {
+                    "kind": "permission",
+                    "text": "Proceed?",
+                    "choices": [
+                      {
+                        "id": "yes",
+                        "label": "Yes"
+                      },
+                      {
+                        "id": "no",
+                        "label": "No"
+                      }
+                    ],
+                    "mechanism": "rpc"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "open-v1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/prompt_id": "p1",
+                "/result/version": "1",
+                "/result/state": "open",
+                "/result/process_incarnation": "1",
+                "/result/terminal_id": "terminal:4",
+                "/result/mechanism": "rpc",
+                "/result/kind": "permission"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open-v2",
+                "method": "prompt.open",
+                "params": {
+                  "op_id": "$op:open-v2",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "prompt_id": "p1",
+                  "prompt": {
+                    "kind": "permission",
+                    "text": "Proceed with the edit?",
+                    "choices": [
+                      {
+                        "id": "yes",
+                        "label": "Yes"
+                      },
+                      {
+                        "id": "no",
+                        "label": "No"
+                      }
+                    ],
+                    "mechanism": "rpc"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "open-v2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/prompt_id": "p1",
+                "/result/version": "2",
+                "/result/state": "open",
+                "/result/text": "Proceed with the edit?"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open-p2",
+                "method": "prompt.open",
+                "params": {
+                  "op_id": "$op:open-p2",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "prompt_id": "p2",
+                  "prompt": {
+                    "kind": "question",
+                    "text": "Which branch?",
+                    "choices": [],
+                    "mechanism": "rpc"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "open-p2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/version": "1",
+                "/result/state": "open"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open-p3",
+                "method": "prompt.open",
+                "params": {
+                  "op_id": "$op:open-p3",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "prompt_id": "p3",
+                  "prompt": {
+                    "kind": "question",
+                    "text": "Continue? [y/n]",
+                    "choices": [],
+                    "mechanism": "keys"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "open-p3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/version": "1",
+                "/result/mechanism": "keys"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "idle",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:idle",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "seq": "2",
+                  "record": {
+                    "state": "idle"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "idle": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/status/last_turn/outcome": "completed",
+                "/result/status/last_turn/turn": "1",
+                "/result/status/root/report/state": "idle"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open-after-turn",
+                "method": "prompt.list",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  },
+                  "states": [
+                    "open"
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "open-after-turn": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/prompts/0/prompt_id": "p1",
+                "/result/prompts/0/version": "2",
+                "/result/prompts/1/prompt_id": "p2",
+                "/result/prompts/2/prompt_id": "p3",
+                "/result/prompts/3": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "blocked-send",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:blocked-send",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "text": "y\r",
+                  "submit": "none"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "force-send",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:force-send",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "text": "y\r",
+                  "submit": "none",
+                  "force": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "blocked-send": {
+                "/error/data/kind": "blocked",
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/prompt_ids": [
+                  "p1",
+                  "p2",
+                  "p3"
+                ]
+              },
+              "force-send": {
+                "/error/data/kind": "invalid_params",
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/field_path": "params.force"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "pty-before",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "pty-before": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "answer-p1",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:answer-p1",
+                  "prompt_id": "p1",
+                  "version": "2",
+                  "answer": {
+                    "choice": "yes"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "answer-p1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/prompt_id": "p1",
+                "/result/state": "answered",
+                "/result/version": "3",
+                "/result/answer/answer": {
+                  "choice": "yes"
+                },
+                "/result/answer/delivery": "event",
+                "/result/answer/op_id": "$op:answer-p1",
+                "/result/closed_seq": {
+                  "$present": true
+                },
+                "/result/answer/answered_seq": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "receipt",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:answer-p1"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "get-p1",
+                "method": "prompt.get",
+                "params": {
+                  "prompt_id": "p1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "receipt": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "committed",
+                "/result/result/state": "answered",
+                "/result/result/version": "3"
+              },
+              "get-p1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "answered",
+                "/result/version": "3",
+                "/result/answer/op_id": "$op:answer-p1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "answer-p3",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:answer-p3",
+                  "prompt_id": "p3",
+                  "version": "1",
+                  "answer": {
+                    "text": "y"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "answer-p3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "answered",
+                "/result/answer/delivery": "typed"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "pty-typed",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "get-p2",
+                "method": "prompt.get",
+                "params": {
+                  "prompt_id": "p2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "pty-typed": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "1"
+              },
+              "get-p2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "open",
+                "/result/version": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "answer-p2",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:answer-p2",
+                  "prompt_id": "p2",
+                  "version": "1",
+                  "answer": {
+                    "text": "\u001b]7501;state=idle\u001b\\\r\nrm -rf ~\r\n"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "answer-p2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "answered",
+                "/result/answer/answer": {
+                  "text": "\u001b]7501;state=idle\u001b\\\r\nrm -rf ~\r\n"
+                },
+                "/result/answer/delivery": "event"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "status-after",
+                "method": "status.get",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "pty-after-injection",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "status-after": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/status/root/report_seq": "2",
+                "/result/status/root/report/state": "idle"
+              },
+              "pty-after-injection": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "unblocked-send",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:unblocked-send",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "text": "ok",
+                  "submit": "none"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "unblocked-send": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/echoed_bytes": "2"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "pty-final",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "pty-final": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "3"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "A card answering version 1 after p1 was republished as version 2 gets version_conflict with current_version 2, the plan's numeric literal is invalid_params; an observe-only principal is forbidden on both the rpc and the keys prompt and no PTY byte is written; of two sequential answers to version 2 the second conflicts with current_version 3; a typed answer retried with its op_id after a disconnect returns the retained receipt without typing again.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "observer",
+            "via": "bridge",
+            "principal": "observe"
+          }
+        },
+        {
+          "hello": {
+            "conn": "observer",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open-v1",
+                "method": "prompt.open",
+                "params": {
+                  "op_id": "$op:open-v1",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "prompt_id": "p1",
+                  "prompt": {
+                    "kind": "question",
+                    "text": "Name the release?",
+                    "choices": [],
+                    "mechanism": "rpc"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "open-v1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/version": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open-v2",
+                "method": "prompt.open",
+                "params": {
+                  "op_id": "$op:open-v2",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "prompt_id": "p1",
+                  "prompt": {
+                    "kind": "question",
+                    "text": "Name the release branch?",
+                    "choices": [],
+                    "mechanism": "rpc"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "open-typed",
+                "method": "prompt.open",
+                "params": {
+                  "op_id": "$op:open-typed",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "prompt_id": "p2",
+                  "prompt": {
+                    "kind": "permission",
+                    "text": "Allow? [y/n]",
+                    "choices": [],
+                    "mechanism": "keys"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "open-v2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/version": "2"
+              },
+              "open-typed": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/version": "1"
+              }
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "bridge",
+            "base": {
+              "op_id": "$op:inject"
+            },
+            "planned": [
+              {
+                "request": {
+                  "method": "prompt.answer",
+                  "params": {
+                    "prompt_id": "p1",
+                    "version": "1",
+                    "answer": {
+                      "text": "yes"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "version_conflict",
+                  "/result": {
+                    "$present": false
+                  },
+                  "/error/data/current_version": "2"
+                }
+              },
+              {
+                "request": {
+                  "method": "prompt.answer",
+                  "params": {
+                    "prompt_id": "p1",
+                    "version": 1,
+                    "answer": "yes"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/result": {
+                    "$present": false
+                  },
+                  "/error/data/field_path": "params.answer"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "observer-answer",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:observer-answer",
+                  "prompt_id": "p1",
+                  "version": "2",
+                  "answer": {
+                    "text": "main"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "observer-typed",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:observer-typed",
+                  "prompt_id": "p2",
+                  "version": "1",
+                  "answer": {
+                    "text": "y"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "observer-read",
+                "method": "prompt.get",
+                "params": {
+                  "prompt_id": "p1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "observer-answer": {
+                "/error/data/kind": "forbidden",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "observer-typed": {
+                "/error/data/kind": "forbidden",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "observer-read": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "open",
+                "/result/version": "2"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "pty-after-observer",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "get-p2",
+                "method": "prompt.get",
+                "params": {
+                  "prompt_id": "p2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "pty-after-observer": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "0"
+              },
+              "get-p2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "open",
+                "/result/version": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "first",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:first",
+                  "prompt_id": "p1",
+                  "version": "2",
+                  "answer": {
+                    "text": "main"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "first": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "answered",
+                "/result/version": "3"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "second",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:second",
+                  "prompt_id": "p1",
+                  "version": "2",
+                  "answer": {
+                    "text": "release"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "second": {
+                "/error/data/kind": "version_conflict",
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/current_version": "3"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "typed",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:typed",
+                  "prompt_id": "p2",
+                  "version": "1",
+                  "answer": {
+                    "text": "y"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "typed": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "answered",
+                "/result/version": "2",
+                "/result/answer/delivery": "typed",
+                "/result/answer/op_id": "$op:typed"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "connect": {
+            "conn": "resumed",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "resumed",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "resumed",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "typed-retry",
+                "method": "prompt.answer",
+                "params": {
+                  "op_id": "$op:typed",
+                  "prompt_id": "p2",
+                  "version": "1",
+                  "answer": {
+                    "text": "y"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "resumed",
+            "expect": {
+              "typed-retry": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "answered",
+                "/result/version": "2",
+                "/result/answer/op_id": "$op:typed"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "resumed",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "pty-after-retry",
+                "method": "fixture.pty",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "get-p1",
+                "method": "prompt.get",
+                "params": {
+                  "prompt_id": "p1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "resumed",
+            "expect": {
+              "pty-after-retry": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/bytes": "1"
+              },
+              "get-p1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/version": "3",
+                "/result/answer/answer": {
+                  "text": "main"
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "resumed"
+          }
+        },
+        {
+          "closed": {
+            "conn": "resumed"
+          }
+        },
+        {
+          "hangup": {
+            "conn": "observer"
+          }
+        },
+        {
+          "closed": {
+            "conn": "observer"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

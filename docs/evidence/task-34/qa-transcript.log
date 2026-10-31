@@ -1,0 +1,18 @@
+# native: Linux x86_64; binary sha256 c60c89a87c393a7567c5ba5f3f9d9e921b1866f92c0985ec61a306387a6a8d47 (target/debug/ovis-terminal)
+# ATTEMPT_DIR=/home/devswha/workspace/ovis-terminal-wt/lane-t34/.omo/evidence/ovis-terminal-v1/task-34
+
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/prompts --isolated --case happy --evidence "$ATTEMPT_DIR/task-34-ovis-terminal-v1.json"
+{"case":"happy","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t34/.omo/evidence/ovis-terminal-v1/task-34/task-34-ovis-terminal-v1.json","evidence_written":null,"result":"passed","scenario":"agent/prompts","totals":{"assertions":"98","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+exit=0
+
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/prompts --isolated --case failure --inject '{"method":"prompt.answer","params":{"prompt_id":"p1","version":1,"answer":"yes"}}' --evidence "$ATTEMPT_DIR/task-34-ovis-terminal-v1.json" --append
+{"case":"failure","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t34/.omo/evidence/ovis-terminal-v1/task-34/task-34-ovis-terminal-v1.json","evidence_written":null,"result":"passed","scenario":"agent/prompts","totals":{"assertions":"61","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+exit=0
+
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/prompts --isolated --case failure --inject '{"method":"prompt.answer","params":{"prompt_id":"p1","version":"1","answer":{"text":"yes"}}}' --evidence "$ATTEMPT_DIR/task-34-ovis-terminal-v1.json" --append
+{"case":"failure","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t34/.omo/evidence/ovis-terminal-v1/task-34/task-34-ovis-terminal-v1.json","evidence_written":null,"result":"passed","scenario":"agent/prompts","totals":{"assertions":"61","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+exit=0
+
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/prompts --isolated --case all --evidence "$ATTEMPT_DIR/task-34-all.json"
+{"case":"all","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t34/.omo/evidence/ovis-terminal-v1/task-34/task-34-all.json","evidence_written":null,"result":"passed","scenario":"agent/prompts","totals":{"assertions":"162","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
+exit=0

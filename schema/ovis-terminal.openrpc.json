@@ -562,6 +562,26 @@
         ],
         "type": "object"
       },
+      "AnswerDelivery": {
+        "description": "How an accepted answer reached the program.",
+        "oneOf": [
+          {
+            "const": "typed",
+            "description": "Admitted as typed input through the terminal's input path.",
+            "type": "string"
+          },
+          {
+            "const": "event",
+            "description": "Published as the prompt's closing event.",
+            "type": "string"
+          },
+          {
+            "const": "extension",
+            "description": "Published for the program's in-process extension.",
+            "type": "string"
+          }
+        ]
+      },
       "AttachControl": {
         "description": "Params of the `attach.control` notification.",
         "properties": {
@@ -1849,6 +1869,9 @@
           "current_seq": {
             "$ref": "#/components/schemas/ReportSeq"
           },
+          "current_version": {
+            "$ref": "#/components/schemas/RecordVersion"
+          },
           "deadline_ms": {
             "$ref": "#/components/schemas/DurationMs"
           },
@@ -1870,6 +1893,12 @@
           },
           "op_id": {
             "$ref": "#/components/schemas/OpId"
+          },
+          "prompt_ids": {
+            "items": {
+              "$ref": "#/components/schemas/PromptId"
+            },
+            "type": "array"
           },
           "queued_position": {
             "$ref": "#/components/schemas/QueuePosition"
@@ -6065,6 +6094,35 @@
         ],
         "type": "object"
       },
+      "PromptAnswerReceipt": {
+        "description": "The accepted answer of a prompt and the operation that committed it.",
+        "properties": {
+          "answer": {
+            "$ref": "#/components/schemas/PromptAnswer",
+            "description": "The answer, kept as data."
+          },
+          "answered_seq": {
+            "$ref": "#/components/schemas/EventSeq",
+            "description": "Sequence of the closing event."
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/AnswerDelivery",
+            "description": "How it was delivered.",
+            "x-ovis-open-enum": true
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that answered; a retry with it returns this receipt."
+          }
+        },
+        "required": [
+          "op_id",
+          "answer",
+          "delivery",
+          "answered_seq"
+        ],
+        "type": "object"
+      },
       "PromptChoice": {
         "additionalProperties": false,
         "description": "One answer choice.",
@@ -6144,6 +6202,14 @@
             },
             "type": "array"
           },
+          "fields": {
+            "default": [],
+            "description": "Fields, for form prompts.",
+            "items": {
+              "$ref": "#/components/schemas/PromptField"
+            },
+            "type": "array"
+          },
           "kind": {
             "$ref": "#/components/schemas/PromptKind",
             "description": "Kind."
@@ -6162,6 +6228,25 @@
           "text",
           "choices",
           "mechanism"
+        ],
+        "type": "object"
+      },
+      "PromptField": {
+        "additionalProperties": false,
+        "description": "One field of a form prompt; a `fields` answer names only declared fields.",
+        "properties": {
+          "name": {
+            "description": "Field name.",
+            "type": "string"
+          },
+          "required": {
+            "description": "Whether an answer must supply it.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "required"
         ],
         "type": "object"
       },
@@ -6293,6 +6378,17 @@
             "$ref": "#/components/schemas/PromptDefinition",
             "description": "Definition."
           },
+          "prompt_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PromptId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The program's own identity for the prompt; naming an open prompt it owns\nrepublishes it at the next version."
+          },
           "target": {
             "$ref": "#/components/schemas/Target",
             "description": "Terminal."
@@ -6309,10 +6405,50 @@
       "PromptRecord": {
         "description": "Versioned prompt record.",
         "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Registered agent of that program, when one registered."
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PromptAnswerReceipt"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The accepted answer, once answered."
+          },
           "choices": {
             "description": "Choices, for choice prompts.",
             "items": {
               "$ref": "#/components/schemas/PromptChoice"
+            },
+            "type": "array"
+          },
+          "closed_seq": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventSeq"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sequence of the closing event, once closed."
+          },
+          "fields": {
+            "description": "Fields, for form prompts.",
+            "items": {
+              "$ref": "#/components/schemas/PromptField"
             },
             "type": "array"
           },
@@ -6337,6 +6473,17 @@
           "prompt_id": {
             "$ref": "#/components/schemas/PromptId",
             "description": "Prompt identity."
+          },
+          "session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Provider session of that agent, when declared."
           },
           "state": {
             "$ref": "#/components/schemas/PromptState",
@@ -6364,6 +6511,7 @@
           "kind",
           "text",
           "choices",
+          "fields",
           "mechanism",
           "state",
           "opened_seq"
@@ -15585,6 +15733,21 @@
           "schema": {
             "$ref": "#/components/schemas/PromptDefinition",
             "description": "Definition."
+          }
+        },
+        {
+          "name": "prompt_id",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PromptId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The program's own identity for the prompt; naming an open prompt it owns\nrepublishes it at the next version."
           }
         },
         {

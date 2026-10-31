@@ -40,7 +40,7 @@ struct RejectionCase {
 
 impl Session<'_> {
     pub(crate) async fn hello(&mut self, hello: &Hello) -> Result<(), RunnerError> {
-        let bearer = self.bearer().ok_or(RunnerError::FixtureState)?.to_owned();
+        let bearer = self.conn(&hello.conn)?.secret().to_owned();
         let request = json!({
             "jsonrpc": "2.0", "id": "hello", "method": "hello",
             "params": {
