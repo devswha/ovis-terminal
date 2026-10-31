@@ -53,14 +53,14 @@ fn a_reaped_pid_is_gone_for_every_read() {
 
 #[cfg(unix)]
 #[test]
-fn an_exited_unreaped_child_keeps_its_token_but_is_not_running() {
+fn an_exited_unreaped_child_keeps_its_token_until_reaped() {
     let mut child = std::process::Command::new("/bin/sh")
         .args(["-c", "read gate; exit 0"])
         .stdin(std::process::Stdio::piped())
         .spawn()
         .expect("spawn child");
     let pid = ProcessId::new(child.id());
-    let started = read_start_token(pid).ok();
+    let started = read_start_token(pid).expect("token of the running child");
     drop(child.stdin.take());
     let raw = libc::id_t::from(pid.get());
     let mut info = std::mem::MaybeUninit::<libc::siginfo_t>::zeroed();
@@ -75,16 +75,16 @@ fn an_exited_unreaped_child_keeps_its_token_but_is_not_running() {
         )
     };
     assert_eq!(waited, 0, "waitid: {}", std::io::Error::last_os_error());
-    let exited = read_entry(pid);
-    assert!(child.wait().expect("reap").success());
 
-    match exited {
-        Ok(entry) => {
-            assert!(!entry.running);
-            assert_eq!(Some(entry.start_token), started);
-        }
-        Err(error) => assert_eq!(error.kind(), "process_gone"),
-    }
+    let zombie = read_entry(pid).expect("an unreaped child keeps its record");
+    let zombie_token = read_start_token(pid).expect("an unreaped child keeps its token");
+    assert!(child.wait().expect("reap").success());
+    let reaped = read_start_token(pid).err().map(|error| error.kind());
+
+    assert!(!zombie.running);
+    assert_eq!(zombie.start_token, started);
+    assert_eq!(zombie_token, started);
+    assert_eq!(reaped, Some("process_gone"));
 }
 
 #[cfg(windows)]

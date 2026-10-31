@@ -71,7 +71,9 @@ fn token(info: &libc::proc_bsdinfo) -> ProcessStartToken {
 /// Returns [`ProbeError::Gone`] when no process has the PID, or a typed read failure.
 pub fn read_entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
     let info: libc::proc_bsdinfo = pidinfo(pid, libc::PROC_PIDTBSDINFO)?;
-    let terminal = if info.e_tdev == NO_DEVICE {
+    let running = info.pbi_status != ZOMBIE;
+    // An exited process has no live terminal membership, and getsid(2) cannot see it.
+    let terminal = if info.e_tdev == NO_DEVICE || !running {
         Membership::Detached
     } else {
         Membership::Controlling(TerminalMembership {
@@ -84,7 +86,7 @@ pub fn read_entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
     Ok(ProcessEntry {
         pid,
         start_token: token(&info),
-        running: info.pbi_status != ZOMBIE,
+        running,
         terminal,
     })
 }
