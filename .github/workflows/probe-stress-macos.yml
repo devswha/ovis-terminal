@@ -7,13 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-<<<<<<< HEAD
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, conformance]
-||||||| ef1d8c1
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding]
-=======
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input]
->>>>>>> origin/integration
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance]
 
 permissions:
   contents: read
@@ -268,7 +262,36 @@ jobs:
           name: encoding-stress-${{ github.run_id }}
           path: encoding-stress.log
           if-no-files-found: error
-<<<<<<< HEAD
+  input:
+    if: inputs.probe == 'input'
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat ordered input tests 100 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 100); do
+              printf '\nITERATION %s/100\n' "$iteration"
+              cargo nextest run -p ovis-terminal-core --test input --locked --no-tests=fail
+              printf 'PASS %s/100\n' "$iteration"
+            done
+            printf 'RESULT 100/100\n'
+          } 2>&1 | tee input-stress.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: input-stress-${{ github.run_id }}
+          path: input-stress.log
+          if-no-files-found: error
   conformance:
     if: inputs.probe == 'conformance'
     runs-on: macos-latest
@@ -300,36 +323,3 @@ jobs:
           name: conformance-stress-macos-${{ github.run_id }}
           path: conformance-stress-macos.log
           if-no-files-found: error
-||||||| ef1d8c1
-=======
-  input:
-    if: inputs.probe == 'input'
-    runs-on: macos-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.99.1
-      - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@nextest
-      - name: repeat ordered input tests 100 times
-        shell: bash
-        run: |
-          set -euo pipefail
-          {
-            uname -a
-            rustc --version
-            git rev-parse HEAD
-            for iteration in $(seq 1 100); do
-              printf '\nITERATION %s/100\n' "$iteration"
-              cargo nextest run -p ovis-terminal-core --test input --locked --no-tests=fail
-              printf 'PASS %s/100\n' "$iteration"
-            done
-            printf 'RESULT 100/100\n'
-          } 2>&1 | tee input-stress.log
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: input-stress-${{ github.run_id }}
-          path: input-stress.log
-          if-no-files-found: error
->>>>>>> origin/integration
