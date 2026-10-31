@@ -1,0 +1,214 @@
+{
+  "scenario": "part-a/task-23",
+  "todo": 23,
+  "title": "Typed attach outcomes and isolated output streams",
+  "closes": [
+    "GAP-039",
+    "GAP-040",
+    "GAP-041",
+    "GAP-043",
+    "GAP-046",
+    "GAP-047",
+    "GAP-060",
+    "GAP-061",
+    "GAP-065"
+  ],
+  "delivers": [
+    "IDEAL-028",
+    "IDEAL-032",
+    "IDEAL-033",
+    "IDEAL-040",
+    "IDEAL-041",
+    "IDEAL-043",
+    "IDEAL-045",
+    "IDEAL-055"
+  ],
+  "excludes": [
+    "EXCL-007",
+    "EXCL-016",
+    "EXCL-019"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "verification": {
+    "status": "declared_until_routed",
+    "server_tests": "cargo nextest run -p ovis-terminal-server --test streams",
+    "blocking_todo": 31,
+    "requires_actual_cli_socket_transcript": true
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "holder_output": "title, bracketed paste and a screen painted once",
+          "as": "before"
+        },
+        {
+          "rpc": "attach.open",
+          "principal": "operator",
+          "params": {
+            "target": {"terminal_id": "$terminal_1"},
+            "role": "interact",
+            "client_id": "tui",
+            "stream_mode": "plain"
+          },
+          "assert": {
+            "outcome": "ready",
+            "lease.role": "interact",
+            "terminal.terminal_incarnation": "$terminal_1.incarnation",
+            "first_paint.output_offset": "$before.raw_end",
+            "first_paint.stream_offset": "0",
+            "controls_in_order": ["checkpoint", "input_ready"]
+          },
+          "as": "operator"
+        },
+        {
+          "holder_output": "a cursor query split across two reads, then text",
+          "assert": {
+            "query_replies_on_internal_lane": 1
+          }
+        },
+        {
+          "rpc": "attach.open",
+          "principal": "phone",
+          "params": {
+            "target": {"terminal_id": "$terminal_1"},
+            "role": "observe",
+            "client_id": "phone",
+            "stream_mode": "plain"
+          },
+          "assert": {
+            "outcome": "ready",
+            "stream_id_differs_from": "$operator.stream_id"
+          },
+          "as": "phone"
+        },
+        {
+          "rpc": "attach.open",
+          "principal": "bridge",
+          "params": {
+            "target": {"terminal_id": "$terminal_1"},
+            "role": "interact",
+            "client_id": "bridge",
+            "stream_mode": "plain"
+          },
+          "assert": {
+            "outcome": "held",
+            "holder": "$operator.lease",
+            "retry.on": "lease_released",
+            "retry.event": "lease.revoked",
+            "lease.role": "observe"
+          }
+        },
+        {
+          "rpc": "attach.open",
+          "principal": "slow",
+          "params": {
+            "target": {"terminal_id": "$terminal_1"},
+            "role": "observe",
+            "client_id": "slow",
+            "stream_mode": "plain"
+          },
+          "never_acknowledges": true,
+          "as": "slow"
+        },
+        {
+          "holder_output": "600 KiB of output",
+          "assert": {
+            "slow.received_bytes": "262144",
+            "slow.credit_beyond_window": "invalid_credit"
+          }
+        },
+        {
+          "rpc": "attach.close",
+          "as": "operator",
+          "assert": {
+            "close.reason": "client_closed",
+            "lease.revoked_committed_before_close": true
+          }
+        },
+        {
+          "rpc": "attach.open",
+          "principal": "bridge",
+          "assert": {
+            "outcome": "ready"
+          }
+        },
+        {
+          "holder_exit": 0,
+          "assert": {
+            "phone.close.reason": "exited",
+            "phone.close.final_offset": "$phone.received_bytes",
+            "phone.close.final_output_offset": "$raw_end",
+            "phone.vt_equals_continuous_vt": true,
+            "phone.contains_answered_query": false,
+            "slow.received_bytes_while_others_closed": "262144"
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "rpc": "attach.credit",
+          "params": {"stream_id": "$stream", "acknowledged": "$sent+1"},
+          "expect_error": "invalid_credit",
+          "assert": {"credit_unchanged": true}
+        },
+        {
+          "rpc": "attach.credit",
+          "params": {"stream_id": "$stream", "acknowledged": 1},
+          "expect_error": "invalid_params"
+        },
+        {
+          "rpc": "attach.credit",
+          "principal": "stranger",
+          "params": {"stream_id": "$stream", "acknowledged": "0"},
+          "expect_error": "stream_not_found"
+        },
+        {
+          "rpc": "attach.credit",
+          "after": "attach.close of $stream",
+          "params": {"stream_id": "$stream", "acknowledged": "$sent"},
+          "expect_error": "invalid_credit"
+        },
+        {
+          "frame": {"kind": "DATA", "channel": "$stream_channel", "payload_b64": "A3JtIC1yZiB+DQ=="},
+          "expect_error": "direction_violation",
+          "assert": {"program_bytes_written": 0}
+        },
+        {
+          "rpc": "attach.open",
+          "principal": "observer_only",
+          "params": {"role": "interact"},
+          "assert": {"outcome": "refused", "reason": "forbidden", "stream_id": null}
+        },
+        {
+          "inject": "terminal recovering",
+          "assert": {
+            "controls_in_order": ["input_revoked", "close"],
+            "close.reason": "lost",
+            "next_attach.outcome": "recovering",
+            "next_attach.retry.on": "recovered"
+          }
+        },
+        {
+          "inject": "interact holder connection closed",
+          "assert": {"lease.revoked_committed": true, "next_interact_attach.outcome": "ready"}
+        },
+        {
+          "inject": "viewer stops acknowledging past the backlog bound",
+          "assert": {
+            "controls_in_order": ["gap", "checkpoint", "close"],
+            "close.reason": "stream_stalled",
+            "other_viewer_has_gap": false
+          }
+        }
+      ]
+    }
+  ]
+}
