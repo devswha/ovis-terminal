@@ -11,6 +11,7 @@ use tokio::sync::watch;
 use tokio::time::Instant;
 
 use super::DispatchError;
+use super::queue::Queued;
 
 #[cfg(test)]
 mod tests;
@@ -18,6 +19,15 @@ mod tests;
 pub(super) async fn wait(
     received: impl Future<Output = Result<Value, BoundaryError>> + Send,
     op_id: OpId,
+    start: Instant,
+) -> Result<Value, BoundaryError> {
+    wait_queued(received, (op_id, None), start).await
+}
+
+/// [`wait`] whose deadline failure carries the request's admission position while queued.
+pub(super) async fn wait_queued(
+    received: impl Future<Output = Result<Value, BoundaryError>> + Send,
+    (op_id, queued): (OpId, Option<Queued>),
     start: Instant,
 ) -> Result<Value, BoundaryError> {
     let deadline = Limits::v1().rpc_default_deadline_ms;
@@ -35,11 +45,12 @@ pub(super) async fn wait(
         Ok(_) | Err(_) => {
             let elapsed =
                 u64::try_from(settled.duration_since(start).as_millis()).unwrap_or(u64::MAX);
-            Err(BoundaryError::deadline_exceeded(
-                op_id,
-                deadline,
-                DurationMs::new(elapsed),
-            ))
+            let failure =
+                BoundaryError::deadline_exceeded(op_id, deadline, DurationMs::new(elapsed));
+            Err(match queued.as_ref().and_then(Queued::position) {
+                Some(position) => failure.with_queued_position(position),
+                None => failure,
+            })
         }
     }
 }

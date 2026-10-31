@@ -126,6 +126,10 @@ decimal_newtype!(
     /// Count of turns that finished on a terminal; deduplicates completion facts.
     FinishGeneration
 );
+decimal_newtype!(
+    /// One-based place of a waiting operation in FIFO admission order; 1 is admitted next.
+    QueuePosition
+);
 
 /// An output enum value that a client tolerates even when it postdates the client.
 ///

@@ -10,6 +10,7 @@ use ovis_terminal_core::ops::{OperationEvent, OperationSnapshot};
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::schema::decode_params;
+use ovis_terminal_protocol::schema::ids::MethodName;
 use ovis_terminal_protocol::schema::methods::all_methods;
 use ovis_terminal_protocol::schema::methods::server::OpRefParams;
 use serde::Serialize;
@@ -19,12 +20,13 @@ use tokio::sync::{Mutex, Semaphore, watch};
 use tokio::time::Instant;
 
 use super::control::{self, Control};
-use super::deadline::{receive, wait};
+use super::deadline::{receive, wait, wait_queued};
 use super::execution::{State, now};
 use super::job::Job;
+use super::queue::{Admission, Queued};
 use super::registry::{Registered, Route};
 use super::reservation::Reservation;
-use super::tasks::{Active, Tasks};
+use super::tasks::{Active, Permits, Tasks};
 use super::{DispatchError, Method};
 use crate::conn::{Call, RequestHandler};
 
@@ -115,6 +117,8 @@ where
         tasks.closed = true;
         for active in tasks.active.values() {
             active.cancel.send_replace(true);
+            // A job still waiting for a snapshot slot would otherwise block the join.
+            active.queued.withdraw();
         }
         let running = tasks.take_running();
         drop(tasks);
@@ -155,16 +159,28 @@ where
         let op_id = prepared.request.op_id().clone();
         let mut tasks = self.tasks.lock().await;
         tasks.reap().map_err(|error| error.boundary())?;
-        if let Some(received) = tasks.joined(call.session.principal(), &prepared.request)? {
+        if let Some((received, queued)) =
+            tasks.joined(call.session.principal(), &prepared.request)?
+        {
             drop(tasks);
-            return wait(receive(received), op_id, start).await;
+            return wait_queued(receive(received), (op_id, Some(queued)), start).await;
         }
         let global = Arc::clone(&self.work)
             .try_acquire_owned()
             .map_err(|_| DispatchError::Backpressure.boundary())?;
-        let permit = tasks
+        let Permits {
+            in_flight,
+            queued: queue_place,
+        } = tasks
             .permit(&call.session)
             .map_err(|error| error.boundary())?;
+        let queue = self.state.core.snapshot_queue();
+        let ticket = queue.enqueue();
+        let queued = Queued {
+            queue: Arc::clone(queue),
+            ticket: ticket.id(),
+            method: MethodName::new(call.request.method().to_owned()),
+        };
         let (cancel, cancellation) = watch::channel(false);
         let (reply, received) = watch::channel(None);
         let reservation = Arc::new(Reservation::new());
@@ -174,6 +190,7 @@ where
             cancel,
             response: received.clone(),
             reservation: Arc::clone(&reservation),
+            queued: queued.clone(),
         };
         let job = Job {
             state: Arc::clone(&self.state),
@@ -181,16 +198,20 @@ where
             decision,
             notifier: call.notifier,
             reservation,
+            admission: Admission {
+                ticket,
+                permit: queue_place,
+            },
         };
         let task = tasks.set.spawn(async move {
             let result = job.run(prepared, cancellation).await;
             // A disappeared RPC waiter does not cancel or discard the durable operation.
             reply.send_replace(Some(result.map_err(|error| error.data().clone())));
-            drop((permit, global));
+            drop((in_flight, global));
         });
         tasks.active.insert(task.id(), active);
         drop(tasks);
-        wait(receive(received), op_id, start).await
+        wait_queued(receive(received), (op_id, Some(queued)), start).await
     }
 
     async fn control_call(&self, call: Call, start: Instant) -> Result<Value, BoundaryError> {
@@ -214,6 +235,7 @@ where
             op_id: op_id.clone(),
             cancel,
             reservation: own.first().map(|active| Arc::clone(&active.reservation)),
+            queued: own.first().map(|active| active.queued.clone()),
             foreign: foreign.first().map(|active| active.principal.clone()),
         };
         let (reply, received) = watch::channel(None);

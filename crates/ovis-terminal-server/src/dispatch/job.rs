@@ -17,6 +17,7 @@ use serde_json::Value;
 use tokio::sync::watch;
 
 use super::execution::{State, now};
+use super::queue::Admission;
 use super::registry::Prepared;
 use super::reservation::Reservation;
 use super::{DispatchError, Execution};
@@ -27,6 +28,7 @@ pub(super) struct Job<D, P> {
     pub decision: Decision<RegistryIdentities>,
     pub notifier: crate::conn::Notifier,
     pub reservation: Arc<Reservation>,
+    pub admission: Admission,
 }
 
 impl<D, P> Job<D, P>
@@ -60,12 +62,16 @@ where
         let accepted_context = context.clone();
         let reservation = Arc::clone(&self.reservation);
         let request = Arc::clone(&prepared.request);
+        let Admission { ticket, permit } = self.admission;
         let record = tokio::task::spawn_blocking(move || {
+            // Waits in FIFO order; the connection's queue place is freed once admitted.
+            let slot = ticket.wait().map_err(OperationError::from)?;
+            drop(permit);
             let operations = Operations::new(&state.core, accepted_context);
             let acceptance = reservation.accept();
             let accepted =
                 if acceptance.cancel_requested() {
-                    match operations.accept_cancelled(&request) {
+                    match operations.accept_cancelled_granted(&request, slot) {
                         Ok(cancelled) => {
                             acceptance.deliver(serde_json::to_value(&cancelled).map_err(|error| {
                                 DispatchError::from(error).boundary().data().clone()
@@ -79,7 +85,9 @@ where
                         }
                     }
                 } else {
-                    operations.accept(&request).map_err(DispatchError::from)
+                    operations
+                        .accept_granted(&request, slot)
+                        .map_err(DispatchError::from)
                 };
             drop(acceptance);
             accepted

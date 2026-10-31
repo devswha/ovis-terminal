@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use super::ledger::{Entry, OperationKey, Row};
 use super::{OP_RETENTION_MS, OperationError, OperationEvent, OperationSnapshot};
-use crate::events::{Commit, Coordinator, EventData, ResourceId, SnapshotProducer};
+use crate::events::{Commit, Coordinator, EventData, ResourceId, SnapshotProducer, SnapshotSlot};
 use crate::registry::RuntimeIdentity;
 
 #[cfg(test)]
@@ -74,7 +74,18 @@ where
     P::Sections: AsRef<OperationSnapshot> + DeserializeOwned,
 {
     pub(super) fn snapshot(&self) -> Result<OperationSnapshot, OperationError> {
-        let snapshot = self.coordinator.read_snapshot()?;
+        self.snapshot_in(None)
+    }
+
+    /// Reads the ledger under `slot` when one was granted, else waits for a slot in turn.
+    pub(super) fn snapshot_in(
+        &self,
+        slot: Option<SnapshotSlot>,
+    ) -> Result<OperationSnapshot, OperationError> {
+        let snapshot = match slot {
+            Some(slot) => self.coordinator.read_snapshot_in(slot)?,
+            None => self.coordinator.read_snapshot()?,
+        };
         if snapshot.cursor.runtime_id != self.context.identity.runtime_id()
             || snapshot.cursor.machine_id != self.context.identity.machine_id()
         {
