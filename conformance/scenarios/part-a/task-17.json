@@ -1,0 +1,122 @@
+{
+  "scenario": "part-a/task-17",
+  "todo": 17,
+  "title": "Holder output connected to revisioned screen and history",
+  "closes": ["GAP-052", "GAP-053", "GAP-054", "GAP-055", "GAP-067", "GAP-068", "GAP-069"],
+  "delivers": ["IDEAL-035", "IDEAL-036", "IDEAL-047"],
+  "excludes": ["EXCL-008", "EXCL-019"],
+  "platforms": ["linux", "macos"],
+  "verification": {
+    "status": "deferred_by_plan",
+    "runner_todo": 21,
+    "requires_actual_cli_socket_transcript": true
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.launch",
+            "program": {
+              "argv": [
+                "/bin/sh",
+                "-c",
+                "i=0; while [ $i -lt 120 ]; do echo \"line $i\"; i=$((i+1)); done; printf '\\033[6n'; echo READY; read go; i=0; while [ $i -lt 40 ]; do echo \"tick $i\"; i=$((i+1)); done; exit 3"
+              ]
+            },
+            "cwd": "$isolated_root",
+            "env": {"PATH": "/usr/bin:/bin"},
+            "geometry": {"rows": 5, "cols": 40},
+            "keep": false
+          },
+          "capture": ["terminal_id"]
+        },
+        {
+          "attach": {"target": "$terminal_id", "role": "observe"},
+          "capture": ["viewer_stream"]
+        },
+        {"await_output": "READY", "target": "$terminal_id"},
+        {
+          "rpc": "terminal.history",
+          "params": {"target": {"terminal_id": "$terminal_id"}, "limit": 50},
+          "capture": ["first_page"],
+          "assert": {
+            "fields": ["source", "format", "revision", "offset", "live", "history", "retained", "fidelity", "requested", "returned", "truncated", "next"],
+            "counters_are_decimal_strings": true,
+            "live.at_live_bottom": true,
+            "truncated": true,
+            "first_line_text": "line 0"
+          }
+        },
+        {
+          "rpc": "input.send",
+          "params": {"target": {"terminal_id": "$terminal_id"}, "text": "go", "submit": "enter"}
+        },
+        {"await": "terminal.finished", "target": "$terminal_id"},
+        {
+          "rpc": "terminal.history",
+          "params": {"target": {"terminal_id": "$terminal_id"}, "cursor": "$first_page.next", "limit": 50},
+          "assert": {
+            "revision_equals": "$first_page.revision",
+            "live.revision_greater_than": "$first_page.revision",
+            "live.at_live_bottom": false,
+            "returned.first": "50"
+          }
+        },
+        {
+          "rpc": "terminal.search",
+          "params": {"target": {"terminal_id": "$terminal_id"}, "needle": "line 7", "revision": "$first_page.revision", "limit": 64},
+          "assert": {"revision_equals": "$first_page.revision", "min_matches": 11}
+        },
+        {
+          "rpc": "terminal.selection",
+          "params": {"target": {"terminal_id": "$terminal_id"}, "revision": "$first_page.revision", "lines": {"first": 0, "count": 2}},
+          "assert": {"text": "line 0\nline 1\n"}
+        },
+        {
+          "stream": "$viewer_stream",
+          "assert": {
+            "received_bytes_through_final_offset": true,
+            "tick_lines_after_pinned_read": 40,
+            "query_reply_bytes_absent": true,
+            "no_input_injected_by_reads": true,
+            "viewer_never_paused": true
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "inject": {"retained_output_bytes": "64", "checkpoint_interval_bytes": "32", "pinned_snapshots": "1"},
+          "rpc": "terminal.output",
+          "params": {"target": {"terminal_id": "$terminal_id"}, "from": "0", "limit_bytes": 16},
+          "assert": {
+            "kind": "history_gap",
+            "retained_floor_greater_than": "0",
+            "checkpoint_offset_within_retained": true
+          }
+        },
+        {
+          "rpc": "terminal.history",
+          "params": {"target": {"terminal_id": "$terminal_id"}, "cursor": {"revision": "$evicted_revision", "line": 0}, "limit": 5},
+          "assert": {"kind": "stale_revision", "empty_complete_history": false, "current_revision_present": true}
+        },
+        {
+          "rpc": "terminal.search",
+          "params": {"target": {"terminal_id": "$terminal_id"}, "needle": "x", "revision": 7, "limit": 1},
+          "assert": {"kind": "invalid_params"}
+        },
+        {
+          "program_bytes": "\u001b[?1049h",
+          "rpc": "terminal.history",
+          "params": {"target": {"terminal_id": "$terminal_id"}, "limit": 5},
+          "assert": {"kind": "history_unavailable", "reason": "alternate_screen", "recovery": "history_available_transition"}
+        }
+      ]
+    }
+  ]
+}

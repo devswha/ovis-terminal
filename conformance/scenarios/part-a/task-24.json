@@ -1,0 +1,356 @@
+{
+  "scenario": "part-a/task-24",
+  "todo": 24,
+  "title": "Independent input and geometry lease ownership",
+  "closes": [
+    "GAP-042",
+    "GAP-044",
+    "GAP-045",
+    "GAP-056",
+    "GAP-057",
+    "GAP-133"
+  ],
+  "delivers": [
+    "IDEAL-029",
+    "IDEAL-030",
+    "IDEAL-031",
+    "IDEAL-037",
+    "IDEAL-103",
+    "IDEAL-106"
+  ],
+  "excludes": [
+    "EXCL-004",
+    "EXCL-007",
+    "EXCL-023"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "verification": {
+    "status": "deferred_by_plan",
+    "runner_todo": 21,
+    "requires_actual_cli_socket_transcript": true
+  },
+  "credentials": {
+    "operator": [
+      "observe",
+      "interact"
+    ],
+    "phone": [
+      "observe"
+    ],
+    "browser": [
+      "observe"
+    ],
+    "rival": [
+      "observe",
+      "interact"
+    ],
+    "bridge": [
+      "observe",
+      "interact",
+      "takeover"
+    ],
+    "relay": [
+      "observe",
+      "interact",
+      "takeover"
+    ]
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.launch",
+            "program": {
+              "argv": [
+                "/bin/sh",
+                "-c",
+                "printf 'ARMED\\n'; while :; do read line; done"
+              ]
+            },
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin"
+            },
+            "geometry": {
+              "rows": 24,
+              "cols": 80
+            },
+            "keep": true
+          },
+          "capture": [
+            "terminal_id"
+          ]
+        },
+        {
+          "as": "operator",
+          "rpc": "attach.open",
+          "params": {
+            "op_id": "$uuidv7.operator",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "role": "interact",
+            "client_id": "operator",
+            "geometry": {
+              "rows": 24,
+              "cols": 80
+            },
+            "stream_mode": "channel"
+          },
+          "capture": [
+            "lease.lease_id",
+            "lease.epoch"
+          ]
+        },
+        {
+          "as": "phone",
+          "rpc": "attach.open",
+          "params": {
+            "op_id": "$uuidv7.phone",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "role": "observe",
+            "client_id": "phone",
+            "geometry": {
+              "rows": 10,
+              "cols": 40
+            },
+            "stream_mode": "channel"
+          }
+        },
+        {
+          "as": "browser",
+          "rpc": "attach.open",
+          "params": {
+            "op_id": "$uuidv7.browser",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "role": "observe",
+            "client_id": "browser",
+            "geometry": {
+              "rows": 50,
+              "cols": 200
+            },
+            "stream_mode": "channel"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "attach.leases",
+          "params": {
+            "target": {
+              "terminal_id": "$terminal_id"
+            }
+          },
+          "assert": {
+            "interact.lease_id": "$operator.lease.lease_id",
+            "interact.epoch": "$operator.lease.epoch",
+            "geometry_owner.holder": "operator",
+            "observers.length": "2",
+            "grid": {
+              "rows": 24,
+              "cols": 80
+            }
+          }
+        },
+        {
+          "as": "bridge",
+          "rpc": "attach.open",
+          "params": {
+            "op_id": "$uuidv7.bridge_watch",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "role": "observe",
+            "client_id": "bridge",
+            "stream_mode": "channel"
+          },
+          "capture": [
+            "stream_id"
+          ]
+        },
+        {
+          "as": "bridge",
+          "rpc": "attach.takeover",
+          "params": {
+            "op_id": "$uuidv7.takeover",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "stream_id": "$bridge.stream_id",
+            "takeover": {
+              "lease_epoch": "$operator.lease.epoch",
+              "reason": "bridge reconnect"
+            }
+          },
+          "assert": {
+            "displaced.holder": "operator",
+            "acquired.holder": "bridge",
+            "acquired.epoch_increment": "1",
+            "events_in_order": [
+              "lease.revoked",
+              "lease.acquired"
+            ],
+            "revoked_names_both_owners": true,
+            "geometry_owner_unchanged": true
+          }
+        },
+        {
+          "repeat_operation": "$uuidv7.takeover",
+          "assert": {
+            "same_receipt": true,
+            "additional_events": "0"
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "as": "rival",
+          "rpc": "attach.open",
+          "params": {
+            "op_id": "$uuidv7.rival_watch",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "role": "observe",
+            "client_id": "rival",
+            "stream_mode": "channel"
+          },
+          "capture": [
+            "stream_id"
+          ]
+        },
+        {
+          "as": "relay",
+          "rpc": "attach.open",
+          "params": {
+            "op_id": "$uuidv7.relay_watch",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "role": "observe",
+            "client_id": "relay",
+            "stream_mode": "channel"
+          },
+          "capture": [
+            "stream_id"
+          ]
+        },
+        {
+          "as": "relay",
+          "rpc": "attach.takeover",
+          "params": {
+            "op_id": "$uuidv7.stale",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "stream_id": "$relay.stream_id",
+            "takeover": {
+              "lease_epoch": "$operator.lease.epoch",
+              "reason": "stale epoch"
+            }
+          },
+          "assert": {
+            "kind": "lease_epoch_mismatch",
+            "lease_unchanged": true
+          }
+        },
+        {
+          "as": "rival",
+          "rpc": "attach.open",
+          "params": {
+            "op_id": "$uuidv7.rival",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "role": "interact",
+            "client_id": "rival",
+            "stream_mode": "channel"
+          },
+          "assert": {
+            "kind": "lease_conflict",
+            "holder.holder": "bridge",
+            "evicted": false
+          }
+        },
+        {
+          "as": "phone",
+          "rpc": "attach.resize",
+          "params": {
+            "op_id": "$uuidv7.phone_resize",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "lease_id": "$phone.lease.lease_id",
+            "geometry": {
+              "rows": 10,
+              "cols": 40
+            }
+          },
+          "assert": {
+            "kind": "forbidden",
+            "grid": {
+              "rows": 24,
+              "cols": 80
+            }
+          }
+        },
+        {
+          "as": "rival",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.borrowed_lease",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "lease_id": "$bridge.lease.lease_id",
+            "text": "address possession is not authority"
+          },
+          "assert": {
+            "kind": "no_lease",
+            "written_bytes": "0"
+          }
+        },
+        {
+          "as": "rival",
+          "rpc": "attach.takeover",
+          "params": {
+            "op_id": "$uuidv7.unpermitted",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "stream_id": "$rival.stream_id",
+            "takeover": {
+              "lease_epoch": "$bridge.lease.epoch",
+              "reason": "no takeover grant"
+            }
+          },
+          "assert": {
+            "kind": "forbidden"
+          }
+        },
+        {
+          "as": "bridge",
+          "disconnect": true,
+          "assert": {
+            "events_in_order": [
+              "lease.revoked"
+            ],
+            "reason": "disconnected"
+          }
+        }
+      ]
+    }
+  ]
+}
