@@ -100,7 +100,7 @@ impl Tasks {
         if self.closed {
             return Err(DispatchError::Closed);
         }
-        let limit = usize::try_from(Limits::v1().max_in_flight_requests)?;
+        let limit = usize::try_from(Limits::v1().max_in_flight_requests.get())?;
         self.connections.retain(|(session, permits)| {
             session.strong_count() > 0 || permits.available_permits() < limit
         });

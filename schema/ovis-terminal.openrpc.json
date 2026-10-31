@@ -1208,6 +1208,11 @@
         ],
         "type": "object"
       },
+      "Count": {
+        "description": "Count carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
       "DecimalCounter": {
         "description": "Unsigned 64-bit integer carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
@@ -3596,20 +3601,16 @@
             "description": "Retained event bytes available for replay."
           },
           "event_replay_events": {
-            "description": "Retained events available for replay.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/components/schemas/Count",
+            "description": "Retained events available for replay."
           },
           "heartbeat_ms": {
             "$ref": "#/components/schemas/DurationMs",
             "description": "Idle interval after which a heartbeat is sent."
           },
           "history_lines": {
-            "description": "Retained history lines per terminal.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/components/schemas/Count",
+            "description": "Retained history lines per terminal."
           },
           "input_queue_bytes": {
             "$ref": "#/components/schemas/ByteCount",
@@ -3620,10 +3621,8 @@
             "description": "Largest frame payload and NDJSON control record."
           },
           "max_in_flight_requests": {
-            "description": "Requests in flight on one connection.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/components/schemas/Count",
+            "description": "Requests in flight on one connection."
           },
           "op_retention_ms": {
             "$ref": "#/components/schemas/DurationMs",
@@ -19920,12 +19919,12 @@
       "credit_max_bytes": "1048576",
       "doc_max_bytes": "1048576",
       "event_replay_bytes": "67108864",
-      "event_replay_events": 10000,
+      "event_replay_events": "10000",
       "heartbeat_ms": "15000",
-      "history_lines": 100000,
+      "history_lines": "100000",
       "input_queue_bytes": "16777216",
       "max_frame_bytes": "16777216",
-      "max_in_flight_requests": 64,
+      "max_in_flight_requests": "64",
       "op_retention_ms": "86400000",
       "output_ring_bytes": "67108864",
       "rpc_default_deadline_ms": "10000",
