@@ -71,7 +71,7 @@ impl<F: IdentityFamily> Authority<F> {
         let mut table = self.write()?;
         table.permit(issuer, &admin)?;
         within_issuer(
-            table.check_claim(issuer.claim, at)?,
+            table.check_claim(&issuer.claim, at)?,
             &request,
             &self.binding.machine,
         )?;

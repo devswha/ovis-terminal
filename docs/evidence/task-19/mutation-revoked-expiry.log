@@ -1,0 +1,32 @@
+# Mutation: Claim::check_bound no longer consults the shared revocation cell
+$ cargo test -p ovis-terminal-authz --test authority reclamation
+test reclamation::credential_table_is_bounded_and_reclaims_revoked_entries ... ok
+test reclamation::expired_decision_reports_expiry_after_its_record_is_purged ... ok
+test reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed ... ok
+test reclamation::purged_revoked_credential_cannot_queue_new_work ... FAILED
+test reclamation::revoked_then_expired_decision_stays_revoked_after_table_overflow ... FAILED
+test reclamation::revoked_then_expired_decision_stays_revoked_after_tombstone_purge ... FAILED
+test reclamation::tombstone_bound_holds_unexpired_revocations_until_one_expires ... ok
+assertion `left == right` failed
+  left: "credential_expired"
+ right: "credential_revoked"
+assertion `left == right` failed
+  left: "credential_expired"
+ right: "credential_revoked"
+assertion `left == right` failed
+  left: "credential_expired"
+ right: "credential_revoked"
+test result: FAILED. 4 passed; 3 failed; 0 ignored; 0 measured; 24 filtered out; finished in 0.00s
+MUTATION_EXIT=101
+
+# restored
+$ cargo test -p ovis-terminal-authz --test authority reclamation
+test reclamation::credential_table_is_bounded_and_reclaims_revoked_entries ... ok
+test reclamation::expired_decision_reports_expiry_after_its_record_is_purged ... ok
+test reclamation::purged_revoked_credential_cannot_queue_new_work ... ok
+test reclamation::revoked_then_expired_decision_stays_revoked_after_table_overflow ... ok
+test reclamation::revoked_then_expired_decision_stays_revoked_after_tombstone_purge ... ok
+test reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed ... ok
+test reclamation::tombstone_bound_holds_unexpired_revocations_until_one_expires ... ok
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 24 filtered out; finished in 0.00s
+RESTORED_EXIT=0

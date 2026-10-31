@@ -107,6 +107,10 @@ pub struct CredentialEpoch(DecimalU64);
 impl CredentialEpoch {
     pub(super) const FIRST: Self = Self(DecimalU64::new(1));
 
+    pub(super) const fn from_raw(value: u64) -> Self {
+        Self(DecimalU64::new(value))
+    }
+
     /// Returns the native epoch value.
     #[must_use]
     pub const fn get(self) -> u64 {

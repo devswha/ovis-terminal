@@ -35,7 +35,31 @@ fn interact(terminal_id: &str, expires: TimestampMs) -> TestResult<IssueRequest<
 }
 
 fn input_on(terminal_id: &str) -> AccessRequest<WireIds> {
-    CommitCheck::new(Action::Input, terminal(terminal_id), NOW)
+    input_at(terminal_id, NOW)
+}
+
+fn input_at(terminal_id: &str, at: TimestampMs) -> AccessRequest<WireIds> {
+    CommitCheck::new(Action::Input, terminal(terminal_id), at)
+}
+
+const EXPIRES: TimestampMs = TimestampMs::new(2_000_000);
+const AFTER_EXPIRY: TimestampMs = TimestampMs::new(3_000_000);
+
+/// Issues an interact credential on `t1` expiring at `EXPIRES`, authenticates it and queues
+/// an input decision for it at `NOW`.
+fn queued_on_t1(
+    authority: &Authority<WireIds>,
+    owner: &Session,
+) -> TestResult<(
+    ovis_terminal_authz::IssuedCredential<WireIds>,
+    Session,
+    ovis_terminal_authz::Decision<WireIds>,
+)> {
+    let issued = authority.issue(owner, Issuance::new(interact("t1", EXPIRES)?, NOW))?;
+    let agent =
+        authority.authenticate(&local_admission()?, Presentation::new(issued.bearer(), NOW))?;
+    let queued = authority.authorize(&agent, &input_on("t1"))?;
+    Ok((issued, agent, queued))
 }
 
 #[test]
@@ -115,5 +139,84 @@ fn tombstone_bound_holds_unexpired_revocations_until_one_expires() -> TestResult
         "expired tombstone was not purged"
     );
     assert_eq!(kind_of(dispatched), "credential_revoked");
+    Ok(())
+}
+
+#[test]
+fn revoked_then_expired_decision_stays_revoked_after_table_overflow() -> TestResult {
+    let (authority, owner) = bounded(AuthorityLimits::DEFAULT.with_max_credentials(2))?;
+    let (issued, _, queued) = queued_on_t1(&authority, &owner)?;
+    authority.revoke(&owner, &Revocation::new(*issued.id(), NOW))?;
+
+    let refill = authority.issue(
+        &owner,
+        Issuance::new(interact("t2", OWNER_EXPIRY)?, AFTER_EXPIRY),
+    );
+    let dispatched = authority.recheck(&queued, &input_at("t1", AFTER_EXPIRY));
+
+    assert!(refill.is_ok(), "the expired revoked record was not purged");
+    assert_eq!(kind_of(dispatched), "credential_revoked");
+    Ok(())
+}
+
+#[test]
+fn revoked_then_expired_decision_stays_revoked_after_tombstone_purge() -> TestResult {
+    let limits = AuthorityLimits::DEFAULT
+        .with_max_credentials(2)
+        .with_max_tombstones(1);
+    let (authority, owner) = bounded(limits)?;
+    let (issued, _, queued) = queued_on_t1(&authority, &owner)?;
+    authority.revoke(&owner, &Revocation::new(*issued.id(), NOW))?;
+    let second = authority.issue(&owner, Issuance::new(interact("t2", OWNER_EXPIRY)?, NOW))?;
+    authority.revoke(&owner, &Revocation::new(*second.id(), NOW))?;
+
+    let purge = authority.issue(
+        &owner,
+        Issuance::new(interact("t3", OWNER_EXPIRY)?, AFTER_EXPIRY),
+    );
+    let dispatched = authority.recheck(&queued, &input_at("t1", AFTER_EXPIRY));
+
+    assert!(
+        purge.is_ok(),
+        "the expired tombstone was not purged to bury the second revocation"
+    );
+    assert_eq!(kind_of(dispatched), "credential_revoked");
+    Ok(())
+}
+
+#[test]
+fn expired_decision_reports_expiry_after_its_record_is_purged() -> TestResult {
+    let (authority, owner) = bounded(AuthorityLimits::DEFAULT.with_max_credentials(2))?;
+    let (_, _, queued) = queued_on_t1(&authority, &owner)?;
+
+    let refill = authority.issue(
+        &owner,
+        Issuance::new(interact("t2", OWNER_EXPIRY)?, AFTER_EXPIRY),
+    );
+    let dispatched = authority.recheck(&queued, &input_at("t1", AFTER_EXPIRY));
+
+    assert!(refill.is_ok(), "the expired record was not purged");
+    assert_eq!(kind_of(dispatched), "credential_expired");
+    Ok(())
+}
+
+#[test]
+fn purged_revoked_credential_cannot_queue_new_work() -> TestResult {
+    let (authority, owner) = bounded(AuthorityLimits::DEFAULT.with_max_credentials(2))?;
+    let (issued, agent, _) = queued_on_t1(&authority, &owner)?;
+    authority.revoke(&owner, &Revocation::new(*issued.id(), NOW))?;
+    authority.issue(
+        &owner,
+        Issuance::new(interact("t2", OWNER_EXPIRY)?, AFTER_EXPIRY),
+    )?;
+
+    let from_open_session = authority.authorize(&agent, &input_at("t1", AFTER_EXPIRY));
+    let fresh_login = authority.authenticate(
+        &local_admission()?,
+        Presentation::new(issued.bearer(), AFTER_EXPIRY),
+    );
+
+    assert_eq!(kind_of(from_open_session), "credential_revoked");
+    assert_eq!(kind_of(fresh_login), "invalid_credential");
     Ok(())
 }

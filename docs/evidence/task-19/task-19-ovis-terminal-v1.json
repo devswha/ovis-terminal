@@ -18,7 +18,7 @@
     {
       "command": "cargo nextest run -p ovis-terminal-authz",
       "exit": 0,
-      "result": "38 tests run: 38 passed, 0 skipped",
+      "result": "42 tests run: 42 passed, 0 skipped",
       "log": "nextest.log"
     },
     {
@@ -56,7 +56,7 @@
     {
       "command": "every step of conformance/scenarios/part-a/task-19.json executed with its expected exit and stdout lines",
       "exit": 0,
-      "result": "17 of 17 steps PASS",
+      "result": "21 of 21 steps PASS",
       "log": "scenario-steps.log"
     },
     {
@@ -80,7 +80,11 @@
       "revocation::commit_must_match_the_decided_action_target_and_incarnation",
       "reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed",
       "reclamation::tombstone_bound_holds_unexpired_revocations_until_one_expires",
-      "revocation::denied_revocation_leaves_the_target_credential_usable"
+      "revocation::denied_revocation_leaves_the_target_credential_usable",
+      "reclamation::revoked_then_expired_decision_stays_revoked_after_table_overflow",
+      "reclamation::revoked_then_expired_decision_stays_revoked_after_tombstone_purge",
+      "reclamation::expired_decision_reports_expiry_after_its_record_is_purged",
+      "reclamation::purged_revoked_credential_cannot_queue_new_work"
     ],
     "malformed_input": [
       "issuance::forged_scope_documents_are_rejected_with_field_paths",
@@ -96,8 +100,9 @@
     "mutation": [
       "mutation.log",
       "mutation-revoke.log",
-      "mutation-reclaim.log"
+      "mutation-reclaim.log",
+      "mutation-revoked-expiry.log"
     ]
   },
-  "round": "gate review round 1 fixes (B1 registry-backed scopes, B2 denied-revocation coverage, B3 revocation survives reclamation)"
+  "round": "gate review round 2 fix (B3-R2: revocation cause bound to outstanding decisions across expiry and reclamation)"
 }

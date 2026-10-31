@@ -25,6 +25,12 @@ absent. GAP-129, GAP-130, GAP-131 and GAP-136 had no comparable capability in th
   - `issuance_document_rejects_an_identity_of_another_family`: `"tab:7"` in a terminal scope is `invalid_params` at `grants[0].scope.resource`, while `"terminal:7"` parses.
   - `docs/evidence/task-19/identity-probe.log`: a terminal scope built from a registry `TabId`, or a terminal target built from a `WorkspaceId`, fails with E0308; the `TerminalId` control compiles.
 - Revocation survives table reclamation. When the table is full, a revoked, unexpired record is reclaimed only after its revocation is buried in a bounded tombstone set (`AuthorityLimits::with_max_tombstones`, default 1024). A claim on it then still fails with `credential_revoked`. If the tombstone set is full of unexpired revocations, the record stays and issuance reports `limit_exceeded`; expired tombstones are purged only when room is needed.
+- The revocation cause is bound to outstanding work (round 3). Each credential record shares an `Arc<RevocationCell>` with every session and decision made under it. Revocation sets the cell once (Release; readers Acquire), and every claim check consults the cell and the claim's bound expiry before any table lookup. Purging the record or its tombstone therefore cannot erase the cause. Per decision this adds one `Arc` pointer plus the copied expiry; no per-decision table state.
+  - (a) `reclamation::revoked_then_expired_decision_stays_revoked_after_table_overflow`: issue, queue, revoke, then advance past expiry and overflow the table, which purges the record. Committing the queued decision returns `credential_revoked`.
+  - (b) `reclamation::revoked_then_expired_decision_stays_revoked_after_tombstone_purge`: the same, except the revocation was first buried and its tombstone was then purged at expiry to bury another revocation. The commit returns `credential_revoked`.
+  - (c) `reclamation::expired_decision_reports_expiry_after_its_record_is_purged`: issue, queue, then advance past expiry with no revocation and purge the record. The commit returns `credential_expired`, neither `credential_revoked` nor `invalid_credential`.
+  - (d) `reclamation::purged_revoked_credential_cannot_queue_new_work`: after the revoked credential is purged, a new authorize from its still-open session returns `credential_revoked`, so nothing can be queued. A fresh login with the old bearer returns `invalid_credential`, because the secret is gone and the runtime cannot tell a revoked bearer from a forged one without disclosing revocation status to an unproven presenter.
+  - Removing the cell check makes (a), (b) and (d) fail with `credential_expired` (exit 101); restored, all 7 reclamation tests pass (`docs/evidence/task-19/mutation-revoked-expiry.log`).
 
 Real-surface command (Before/After requirement), exit 2:
 
@@ -48,11 +54,11 @@ EXIT=0
 
 - `cargo test -p ovis-terminal-authz --test authority happy -- --exact --nocapture`: exit 0. It asserts that a machine-scoped observe principal is allowed `read` and `subscribe` on t1 and t2 and that each decision passes `recheck`, and that the same principal gets `forbidden` for `input`. A terminal-scoped interact principal is allowed `input` and `resize` on t1 (with `recheck`) and gets `forbidden` for `input` on t2 and for `launch` on a workspace.
 - `cargo test -p ovis-terminal-authz --test authority failure -- --exact --nocapture`: exit 0. It asserts that an input decision made before the owner revoked the credential fails its write-time `recheck` with `credential_revoked`. It also asserts that an observe principal gets `forbidden` for input, resize, launch, document write, layout change, takeover and prompt answer (7 typed rejections, printed in the log).
-- Every step of `conformance/scenarios/part-a/task-19.json` (17 named tests across authz and the core seam, each with its expected exit code and stdout lines) was executed: 17/17 PASS (`scenario-steps.log`).
-- `cargo nextest run -p ovis-terminal-authz`: exit 0, 38 passed: 6 unit tests, 27 in `tests/authority.rs`, 5 in `tests/endpoint.rs`.
+- Every step of `conformance/scenarios/part-a/task-19.json` (21 named tests across authz and the core seam, each with its expected exit code and stdout lines) was executed: 21/21 PASS (`scenario-steps.log`).
+- `cargo nextest run -p ovis-terminal-authz`: exit 0, 42 passed: 6 unit tests, 31 in `tests/authority.rs`, 5 in `tests/endpoint.rs`.
 - `cargo nextest run -p ovis-terminal-core --test authority_scope`: exit 0, 2 passed.
 - `cargo clippy -p ovis-terminal-authz --all-targets -- -D warnings`: exit 0.
-- `bash scripts/check.sh`: exit 0, all steps passed. Workspace nextest: 272 passed, 1 skipped (the intentional `crash_child` fixture). Hygiene: 0 violations in 301 files, 16 manifests, and 26 JSON files checked.
+- `bash scripts/check.sh`: exit 0, all steps passed. Workspace nextest: 276 passed, 1 skipped (the intentional `crash_child` fixture). Hygiene: 0 violations in 302 files, 16 manifests, and 26 JSON files checked.
 - `cargo metadata --locked --format-version 1 --no-deps`: exit 0. `origin/integration` was still at `c1dd6cf` when this branch was pushed, so no merge was needed.
 
 ## Adversarial
@@ -96,5 +102,5 @@ EXIT=0
 - `credential_revoked`, `decision_mismatch`, `grant_exceeds_issuer`, `endpoint_insecure` and `peer_rejected` are stable `AuthzError::kind()` tokens but are not yet in protocol `DomainErrorKind` or the published OpenRPC error catalog. The lane that maps `AuthzError` onto the wire (todos 13/14) must add them there.
 - Credentials live in memory, per `Authority` instance. A control-server restart invalidates every credential (fail-closed). Durable credentials and rotation are todo 57.
 - The endpoint checks validate OS evidence they are given. Collecting it (`SO_PEERCRED`, socket/dir `stat`, pipe security descriptors, `FILE_FLAG_FIRST_PIPE_INSTANCE`) belongs to the listener todos (13, 51, 54). No Windows host ran these checks here.
-- When the credential table is full, expired records and buried revocations are reclaimed. A credential that is both reclaimed and past its expiry (or whose tombstone was purged after expiry) reports `invalid_credential`; it is still denied.
+- When the credential table is full, expired records and buried revocations are reclaimed. Outstanding sessions and decisions keep their revoked or expired cause through the shared cell. Only a fresh login with a purged credential's bearer reports `invalid_credential` (still denied).
 - The scaffold's `ovis-terminal-store` dependency is kept for the layering record, but this crate does not persist anything yet.

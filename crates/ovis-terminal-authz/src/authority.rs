@@ -1,5 +1,6 @@
 //! Authentication, authorization and the commit-time recheck of decisions.
 
+mod cell;
 mod issuance;
 mod issued;
 mod secret;
@@ -151,11 +152,8 @@ impl<F: IdentityFamily> Authority<F> {
                 .get(&bearer.credential)
                 .filter(|record| record.proves(&bearer.secret))
                 .ok_or(AuthzError::InvalidCredential)?;
-            let claim = Claim {
-                credential: bearer.credential,
-                epoch: record.epoch,
-            };
-            record.check(claim, presentation.at)?;
+            let claim = record.claim(bearer.credential);
+            record.check(&claim, presentation.at)?;
             let principal = record.principal.clone();
             drop(table);
             (claim, principal)
@@ -208,7 +206,7 @@ impl<F: IdentityFamily> Authority<F> {
             return Err(AuthzError::DecisionMismatch { reason });
         }
         self.read()?
-            .check_claim(decision.claim, commit.at)
+            .check_claim(&decision.claim, commit.at)
             .map(|_| ())
     }
 

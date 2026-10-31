@@ -1,9 +1,11 @@
 //! The in-memory credential table of one authority.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 
+use super::cell::RevocationCell;
 use super::issued::{Bearer, IssuedCredential};
 use super::secret::CredentialSecret;
 use super::tombstone::{Tombstone, Tombstones};
@@ -28,18 +30,51 @@ pub(super) struct CredentialRecord<F: IdentityFamily> {
     pub(super) expires_at: TimestampMs,
     pub(super) epoch: CredentialEpoch,
     standing: Standing,
+    revocation: Arc<RevocationCell>,
 }
 
-/// The credential and epoch a session or decision was made under.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The credential a session or decision was made under, with the cause-bearing facts bound
+/// at that moment: its epoch, its expiry and the revocation cell shared with the record.
+#[derive(Debug, Clone)]
 pub(super) struct Claim {
     pub(super) credential: CredentialId,
     pub(super) epoch: CredentialEpoch,
+    expires_at: TimestampMs,
+    revocation: Arc<RevocationCell>,
+}
+
+impl Claim {
+    /// Fails with the bound cause, without consulting the table, so reclaiming the record or
+    /// its tombstone cannot turn a revoked or expired claim into an unknown one.
+    fn check_bound(&self, at: TimestampMs) -> Result<(), AuthzError> {
+        if let Some(epoch) = self.revocation.revoked_at() {
+            return Err(AuthzError::CredentialRevoked {
+                credential: self.credential,
+                epoch,
+            });
+        }
+        if at.get() >= self.expires_at.get() {
+            return Err(AuthzError::CredentialExpired {
+                credential: self.credential,
+                expired_at: self.expires_at,
+            });
+        }
+        Ok(())
+    }
 }
 
 impl<F: IdentityFamily> CredentialRecord<F> {
+    pub(super) fn claim(&self, credential: CredentialId) -> Claim {
+        Claim {
+            credential,
+            epoch: self.epoch,
+            expires_at: self.expires_at,
+            revocation: Arc::clone(&self.revocation),
+        }
+    }
+
     /// Fails unless the credential is still active at the claimed epoch and unexpired at `at`.
-    pub(super) const fn check(&self, claim: Claim, at: TimestampMs) -> Result<(), AuthzError> {
+    pub(super) const fn check(&self, claim: &Claim, at: TimestampMs) -> Result<(), AuthzError> {
         if matches!(self.standing, Standing::Revoked) || self.epoch.get() != claim.epoch.get() {
             return Err(AuthzError::CredentialRevoked {
                 credential: claim.credential,
@@ -59,9 +94,10 @@ impl<F: IdentityFamily> CredentialRecord<F> {
         self.secret.matches(presented)
     }
 
-    pub(super) const fn revoke(&mut self) -> CredentialEpoch {
+    pub(super) fn revoke(&mut self) -> CredentialEpoch {
         self.epoch = self.epoch.next();
         self.standing = Standing::Revoked;
+        self.revocation.revoke(self.epoch);
         self.epoch
     }
 
@@ -106,9 +142,10 @@ impl<F: IdentityFamily> CredentialTable<F> {
     /// reclaimed revoked credential still fails as revoked.
     pub(super) fn check_claim(
         &self,
-        claim: Claim,
+        claim: &Claim,
         at: TimestampMs,
     ) -> Result<&CredentialRecord<F>, AuthzError> {
+        claim.check_bound(at)?;
         let Some(record) = self.records.get(&claim.credential) else {
             return Err(self.tombstones.get(claim.credential).map_or(
                 AuthzError::InvalidCredential,
@@ -142,7 +179,7 @@ impl<F: IdentityFamily> CredentialTable<F> {
         session: &Session,
         request: &AccessRequest<F>,
     ) -> Result<Decision<F>, AuthzError> {
-        let record = self.check_claim(session.claim, request.at)?;
+        let record = self.check_claim(&session.claim, request.at)?;
         let required = request.action.required();
         if !record
             .grants
@@ -157,7 +194,7 @@ impl<F: IdentityFamily> CredentialTable<F> {
         }
         Ok(Decision {
             authority: session.authority,
-            claim: session.claim,
+            claim: session.claim.clone(),
             principal: session.principal.clone(),
             action: request.action,
             target: request.target.clone(),
@@ -214,6 +251,7 @@ impl<F: IdentityFamily> CredentialTable<F> {
                 expires_at: new.expires_at,
                 epoch: CredentialEpoch::FIRST,
                 standing: Standing::Active,
+                revocation: Arc::default(),
             },
         );
         self.last_issued = sequence;
