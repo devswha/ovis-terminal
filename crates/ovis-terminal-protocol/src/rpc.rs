@@ -176,8 +176,8 @@ pub struct RpcErrorObject {
     pub code: i32,
     /// Human-readable summary; clients branch on `data.kind`.
     pub message: String,
-    /// Stable machine-readable error metadata.
-    pub data: ErrorData,
+    /// Stable machine-readable error metadata, boxed so a reply stays compact.
+    pub data: Box<ErrorData>,
 }
 
 /// Closed failing JSON-RPC response envelope.
@@ -205,7 +205,7 @@ impl RpcFailure {
             error: RpcErrorObject {
                 code,
                 message: error.to_string(),
-                data,
+                data: Box::new(data),
             },
         }
     }

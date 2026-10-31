@@ -23,11 +23,13 @@ impl Launcher for crate::terminals::Terminals {
                 spawn: record.spawn,
             },
             Err(error) => LaunchOutcome::Rejected {
-                error: BoundaryError::domain(ErrorKind::from(error.kind().to_owned()), false)
-                    .with_hint(error.hint())
-                    .with_op_id(op_id)
-                    .data()
-                    .clone(),
+                error: Box::new(
+                    BoundaryError::domain(ErrorKind::from(error.kind().to_owned()), false)
+                        .with_hint(error.hint())
+                        .with_op_id(op_id)
+                        .data()
+                        .clone(),
+                ),
             },
         }
     }

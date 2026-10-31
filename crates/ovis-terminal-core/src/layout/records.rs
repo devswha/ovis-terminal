@@ -28,8 +28,8 @@ pub enum LaunchOutcome {
     },
     /// No terminal was admitted; the created resources remain.
     Rejected {
-        /// Typed launch rejection.
-        error: ErrorData,
+        /// Typed launch rejection, boxed so the outcome stays compact.
+        error: Box<ErrorData>,
     },
 }
 
@@ -163,5 +163,30 @@ impl SelectionChanged {
         affected.extend(self.tab.map(ResourceId::Tab));
         affected.extend(self.pane.map(ResourceId::Pane));
         affected
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind};
+    use serde_json::json;
+
+    use super::LaunchOutcome;
+
+    #[test]
+    fn a_boxed_rejection_keeps_the_flat_wire_shape() -> Result<(), serde_json::Error> {
+        let data = BoundaryError::domain(ErrorKind::from("spawn_failed".to_owned()), false)
+            .with_hint("check the program")
+            .data()
+            .clone();
+        let outcome = LaunchOutcome::Rejected {
+            error: Box::new(data),
+        };
+        let wire = serde_json::to_value(&outcome)?;
+        let expected = json!({"state": "rejected", "error": {
+            "kind": "spawn_failed", "hint": "check the program", "retryable": false}});
+        assert_eq!(wire, expected);
+        assert_eq!(serde_json::from_value::<LaunchOutcome>(expected)?, outcome);
+        Ok(())
     }
 }
