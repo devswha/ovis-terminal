@@ -142,7 +142,7 @@ FAILURE_EXIT=0
 
 Gate: `bash scripts/check.sh` exit 0 (`check.log`: 448 tests run, 448 passed, 1 skipped; hygiene 0 violations; 42 JSON files checked). Acceptance commands: `cargo nextest run -p ovis-terminal-core` and `cargo clippy -p ovis-terminal-core --all-targets -- -D warnings` (`core-nextest.log`: 107 tests run, 107 passed, `NEXTEST_EXIT=0`; `core-clippy.log`: `CLIPPY_EXIT=0`). TDD red run before the module existed: `tdd-red.log` (unresolved `leases::*` imports, exit 101).
 
-macOS: the `probe-stress-macos` workflow gains a `leases` input that repeats `cargo nextest run -p ovis-terminal-core --test leases` 100 times on macos-latest. Run: STRESS_RUN_URL
+macOS: the `probe-stress-macos` workflow gains a `leases` input that repeats `cargo nextest run -p ovis-terminal-core --test leases` 100 times on macos-latest. Run: https://github.com/devswha/ovis-terminal/actions/runs/41194353648 (dispatched with `gh workflow run probe-stress-macos.yml --ref lane/t24-input-geometry-leases -f probe=leases`)
 
 ## Adversarial
 
