@@ -32,6 +32,7 @@ fn report(planned: &PlannedCase, outcome: Outcome, failure: Option<Failure>) -> 
         outcome,
         failure,
         assertions: Vec::new(),
+        descriptors: Vec::new(),
         connections: Vec::new(),
         processes: Vec::new(),
         fixture: None,
@@ -89,6 +90,7 @@ pub(crate) async fn run_case(ctx: &Context, planned: &PlannedCase) -> CaseReport
         case.outcome = Outcome::Failed;
     }
     case.assertions = std::mem::take(&mut session.assertions);
+    case.descriptors = std::mem::take(&mut session.descriptors);
     case.connections = std::mem::take(&mut session.connections);
     case.processes = std::mem::take(&mut session.processes);
     case.fixture = session.fixture_report.take();

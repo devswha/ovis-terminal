@@ -3,7 +3,6 @@
   "frames": [
     {
       "name": "control-request",
-      "summary": "One channel-0 DATA frame carrying a doc.get request.",
       "hex": "0000000000480000007b226a736f6e727063223a22322e30222c226964223a227731222c226d6574686f64223a22646f632e676574222c22706172616d73223a7b226e616d65223a22616c706861227d7d",
       "decodes": [
         {
@@ -11,11 +10,13 @@
           "kind": "data",
           "payload_hex": "7b226a736f6e727063223a22322e30222c226964223a227731222c226d6574686f64223a22646f632e676574222c22706172616d73223a7b226e616d65223a22616c706861227d7d"
         }
-      ]
+      ],
+      "descriptors": {
+        "summary": "One channel-0 DATA frame carrying a doc.get request."
+      }
     },
     {
       "name": "coalesced-requests",
-      "summary": "Two channel-0 DATA frames in one byte sequence.",
       "hex": "0000000000480000007b226a736f6e727063223a22322e30222c226964223a227732222c226d6574686f64223a22646f632e676574222c22706172616d73223a7b226e616d65223a22616c706861227d7d0000000000470000007b226a736f6e727063223a22322e30222c226964223a227733222c226d6574686f64223a22646f632e676574222c22706172616d73223a7b226e616d65223a2262657461227d7d",
       "decodes": [
         {
@@ -28,11 +29,13 @@
           "kind": "data",
           "payload_hex": "7b226a736f6e727063223a22322e30222c226964223a227733222c226d6574686f64223a22646f632e676574222c22706172616d73223a7b226e616d65223a2262657461227d7d"
         }
-      ]
+      ],
+      "descriptors": {
+        "summary": "Two channel-0 DATA frames in one byte sequence."
+      }
     },
     {
       "name": "credit-offset",
-      "summary": "A CREDIT frame on channel 7 acknowledging delivery offset 65536 (u64 little-endian).",
       "hex": "0700000001080000000000010000000000",
       "decodes": [
         {
@@ -40,11 +43,13 @@
           "kind": "credit",
           "payload_hex": "0000010000000000"
         }
-      ]
+      ],
+      "descriptors": {
+        "summary": "A CREDIT frame on channel 7 acknowledging delivery offset 65536 (u64 little-endian)."
+      }
     },
     {
       "name": "close-channel",
-      "summary": "A CLOSE frame on channel 7 with a typed control payload.",
       "hex": "0700000002150000007b22726561736f6e223a2272656c6561736564227d",
       "decodes": [
         {
@@ -52,11 +57,13 @@
           "kind": "close",
           "payload_hex": "7b22726561736f6e223a2272656c6561736564227d"
         }
-      ]
+      ],
+      "descriptors": {
+        "summary": "A CLOSE frame on channel 7 with a typed control payload."
+      }
     },
     {
       "name": "empty-data",
-      "summary": "A DATA frame with an empty payload on channel 3.",
       "hex": "030000000000000000",
       "decodes": [
         {
@@ -64,31 +71,42 @@
           "kind": "data",
           "payload_hex": ""
         }
-      ]
+      ],
+      "descriptors": {
+        "summary": "A DATA frame with an empty payload on channel 3."
+      }
     },
     {
       "name": "oversized-header",
-      "summary": "A header declaring one byte more than the 16 MiB frame bound.",
       "hex": "000000000001000001",
-      "error": "frame_too_large"
+      "error": "frame_too_large",
+      "descriptors": {
+        "summary": "A header declaring one byte more than the 16 MiB frame bound."
+      }
     },
     {
       "name": "unknown-kind",
-      "summary": "A header with frame kind 7, which no generation defines.",
       "hex": "000000000700000000",
-      "error": "unknown_kind"
+      "error": "unknown_kind",
+      "descriptors": {
+        "summary": "A header with frame kind 7, which no generation defines."
+      }
     },
     {
       "name": "truncated-header",
-      "summary": "Five of the nine header bytes, then end of stream.",
       "hex": "0000000000",
-      "error": "truncated_frame"
+      "error": "truncated_frame",
+      "descriptors": {
+        "summary": "Five of the nine header bytes, then end of stream."
+      }
     },
     {
       "name": "truncated-payload",
-      "summary": "A header declaring four payload bytes followed by two.",
       "hex": "0000000000040000007b7d",
-      "error": "truncated_frame"
+      "error": "truncated_frame",
+      "descriptors": {
+        "summary": "A header declaring four payload bytes followed by two."
+      }
     }
   ]
 }

@@ -7,6 +7,16 @@ use sha2::{Digest, Sha256};
 use crate::ids::{CaseName, Decimal, ScenarioId};
 use crate::scenario::matcher::Assertion;
 
+/// Free-text fixture documentation: recorded in the evidence, never asserted.
+pub(crate) type Descriptors = std::collections::BTreeMap<String, String>;
+
+/// The descriptors of one fixture a case used, and where they came from.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct DescriptorRecord {
+    pub(crate) source: String,
+    pub(crate) descriptors: Descriptors,
+}
+
 /// Record text longer than this is kept as length and digest only.
 pub(crate) const TEXT_LIMIT: usize = 4096;
 
@@ -118,6 +128,7 @@ pub(crate) struct CaseReport {
     pub(crate) outcome: Outcome,
     pub(crate) failure: Option<Failure>,
     pub(crate) assertions: Vec<Assertion>,
+    pub(crate) descriptors: Vec<DescriptorRecord>,
     pub(crate) connections: Vec<ConnectionReport>,
     pub(crate) processes: Vec<ProcessReport>,
     pub(crate) fixture: Option<Value>,

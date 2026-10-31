@@ -9,6 +9,7 @@ use serde_json::{Value, json};
 use super::conn::Wait;
 use super::session::Session;
 use crate::error::RunnerError;
+use crate::evidence::{DescriptorRecord, Descriptors};
 use crate::ids::ConnName;
 use crate::scenario::matcher::{Assertion, Subject};
 use crate::scenario::model::{Hello, Notification, Rejections, Replies, Split};
@@ -21,11 +22,8 @@ pub(crate) const RECORD_BOUND_MS: u64 = 20_000;
 #[serde(deny_unknown_fields)]
 struct RejectionFixture {
     format: String,
-    #[expect(
-        dead_code,
-        reason = "human-readable fixture documentation, required by the closed schema"
-    )]
-    summary: String,
+    #[serde(default)]
+    descriptors: Descriptors,
     cases: Vec<RejectionCase>,
 }
 
@@ -185,6 +183,10 @@ impl Session<'_> {
         if fixture.format != "ovis-protocol-fixture/1" {
             return Err(RunnerError::ScenarioNotExecutable { scenario: relative });
         }
+        self.descriptors.push(DescriptorRecord {
+            source: relative.clone(),
+            descriptors: fixture.descriptors,
+        });
         for case in fixture.cases {
             let params = self.labels.resolve(&case.params);
             let request =
@@ -232,5 +234,25 @@ impl Session<'_> {
             self.assert(checked)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::RejectionFixture;
+
+    #[test]
+    fn a_rejection_fixture_key_outside_the_schema_and_descriptors_is_refused() {
+        let case = json!({"name": "n", "method": "m", "params": {}, "kind": "invalid_params"});
+        let parse = |value| serde_json::from_value::<RejectionFixture>(value);
+        let described =
+            parse(json!({"format": "f", "descriptors": {"summary": "prose"}, "cases": [case]}));
+        assert!(described.is_ok_and(|fixture| fixture.descriptors.contains_key("summary")));
+        assert!(parse(json!({"format": "f", "summary": "prose", "cases": [case]})).is_err());
+        let typo =
+            json!({"name": "n", "method": "m", "params": {}, "kind": "k", "feild_path": "x"});
+        assert!(parse(json!({"format": "f", "cases": [typo]})).is_err());
     }
 }

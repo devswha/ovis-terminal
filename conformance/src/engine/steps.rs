@@ -11,8 +11,9 @@ use super::process::{self, document};
 use super::session::Session;
 use super::transport;
 use crate::error::RunnerError;
-use crate::evidence::ConnectionReport;
+use crate::evidence::{ConnectionReport, DescriptorRecord};
 use crate::fixture::launch;
+use crate::fixture::wire::decode;
 use crate::scenario::matcher::{Assertion, Subject};
 use crate::scenario::model::{
     Connect, Effects, ExpectFailure, FixtureKind, Run, Send as SendStep, SendWire, Step, Via,
@@ -112,6 +113,25 @@ impl Session<'_> {
         let frames = crate::fixture::wire::load(&self.ctx.repo)?;
         let entry = frames.named(&wire.frame)?;
         let bytes = entry.bytes()?;
+        let declared = entry.declared()?;
+        let bytewise: Vec<usize> = (1..bytes.len()).collect();
+        let scope = format!("wire[{}]", entry.name);
+        self.descriptors.push(DescriptorRecord {
+            source: format!("fixtures/wire/frames.json#{}", entry.name),
+            descriptors: entry.descriptors.clone(),
+        });
+        self.assert(vec![
+            Assertion::equal(
+                format!("{scope}/decode/whole"),
+                declared.clone(),
+                decode(&bytes, &[]),
+            ),
+            Assertion::equal(
+                format!("{scope}/decode/bytewise"),
+                declared,
+                decode(&bytes, &bytewise),
+            ),
+        ])?;
         self.conn(&wire.conn)?
             .write(&bytes, &crate::scenario::model::Split::Whole)
             .await

@@ -1,9 +1,16 @@
 //! `fixtures/wire/frames.json`: language-neutral frame bytes and what they decode to.
 //! The same file is replayed over the socket by scenarios and by the TypeScript client.
+//!
+//! Every entry key is either asserted (`hex` with exactly one of `decodes` or `error`, checked
+//! by decoding the bytes before they are sent) or a free-text `descriptors` entry that the
+//! evidence records and nothing asserts. Any other key fails to load.
 
+use ovis_terminal_protocol::wire::{Frame, FrameDecoder, FrameKind};
 use serde::Deserialize;
+use serde_json::{Value, json};
 
 use crate::error::RunnerError;
+use crate::evidence::{Descriptors, hex};
 use crate::scenario::load::Repo;
 
 pub(crate) const FORMAT: &str = "ovis-wire-fixture/1";
@@ -21,41 +28,17 @@ pub(crate) struct WireFixtures {
 #[serde(deny_unknown_fields)]
 pub(crate) struct WireEntry {
     pub(crate) name: String,
-    #[expect(
-        dead_code,
-        reason = "human-readable fixture documentation, required by the closed schema"
-    )]
-    pub(crate) summary: String,
     pub(crate) hex: String,
     #[serde(default)]
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "checked by the decode tests and the TypeScript client"
-        )
-    )]
     pub(crate) decodes: Vec<DecodedFrame>,
     #[serde(default)]
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "checked by the decode tests and the TypeScript client"
-        )
-    )]
     pub(crate) error: Option<String>,
+    #[serde(default)]
+    pub(crate) descriptors: Descriptors,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "checked by the decode tests and the TypeScript client"
-    )
-)]
 pub(crate) struct DecodedFrame {
     /// Channel as a canonical decimal string.
     pub(crate) channel: String,
@@ -79,12 +62,60 @@ pub(crate) fn unhex(text: &str) -> Option<Vec<u8>> {
         .collect()
 }
 
+fn shown(frame: &Frame) -> Value {
+    let kind = match frame.kind {
+        FrameKind::Data => "data",
+        FrameKind::Credit => "credit",
+        FrameKind::Close => "close",
+        _ => "unknown",
+    };
+    json!({"channel": frame.channel.value().to_string(), "kind": kind, "payload_hex": hex(&frame.payload)})
+}
+
+/// What the protocol's decoder makes of `bytes` fed in pieces ending at `cuts`:
+/// `{"frames": [..]}`, or `{"error": kind}` for the first typed failure.
+pub(crate) fn decode(bytes: &[u8], cuts: &[usize]) -> Value {
+    let mut decoder = FrameDecoder::new();
+    let mut frames = Vec::new();
+    let mut start = 0;
+    for end in cuts.iter().copied().chain([bytes.len()]) {
+        let piece = bytes.get(start..end.max(start)).unwrap_or_default();
+        match decoder.push(piece) {
+            Ok(ready) => frames.extend(ready.iter().map(shown)),
+            Err(error) => return json!({ "error": error.kind() }),
+        }
+        start = end.max(start);
+    }
+    match decoder.finish() {
+        Ok(()) => json!({ "frames": frames }),
+        Err(error) => json!({ "error": error.kind() }),
+    }
+}
+
 impl WireEntry {
     pub(crate) fn bytes(&self) -> Result<Vec<u8>, RunnerError> {
-        unhex(&self.hex).ok_or_else(|| RunnerError::ScenarioInconsistent {
-            scenario: self.name.clone(),
-            detail: "the wire fixture hex is not lowercase byte pairs",
-        })
+        unhex(&self.hex)
+            .ok_or_else(|| self.inconsistent("the wire fixture hex is not lowercase byte pairs"))
+    }
+
+    fn inconsistent(&self, detail: &'static str) -> RunnerError {
+        RunnerError::ScenarioInconsistent {
+            scenario: format!("{PATH}#{}", self.name),
+            detail,
+        }
+    }
+
+    /// The declared outcome in the shape [`decode`] returns; exactly one of `decodes` or `error`.
+    pub(crate) fn declared(&self) -> Result<Value, RunnerError> {
+        match (&self.error, self.decodes.is_empty()) {
+            (Some(kind), true) => Ok(json!({ "error": kind })),
+            (None, false) => Ok(json!({ "frames": self.decodes.iter().map(|frame| json!({
+                "channel": frame.channel, "kind": frame.kind, "payload_hex": frame.payload_hex,
+            })).collect::<Vec<_>>() })),
+            (Some(_), false) | (None, true) => {
+                Err(self.inconsistent("a wire fixture declares exactly one of decodes or error"))
+            }
+        }
     }
 }
 
@@ -100,13 +131,14 @@ impl WireFixtures {
 }
 
 pub(crate) fn load(repo: &Repo) -> Result<WireFixtures, RunnerError> {
-    let fixtures: WireFixtures = serde_json::from_value(repo.json(PATH)?).map_err(|source| {
-        RunnerError::ScenarioInvalid {
-            path: repo.conformance(PATH),
-            field: ".".to_owned(),
-            source,
-        }
-    })?;
+    let fixtures: WireFixtures =
+        serde_path_to_error::deserialize(repo.json(PATH)?).map_err(|error| {
+            RunnerError::ScenarioInvalid {
+                path: repo.conformance(PATH),
+                field: error.path().to_string(),
+                source: error.into_inner(),
+            }
+        })?;
     if fixtures.format != FORMAT {
         return Err(RunnerError::ScenarioNotExecutable {
             scenario: PATH.to_owned(),
@@ -117,66 +149,20 @@ pub(crate) fn load(repo: &Repo) -> Result<WireFixtures, RunnerError> {
 
 #[cfg(test)]
 mod tests {
-    use ovis_terminal_protocol::wire::{Frame, FrameDecoder, FrameError, FrameKind};
     use proptest::prelude::*;
+    use serde_json::{Value, json};
 
-    use super::{WireEntry, load, unhex};
+    use super::{WireEntry, decode, load};
     use crate::scenario::load::Repo;
 
-    fn shown(frame: &Frame) -> (String, String, Vec<u8>) {
-        let kind = match frame.kind {
-            FrameKind::Data => "data",
-            FrameKind::Credit => "credit",
-            FrameKind::Close => "close",
-            _ => "unknown",
-        };
-        (
-            frame.channel.value().to_string(),
-            kind.to_owned(),
-            frame.payload.clone(),
-        )
-    }
-
-    fn expected(entry: &WireEntry) -> Vec<(String, String, Vec<u8>)> {
-        entry
-            .decodes
-            .iter()
-            .map(|frame| {
-                (
-                    frame.channel.clone(),
-                    frame.kind.clone(),
-                    unhex(&frame.payload_hex).unwrap_or_default(),
-                )
-            })
-            .collect()
-    }
-
-    /// Decodes `bytes` fed in `cuts` pieces; an error ends decoding with its kind.
-    fn decode(bytes: &[u8], cuts: &[usize]) -> Result<Vec<(String, String, Vec<u8>)>, String> {
-        let mut decoder = FrameDecoder::new();
-        let mut frames = Vec::new();
-        let mut start = 0;
-        for end in cuts.iter().copied().chain([bytes.len()]) {
-            let piece = bytes.get(start..end.max(start)).unwrap_or_default();
-            frames.extend(
-                decoder
-                    .push(piece)
-                    .map_err(|error: FrameError| error.kind().to_owned())?,
-            );
-            start = end.max(start);
-        }
-        decoder.finish().map_err(|error| error.kind().to_owned())?;
-        Ok(frames.iter().map(shown).collect())
-    }
-
     #[test]
-    fn every_fixture_decodes_identically_at_every_single_split_and_bytewise() -> Result<(), String>
+    fn every_fixture_decodes_as_declared_at_every_single_split_and_bytewise() -> Result<(), String>
     {
         let fixtures = load(&Repo::of_build()).map_err(|error| error.to_string())?;
         assert!(fixtures.frames.len() >= 6);
         for entry in &fixtures.frames {
-            let bytes = entry.bytes().unwrap_or_default();
-            let want = entry.error.clone().map_or_else(|| Ok(expected(entry)), Err);
+            let bytes = entry.bytes().map_err(|error| error.to_string())?;
+            let want = entry.declared().map_err(|error| error.to_string())?;
             for cut in 0..=bytes.len() {
                 assert_eq!(
                     decode(&bytes, &[cut]),
@@ -191,6 +177,17 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn an_entry_with_both_or_neither_outcome_and_an_unknown_key_are_refused() {
+        let entry = |value: Value| serde_json::from_value::<WireEntry>(value);
+        let both = entry(json!({"name": "x", "hex": "", "error": "unknown_kind",
+            "decodes": [{"channel": "0", "kind": "data", "payload_hex": ""}]}));
+        assert!(both.is_ok_and(|entry| entry.declared().is_err()));
+        let neither = entry(json!({"name": "x", "hex": ""}));
+        assert!(neither.is_ok_and(|entry| entry.declared().is_err()));
+        assert!(entry(json!({"name": "x", "hex": "", "error": "e", "summary": "prose"})).is_err());
+    }
+
     proptest! {
         #[test]
         fn coalesced_valid_fixtures_decode_identically_under_any_segmentation(
@@ -199,10 +196,14 @@ mod tests {
             let fixtures = load(&Repo::of_build()).map_err(|error| TestCaseError::fail(error.to_string()))?;
             let valid: Vec<&WireEntry> = fixtures.frames.iter().filter(|entry| entry.error.is_none()).collect();
             let bytes: Vec<u8> = valid.iter().flat_map(|entry| entry.bytes().unwrap_or_default()).collect();
-            let want: Vec<_> = valid.iter().flat_map(|entry| expected(entry)).collect();
+            let want: Vec<Value> = valid.iter()
+                .filter_map(|entry| entry.declared().ok())
+                .filter_map(|declared| declared.get("frames").and_then(Value::as_array).cloned())
+                .flatten()
+                .collect();
             let mut cuts: Vec<usize> = cuts.into_iter().map(|cut| cut.checked_rem(bytes.len().saturating_add(1)).unwrap_or(0)).collect();
             cuts.sort_unstable();
-            prop_assert_eq!(decode(&bytes, &cuts), Ok(want));
+            prop_assert_eq!(decode(&bytes, &cuts), json!({ "frames": want }));
         }
     }
 }

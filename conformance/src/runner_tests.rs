@@ -156,6 +156,28 @@ fn failure() -> TestResult {
     assert_eq!(*field(effects, "/actual"), serde_json::json!([]));
     let closing = assertion(evidence, "notification[$/closing]/params/reason").ok_or("closing")?;
     assert_eq!(field(closing, "/actual"), "frame_too_large");
+    for check in [
+        "wire[oversized-header]/decode/whole",
+        "wire[oversized-header]/decode/bytewise",
+    ] {
+        let decoded = assertion(evidence, check).ok_or(check)?;
+        assert_eq!(field(decoded, "/passed"), true, "{check}");
+        assert_eq!(
+            field(decoded, "/actual/error"),
+            "frame_too_large",
+            "{check}"
+        );
+    }
+    let sources: Vec<&Value> = field(evidence, "/cases/0/descriptors")
+        .as_array()
+        .ok_or("descriptors")?
+        .iter()
+        .map(|record| field(record, "/source"))
+        .collect();
+    assert!(
+        sources.contains(&&Value::from("fixtures/protocol/strict-rejections.json")),
+        "{sources:?}"
+    );
     assert_eq!(
         field(evidence, "/cases/0/fixture/failures/frame_too_large"),
         "1"

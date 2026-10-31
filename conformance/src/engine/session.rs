@@ -9,7 +9,7 @@ use super::conn::Connection;
 use super::root::IsolatedRoot;
 use super::transport::Endpoint;
 use crate::error::RunnerError;
-use crate::evidence::{ConnectionReport, ProcessReport};
+use crate::evidence::{ConnectionReport, DescriptorRecord, ProcessReport};
 use crate::fixture::launch::FixtureProcess;
 use crate::ids::ConnName;
 use crate::scenario::labels::Labels;
@@ -32,6 +32,7 @@ pub(crate) struct Session<'a> {
     pub(crate) conns: BTreeMap<ConnName, Connection>,
     pub(crate) labels: Labels,
     pub(crate) assertions: Vec<Assertion>,
+    pub(crate) descriptors: Vec<DescriptorRecord>,
     pub(crate) connections: Vec<ConnectionReport>,
     pub(crate) processes: Vec<ProcessReport>,
     pub(crate) fixture_report: Option<Value>,
@@ -46,6 +47,7 @@ impl<'a> Session<'a> {
             conns: BTreeMap::new(),
             labels: Labels::default(),
             assertions: Vec::new(),
+            descriptors: Vec::new(),
             connections: Vec::new(),
             processes: Vec::new(),
             fixture_report: None,
