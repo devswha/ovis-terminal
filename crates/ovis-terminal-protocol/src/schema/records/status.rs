@@ -5,8 +5,12 @@ use std::collections::BTreeMap;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::agent_status::OscProvenance;
 use crate::schema::ids::{AgentId, HistoryId};
-use crate::schema::scalar::{EventSeq, Incarnation, OpenEnum, Revision, TimestampMs, TurnNumber};
+use crate::schema::methods::status::TurnRecord;
+use crate::schema::scalar::{
+    EventSeq, FinishGeneration, Incarnation, OpenEnum, ReportSeq, Revision, TimestampMs, TurnNumber,
+};
 
 /// Lifecycle state an agent declares; later releases may add values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -75,6 +79,12 @@ pub struct StatusEntry {
     pub seq: EventSeq,
     /// Time the state was entered.
     pub since_ms: TimestampMs,
+    /// Producer status sequence that was accepted.
+    pub report_seq: ReportSeq,
+    /// Turn current when the report was accepted.
+    pub turn: TurnNumber,
+    /// Raw fields and decoding outcome, when the origin is OSC.
+    pub osc: Option<OscProvenance>,
 }
 
 /// Declared status of a terminal; `reported: false` is the only never-reported form.
@@ -91,6 +101,16 @@ pub struct StatusSnapshot {
     pub turn: TurnNumber,
     /// Program incarnation the status belongs to.
     pub process_incarnation: Option<Incarnation>,
+    /// Highest accepted producer sequence of this incarnation.
+    pub report_seq: Option<ReportSeq>,
+    /// Number of turns that finished; viewing never changes it.
+    pub finish_generation: FinishGeneration,
+    /// The most recently finished turn.
+    pub last_turn: Option<TurnRecord>,
+    /// Registered agent, when one is bound to this incarnation.
+    pub agent_id: Option<AgentId>,
+    /// Provider session of the registered agent.
+    pub session: Option<SessionRef>,
 }
 
 /// Provider session an agent is bound to.
