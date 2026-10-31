@@ -73,6 +73,9 @@ The acceptance criterion "conformance exits 0 with failed:0, skipped:0" is **not
 
 ## QA
 
+- macOS stress: `gh workflow run probe-stress-macos.yml --ref lane/t48-planned-restart -f probe=restart` ran https://github.com/devswha/ovis-terminal/actions/runs/41235872273. Result: success, `RESULT 25/25` on Darwin 25.6.0 arm64 (core `restart::`, server `lanes::restart`, protocol `domain::restart`, each repeated 25 times).
+- PR CI: none ran. The PR is `CONFLICTING` against origin/integration b1c68ef in exactly one file, the shared `.github/workflows/probe-stress-macos.yml` (both sides appended an option and a job; union-merge). Per the lane rule, this lane did not merge integration.
+
 - happy: `cargo test -p ovis-terminal-server --lib lanes::restart` and `cargo test -p ovis-terminal-core --lib restart` (real holder PTY, real SQLite, real socket). Exit 0.
 - failure: the invalid `server.stop` scope over the socket, as above. No process ended, which is asserted with the OS start token.
 - Logs: `docs/evidence/task-48/`.
