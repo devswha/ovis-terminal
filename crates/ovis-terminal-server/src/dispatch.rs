@@ -6,6 +6,7 @@ mod error;
 mod execution;
 mod job;
 pub mod lanes;
+mod queue;
 mod read;
 mod registry;
 mod reservation;

@@ -10,7 +10,7 @@ use super::ledger::{Entry, OperationKey, index_key};
 use super::{
     OP_RETENTION_MS, OperationError, OperationEvent, OperationSnapshot, Operations, Request,
 };
-use crate::events::{EventData, SnapshotProducer};
+use crate::events::{EventData, SnapshotProducer, SnapshotSlot};
 
 impl<D, P> Operations<'_, D, P>
 where
@@ -27,7 +27,29 @@ where
     ///
     /// Returns `op_reused`, `op_expired`, bounded admission or persistence errors.
     pub fn accept(&self, request: &Request) -> Result<OpRecord, OperationError> {
-        match self.admit(request, Admission::Runnable)? {
+        self.accepted(request, self.admit(request, (Admission::Runnable, None))?)
+    }
+
+    /// [`Operations::accept`] whose first ledger read uses a slot granted in FIFO order.
+    ///
+    /// A retry after a concurrent acceptance queues again for its next read.
+    ///
+    /// # Errors
+    ///
+    /// Returns the errors of [`Operations::accept`].
+    pub fn accept_granted(
+        &self,
+        request: &Request,
+        slot: SnapshotSlot,
+    ) -> Result<OpRecord, OperationError> {
+        self.accepted(
+            request,
+            self.admit(request, (Admission::Runnable, Some(slot)))?,
+        )
+    }
+
+    fn accepted(&self, request: &Request, admitted: Admitted) -> Result<OpRecord, OperationError> {
+        match admitted {
             Admitted::New(record) => Ok(*record),
             Admitted::Retained => self.get(&request.op_id),
         }
@@ -36,10 +58,10 @@ where
     pub(super) fn admit(
         &self,
         request: &Request,
-        admission: Admission,
+        (admission, mut slot): (Admission, Option<SnapshotSlot>),
     ) -> Result<Admitted, OperationError> {
         loop {
-            match self.accept_once(request, admission) {
+            match self.accept_once(request, (admission, slot.take())) {
                 Err(error) if error.is_conflict() => {}
                 outcome => return outcome,
             }
@@ -49,9 +71,9 @@ where
     fn accept_once(
         &self,
         request: &Request,
-        admission: Admission,
+        (admission, slot): (Admission, Option<SnapshotSlot>),
     ) -> Result<Admitted, OperationError> {
-        let mut snapshot = self.snapshot()?;
+        let mut snapshot = self.snapshot_in(slot)?;
         let key = OperationKey::new(&self.context.principal, &request.op_id)?;
         if let Some(row) = snapshot.rows.iter().find(|row| row.key == key) {
             self.retained(&row.entry)?;
