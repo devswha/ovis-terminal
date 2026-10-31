@@ -70,7 +70,11 @@ fn token(info: &libc::proc_bsdinfo) -> ProcessStartToken {
 ///
 /// Returns [`ProbeError::Gone`] when no process has the PID, or a typed read failure.
 pub fn read_entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
-    let info: libc::proc_bsdinfo = pidinfo(pid, libc::PROC_PIDTBSDINFO)?;
+    let info: libc::proc_bsdinfo = match pidinfo(pid, libc::PROC_PIDTBSDINFO) {
+        Ok(info) => info,
+        Err(ProbeError::Gone { .. }) => return zombie(pid),
+        Err(error) => return Err(error),
+    };
     let running = info.pbi_status != ZOMBIE;
     // An exited process has no live terminal membership, and getsid(2) cannot see it.
     let terminal = if info.e_tdev == NO_DEVICE || !running {
@@ -88,6 +92,51 @@ pub fn read_entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
         start_token: token(&info),
         running,
         terminal,
+    })
+}
+
+/// `struct extern_proc` offsets from `<sys/proc.h>` (64-bit): the `p_un` union holds
+/// `struct timeval __p_starttime` (an `i64` second, then an `i32` microsecond), and
+/// `char p_stat` follows two pointers and an `int` after the 16-byte union.
+const START_SECONDS: usize = 0;
+const START_MICROS: usize = 8;
+const RUN_STATE: usize = 36;
+
+fn field<const N: usize>(record: &[u8], at: usize) -> Result<[u8; N], ProbeError> {
+    record
+        .get(at..at.saturating_add(N))
+        .and_then(|bytes| <[u8; N]>::try_from(bytes).ok())
+        .ok_or(ProbeError::Malformed)
+}
+
+/// `proc_pidinfo` cannot see an unreaped zombie, but `KERN_PROC_PID` still reports it
+/// with the same kernel start time, so its token matches the one read while it ran.
+fn zombie(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
+    let mut record = [0_u8; 1024];
+    let used = sysctl(
+        &mut [
+            libc::CTL_KERN,
+            libc::KERN_PROC,
+            libc::KERN_PROC_PID,
+            raw_pid(pid)?,
+        ],
+        &mut record,
+    )?;
+    let record = record.get(..used).ok_or(ProbeError::Malformed)?;
+    let gone = ProbeError::Gone { pid: pid.get() };
+    let Ok([state]) = field::<1>(record, RUN_STATE) else {
+        return Err(gone);
+    };
+    if u32::from(state) != ZOMBIE {
+        return Err(gone);
+    }
+    let seconds = i64::from_ne_bytes(field(record, START_SECONDS)?);
+    let micros = i32::from_ne_bytes(field(record, START_MICROS)?);
+    Ok(ProcessEntry {
+        pid,
+        start_token: ProcessStartToken::new(format!("darwin:{seconds}.{micros:06}")),
+        running: false,
+        terminal: Membership::Detached,
     })
 }
 
