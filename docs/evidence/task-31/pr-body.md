@@ -133,6 +133,16 @@ Fix: the post-exit settings are read through a freshly opened slave (`O_NOCTTY`)
 
 Proof on Linux (`docs/evidence/task-31/darwin-revoke-fix.log`): the attach suite passes 5/5 under `script -q -e -c ... /dev/null` (stdio is a pty) and 5/5 with stdin `</dev/null`. Conformance `part-a/task-31 --case all --require-no-skips` passes with 49 assertions and exit 0. The runner suite passes 25/25. A scratch merge with integration (not merged into the lane) passes workspace clippy and 53/53 CLI and conformance tests. The macOS outcome itself is verified only by this PR's CI run.
 
+## Round 3: merge-ref compile break
+
+CI on `1a86051` failed to compile `ovis-terminal-cli` at `assembly/terminal.rs:33` with E0308, expecting `Option<LaunchProgram>`. That type exists only on integration: T35 made `TerminalRunParams.program` optional beside `template`. The lane itself built at its base, so the failure came from CI's PR merge ref.
+
+Fix (`d57822e`): the launch program is decoded through its serialized form, which yields `Option<LaunchProgram>` from either revision. Template-only launches stay `unsupported_field`, because `serve` does not route templates.
+
+Verified before pushing:
+- **Lane:** `cargo build -p ovis-terminal-cli` and `cargo clippy -p ovis-terminal-cli --all-targets -- -D warnings` pass, CLI tests pass 28/28, and `bash scripts/check.sh` exits 0 (931 passed, 0 hygiene violations).
+- **Scratch merge with `origin/integration` `804e508`** (built from `git merge-tree`/`commit-tree` in a throwaway worktree; the lane was not merged): workspace clippy `-D warnings` is clean, and CLI plus conformance pass 53/53.
+
 ## Risks and not delivered
 
 - `serve` owns an in-process holder, so programs end with the server. `hold` runs a standalone holder that `serve` does not adopt; out-of-process adoption is todo 48.
