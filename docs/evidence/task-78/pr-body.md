@@ -94,5 +94,6 @@ The test then asserts the document is still version 1 with the original value.
 
 ## CI
 
-- PR checks: see below once the run completes.
-- macOS stress `ops-digest`: run URL recorded below.
+- 02929c3: ci https://github.com/devswha/ovis-terminal/actions/runs/41227984170 and platform-probes https://github.com/devswha/ovis-terminal/actions/runs/41227984225. Every check passed (`gh pr checks 44 --watch` exit 0), including test (ubuntu/macos/windows-latest), scripts/check.sh (ubuntu), msrv, rustdoc, cargo deny and machete.
+- macOS stress `ops-digest` (25 iterations of `ops_digest` + `documents_retention` + core digest/params tests): https://github.com/devswha/ovis-terminal/actions/runs/41227982330 and https://github.com/devswha/ovis-terminal/actions/runs/41227989939, both `RESULT 25/25`.
+- The evidence-only commit that records these URLs reruns PR CI; see the PR checks for its head.
