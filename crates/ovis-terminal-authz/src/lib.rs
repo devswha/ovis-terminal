@@ -1,7 +1,35 @@
 //! Principals, roles and resource-scoped authority checks for ovis-terminal.
 //!
-//! Scaffold crate: it compiles and records its place in the workspace layering;
-//! runtime behavior arrives with the plan todos named on each module.
+//! A connection is first admitted at its endpoint ([`EndpointPolicy`]), which proves the
+//! local account but grants nothing, then authenticates with a runtime-scoped credential
+//! ([`Authority::authenticate`]). Every request is authorized against explicit grants of
+//! one [`Permission`] over one [`ResourceScope`]; the resulting [`Decision`] is bound to the
+//! resolved target and the credential epoch, and the commit or queued write rechecks it
+//! with [`Authority::recheck`] so revocation and expiry also stop work already queued.
+
+mod authority;
+mod config;
+mod credential;
+mod endpoint;
+mod error;
+mod identity;
+mod permission;
+mod scope;
+
+pub use authority::{
+    AccessRequest, Authority, CommitCheck, Decision, IssuedCredential, Presentation, Session,
+};
+pub use config::{AuthorityConfig, AuthorityLimits, OwnerSpec, RuntimeBinding};
+pub use credential::{Issuance, IssueRequest, Revocation};
+pub use endpoint::{
+    Ace, AceKind, Dacl, EndpointPolicy, FileEvidence, LocalAccount, PeerAdmission, PeerEvidence,
+    PipeInstance, PipeInstanceEvidence, PipeNamespace, PipeSecurity, RemoteClients,
+    RemoteTransport, Transport, UnixSocketEvidence, UnixUid, WindowsSid,
+};
+pub use error::{AuthzError, EndpointDefect, Exceeded, Limit, MismatchReason};
+pub use identity::{CredentialEpoch, CredentialId, PrincipalId};
+pub use permission::{Action, Permission, Role};
+pub use scope::{Grant, Placement, ResolvedTarget, ResourceScope, ScopeResource, TargetResource};
 
 /// Cargo package name of this crate, used by the workspace layering record.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");

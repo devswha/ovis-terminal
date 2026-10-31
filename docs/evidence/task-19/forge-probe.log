@@ -1,0 +1,16 @@
+$ probe: forge a Decision literal
+fn forge() -> ovis_terminal_authz::Decision { ovis_terminal_authz::Decision { authority: todo!(), claim: todo!(), principal: todo!(), action: todo!(), target: todo!() } }
+error[E0451]: fields `authority`, `claim`, `principal`, `action` and `target` of struct `Decision` are private
+EXIT=101
+
+$ probe: clone an owned Session (a reference copy compiles; an owned copy must not)
+fn copy(session: &ovis_terminal_authz::Session) -> ovis_terminal_authz::Session { session.clone() }
+error[E0308]: mismatched types
+note: `Session` does not implement `Clone`, so `&Session` was cloned instead
+EXIT=101
+
+$ probe: deserialize an IssuedCredential (bearer) from JSON
+fn forge(text: &str) { let _issued: ovis_terminal_authz::IssuedCredential = serde_json::from_str(text).unwrap(); }
+error[E0277]: the trait bound `IssuedCredential: serde::Deserialize<'de>` is not satisfied
+EXIT=101
+
