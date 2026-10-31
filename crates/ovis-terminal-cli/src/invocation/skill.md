@@ -28,7 +28,8 @@ generation it belongs to.
   (`OVIS_TERMINAL_SOCKET`, `OVIS_TERMINAL_SESSION`, `XDG_RUNTIME_DIR`, `XDG_STATE_HOME`,
   `HOME`, `USERNAME`) without touching it.
 
-None of these, and no other command, starts, installs or restarts a server.
+None of these, and no inspection command, starts, installs or restarts a server. Only
+the explicit `serve` and `hold` verbs below run one, in the foreground.
 
 ## Commands that reach the endpoint
 
@@ -45,6 +46,37 @@ None of these, and no other command, starts, installs or restarts a server.
   protocol bytes only.
 
 The bearer credential is read from `OVIS_TERMINAL_CREDENTIAL` and is never printed.
+
+## Serving (Unix)
+
+- `ovis-terminal serve [--root DIR] [--stdin-lifetime]` runs the control server in the
+  foreground: endpoint, authority, stores, a shared holder and every routed method.
+  With `--root` the socket is `DIR/run/s.sock` and state lives in `DIR/state`;
+  otherwise the resolved endpoint is used. It prints one line
+  `{"ready": {"socket", "bearer", "observer"}}` (owner and observe-only bearers) before
+  serving, stops on SIGINT, SIGTERM or, with `--stdin-lifetime`, end of stdin, and then
+  prints one `{"report": {...}}` line. Programs it launched end with it.
+- hello advertises exactly the methods `serve` routes: `server.status`, `terminal.run`,
+  `terminal.list`, `terminal.get`, `op.get`, `input.raw` and `attach.open`, `credit`,
+  `close`, `repaint`, `resize`, `leases`. Every other catalog method answers
+  `method_not_found`.
+- `ovis-terminal hold [--session S]` runs the session holder in the foreground, owned by
+  no service manager.
+
+## Attaching (Unix)
+
+- `ovis-terminal terminal attach --target ADDR | --terminal-id ID | --name NAME` attaches
+  this terminal: stdout carries the program's screen, the terminal is raw while
+  attached, typed bytes go to the program only under the interact lease, window
+  resizes are applied under the geometry lease, and Ctrl-\ detaches. Ctrl-C goes to
+  the program. It needs a TTY on stdin and stdout (`not_a_tty`, exit 2, otherwise).
+- Another holder is never displaced: a held lease exits 11 with `lease_held` and the
+  holder's lease record in `holder`.
+- `--observe` needs no TTY, never reads stdin and never writes input.
+- The outcome record goes to stderr: `{"detached": {"reason", "stream_closed", ...}}`
+  (exit 0) for Ctrl-\, end of stdin, SIGINT, SIGTERM or SIGHUP, or the error record
+  for a refusal; a lost connection exits 4 with `connection_lost`. The outer
+  terminal's settings are restored on every one of these.
 
 ## Holder service (Unix)
 
@@ -73,14 +105,14 @@ The session holder owns every PTY and outlives the command that started it. Only
 |---|---|---|
 | 0 | success | |
 | 1 | failure | any kind not listed below |
-| 2 | usage | usage, invalid_params, unknown_method, invalid_json_switch, endpoint and service path configuration kinds |
+| 2 | usage | usage, invalid_params, unknown_method, invalid_json_switch, not_a_tty, endpoint and service path configuration kinds |
 | 3 | not_found | not_found, template_not_found, parent_not_found, stream_not_found |
-| 4 | unavailable | unavailable, server_not_running, stale_endpoint, method_not_found, machine_unreachable, unsupported_transport, backpressure, recovering, not_ready, service_manager_unavailable, service_unsupported |
+| 4 | unavailable | unavailable, server_not_running, stale_endpoint, method_not_found, machine_unreachable, unsupported_transport, backpressure, recovering, not_ready, service_manager_unavailable, service_unsupported, connection_lost |
 | 7 | needs_target | needs_target, ambiguous_target |
 | 9 | blocked | blocked |
 | 10 | cancelled | cancelled |
-| 11 | conflict | conflict and state conflicts such as op_reused or already_running |
-| 12 | forbidden | forbidden, unauthenticated and credential kinds |
+| 11 | conflict | conflict and state conflicts such as op_reused, already_running or lease_held |
+| 12 | forbidden | forbidden, unauthenticated, credential kinds and attach_refused |
 | 13 | outcome_unknown | outcome_unknown, deadline_exceeded, manager_timeout, holder_not_ready: inspect the operation or the service status |
 
 `ovis-terminal schema cli` lists the exact kinds of each code.

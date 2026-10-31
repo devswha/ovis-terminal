@@ -46,20 +46,22 @@ pub(crate) struct FixtureProcess {
     pub(crate) ready: Ready,
 }
 
-/// Starts `runner fixture --root <root>` and waits, bounded, for its ready line.
-pub(crate) async fn start(runner: &Path, root: &Path) -> Result<FixtureProcess, RunnerError> {
-    let mut command = tokio::process::Command::new(runner);
+/// Starts `program <args>` (the runner's fixture mode or the binary's `serve`) and waits,
+/// bounded, for its ready line.
+pub(crate) async fn start(
+    program: &Path,
+    args: &[std::ffi::OsString],
+) -> Result<FixtureProcess, RunnerError> {
+    let mut command = tokio::process::Command::new(program);
     command
-        .arg("fixture")
-        .arg("--root")
-        .arg(root)
+        .args(args)
         .env_clear()
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true);
     let mut child = command.spawn().map_err(|source| RunnerError::Spawn {
-        program: runner.to_path_buf(),
+        program: program.to_path_buf(),
         source,
     })?;
     let not_piped = RunnerError::FixtureReport {
@@ -82,12 +84,9 @@ pub(crate) async fn start(runner: &Path, root: &Path) -> Result<FixtureProcess, 
         stdin,
         stdout,
         stderr,
-        argv: vec![
-            runner.display().to_string(),
-            "fixture".to_owned(),
-            "--root".to_owned(),
-            root.display().to_string(),
-        ],
+        argv: std::iter::once(program.display().to_string())
+            .chain(args.iter().map(|arg| arg.to_string_lossy().into_owned()))
+            .collect(),
         ready: ready.ready,
     })
 }

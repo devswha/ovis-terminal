@@ -7,6 +7,7 @@
 //! VT answered. Control records travel ahead of credit-limited chunks; each viewer has
 //! its own credit, cursor and bounded backlog over one shared immutable output log.
 
+mod control;
 mod credit;
 mod error;
 mod filter;

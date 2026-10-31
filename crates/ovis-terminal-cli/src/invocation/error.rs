@@ -102,6 +102,14 @@ pub(super) enum CliError {
     /// A request or result could not be encoded.
     #[error("a JSON value could not be encoded")]
     Encode(#[source] serde_json::Error),
+    /// The assembled server could not start, serve or stop.
+    #[cfg(unix)]
+    #[error(transparent)]
+    Assembly(crate::assembly::AssemblyError),
+    /// The attach ended without a detach.
+    #[cfg(unix)]
+    #[error(transparent)]
+    Attach(crate::attach::AttachError),
 }
 
 impl CliError {
@@ -124,6 +132,10 @@ impl CliError {
             Self::Schema(_) | Self::Encode(_) => "internal",
             #[cfg(any(unix, windows))]
             Self::Service(error) => error.kind(),
+            #[cfg(unix)]
+            Self::Assembly(error) => error.kind(),
+            #[cfg(unix)]
+            Self::Attach(error) => error.kind(),
         }
     }
 
@@ -154,6 +166,10 @@ impl CliError {
             Self::Schema(_) | Self::Encode(_) => "report the build; a value could not be encoded",
             #[cfg(any(unix, windows))]
             Self::Service(error) => error.hint(),
+            #[cfg(unix)]
+            Self::Assembly(error) => error.hint(),
+            #[cfg(unix)]
+            Self::Attach(error) => error.hint(),
         }
     }
 }

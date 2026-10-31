@@ -49,6 +49,24 @@ pub(super) enum Command {
     #[cfg(any(unix, windows))]
     #[command(subcommand)]
     Service(crate::service::ServiceCommand),
+    /// Run the control server in the foreground: endpoint, stores, holder and every routed method.
+    #[cfg(unix)]
+    Serve(ServeArgs),
+    /// Run the session holder in the foreground, owned by no service manager.
+    #[cfg(unix)]
+    Hold(crate::service::unix::SessionArgs),
+}
+
+/// `ovis-terminal serve [--root <dir>] [--stdin-lifetime]`.
+#[cfg(unix)]
+#[derive(Debug, Args)]
+pub(super) struct ServeArgs {
+    /// Keep the socket at `<root>/run/s.sock` and state in `<root>/state`.
+    #[arg(long)]
+    pub(super) root: Option<std::path::PathBuf>,
+    /// Also stop when standard input reaches end of file.
+    #[arg(long)]
+    pub(super) stdin_lifetime: bool,
 }
 
 /// The two published contracts.
@@ -74,6 +92,40 @@ pub(super) enum TerminalCommand {
     List,
     /// Read one terminal record; without a target, answer `needs_target` with candidates.
     Get(TargetArgs),
+    /// Attach this terminal to a running terminal; Ctrl-\ detaches.
+    #[cfg(unix)]
+    Attach(AttachArgs),
+}
+
+/// `ovis-terminal terminal attach (--target <address> | --terminal-id <id> | --name <name>)`.
+#[cfg(unix)]
+#[derive(Debug, Args)]
+pub(super) struct AttachArgs {
+    /// The terminal to attach to.
+    #[command(flatten)]
+    pub(super) target: AttachTarget,
+    /// Watch only: needs no TTY and never reads or forwards input.
+    #[arg(long)]
+    pub(super) observe: bool,
+    /// Client label the lease is recorded under.
+    #[arg(long, default_value = "cli")]
+    pub(super) client_id: String,
+}
+
+/// Exactly one explicit way to name the attached terminal.
+#[cfg(unix)]
+#[derive(Debug, Args)]
+#[group(required = true, multiple = false)]
+pub(super) struct AttachTarget {
+    /// Terminal address such as `t1` or `machine/t1`.
+    #[arg(long)]
+    pub(super) target: Option<String>,
+    /// Stable terminal identity.
+    #[arg(long)]
+    pub(super) terminal_id: Option<String>,
+    /// Unique live terminal name.
+    #[arg(long)]
+    pub(super) name: Option<String>,
 }
 
 /// At most one explicit way to name a terminal; there is no focus fallback.

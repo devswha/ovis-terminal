@@ -34,6 +34,29 @@ impl Terminals {
         }
     }
 
+    /// Applies one holder notification exactly like [`Terminals::receive`] and hands it
+    /// back once committed, so screens and input sequencers follow the same ordered facts;
+    /// `None` when the notification was an internal spawn refusal.
+    ///
+    /// # Errors
+    ///
+    /// The failures of [`Terminals::receive`]; a message that failed to apply is not returned.
+    pub fn receive_message(&mut self, timeout: Duration) -> Result<Option<Message>, TerminalError> {
+        match self
+            .messages
+            .recv_timeout(timeout)
+            .map_err(TerminalError::Notification)?
+        {
+            Incoming::Holder(message) => {
+                let applied = message.clone();
+                self.observe(message)?;
+                Ok(Some(applied))
+            }
+            Incoming::Rejected(id, error) => self.rejected(id, error).map(|()| None),
+            Incoming::Disconnected(error) => Err(error.into()),
+        }
+    }
+
     /// Awaits spawn evidence, consuming the same ordered holder stream used by the actor.
     ///
     /// # Errors

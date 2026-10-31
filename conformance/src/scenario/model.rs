@@ -112,6 +112,16 @@ pub(crate) enum Step {
     ExpectFailure(ExpectFailure),
     /// Send planned requests, or only the one `--inject` names, and check each reply.
     Inject(Inject),
+    /// Start the binary on a fresh outer PTY.
+    PtyOpen(super::pty::PtyOpen),
+    /// Type bytes on an outer PTY.
+    PtyType(super::pty::PtyType),
+    /// Require output on an outer PTY.
+    PtyExpect(super::pty::PtyExpect),
+    /// Resize an outer PTY.
+    PtyResize(super::pty::PtyResize),
+    /// Await the PTY client's exit and check its terminal settings.
+    PtyExit(super::pty::PtyExit),
 }
 
 /// Fixture servers the runner can start.
@@ -120,6 +130,8 @@ pub(crate) enum Step {
 pub(crate) enum FixtureKind {
     /// Real server, dispatcher and store with protocol test methods.
     Protocol,
+    /// The binary under test itself: `ovis-terminal serve`.
+    Assembled,
 }
 
 #[derive(Debug, Clone, Deserialize)]

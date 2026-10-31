@@ -1,0 +1,523 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "part-a/task-31",
+  "title": "Assembled binary and plain interactive attach client",
+  "todo": 31,
+  "closes": [
+    "GAP-039",
+    "GAP-040",
+    "GAP-041",
+    "GAP-042",
+    "GAP-044",
+    "GAP-045",
+    "GAP-056",
+    "GAP-057",
+    "GAP-137",
+    "GAP-145"
+  ],
+  "delivers": [
+    "IDEAL-028",
+    "IDEAL-029",
+    "IDEAL-030",
+    "IDEAL-031",
+    "IDEAL-033",
+    "IDEAL-037",
+    "IDEAL-055",
+    "IDEAL-110",
+    "IDEAL-111",
+    "IDEAL-114"
+  ],
+  "excludes": [
+    "EXCL-001",
+    "EXCL-002",
+    "EXCL-003",
+    "EXCL-007",
+    "EXCL-016",
+    "EXCL-027"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Real ovis-terminal serve runs /bin/sh as t1; ovis-terminal terminal attach --target t1 on a real outer PTY types a marker the shell evaluates, follows a resize the inner PTY reports, detaches on Ctrl-\\ with exit 0; the outer terminal settings equal the originals and attach.leases is empty afterwards; an unrouted method answers method_not_found.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "attach.resize",
+                  "attach.leases",
+                  "input.raw",
+                  "terminal.run",
+                  "terminal.get",
+                  "server.status"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "shell",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "layout",
+                "method": "layout.get",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "layout": {
+                "/error/data/kind": "method_not_found"
+              }
+            }
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "outer",
+            "args": [
+              "terminal",
+              "attach",
+              "--target",
+              "t1"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "echo mark-$((30+1))\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "mark-31"
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "held",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "held": {
+                "/result/interact/holder": "cli",
+                "/result/geometry_owner/holder": "cli"
+              }
+            }
+          }
+        },
+        {
+          "pty_resize": {
+            "pty": "outer",
+            "cols": 120,
+            "rows": 40
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "40 120",
+            "retry_type": "stty size\r"
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "\u001c"
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "outer",
+            "exit": 0,
+            "stderr": {
+              "/detached/reason": "detach_key",
+              "/detached/stream_closed": true
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "released",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "released": {
+                "/result": {
+                  "interact": null,
+                  "geometry_owner": null,
+                  "observers": []
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "A second interact attach exits 11 lease_held naming the holder and never changes its terminal; a stale target exits 3 not_found; interact without a TTY exits 2 not_a_tty; stopping the server (forced socket EOF) makes the holder exit 4 connection_lost with its outer terminal settings restored.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "attach.resize",
+                  "attach.leases",
+                  "input.raw",
+                  "terminal.run",
+                  "terminal.get",
+                  "server.status"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "shell",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "holder",
+            "args": [
+              "--json",
+              "terminal",
+              "attach",
+              "--target",
+              "t1"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "holder",
+            "bytes": "echo ready-$((2+3))\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "holder",
+            "output": "ready-5"
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "second",
+            "args": [
+              "--json",
+              "terminal",
+              "attach",
+              "--target",
+              "t1",
+              "--client-id",
+              "second"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "second",
+            "exit": 11,
+            "stderr": {
+              "/error/kind": "lease_held",
+              "/error/holder/holder": "cli",
+              "/error/holder/role": "interact"
+            }
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "stale",
+            "args": [
+              "--json",
+              "terminal",
+              "attach",
+              "--target",
+              "t9"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "stale",
+            "exit": 3,
+            "stderr": {
+              "/error/kind": "not_found"
+            }
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--json",
+              "terminal",
+              "attach",
+              "--target",
+              "t1"
+            ],
+            "endpoint": true,
+            "exit": 2,
+            "stderr": {
+              "/error/kind": "not_a_tty"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "still",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "still": {
+                "/result/interact/holder": "cli",
+                "/result/observers": []
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "holder",
+            "exit": 4,
+            "stderr": {
+              "/error/kind": "connection_lost"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

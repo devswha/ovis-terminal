@@ -40,6 +40,9 @@ pub(crate) struct Session<'a> {
     pub(crate) fixture_report: Option<Value>,
     /// Whether an inject step ran the `--inject` request.
     pub(crate) injected: bool,
+    /// Outer PTYs of attach clients, by step name.
+    #[cfg(unix)]
+    pub(crate) ptys: BTreeMap<String, super::pty::outer::OuterPty>,
 }
 
 impl<'a> Session<'a> {
@@ -56,6 +59,8 @@ impl<'a> Session<'a> {
             processes: Vec::new(),
             fixture_report: None,
             injected: false,
+            #[cfg(unix)]
+            ptys: BTreeMap::new(),
         })
     }
 

@@ -125,6 +125,21 @@ pub(super) async fn needs_target(context: &Context) -> Failure {
     }
 }
 
+/// Attaches until detach; a server refusal stays the server's typed error.
+#[cfg(unix)]
+pub(super) async fn attach(
+    context: &Context,
+    plan: &crate::attach::AttachPlan,
+) -> Result<super::Report, Failure> {
+    let address = address(context)?;
+    let bearer = context.credential().map(super::context::Credential::bearer);
+    match crate::attach::attach(plan, (&address, bearer)).await {
+        Ok(record) => Ok(super::Report::detached(&record)),
+        Err(crate::attach::AttachError::Server(error)) => Err(Failure::Server(error)),
+        Err(error) => Err(CliError::Attach(error).into()),
+    }
+}
+
 /// Relays protocol bytes between stdio and the endpoint.
 pub(super) async fn connect(context: &Context) -> Result<(), CliError> {
     bridge(&address(context)?).await

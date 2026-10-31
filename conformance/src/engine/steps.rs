@@ -27,9 +27,7 @@ impl Session<'_> {
     pub(crate) fn execute<'s>(&'s mut self, step: &'s Step) -> StepFuture<'s> {
         Box::pin(async move {
             match step {
-                Step::Serve(serve) => match serve.fixture {
-                    FixtureKind::Protocol => self.serve().await,
-                },
+                Step::Serve(serve) => self.serve(serve.fixture).await,
                 Step::Connect(connect) => self.connect(connect).await,
                 Step::Hello(hello) => self.hello(hello).await,
                 Step::Send(send) => self.send(send).await,
@@ -57,18 +55,42 @@ impl Session<'_> {
                 }),
                 Step::ExpectFailure(expected) => self.expect_failure(expected).await,
                 Step::Inject(inject) => self.inject(inject).await,
+                Step::PtyOpen(_)
+                | Step::PtyType(_)
+                | Step::PtyExpect(_)
+                | Step::PtyResize(_)
+                | Step::PtyExit(_) => self.pty(step).await,
             }
         })
     }
 
-    async fn serve(&mut self) -> Result<(), RunnerError> {
+    async fn serve(&mut self, kind: FixtureKind) -> Result<(), RunnerError> {
         if self.fixture.is_some() {
             return Err(RunnerError::FixtureState);
         }
         if !cfg!(unix) {
             return Err(RunnerError::UnsupportedPlatform);
         }
-        self.fixture = Some(launch::start(&self.ctx.runner, self.root.path()).await?);
+        let root = self.root.path();
+        let started = match kind {
+            FixtureKind::Protocol => {
+                launch::start(
+                    &self.ctx.runner,
+                    &["fixture".into(), "--root".into(), root.into()],
+                )
+                .await?
+            }
+            FixtureKind::Assembled => {
+                let args = [
+                    "serve".into(),
+                    "--stdin-lifetime".into(),
+                    "--root".into(),
+                    root.join("srv").into(),
+                ];
+                launch::start(&self.ctx.binary, &args).await?
+            }
+        };
+        self.fixture = Some(started);
         Ok(())
     }
 
