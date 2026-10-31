@@ -117,6 +117,14 @@ fn a_pty_session_leader_is_listed_on_its_own_controlling_terminal() {
     let mut command = CommandBuilder::new("/bin/sh");
     command.args(["-c", "read gate; exit 0"]);
     let mut child = pair.slave.spawn_command(command).expect("spawn on the pty");
+    drop(pair.slave);
+    // Darwin holds an exiting session leader until its tty output drains, so the echo
+    // must be read; the reader ends at end of file once the child is gone.
+    let mut reader = pair.master.try_clone_reader().expect("pty reader");
+    let drained = std::thread::spawn(move || {
+        let mut sink = Vec::new();
+        drop(std::io::Read::read_to_end(&mut reader, &mut sink));
+    });
     let pid = ProcessId::new(child.process_id().expect("child pid"));
 
     let entry = read_entry(pid).expect("child record");
@@ -130,6 +138,9 @@ fn a_pty_session_leader_is_listed_on_its_own_controlling_terminal() {
     let mut writer = pair.master.take_writer().expect("pty writer");
     writer.write_all(b"\n").expect("release the child");
     let status = child.wait().expect("child exit");
+    drop(writer);
+    drop(pair.master);
+    drained.join().expect("pty reader thread");
 
     let (member, listed) = listed.expect("a pty child has a controlling terminal");
     assert_eq!(member.group, pid.get());
