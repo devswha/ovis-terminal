@@ -78,7 +78,7 @@ impl<D: EventData + Clone + Serialize + DeserializeOwned, P: SnapshotProducer> C
         let mut state = self.lock()?;
         let subscription = self.start(&mut state, request)?;
         let snapshot = match subscription.snapshot {
-            Some(snapshot) => Some(self.pin(&mut state, &snapshot)?),
+            Some(snapshot) => Some(self.pin(&mut state, (&snapshot, self.pins.try_acquire()?))?),
             None => None,
         };
         drop(state);

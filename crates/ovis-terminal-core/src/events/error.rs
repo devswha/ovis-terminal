@@ -57,6 +57,9 @@ pub enum EventError {
     /// The configured bound is exhausted.
     #[error("the coordinator admission bound has been reached")]
     LimitExceeded,
+    /// A request waiting for a pinned-snapshot slot was withdrawn before its turn.
+    #[error("the queued snapshot request was withdrawn before its turn")]
+    AdmissionWithdrawn,
     /// The mutation does not name an affected resource.
     #[error("a committed event must name its affected resources")]
     MissingResources,
@@ -89,6 +92,7 @@ impl EventError {
             Self::SequenceAhead => "seq_ahead",
             Self::SnapshotUnavailable => "snapshot_unavailable",
             Self::LimitExceeded => "limit_exceeded",
+            Self::AdmissionWithdrawn => "unavailable",
             Self::Missed => "missed",
             Self::Receive(_) | Self::TryReceive(_) => "delivery_unavailable",
             Self::InvalidRecord | Self::DecodeRecord(_) => "invalid_event",
@@ -112,6 +116,7 @@ impl EventError {
             }
             Self::SnapshotUnavailable => "wait for the owning producer to become available",
             Self::LimitExceeded => "release a pinned snapshot or disconnect an unused subscription",
+            Self::AdmissionWithdrawn => "connect to an available runtime and inspect the operation",
             Self::Receive(_) | Self::TryReceive(_) => {
                 "resume from the last processed cursor if the connection closed"
             }

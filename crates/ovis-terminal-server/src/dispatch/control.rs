@@ -6,12 +6,14 @@ use ovis_terminal_authz::{Action, PrincipalId, ResolvedTarget, Session, TargetRe
 use ovis_terminal_core::events::{EventData, SnapshotProducer};
 use ovis_terminal_core::ops::{Context, OperationEvent, OperationSnapshot, Operations};
 use ovis_terminal_protocol::errors::{BoundaryError, OpId};
+use ovis_terminal_protocol::schema::methods::server::OpRecord;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 use super::deadline::receive;
 use super::execution::{State, now};
+use super::queue::Queued;
 use super::reservation::Reservation;
 use super::{Access, DispatchError};
 
@@ -22,6 +24,8 @@ pub(super) struct Control {
     pub reservation: Option<Arc<Reservation>>,
     /// Another principal's dispatched request, which owns the identity for authorization.
     pub foreign: Option<PrincipalId>,
+    /// The caller's own dispatched request's place in the admission queue.
+    pub queued: Option<Queued>,
 }
 
 impl Control {
@@ -61,6 +65,19 @@ where
     P::Sections: AsRef<OperationSnapshot> + DeserializeOwned,
 {
     let op_id = request.op_id.clone();
+    // A request still waiting for admission has no ledger row yet; its queue place is
+    // the truthful answer, and reading the ledger would queue behind it.
+    if !request.cancel
+        && let Some(queued) = &request.queued
+        && let Some(position) = queued.position()
+    {
+        request
+            .authorize(&state, (&session, session.principal().clone()))
+            .map_err(|error| error.boundary().with_op_id(op_id.clone()))?;
+        let record = OpRecord::queued(op_id.clone(), queued.method.clone(), position);
+        return serde_json::to_value(record)
+            .map_err(|error| DispatchError::from(error).boundary().with_op_id(op_id));
+    }
     if request.cancel
         && let Some(reservation) = &request.reservation
     {

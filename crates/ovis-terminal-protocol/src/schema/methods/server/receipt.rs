@@ -7,7 +7,7 @@ use serde_json::Value;
 use super::OperationEvidence;
 use crate::errors::{ErrorData, OpId};
 use crate::schema::ids::MethodName;
-use crate::schema::scalar::{EventSeq, OpenEnum};
+use crate::schema::scalar::{EventSeq, OpenEnum, QueuePosition};
 
 /// State of an operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -26,6 +26,8 @@ pub enum OpState {
     Cancelled,
     /// Effects may have begun; the outcome cannot be proven.
     OutcomeUnknown,
+    /// Waiting in FIFO order for admission; never accepted, no effect has begun.
+    Queued,
 }
 
 /// Parameters of `op.get` and `op.cancel`.
@@ -56,6 +58,9 @@ pub struct OpRecord {
     /// Supporting delivery, process and cancellation facts, when recorded.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub evidence: Option<OperationEvidence>,
+    /// FIFO admission position, present only while the state is `queued`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub queued_position: Option<QueuePosition>,
 }
 
 impl OpRecord {
@@ -69,6 +74,21 @@ impl OpRecord {
             error: None,
             updated_seq: EventSeq::new(0),
             evidence: None,
+            queued_position: None,
+        }
+    }
+
+    /// Describes a request still waiting for admission; no durable record exists yet.
+    pub const fn queued(op_id: OpId, method: MethodName, position: QueuePosition) -> Self {
+        Self {
+            op_id,
+            method,
+            state: OpenEnum::Known(OpState::Queued),
+            result: None,
+            error: None,
+            updated_seq: EventSeq::new(0),
+            evidence: None,
+            queued_position: Some(position),
         }
     }
 }

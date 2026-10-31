@@ -13,7 +13,7 @@ use super::admission::{Admission, Admitted};
 use super::{
     OperationError, OperationEvent, OperationSnapshot, Operations, Request, RunningOperation,
 };
-use crate::events::{EventData, SnapshotProducer};
+use crate::events::{EventData, SnapshotProducer, SnapshotSlot};
 
 impl<D, P> Operations<'_, D, P>
 where
@@ -154,7 +154,31 @@ where
     ///
     /// Returns the acceptance errors of [`Operations::accept`] or the cancellation errors.
     pub fn accept_cancelled(&self, request: &Request) -> Result<OpCancelResult, OperationError> {
-        match self.admit(request, Admission::Cancelled)? {
+        self.cancelled(request, self.admit(request, (Admission::Cancelled, None))?)
+    }
+
+    /// [`Operations::accept_cancelled`] whose first ledger read uses a slot granted in turn.
+    ///
+    /// # Errors
+    ///
+    /// Returns the errors of [`Operations::accept_cancelled`].
+    pub fn accept_cancelled_granted(
+        &self,
+        request: &Request,
+        slot: SnapshotSlot,
+    ) -> Result<OpCancelResult, OperationError> {
+        self.cancelled(
+            request,
+            self.admit(request, (Admission::Cancelled, Some(slot)))?,
+        )
+    }
+
+    fn cancelled(
+        &self,
+        request: &Request,
+        admitted: Admitted,
+    ) -> Result<OpCancelResult, OperationError> {
+        match admitted {
             Admitted::New(record) => Ok(OpCancelResult::new(*record, CancelOutcome::CancelPending)),
             Admitted::Retained => self.cancel(request.op_id()),
         }
