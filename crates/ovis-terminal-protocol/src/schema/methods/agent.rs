@@ -4,12 +4,15 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::domain::session_binding::{ConversationCursor, SessionChange};
 use crate::errors::OpId;
 use crate::schema::common::{PageInfo, PageRequest, Target};
-use crate::schema::ids::{HistoryId, NoteId, ProcessToken, TerminalId};
+use crate::schema::ids::{HistoryId, NoteId, ProcessToken, RecordId, TerminalId};
 use crate::schema::method::{MethodSpec, method};
 use crate::schema::records::{AgentBinding, SessionRef, StatusSnapshot};
-use crate::schema::scalar::{DurationMs, EventSeq, Incarnation, OpenEnum, Revision};
+use crate::schema::scalar::{
+    DurationMs, EventSeq, HistoryRevision, Incarnation, OpenEnum, Revision,
+};
 
 /// Parameters of `agent.register`; the label is arbitrary and never brand-matched.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -43,6 +46,12 @@ pub struct AgentUpdateSessionParams {
     pub session: SessionRef,
     /// Conversation history the session continues.
     pub history_id: Option<HistoryId>,
+    /// Why the binding changes; required once the incarnation is bound.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<SessionChange>,
+    /// Record that becomes the active chain head; only with reason `branch`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub head: Option<RecordId>,
 }
 
 /// Parameters of `agent.release`.
@@ -216,12 +225,19 @@ pub struct AgentConversationParams {
     pub target: Target,
     /// Continuation from a previous page.
     pub page: Option<PageRequest>,
+    /// Position bound to a history identity and revision; absent starts the active chain.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cursor: Option<ConversationCursor>,
 }
 
 /// One conversation record with provenance.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
 pub struct ConversationRecord {
+    /// Record identity, stable across revisions that keep the record.
+    pub record_id: RecordId,
+    /// Record this one continues; absent for a chain root.
+    pub parent: Option<RecordId>,
     /// Record role, such as user or assistant.
     pub role: String,
     /// Typed block content as read from the provider store.
@@ -236,10 +252,20 @@ pub struct ConversationRecord {
 pub struct AgentConversationResult {
     /// History identity the page belongs to.
     pub history_id: HistoryId,
+    /// Observed history revision every record of the page belongs to.
+    pub revision: HistoryRevision,
+    /// Last record of the chain read; absent for an empty history.
+    pub head: Option<RecordId>,
+    /// Whether the chain read is the active chain.
+    pub active: bool,
+    /// Leaf records outside the chain read, addressable through a cursor head.
+    pub off_branch: Vec<RecordId>,
     /// Records.
     pub records: Vec<ConversationRecord>,
     /// Paging facts.
     pub page: PageInfo,
+    /// Continuation bound to this history identity and revision; absent on the last page.
+    pub next_cursor: Option<ConversationCursor>,
 }
 
 /// Parameters of `agent.history`.

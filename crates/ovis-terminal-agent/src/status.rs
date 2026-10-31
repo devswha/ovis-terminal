@@ -12,7 +12,7 @@ mod machine;
 mod osc;
 mod owner;
 mod request;
-mod row;
+pub mod row;
 mod service;
 
 pub use error::StatusError;

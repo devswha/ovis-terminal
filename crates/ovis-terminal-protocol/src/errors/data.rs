@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::identity::{FieldPath, OpId, TargetId};
 use super::kinds::ErrorKind;
+use crate::domain::session_binding::HistoryHead;
 use crate::schema::scalar::{DurationMs, ReportSeq};
 
 /// Machine-readable context attached to a boundary failure.
@@ -41,6 +42,9 @@ pub struct ErrorData {
     /// Every resource a refusal would touch or a partial effect already committed.
     #[serde(default, skip_serializing_if = "<[TargetId]>::is_empty")]
     pub affected: Box<[TargetId]>,
+    /// Current history identity and revision, present on a `history_changed` refusal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history: Option<Box<HistoryHead>>,
 }
 
 impl ErrorData {
@@ -57,6 +61,7 @@ impl ErrorData {
             current_seq: None,
             candidates: Vec::new(),
             affected: Box::default(),
+            history: None,
         }
     }
 

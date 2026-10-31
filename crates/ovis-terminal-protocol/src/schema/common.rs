@@ -103,6 +103,20 @@ pub struct PageRequest {
 #[serde(transparent)]
 pub struct PageToken(String);
 
+impl PageToken {
+    /// Wraps a continuation issued by a listing.
+    #[must_use]
+    pub const fn new(token: String) -> Self {
+        Self(token)
+    }
+
+    /// Borrows the continuation text.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 /// Paging facts returned with every listing.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
