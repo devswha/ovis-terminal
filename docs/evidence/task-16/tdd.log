@@ -1,0 +1,34 @@
+Platform: Linux x86_64
+Base: 8db5609
+
+Before holder changes:
+$ cargo test -p ovis-terminal-core --test terminals generation_two -- --nocapture
+running 2 tests
+test generation_two_ignores_optional_envelope_evidence ... ok
+test generation_two_rejects_nested_lifecycle_extension ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+exit_code: 0
+
+$ cargo test -p ovis-terminal-core --test terminals holder_publishes_hangup_before_exit -- --exact --nocapture
+running 1 test
+thread 'holder_publishes_hangup_before_exit' (614199) panicked at crates/ovis-terminal-core/tests/terminals.rs:67:5:
+missing distinct pre-reap hangup evidence
+test holder_publishes_hangup_before_exit ... FAILED
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+exit_code: 101
+
+After holder changes:
+$ cargo test -p ovis-terminal-core --test terminals -- --nocapture
+running 3 tests
+test generation_two_ignores_optional_envelope_evidence ... ok
+test generation_two_rejects_nested_lifecycle_extension ... ok
+test holder_publishes_hangup_before_exit ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+exit_code: 0
+
+$ cargo nextest run -p ovis-terminal-holder --no-tests=fail
+Summary [6.171s] 46 tests run: 46 passed, 0 skipped
+exit_code: 0
+
+Build progress is omitted. These are component results, not the task-16 happy
+or failure acceptance cases and not a CLI/socket conformance pass.

@@ -13,8 +13,8 @@ use super::super::tail::RetainedTail;
 use super::ending::Completion;
 use crate::process::ProcessId;
 use crate::protocol::{
-    AdoptionError, AdoptionTable, HeldTerminal, InputWritten, Message, ProcessIncarnation,
-    PtyIoFailure, TerminalId, TerminalTarget,
+    AdoptionError, AdoptionTable, Hangup, HeldTerminal, InputWritten, Message, Output,
+    ProcessIncarnation, PtyIoFailure, TerminalId, TerminalTarget,
 };
 use crate::unix::pty_io::PumpStop;
 
@@ -75,6 +75,37 @@ pub(super) struct HolderState {
 }
 
 impl HolderState {
+    /// Publishes PTY EOF before the pump records Exit.
+    ///
+    /// The leader may already be reaped (a descendant can hold the slave long
+    /// after it exits), so the evidence is the PID and start token retained at
+    /// spawn, never a live lookup of a PID that may since have been reused.
+    pub(super) fn record_hangup(&mut self, terminal_id: &TerminalId) {
+        let Some(terminal) = self.terminals.get(terminal_id) else {
+            return;
+        };
+        if terminal
+            .io_errors
+            .iter()
+            .any(|error| error.exit_unknown().is_some())
+        {
+            return;
+        }
+        let (Some(pid), Some(start_token)) = (terminal.held.pid, &terminal.held.start_token) else {
+            return;
+        };
+        let output = Output {
+            target: terminal.target(),
+            offset: terminal.tail.head(),
+            bytes: Vec::new(),
+            hangup: Some(Hangup {
+                pid: ProcessId::new(pid),
+                start_token: start_token.clone(),
+            }),
+        };
+        self.publish(Message::Output(output));
+    }
+
     /// Delivers to the adopted core, dropping a link that refuses delivery.
     pub(super) fn publish(&mut self, message: Message) {
         if self
@@ -151,6 +182,7 @@ impl HolderState {
             target,
             offset,
             bytes: chunk.to_vec(),
+            hangup: None,
         }));
         Ok(())
     }

@@ -1,0 +1,177 @@
+{
+  "scenario": "part-a/task-16",
+  "todo": 16,
+  "title": "Terminal lifecycle and process incarnation evidence",
+  "closes": ["GAP-095", "GAP-096", "GAP-126"],
+  "delivers": ["IDEAL-042", "IDEAL-043", "IDEAL-045", "IDEAL-071", "IDEAL-099"],
+  "excludes": ["EXCL-005", "EXCL-006", "EXCL-018", "EXCL-026"],
+  "platforms": ["linux", "macos"],
+  "verification": {
+    "status": "deferred_by_plan",
+    "runner_todo": 21,
+    "requires_actual_cli_socket_transcript": true
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.launch",
+            "program": {
+              "argv": [
+                "/bin/sh",
+                "-c",
+                "printf 'cwd=%s\\nenv=%s\\narg=%s\\n' \"$PWD\" \"$OVIS_FIXTURE\" \"$1\"; stty size; printf '\\303\\251'; exit 7",
+                "fixture",
+                "literal ; argument"
+              ]
+            },
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin",
+              "OVIS_FIXTURE": "explicit-environment"
+            },
+            "geometry": {"rows": 37, "cols": 103},
+            "keep": false
+          },
+          "capture": ["terminal_id", "terminal_incarnation", "launch_op"]
+        },
+        {
+          "await": "terminal.finished",
+          "target": "$terminal_id",
+          "assert": {
+            "launch_admission_distinct_from_spawn": true,
+            "stdout_utf8": "cwd=$isolated_root\r\nenv=explicit-environment\r\narg=literal ; argument\r\n37 103\r\n\u00e9",
+            "exit_code": 7,
+            "exit_after_final_output": true,
+            "hangup_does_not_mean_reaped": true,
+            "process_identity_fields": ["pid", "start_token"]
+          }
+        },
+        {
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.live",
+            "program": {
+              "argv": ["/bin/sh", "-c", "trap '' HUP TERM; printf 'ARMED\\n'; while :; do read line; done"]
+            },
+            "cwd": "$isolated_root",
+            "env": {"PATH": "/usr/bin:/bin"},
+            "geometry": {"rows": 24, "cols": 80},
+            "keep": true
+          },
+          "capture": ["terminal_id", "terminal_incarnation", "process_incarnation"]
+        },
+        {
+          "await_output": "ARMED",
+          "target": "$live.terminal_id"
+        },
+        {
+          "rpc": "terminal.process_info",
+          "params": {"target": {"terminal_id": "$live.terminal_id"}},
+          "assert": {
+            "roles": ["shell", "launcher", "foreground", "background"],
+            "each_role_has_pid_and_start_token_or_explicit_unsupported": true
+          }
+        },
+        {
+          "rpc": "terminal.kill",
+          "params": {
+            "op_id": "$uuidv7.kill",
+            "target": {"terminal_id": "$live.terminal_id"},
+            "escalation": {"hup_ms": "0", "term_ms": "0"}
+          },
+          "assert": {
+            "receipt_names_process_start_token": true,
+            "delivered_is_not_exited": true,
+            "exited_requires_holder_exit_evidence": true
+          }
+        },
+        {
+          "repeat_operation": "$uuidv7.kill",
+          "assert": {"same_receipt": true, "additional_signals": "0"}
+        },
+        {
+          "rpc": "terminal.recover",
+          "params": {
+            "op_id": "$uuidv7.recover",
+            "target": {"terminal_id": "$live.terminal_id"}
+          },
+          "assert": {
+            "same_terminal_identity": true,
+            "terminal_incarnation_increment": "1",
+            "process_incarnation_increment": "1",
+            "origin": "relaunched",
+            "old_agent_authority_invalidated": true
+          }
+        },
+        {
+          "repeat_operation": "$uuidv7.recover",
+          "assert": {"additional_spawns": "0"}
+        },
+        {
+          "remove_finished": "$launch.terminal_id",
+          "assert": {
+            "tombstone_present": true,
+            "affected_incarnations_enumerated": true,
+            "live_sibling_receives_no_signal": true
+          }
+        },
+        {
+          "control_stop_and_restart": true,
+          "assert": {
+            "programs_preserved": true,
+            "affected_incarnations_enumerated": true,
+            "restored_metadata_never_claimed_surviving": true
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "inject": {
+            "same_pid_different_start_token": true
+          },
+          "attempt": ["terminal.kill", "agent_authority_check"],
+          "assert": {
+            "kind": "process_replaced",
+            "written_bytes": "0",
+            "signals_delivered": "0"
+          }
+        },
+        {
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.missing",
+            "program": {"argv": ["/nonexistent/ovis-task-16-fixture"]},
+            "cwd": "$isolated_root",
+            "env": {},
+            "geometry": {"rows": 24, "cols": 80}
+          },
+          "assert": {
+            "admission_does_not_claim_spawn": true,
+            "eventual_kind": "spawn_failed",
+            "spawned_process": null
+          }
+        },
+        {
+          "rpc": "terminal.process_info",
+          "params": {"pane": "$live.terminal_id"},
+          "assert": {"kind": "invalid_params", "focus_fallback": false}
+        },
+        {
+          "rpc": "terminal.rm",
+          "params": {
+            "op_id": "$uuidv7.remove_live",
+            "target": {"terminal_id": "$live.terminal_id"}
+          },
+          "assert": {"kind": "still_live", "signals_delivered": "0"}
+        }
+      ]
+    }
+  ]
+}

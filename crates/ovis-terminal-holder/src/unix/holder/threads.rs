@@ -1,8 +1,10 @@
 //! Bodies of a terminal's exit waiter, output pump and input writer.
 //!
 //! Output order is fixed by construction: the pump records every chunk, reaches
-//! the PTY hang-up, and only then records the exit the waiter observed, so
-//! `final_offset` always covers the final bytes. Exit also waits for the input
+//! the PTY hang-up and publishes it, and only then records the exit the waiter
+//! observed, so `final_offset` always covers the final bytes and Hangup precedes
+//! Exit. The waiter reaps as soon as the leader exits: a descendant may hold the
+//! PTY slave indefinitely, so reaping is never gated on output completion. Exit also waits for the input
 //! writer to acknowledge every entry remaining in the closed queue. Unexpected
 //! failures are kept typed with their sources and reach the core in the exit record.
 
@@ -57,10 +59,15 @@ pub(super) fn wait_for_exit(waiter: Waiter, report: &SyncSender<WaiterReport>) {
     } = waiter;
     // NOWAIT leaves the zombie/PID reserved while we wait without the state lock.
     // The only reap happens under the same mutex held through signal delivery.
-    let ready = waitid(
-        WaitId::Pid(Pid::from_child(&child)),
-        WaitIdOptions::EXITED | WaitIdOptions::NOWAIT,
-    );
+    let ready = loop {
+        match waitid(
+            WaitId::Pid(Pid::from_child(&child)),
+            WaitIdOptions::EXITED | WaitIdOptions::NOWAIT,
+        ) {
+            Err(rustix::io::Errno::INTR) => {}
+            result => break result,
+        }
+    };
     let status = ready.map_err(std::io::Error::from).and_then(|_| {
         let mut state = shared.lock();
         let status = child.wait()?;
@@ -119,7 +126,10 @@ pub(super) fn pump_output(shared: &Shared, pump: Pump) {
     let mut buffer = vec![0_u8; OUTPUT_CHUNK];
     loop {
         let failure = match read_chunk(&mut reader, &mut buffer, &wake) {
-            Ok(ReadOutcome::Hangup) => break,
+            Ok(ReadOutcome::Hangup) => {
+                shared.lock().record_hangup(&terminal_id);
+                break;
+            }
             Ok(ReadOutcome::Data(read)) => buffer
                 .get(..read)
                 .and_then(|chunk| shared.lock().record_output(&terminal_id, chunk).err())

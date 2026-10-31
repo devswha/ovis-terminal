@@ -83,7 +83,7 @@ fn retained_child() -> (Holder, Waiter) {
     (holder, waiter)
 }
 
-fn wait_until_reaped(holder: &Holder, terminal_id: &crate::protocol::TerminalId) {
+pub(super) fn wait_until_reaped(holder: &Holder, terminal_id: &crate::protocol::TerminalId) {
     let (state, wait) = holder
         .shared
         .reaped

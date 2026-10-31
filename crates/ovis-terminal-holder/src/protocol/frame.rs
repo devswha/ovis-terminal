@@ -121,8 +121,7 @@ impl FrameHeader {
 /// Returns a typed error when serialization fails or the payload exceeds the
 /// version-one frame limit.
 pub fn encode_message(message: &Message) -> Result<Vec<u8>, FrameError> {
-    let payload = serde_json::to_vec(message)
-        .map_err(|source| FrameError::PayloadSerialization { source })?;
+    let payload = super::payload::encode(message)?;
     let header = FrameHeader::encode(message.kind(), payload.len())?;
     let frame_capacity = HEADER_LEN
         .checked_add(payload.len())
@@ -159,8 +158,7 @@ pub fn decode_message(frame: &[u8]) -> Result<Message, FrameError> {
     let payload = frame
         .get(header_len..expected_len)
         .ok_or(FrameError::TruncatedFrame)?;
-    let message: Message = serde_json::from_slice(payload)
-        .map_err(|source| FrameError::MalformedPayload { source })?;
+    let message = super::payload::decode(payload)?;
     if message.kind() != header.kind {
         return Err(FrameError::MessageKindMismatch);
     }

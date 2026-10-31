@@ -23,6 +23,8 @@ type Core = Coordinator<OperationEvent, OperationProducer>;
 mod admission;
 #[path = "../src/ops/qa/adversarial.rs"]
 mod adversarial;
+#[path = "../src/ops/qa/atomic.rs"]
+mod atomic;
 #[path = "../src/ops/qa/bounds.rs"]
 mod bounds;
 #[path = "../src/ops/qa/concurrency.rs"]

@@ -12,10 +12,14 @@ mod decimal;
 mod decimal_u16;
 mod decimal_u32;
 mod frame;
+#[cfg(test)]
+mod hangup_tests;
 mod identity;
 mod messages;
 mod optional_decimal;
 mod optional_decimal_u32;
+mod payload;
+mod process_pid;
 #[cfg(test)]
 mod property_message_examples;
 #[cfg(test)]
@@ -30,12 +34,13 @@ pub use identity::{
     TerminalId, TerminalIncarnation,
 };
 pub use messages::{
-    Drain, Exit, ExitUnknown, ExitUnknownReason, Forget, Goodbye, GoodbyeReason, HeldTerminal,
-    Hello, Input, InputRejected, InputRejection, InputWritten, Message, MessageKind, Output,
-    PreviousCoreState, PtyIoFailure, PtyOperation, Resize, Signal, SignalKind, Spawn, SpawnFailed,
-    SpawnFailureKind, SpawnFailureReason, Spawned, Tail, TailRequest, TerminalTarget, Welcome,
-    WriteGrant,
+    Drain, Exit, ExitUnknown, ExitUnknownReason, Forget, Goodbye, GoodbyeReason, Hangup,
+    HeldTerminal, Hello, Input, InputRejected, InputRejection, InputWritten, Message, MessageKind,
+    Output, PreviousCoreState, PtyIoFailure, PtyOperation, Resize, Signal, SignalKind, Spawn,
+    SpawnFailed, SpawnFailureKind, SpawnFailureReason, Spawned, Tail, TailRequest, TerminalTarget,
+    Welcome, WriteGrant,
 };
+pub use process_pid::ProcessId;
 
 /// Independently versioned generation of the holder-to-core contract.
 pub const HOLDER_PROTOCOL_GENERATION: u16 = 2;

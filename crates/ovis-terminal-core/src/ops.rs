@@ -1,5 +1,6 @@
 //! Operation deduplication and inspectable outcomes (plan todo 15).
 
+mod completion;
 mod context;
 mod error;
 mod evidence;
@@ -8,6 +9,7 @@ mod ownership;
 mod request;
 mod transitions;
 
+pub use completion::Completion;
 pub use context::{Context, Operations, RunningOperation};
 pub use error::OperationError;
 pub use ledger::{OperationEvent, OperationProducer, OperationSnapshot};

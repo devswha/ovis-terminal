@@ -1,8 +1,11 @@
-//! Operating-system process identifiers of holder-owned children.
+//! Operating-system process identifiers shared by ownership and wire evidence.
 
 /// PID of a process started and still owned by the holder.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct ProcessId(u32);
+#[derive(
+    Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize,
+)]
+#[serde(transparent)]
+pub struct ProcessId(#[serde(with = "crate::protocol::decimal_u32")] u32);
 
 impl ProcessId {
     /// Wraps a PID reported by the operating system.

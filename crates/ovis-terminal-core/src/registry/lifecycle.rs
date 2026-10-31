@@ -85,6 +85,8 @@ pub enum RelaunchEvidence {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum LifecycleEvent {
+    /// The owning holder reaped the process and supplied its final exit evidence.
+    ProcessEnded,
     /// The first process was confirmed after a terminal resource was allocated.
     InitialSpawn {
         /// Proof that the holder completed the first process spawn.
@@ -133,7 +135,8 @@ pub enum SurvivalEvidence {
 }
 
 /// Lifecycle state of a terminal resource.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum TerminalState {
     /// A process incarnation is currently owned by a live holder.
@@ -142,6 +145,8 @@ pub enum TerminalState {
     Lost,
     /// The host rebooted; persisted metadata exists but no process is claimed alive.
     RestoredMetadata,
+    /// The holder reaped the last process; its identity remains historical evidence.
+    Finished,
 }
 
 /// Proof and transition errors at the lifecycle boundary.
@@ -268,6 +273,11 @@ impl ProcessIdentity {
     /// Opaque runtime process identity.
     pub const fn process_id(&self) -> ProcessId {
         self.id
+    }
+
+    /// Native PID and start token, independent of the registry's process resource ID.
+    pub const fn handle(&self) -> &ProcessHandle {
+        &self.process
     }
 
     /// Process incarnation generation.

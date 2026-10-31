@@ -9,6 +9,7 @@ mod replay;
 mod snapshot;
 mod snapshot_assembly;
 mod startup;
+mod unit;
 
 pub use coordinator::{Coordinator, Limits};
 pub use delivery::{Delivery, MissedReason, PagedSubscription, Subscription};

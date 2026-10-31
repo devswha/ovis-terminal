@@ -1,0 +1,70 @@
+Platform: Linux x86_64
+Toolchain: rustc 1.99.1 (58cf8f9c3 2026-10-13)
+
+Command: bash scripts/check.sh
+Output below is filtered to stage boundaries, summaries and hygiene results.
+status: completed exit_code: 0
+==> cargo +nightly fmt --all -- --check
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.28s
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 18.18s
+        PASS [   0.031s] workspace-hygiene::fixtures malformed_source_is_a_syntax_violation
+        PASS [   0.038s] workspace-hygiene::fixtures receivers_count_as_parameters
+        PASS [   0.072s] workspace-hygiene::fixtures one_line_and_one_parameter_over_the_limit_both_fail
+        PASS [   0.074s] workspace-hygiene::fixtures violations_report_file_line_rule_and_count
+        PASS [   0.097s] workspace-hygiene::fixtures exactly_250_pure_loc_and_three_parameters_pass
+     Summary [ 120.935s] 392 tests run: 392 passed (1 slow), 1 skipped
+==> cargo test --doc --workspace --all-features --locked
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 395 file(s) checked
+==> bash scripts/hygiene/manifests.sh
+==> bash scripts/hygiene/json.sh
+check.sh: all steps passed
+
+Command: cargo nextest run -p ovis-terminal-core
+Exit code: 0
+Summary [118.898s] 91 tests run: 91 passed (1 slow), 0 skipped
+
+Command: cargo nextest run -p ovis-terminal-holder --no-tests=fail --status-level fail --final-status-level fail
+Exit code: 0
+Summary [6.668s] 46 tests run: 46 passed, 0 skipped
+
+Command: cargo clippy -p ovis-terminal-core --all-targets -- -D warnings
+status: completed exit_code: 0
+    Checking ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t16/crates/ovis-terminal-core)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.05s
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+Linux x86_64
+Command: cargo metadata --locked --no-deps --format-version 1
+Exit code: 0 (stdout discarded after successful metadata validation)
+
+Final pre-commit refresh and documentation validation:
+git fetch origin
+git rev-parse HEAD origin/integration
+8db5609986d000997b6344d230523c62d290e694
+8db5609986d000997b6344d230523c62d290e694
+No integration merge was necessary.
+git diff --check
+Exit code: 0
+bash scripts/hygiene/json.sh
+json.sh: 37 JSON file(s) checked
+Exit code: 0
+cargo metadata --locked --no-deps --format-version 1
+Exit code: 0

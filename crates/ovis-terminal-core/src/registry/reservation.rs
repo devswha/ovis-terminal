@@ -1,6 +1,5 @@
 //! Durable identity reservation before a resource can be published.
 
-use std::num::NonZeroU64;
 use std::str::FromStr as _;
 
 use ovis_terminal_store::{
@@ -12,6 +11,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
 use crate::registry::{DurableId, IdentityError, MachineId};
+
+mod staged;
+pub use staged::ReservedIdentity;
 
 const COUNTER_KIND: &str = "identity_allocator";
 const RESERVATION_KIND: &str = "identity_reservation";
@@ -157,51 +159,17 @@ impl<'a> IdentityReservation<'a> {
     /// Returns `counter_overflow`, `identity_store_invalid` or `persistence_failed` if
     /// the durable compare-and-swap transaction cannot reserve the next identity.
     pub async fn reserve<T: DurableId>(&self, op: OpId) -> Result<T, ReservationError> {
-        let counter_key = ResourceKey::new(COUNTER_KIND, T::FAMILY);
         let snapshot = self.store.snapshot()?;
-        let (current, version) = match snapshot.resource(&counter_key)? {
-            ResourceLookup::Absent => (0, Version::ABSENT),
-            ResourceLookup::Live {
-                version,
-                value,
-                revision: _,
-            } => {
-                let counter: CounterText = serde_json::from_slice(value.as_bytes())
-                    .map_err(ReservationError::InvalidCounter)?;
-                if counter.0 == 0 {
-                    return Err(ReservationError::AllocatorUnavailable);
-                }
-                (counter.0, version)
-            }
-            ResourceLookup::Tombstone { .. } => {
-                return Err(ReservationError::AllocatorUnavailable);
-            }
-            _ => return Err(ReservationError::AllocatorUnavailable),
-        };
-        let next = current
-            .checked_add(1)
-            .ok_or(ReservationError::CounterOverflow)?;
-        let sequence = NonZeroU64::new(next).ok_or(ReservationError::CounterOverflow)?;
-        let id = T::from_sequence(sequence);
-        let counter =
-            serde_json::to_vec(&CounterText(next)).map_err(ReservationError::Serialization)?;
+        let (id, writes) = Self::stage::<T>(&snapshot)?.into_parts();
         let id_bytes = serde_json::to_vec(&id).map_err(ReservationError::Serialization)?;
-        let reservation_key = ResourceKey::new(RESERVATION_KIND, id.to_string());
         let event = NewEvent::new(
             EventKind::new("identity.reserved"),
             Payload::from(id_bytes.clone()),
         );
-        let mutation = Mutation::new(op, Payload::from(id_bytes), event)
-            .compare_and_swap(CasWrite::new(
-                counter_key,
-                version,
-                Some(Payload::from(counter)),
-            ))
-            .compare_and_swap(CasWrite::new(
-                reservation_key,
-                Version::ABSENT,
-                Some(Payload::from("reserved")),
-            ));
+        let mut mutation = Mutation::new(op, Payload::from(id_bytes), event);
+        for write in writes {
+            mutation = mutation.compare_and_swap(write);
+        }
         self.store.submit(mutation)?.outcome().await?;
         Ok(id)
     }
