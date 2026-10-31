@@ -46,20 +46,41 @@ None of these, and no other command, starts, installs or restarts a server.
 
 The bearer credential is read from `OVIS_TERMINAL_CREDENTIAL` and is never printed.
 
+## Holder service (Unix)
+
+The session holder owns every PTY and outlives the command that started it. Only
+`status` is read-only; every other verb is an explicit mutation and names its manager.
+
+- `ovis-terminal service status [--session S]` reports `running`, `stopped`,
+  `unreachable` or `stale_endpoint` from the discovery record, the recorded process's
+  start token and one connection attempt. It never starts, installs or repairs anything,
+  and lists `missing_prerequisites` for surviving a logout.
+- `ovis-terminal service install --manager systemd-user|launchd` writes and loads the
+  service definition; `ovis-terminal service uninstall --manager ...` removes only a
+  definition this runtime wrote, after the holder stopped.
+- `ovis-terminal service start --manager systemd-user|launchd|detached` starts the
+  holder. `detached` puts it in its own session with no manager: it survives the
+  starting command and its terminal, but not a logout that ends every user process.
+- `ovis-terminal service stop` stops the holder and lists the holder process and every
+  terminal and process it ended. A stale endpoint is reported, not cleaned; the next
+  `service start` replaces an endpoint whose process is proven gone.
+- `ovis-terminal service run` is the holder process itself, executed by the manager or
+  by `start`; do not run it by hand.
+
 ## Exit codes
 
 | code | name | kinds |
 |---|---|---|
 | 0 | success | |
 | 1 | failure | any kind not listed below |
-| 2 | usage | usage, invalid_params, unknown_method, invalid_json_switch, endpoint configuration kinds |
+| 2 | usage | usage, invalid_params, unknown_method, invalid_json_switch, endpoint and service path configuration kinds |
 | 3 | not_found | not_found, template_not_found, parent_not_found, stream_not_found |
-| 4 | unavailable | unavailable, server_not_running, stale_endpoint, method_not_found, machine_unreachable, unsupported_transport, backpressure, recovering, not_ready |
+| 4 | unavailable | unavailable, server_not_running, stale_endpoint, method_not_found, machine_unreachable, unsupported_transport, backpressure, recovering, not_ready, service_manager_unavailable, service_unsupported |
 | 7 | needs_target | needs_target, ambiguous_target |
 | 9 | blocked | blocked |
 | 10 | cancelled | cancelled |
 | 11 | conflict | conflict and state conflicts such as op_reused or already_running |
 | 12 | forbidden | forbidden, unauthenticated and credential kinds |
-| 13 | outcome_unknown | outcome_unknown, deadline_exceeded: inspect the operation |
+| 13 | outcome_unknown | outcome_unknown, deadline_exceeded, manager_timeout, holder_not_ready: inspect the operation or the service status |
 
 `ovis-terminal schema cli` lists the exact kinds of each code.

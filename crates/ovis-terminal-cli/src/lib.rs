@@ -5,6 +5,7 @@
 //! and exits with a published code. No command starts, installs or restarts a server.
 
 mod invocation;
+pub mod service;
 
 pub use invocation::{CREDENTIAL_ENV, Context, Credential, ExitStatus, JSON_ENV, Report, run};
 
@@ -21,4 +22,5 @@ pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const DEPENDS_ON: &[&str] = &[
     ovis_terminal_protocol::CRATE_NAME,
     ovis_terminal_server::CRATE_NAME,
+    ovis_terminal_holder::CRATE_NAME,
 ];
