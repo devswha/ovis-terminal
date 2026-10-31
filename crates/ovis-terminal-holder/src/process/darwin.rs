@@ -47,6 +47,16 @@ fn pidinfo<T>(pid: ProcessId, flavor: c_int) -> Result<T, ProbeError> {
     }
 }
 
+/// The session of `pid`; `proc_bsdinfo` does not carry it.
+fn session(pid: ProcessId) -> Result<u32, ProbeError> {
+    // SAFETY: getsid(2) takes a PID by value and reads no caller memory.
+    let session = unsafe { libc::getsid(raw_pid(pid)?) };
+    if session < 0 {
+        return Err(os_error(pid));
+    }
+    u32::try_from(session).map_err(|_| ProbeError::Malformed)
+}
+
 fn token(info: &libc::proc_bsdinfo) -> ProcessStartToken {
     ProcessStartToken::new(format!(
         "darwin:{}.{:06}",
@@ -65,6 +75,7 @@ pub fn read_entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
         Membership::Detached
     } else {
         Membership::Controlling(TerminalMembership {
+            session: session(pid)?,
             group: info.pbi_pgid,
             tty: u64::from(info.e_tdev),
             foreground_group: info.e_tpgid,

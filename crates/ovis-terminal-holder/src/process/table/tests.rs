@@ -148,6 +148,7 @@ fn a_pty_session_leader_is_listed_on_its_own_controlling_terminal() {
     drained.join().expect("pty reader thread");
 
     let (member, listed) = listed.expect("a pty child has a controlling terminal");
+    assert_eq!(member.session, pid.get());
     assert_eq!(member.group, pid.get());
     assert_eq!(member.foreground_group, pid.get());
     assert!(listed.contains(&pid));

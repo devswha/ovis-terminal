@@ -35,11 +35,11 @@ fn sample(table: &dyn ProcessTable, native: &NativeProcess) -> Result<ProcessSam
 fn member(
     table: &dyn ProcessTable,
     pid: ProcessPid,
-    tty: u64,
+    root: &Session,
 ) -> Result<Option<(NativeProcess, Session)>, Unavailable> {
     match table.read(pid) {
         Ok(native) => match native.terminal {
-            Terminal::Controlling(session) if session.tty == tty && native.running => {
+            Terminal::Controlling(session) if session.same_terminal(root) && native.running => {
                 Ok(Some((native, session)))
             }
             Terminal::Controlling(_) | Terminal::Detached | Terminal::Unsupported => Ok(None),
@@ -56,7 +56,7 @@ fn groups(table: &dyn ProcessTable, root: Session) -> Result<Groups, Unavailable
     }
     let (mut foreground, mut background) = (Vec::new(), Vec::new());
     for pid in pids {
-        let Some((native, session)) = member(table, pid, root.tty)? else {
+        let Some((native, session)) = member(table, pid, &root)? else {
             continue;
         };
         let observed = match sample(table, &native) {

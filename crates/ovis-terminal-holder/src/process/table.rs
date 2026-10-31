@@ -15,6 +15,10 @@ use crate::protocol::ProcessStartToken;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct TerminalMembership {
+    /// Session of the process. A process whose terminal was closed can keep naming a
+    /// terminal device number that a newer terminal reuses, so membership is the pair of
+    /// session and terminal, never the device number alone.
+    pub session: u32,
     /// Process group of the process.
     pub group: u32,
     /// Device number of its controlling terminal.

@@ -11,6 +11,7 @@ use crate::protocol::ProcessStartToken;
 struct Stat {
     state: String,
     group: u32,
+    session: u32,
     tty: u64,
     foreground: i64,
     start_ticks: u64,
@@ -31,6 +32,7 @@ fn read_stat(pid: ProcessId) -> Result<Stat, ProbeError> {
     Ok(Stat {
         state: field(0)?.to_owned(),
         group: u32::try_from(number(2)?).map_err(|_| ProbeError::Malformed)?,
+        session: u32::try_from(number(3)?).map_err(|_| ProbeError::Malformed)?,
         tty: u64::try_from(number(4)?).map_err(|_| ProbeError::Malformed)?,
         foreground: number(5)?,
         start_ticks: field(19)?.parse().map_err(|_| ProbeError::Malformed)?,
@@ -60,6 +62,7 @@ pub fn read_entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
     };
     let terminal = match u32::try_from(stat.foreground) {
         Ok(foreground_group) if stat.tty != 0 => Membership::Controlling(TerminalMembership {
+            session: stat.session,
             group: stat.group,
             tty: stat.tty,
             foreground_group,

@@ -161,7 +161,7 @@ fn an_unsupported_foreground_answers_without_revoking_or_reporting_exit() {
 
 #[test]
 fn the_launcher_in_the_foreground_group_is_the_legacy_foreground_record() {
-    let session = Terminal::Controlling(Session::new(40, 3, 40));
+    let session = Terminal::Controlling(Session::new(40, 3));
     let shell = lane(vec![NativeProcess::new(owned("t-1"), true, session)]);
 
     let result = shell

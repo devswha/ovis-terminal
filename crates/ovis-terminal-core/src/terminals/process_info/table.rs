@@ -8,26 +8,51 @@ use crate::registry::{ProcessHandle, ProcessPid, ProcessStartToken};
 use crate::terminals::{Field, Unavailable};
 
 /// The controlling-terminal facts of one process.
+///
+/// A process whose terminal was closed can keep naming a device number that a newer
+/// terminal reuses, so a process belongs to a terminal only when both its session and
+/// its terminal device match.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Session {
-    /// Process group of the process.
-    pub group: u32,
+    /// Session of the process.
+    pub session: u32,
     /// Device number of its controlling terminal.
     pub tty: u64,
+    /// Process group of the process.
+    pub group: u32,
     /// Foreground process group of that terminal.
     pub foreground_group: u32,
 }
 
 impl Session {
-    /// Membership of process group `group` on terminal `tty` whose foreground is `foreground_group`.
+    /// The session leader's facts: session `session` on terminal `tty`, with the leader's
+    /// own group in the foreground.
     #[must_use]
-    pub const fn new(group: u32, tty: u64, foreground_group: u32) -> Self {
+    pub const fn new(session: u32, tty: u64) -> Self {
+        Self {
+            session,
+            tty,
+            group: session,
+            foreground_group: session,
+        }
+    }
+
+    /// The same session and terminal for a member of `group` while `foreground_group`
+    /// holds the terminal.
+    #[must_use]
+    pub const fn with_groups(self, group: u32, foreground_group: u32) -> Self {
         Self {
             group,
-            tty,
             foreground_group,
+            ..self
         }
+    }
+
+    /// Whether this and `other` are the same session on the same terminal device.
+    #[must_use]
+    pub const fn same_terminal(&self, other: &Self) -> bool {
+        self.session == other.session && self.tty == other.tty
     }
 }
 
@@ -122,11 +147,10 @@ impl ProcessTable for NativeTable {
         let token = ProcessStartToken::new(entry.start_token.as_str())
             .map_err(|_| Unavailable::Encoding)?;
         let terminal = match entry.terminal {
-            Membership::Controlling(member) => Terminal::Controlling(Session::new(
-                member.group,
-                member.tty,
-                member.foreground_group,
-            )),
+            Membership::Controlling(member) => Terminal::Controlling(
+                Session::new(member.session, member.tty)
+                    .with_groups(member.group, member.foreground_group),
+            ),
             Membership::Detached => Terminal::Detached,
             _ => Terminal::Unsupported,
         };

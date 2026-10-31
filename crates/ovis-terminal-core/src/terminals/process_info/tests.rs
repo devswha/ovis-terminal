@@ -66,8 +66,9 @@ fn record(pid: u64, token: &str, terminal: Terminal) -> NativeProcess {
     NativeProcess::new(handle(pid, token), true, terminal)
 }
 
+/// A member of session 40 on terminal 7.
 fn on_tty(group: u32, foreground: u32) -> Terminal {
-    Terminal::Controlling(Session::new(group, 7, foreground))
+    Terminal::Controlling(Session::new(40, 7).with_groups(group, foreground))
 }
 
 fn table(records: Vec<NativeProcess>) -> Scripted {
@@ -136,7 +137,7 @@ fn unsupported_membership_reports_the_launcher_and_never_an_exit() {
 fn foreground_and_background_follow_the_terminal_foreground_group() {
     let owned = handle(40, "t40");
     let mut other_tty = record(70, "t70", on_tty(70, 70));
-    other_tty.terminal = Terminal::Controlling(Session::new(70, 8, 70));
+    other_tty.terminal = Terminal::Controlling(Session::new(40, 8).with_groups(70, 70));
     let session = table(vec![
         record(40, "t40", on_tty(40, 50)),
         record(50, "t50", on_tty(50, 50)),
@@ -157,6 +158,23 @@ fn foreground_and_background_follow_the_terminal_foreground_group() {
             UnsupportedReason::UndeclaredRole
         )
     );
+}
+
+#[test]
+fn a_process_of_another_session_on_a_reused_terminal_number_is_never_a_role() {
+    let owned = handle(40, "t40");
+    let mut orphan = record(90, "t90", on_tty(90, 90));
+    orphan.terminal = Terminal::Controlling(Session::new(90, 7).with_groups(90, 50));
+    let session = table(vec![
+        record(40, "t40", on_tty(40, 50)),
+        record(50, "t50", on_tty(50, 50)),
+        orphan,
+    ]);
+
+    let info = observe(&session, terminal(), &owned).expect("launcher is current");
+
+    assert_eq!(pids(&info.foreground), Some(vec![50]));
+    assert_eq!(pids(&info.background), Some(vec![40]));
 }
 
 #[test]
