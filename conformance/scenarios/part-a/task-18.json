@@ -1,0 +1,131 @@
+{
+  "scenario": "part-a/task-18",
+  "todo": 18,
+  "title": "Deterministic thin workspace and layout service",
+  "closes": ["GAP-032", "GAP-033", "GAP-034", "GAP-036", "GAP-110", "GAP-111", "GAP-112", "GAP-113", "GAP-115", "GAP-149", "GAP-150"],
+  "delivers": ["IDEAL-023", "IDEAL-024", "IDEAL-084", "IDEAL-085", "IDEAL-086", "IDEAL-088"],
+  "excludes": ["EXCL-001", "EXCL-004", "EXCL-005", "EXCL-018", "EXCL-022"],
+  "platforms": ["linux", "macos"],
+  "verification": {
+    "status": "deferred_by_plan",
+    "runner_todo": 21,
+    "requires_actual_cli_socket_transcript": true
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "subscribe": "events",
+          "capture": ["cursor"]
+        },
+        {
+          "rpc": "layout.edit",
+          "params": {"op_id": "$uuidv7.workspace", "edit": {"op": "create_workspace", "name": "main"}},
+          "capture": ["workspace_id", "tab_id", "pane_id.left"]
+        },
+        {
+          "rpc": "layout.edit",
+          "params": {"op_id": "$uuidv7.split", "edit": {"op": "split", "pane": "$pane_id.left", "axis": "horizontal", "ratio_permille": 500}},
+          "capture": ["split_id.outer", "pane_id.right"]
+        },
+        {
+          "rpc": "layout.edit",
+          "params": {"op_id": "$uuidv7.inner", "edit": {"op": "split", "pane": "$pane_id.right", "axis": "vertical", "ratio_permille": 250}},
+          "capture": ["split_id.inner", "pane_id.bottom"]
+        },
+        {
+          "rpc": "selection.set",
+          "params": {"op_id": "$uuidv7.phone", "client": "phone", "workspace": "$workspace_id", "tab": "$tab_id", "pane": "$pane_id.right"}
+        },
+        {
+          "rpc": "selection.set",
+          "params": {"op_id": "$uuidv7.desk", "client": "desk", "workspace": "$workspace_id", "tab": "$tab_id", "pane": "$pane_id.bottom"}
+        },
+        {
+          "rpc": "layout.edit",
+          "params": {"op_id": "$uuidv7.swap", "edit": {"op": "swap", "first": "$pane_id.left", "second": "$pane_id.bottom"}},
+          "assert": {"created": [], "removed": [], "revision_increases": true, "geometry_exchanged": ["$pane_id.left", "$pane_id.bottom"]}
+        },
+        {
+          "rpc": "layout.edit",
+          "params": {"op_id": "$uuidv7.other", "edit": {"op": "create_workspace", "name": "other"}},
+          "capture": ["workspace_id.other"]
+        },
+        {
+          "rpc": "layout.edit",
+          "params": {"op_id": "$uuidv7.move", "edit": {"op": "move_tab", "tab": "$tab_id", "workspace": "$workspace_id.other", "index": 1}},
+          "assert": {"source_workspace_kept_empty": true, "implicit_close": false}
+        },
+        {
+          "rpc": "layout.get",
+          "assert": {
+            "pane_ids_unchanged": ["$pane_id.left", "$pane_id.right", "$pane_id.bottom"],
+            "split_ids_unchanged": ["$split_id.outer", "$split_id.inner"],
+            "selections_unchanged": ["phone", "desk"],
+            "revision_is_decimal_string": true
+          }
+        },
+        {
+          "await_events": "layout.changed",
+          "assert": {"count": "6", "each_revision_equals_event_seq": true, "each_names_affected_resources": true}
+        },
+        {
+          "rpc": "layout.edit",
+          "params": {
+            "op_id": "$uuidv7.failed_launch",
+            "edit": {"op": "create_tab", "workspace": "$workspace_id.other"},
+            "launch": {
+              "program": {"argv": ["/bin/sh", "-c", "exit 0"], "cwd": "$isolated_root/missing-cwd", "env": {"PATH": "/usr/bin:/bin"}},
+              "geometry": {"cols": 80, "rows": 24},
+              "name": null,
+              "labels": {},
+              "keep": false
+            }
+          },
+          "assert": {
+            "created_kinds": ["tab", "pane"],
+            "launch.state": "rejected",
+            "launch.error.kind": "invalid_params",
+            "created_ids_present_in_layout_get": true
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "rpc": "layout.edit",
+          "params": {"op_id": "$uuidv7.ratio", "edit": {"op": "set_ratio", "split": "$split_id.outer", "ratio_permille": 950}},
+          "assert": {"kind": "invalid_geometry", "reason": "out_of_range", "requested": 950, "min": 100, "max": 900, "layout_unchanged": true, "op_state": "failed"}
+        },
+        {
+          "rpc": "layout.edit",
+          "params": {"op_id": "$uuidv7.resize", "edit": {"op": "resize", "split": "$split_id.outer", "delta_ppm": 1}},
+          "assert": {"kind": "invalid_geometry", "reason": "unrepresentable", "step": 1000, "layout_unchanged": true}
+        },
+        {
+          "rpc": "layout.edit",
+          "params": {"op_id": "$uuidv7.linked", "edit": {"op": "create_workspace", "name": "linked", "group_with": "$workspace_id"}},
+          "capture": ["workspace_id.linked"]
+        },
+        {
+          "rpc": "layout.edit",
+          "params": {"op_id": "$uuidv7.close_target", "edit": {"op": "close", "target": {"kind": "workspace", "id": "$workspace_id"}, "scope": "target"}},
+          "assert": {"kind": "group_scope_required", "affected_includes": ["$workspace_id", "$workspace_id.linked", "$split_id.outer"], "layout_unchanged": true}
+        },
+        {
+          "rpc": "layout.edit",
+          "params": {"op_id": "$uuidv7.stale", "expect_revision": "1", "edit": {"op": "close", "target": {"kind": "workspace", "id": "$workspace_id"}, "scope": "group"}},
+          "assert": {"kind": "revision_mismatch", "layout_unchanged": true}
+        },
+        {
+          "rpc": "layout.edit",
+          "params": {"op_id": "$uuidv7.misnamed", "edit": {"op": "split", "pane_id": "$pane_id.left", "axis": "horizontal", "ratio_permille": 500}},
+          "assert": {"kind": "invalid_params", "focus_fallback": false}
+        }
+      ]
+    }
+  ]
+}
