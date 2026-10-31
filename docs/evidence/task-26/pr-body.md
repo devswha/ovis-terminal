@@ -131,6 +131,25 @@ macOS: `probe-stress-macos.yml` gains the option `geometry` and a job running `-
 - The runtime (todo 31) must call `input_ready()` before sequencer admission and feed the holder's resize result into `acknowledged`. The landed sequencer has no geometry readiness input of its own, and this lane does not touch `input/`.
 - Tests reuse `src/input/sequencer/qa/fixture.rs` read-only via `#[path]`.
 
+## Round 2: Windows open-file cleanup
+
+CI `test (windows-latest)` failed: `geometry/qa/rig.rs:49` panicked with `geometry store cleanup: Err(Os {{ code: 32, .. being used by another process }})` in `adversarial::a_released_owners_waiting_resize_is_refused_and_the_grid_stays`. This is the same class todo 50 fixed in `4e609d1`.
+
+Cause: the rig only *dropped* its `Coordinator` and relied on field order to remove the store directory afterwards. It never called `Coordinator::close`, the API that tears the coordinator down (it drops sinks and pages, then `Store::close`) and returns the close error. Windows refuses `remove_dir_all` while any handle on the SQLite files remains, whereas Unix unlinks open files, so only Windows failed.
+
+Fix (structural, all geometry rigs):
+
+- `Rig` now owns the coordinator as `core: Option<Coordinator<..>>` and the directory as a plain `root: PathBuf`. `impl Drop for Rig` first `take()`s the coordinator and calls `close()`, asserting the result. Only then does it `remove_dir_all(root)`, also asserted. No retry, no sleep, no ignored error, no `#[cfg(windows)]`. Callers use `rig.core()?`.
+- **Handle lifetimes:**
+  - Every `Subscription` is a test-local declared after the rig, so it drops before the rig.
+  - The only other holders of store handles are the coordinator's state (sinks, pages, store), which `close()` consumes.
+  - The `Screen` and the lease and authority objects open no files.
+- In the bash `Session` (the only other rig), fields drop in declaration order: `pty` first (its `Drop` runs `Holder::shutdown`, killing the program, closing the PTY and joining workers), then `rig` (store closed, then directory removed). The holder's cwd is the temp dir, never the store directory. This order is documented on the struct.
+- **Verification:**
+  - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exits 0 (`windows-check-r2.log`). This is a compile check only; the cleanup behaviour is proven at runtime by the Windows CI job.
+  - `bash scripts/check.sh` exits 0, 840 passed (`check-r2.log`).
+  - `cargo nextest run -p ovis-terminal-core --test geometry`: 14 passed, and no `ovis-geometry-*` directory is left in the temp dir.
+
 ## Risks
 
 - **PR status: CONFLICTING (no pull_request CI yet).** `git merge-tree HEAD origin/integration` reports exactly one conflict, in `.github/workflows/probe-stress-macos.yml`: todo 78's `ops-digest` and this lane's `geometry` option/job were both appended at the end of the same lists. Resolution is the orchestrator's union merge; this lane does not merge (hard process rule).

@@ -53,7 +53,7 @@ fn failure() -> TestResult {
     // When input and repaint arrive before the VT applied and the holder acknowledged 100x30.
     let dispatch = dispatched(rig.resize(&op(), (100, 30))??)?;
     let (unit, committing) = dispatch.into_commit(store_op());
-    let receipt = rig.core.commit(unit)?;
+    let receipt = rig.core()?.commit(unit)?;
     let committed = [
         rig.geometry.input_ready().err(),
         rig.geometry.repaint().err(),

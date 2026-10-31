@@ -25,6 +25,9 @@ const MARKER_BOUND: Duration = Duration::from_secs(10);
 const BOUND: Duration = Duration::from_secs(20);
 
 /// An unmodified program on a real PTY, the operator's leases and its live sequencer.
+///
+/// Fields drop in declaration order: `pty` shuts the holder down (killing the program and
+/// closing the PTY) before `rig` closes the store and removes its directory.
 struct Session {
     pty: Pty,
     rig: Rig,
@@ -114,7 +117,7 @@ impl Session {
 pub fn unmodified_bash_receives_input_at_the_new_grid() -> TestResult<serde_json::Value> {
     // Given an unmodified interactive bash at 100x30 and a subscriber registered first.
     let mut session = Session::start(&["bash", "--norc", "--noprofile", "-i"])?;
-    let subscription = session.rig.core.subscribe(None)?;
+    let subscription = session.rig.core()?.subscribe(None)?;
 
     // When the operator resizes to 120x40, then types the marker command once ready.
     let (message, before_ack) = session.resize((120, 40))?;

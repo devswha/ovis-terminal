@@ -15,13 +15,13 @@ const BOUND: Duration = Duration::from_secs(5);
 fn the_change_commits_before_the_grid_exists_and_ready_follows_the_acknowledgement() -> TestResult {
     // Given the operator owns geometry of an 80x24 screen and a subscriber is listening.
     let mut rig = Rig::new(screen(holder_target(1), 80, 24)?)?;
-    let subscription = rig.core.subscribe(None)?;
+    let subscription = rig.core()?.subscribe(None)?;
 
     // When the operator asks for 100x30 and the transition runs step by step.
     let dispatch = dispatched(rig.resize(&op(), (100, 30))??)?;
     let epoch = dispatch.epoch();
     let (unit, committing) = dispatch.into_commit(store_op());
-    let receipt = rig.core.commit(unit)?;
+    let receipt = rig.core()?.commit(unit)?;
     let grid_at_commit = rig.screen.first_paint()?.geometry;
     let gate_at_commit = rig.geometry.input_ready().err().map(|error| error.kind());
     let resize = rig.geometry.apply(&committing, receipt)?;

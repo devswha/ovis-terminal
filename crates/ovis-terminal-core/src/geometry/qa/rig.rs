@@ -39,17 +39,6 @@ impl SnapshotProducer for NoSections {
     }
 }
 
-/// A temporary store root removed when the rig is dropped.
-#[derive(Debug)]
-pub struct Root(PathBuf);
-
-impl Drop for Root {
-    fn drop(&mut self) {
-        let removed = std::fs::remove_dir_all(&self.0);
-        assert!(removed.is_ok(), "geometry store cleanup: {removed:?}");
-    }
-}
-
 /// The fixture terminal as the holder names it.
 pub fn holder_target(process: u64) -> TerminalTarget {
     TerminalTarget {
@@ -108,10 +97,23 @@ pub struct Rig {
     pub screen: Screen,
     /// Unit under test.
     pub geometry: GeometryController,
-    /// Durable commit path.
-    pub core: Coordinator<GeometryEvent, NoSections>,
-    /// Removed after `core` closed its store.
-    _root: Root,
+    /// Durable commit path; taken and closed in `Drop` before `root` is removed.
+    core: Option<Coordinator<GeometryEvent, NoSections>>,
+    /// Store directory, removed only after the store is closed.
+    root: PathBuf,
+}
+
+/// Closes the store (every SQLite handle) first, then removes its directory: Windows
+/// refuses to delete a file another handle still has open.
+impl Drop for Rig {
+    fn drop(&mut self) {
+        if let Some(core) = self.core.take() {
+            let closed = core.close();
+            assert!(closed.is_ok(), "geometry store close: {closed:?}");
+        }
+        let removed = std::fs::remove_dir_all(&self.root);
+        assert!(removed.is_ok(), "geometry store cleanup: {removed:?}");
+    }
 }
 
 impl Rig {
@@ -129,7 +131,7 @@ impl Rig {
         leases.acquire(operator.caller(), Acquire::new(ControlSlot::Geometry, grid))?;
         let terminal = TerminalId::try_from(9)?;
         let geometry = GeometryController::new(terminal, screen.clone(), GeometryEpoch::new(0))?;
-        let root = Root(std::env::temp_dir().join(format!("ovis-geometry-{}", Uuid::now_v7())));
+        let root = std::env::temp_dir().join(format!("ovis-geometry-{}", Uuid::now_v7()));
         let identity = RuntimeIdentity::new(
             HostIdentity::new(
                 MachineId::new(Uuid::from_u128(26))?,
@@ -139,7 +141,7 @@ impl Rig {
             ServerBootId::try_from(1)?,
         );
         let core = Coordinator::new(
-            Store::open(&root.0, StoreOptions::default())?,
+            Store::open(&root, StoreOptions::default())?,
             identity,
             NoSections,
         );
@@ -151,9 +153,18 @@ impl Rig {
             grid,
             screen,
             geometry,
-            core,
-            _root: root,
+            core: Some(core),
+            root,
         })
+    }
+
+    /// The durable commit path.
+    ///
+    /// # Errors
+    ///
+    /// Fails only after the rig began dropping, which no caller can observe.
+    pub fn core(&self) -> TestResult<&Coordinator<GeometryEvent, NoSections>> {
+        Ok(self.core.as_ref().ok_or("the coordinator was closed")?)
     }
 
     /// The operator asks for `size` under its geometry lease.
@@ -181,7 +192,7 @@ impl Rig {
     /// Fails when the commit or the controller refuses.
     pub fn start(&mut self, dispatch: Dispatch) -> TestResult<(Resize, Cursor)> {
         let (unit, committing) = dispatch.into_commit(store_op());
-        let receipt = self.core.commit(unit)?;
+        let receipt = self.core()?.commit(unit)?;
         let resize = self.geometry.apply(&committing, receipt)?;
         Ok((resize, receipt))
     }
@@ -203,7 +214,7 @@ impl Rig {
     /// Fails when it has no events or the commit fails.
     pub fn publish(&self, settled: &Settled) -> TestResult<Cursor> {
         let unit = settled.commit(store_op()).ok_or("no events to commit")?;
-        Ok(self.core.commit(unit)?)
+        Ok(self.core()?.commit(unit)?)
     }
 }
 
