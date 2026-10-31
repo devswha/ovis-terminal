@@ -133,7 +133,7 @@ fn utf8_output_and_win32_input_mode_precede_an_exit_carrying_the_final_offset() 
 #[test]
 fn a_resize_and_a_keypress_reach_the_program_through_separate_paths() {
     let mut driver = Driver::spawn(
-        &cmd("pause >NUL & mode con & exit /b 3"),
+        &cmd("set /p line= & mode con & exit /b 3"),
         TerminalLimits::DEFAULT,
     );
     let started = driver.until(|bytes| contains(bytes, b"\x1b]0;"));
@@ -145,11 +145,14 @@ fn a_resize_and_a_keypress_reach_the_program_through_separate_paths() {
         .terminal
         .resize(ConptyGrid::new(132, 40).expect("grid"))
         .expect("resize");
-    // Mode 9001 is on, so the key travels in win32-input form (Vk;Sc;Uc;Kd;Cs;Rc _),
-    // down then up, as the core's encoder writes it.
+    // Mode 9001 is on, so keys travel in win32-input form (Vk;Sc;Uc;Kd;Cs;Rc _), down
+    // then up, as the core's encoder writes them: `x`, then Enter ends `set /p`.
     driver
         .terminal
-        .input(b"\x1b[88;45;120;1;0;1_\x1b[88;45;120;0;0;1_".to_vec())
+        .input(
+            b"\x1b[88;45;120;1;0;1_\x1b[88;45;120;0;0;1_\x1b[13;28;13;1;0;1_\x1b[13;28;13;0;0;1_"
+                .to_vec(),
+        )
         .expect("keypress admitted");
     let (ended, bytes, _) = driver.finish();
     let text = String::from_utf8_lossy(&bytes);
