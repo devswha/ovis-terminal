@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, cli]
+        options: [platform, holder-shutdown, screen, leases, layout, cli]
 
 permissions:
   contents: read
@@ -79,6 +79,66 @@ jobs:
           name: probe-stress-macos-${{ matrix.image }}-${{ matrix.probe }}-${{ github.run_id }}
           path: probe-stress-macos.log
           if-no-files-found: error
+  screen:
+    if: inputs.probe == 'screen'
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat screen tests 100 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 100); do
+              printf '\nITERATION %s/100\n' "$iteration"
+              cargo nextest run -p ovis-terminal-core --test screen --locked --no-tests=fail
+              printf 'PASS %s/100\n' "$iteration"
+            done
+            printf 'RESULT 100/100\n'
+          } 2>&1 | tee screen-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screen-stress-${{ github.run_id }}
+          path: screen-stress-macos.log
+          if-no-files-found: error
+  leases:
+    if: inputs.probe == 'leases'
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat lease ownership tests 100 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 100); do
+              printf '\nITERATION %s/100\n' "$iteration"
+              cargo nextest run -p ovis-terminal-core --test leases --locked --no-tests=fail
+              printf 'PASS %s/100\n' "$iteration"
+            done
+            printf 'RESULT 100/100\n'
+          } 2>&1 | tee leases-stress.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: leases-stress-${{ github.run_id }}
+          path: leases-stress.log
+          if-no-files-found: error
   holder-shutdown:
     if: inputs.probe == 'holder-shutdown'
     runs-on: macos-latest
@@ -111,6 +171,36 @@ jobs:
         with:
           name: holder-shutdown-${{ github.run_id }}
           path: macos-stress.log
+          if-no-files-found: error
+  layout:
+    if: inputs.probe == 'layout'
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat layout acceptance 100 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 100); do
+              printf '\nITERATION %s/100\n' "$iteration"
+              cargo nextest run -p ovis-terminal-core --test layout --locked --no-tests=fail
+              printf 'PASS %s/100\n' "$iteration"
+            done
+            printf 'RESULT 100/100\n'
+          } 2>&1 | tee layout-stress.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layout-stress-${{ github.run_id }}
+          path: layout-stress.log
           if-no-files-found: error
   cli:
     if: inputs.probe == 'cli'
