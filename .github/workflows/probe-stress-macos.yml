@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding]
 
 permissions:
   contents: read
@@ -476,4 +476,114 @@ jobs:
         with:
           name: ops-cancel-stress-macos-${{ github.run_id }}
           path: ops-cancel-stress-macos.log
+          if-no-files-found: error
+  unix-service:
+    if: inputs.probe == 'unix-service'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - name: holder service tests, conformance and a live launchd agent with a private label
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+            for iteration in $(seq 1 10); do
+              printf '\nITERATION %s/10\n' "$iteration"
+              cargo test --locked -p ovis-terminal-holder --lib service
+              cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario platform/unix-service --isolated --case all --evidence "unix-service-$iteration.json"
+            done
+            session="t51ci$GITHUB_RUN_ID"
+            bin=target/debug/ovis-terminal
+            "$bin" --json service status --session "$session"
+            status=0
+            "$bin" --json service install --manager launchd --session "$session" || status=$?
+            if test "$status" -eq 0; then
+              "$bin" --json service start --manager launchd --session "$session"
+              "$bin" --json service status --session "$session" | grep '"state":"running"'
+              "$bin" --json service stop --session "$session"
+              "$bin" --json service status --session "$session" | grep '"state":"stopped"'
+              "$bin" --json service uninstall --manager launchd --session "$session"
+              test ! -e "$HOME/Library/LaunchAgents/dev.ovis-terminal.holder.$session.plist"
+            else
+              printf 'launchd install refused with exit %s; the typed error above names the missing prerequisite\n' "$status"
+              test "$status" -eq 4
+            fi
+            printf 'RESULT pass\n'
+          } 2>&1 | tee unix-service-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unix-service-macos-${{ github.run_id }}
+          path: unix-service-macos.log
+          if-no-files-found: error
+  docs-retention:
+    if: inputs.probe == 'docs-retention'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat document CAS race and retention tests 50 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 50); do
+              printf '\nITERATION %s/50\n' "$iteration"
+              cargo nextest run -p ovis-terminal-server --test documents_retention --locked --no-tests=fail
+              cargo nextest run -p ovis-terminal-core --locked --no-tests=fail -E 'test(/docs::/)'
+              printf 'PASS %s/50\n' "$iteration"
+            done
+            printf 'RESULT 50/50\n'
+          } 2>&1 | tee docs-retention-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docs-retention-stress-macos-${{ github.run_id }}
+          path: docs-retention-stress-macos.log
+          if-no-files-found: error
+  session-binding:
+    if: inputs.probe == 'session-binding'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat session binding tests and scenario 25 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              cargo nextest run -p ovis-terminal-agent --locked --no-tests=fail -E 'test(conversation::binding)'
+              cargo nextest run -p ovis-terminal-server --test dispatch --locked --no-tests=fail -E 'test(session_binding)'
+              cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/binding --isolated --case all --evidence "session-binding-$iteration.json"
+              printf 'PASS %s/25\n' "$iteration"
+            done
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee session-binding-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: session-binding-stress-macos-${{ github.run_id }}
+          path: session-binding-stress-macos.log
           if-no-files-found: error

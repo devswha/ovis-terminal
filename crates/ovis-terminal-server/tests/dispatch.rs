@@ -26,6 +26,9 @@ pub mod support;
 /// Explicit and ambiguous registry targets.
 pub mod targeting;
 
+#[path = "../src/dispatch/lanes/session_binding/qa.rs"]
+/// The session binding lane over a real dispatcher and socket.
+pub mod session_binding;
 #[path = "../src/dispatch/lanes/worktrees/authority.rs"]
 /// The worktree lane's grant for destructive removal.
 pub mod worktree_authority;
