@@ -1,0 +1,16 @@
+$ # facts.rs restored to origin/integration (rule removed); new tests kept
+$ cargo test -p ovis-terminal-protocol --test schema_composition --test schema_properties
+combinatorial_composition_is_a_typed_bound_error --- FAILED
+bound_inside_a_nested_intersection_is_narrowed --- FAILED
+pattern_beside_a_nullable_union_is_narrowed --- FAILED
+thread 'combinatorial_composition_is_a_typed_bound_error' (1802317) panicked at crates/ovis-terminal-protocol/tests/schema_composition.rs:101:58:
+thread 'bound_inside_a_nested_intersection_is_narrowed' (1802316) panicked at crates/ovis-terminal-protocol/tests/schema_composition.rs:77:5:
+thread 'pattern_beside_a_nullable_union_is_narrowed' (1802318) panicked at crates/ovis-terminal-protocol/tests/schema_composition.rs:51:5:
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+EXIT=101
+$ cargo test -p ovis-terminal-protocol --test schema_properties  # same mutation
+thread 'any_narrowing_at_any_depth_is_reported' (1816940) panicked at crates/ovis-terminal-protocol/tests/schema_properties.rs:13:1:
+Test failed: narrowing passed:
+minimal failing input: root = Within(
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+EXIT=101
