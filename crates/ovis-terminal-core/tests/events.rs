@@ -29,6 +29,8 @@ mod contracts;
 mod durable;
 #[path = "../src/events/qa/integrity.rs"]
 mod integrity;
+#[path = "../src/events/qa/unit.rs"]
+mod unit;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct Changed {

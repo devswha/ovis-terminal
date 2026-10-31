@@ -131,6 +131,7 @@ pub struct Commit<D> {
     pub(super) affected: Vec<ResourceId>,
     pub(super) writes: Vec<CasWrite>,
     pub(super) origin: Option<RemoteOrigin>,
+    pub(super) additional: Vec<(D, Vec<ResourceId>)>,
 }
 
 impl<D> Commit<D> {
@@ -142,6 +143,7 @@ impl<D> Commit<D> {
             affected,
             writes: Vec::new(),
             origin: None,
+            additional: Vec::new(),
         }
     }
 
@@ -149,6 +151,13 @@ impl<D> Commit<D> {
     #[must_use]
     pub fn write(mut self, write: CasWrite) -> Self {
         self.writes.push(write);
+        self
+    }
+
+    /// Adds another ordered event to this same durable transaction.
+    #[must_use]
+    pub fn event(mut self, data: D, affected: Vec<ResourceId>) -> Self {
+        self.additional.push((data, affected));
         self
     }
 

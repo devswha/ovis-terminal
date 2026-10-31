@@ -3,6 +3,9 @@
 mod admission;
 mod control;
 mod ending;
+mod hangup;
+#[cfg(test)]
+mod reap_tests;
 mod state;
 mod threads;
 mod workers;

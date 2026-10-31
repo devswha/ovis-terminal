@@ -15,6 +15,16 @@
       "flags": "u8-zero",
       "payload_length": "u32-le",
       "max_payload_bytes": 16777216
+    },
+    "optional_envelope_evidence": {
+      "hangup": {
+        "carrier_kind": "output",
+        "carrier_bytes": [],
+        "pid": "canonical-decimal-string",
+        "start_token": "opaque-string",
+        "process_reaped_at_publication": false,
+        "legacy_generation_two": "ignore-envelope-field-preserve-output"
+      }
     }
   },
   "cases": [
@@ -67,7 +77,7 @@
         },
         {
           "assert": {
-            "welcome.pid": 4242,
+            "welcome.pid": "4242",
             "welcome.start_token": "proc-start-abc",
             "tail.bytes": [104, 101, 97, 100],
             "exit.final_offset": "8",
@@ -105,7 +115,7 @@
           "expect_error": {
             "kind": "unsupported_generation",
             "offered": "999",
-            "supported": "1"
+            "supported": "2"
           }
         },
         {

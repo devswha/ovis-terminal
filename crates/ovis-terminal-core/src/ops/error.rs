@@ -10,6 +10,15 @@ use crate::events::EventError;
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum OperationError {
+    /// The clock could not supply an operation timestamp.
+    #[error("the system clock predates the operation clock epoch")]
+    Clock(#[from] std::time::SystemTimeError),
+    /// Authority lapsed at a transactional effect boundary.
+    #[error(transparent)]
+    Authority(#[from] ovis_terminal_authz::AuthzError),
+    /// A resource identity could not be reserved in the operation's commit unit.
+    #[error(transparent)]
+    Reservation(#[from] crate::registry::ReservationError),
     /// JSON encoding or persisted record decoding failed.
     #[error("the operation record could not be encoded or decoded")]
     Serialization(#[from] serde_json::Error),
@@ -61,6 +70,9 @@ impl OperationError {
     /// Stable machine token, never inferred from Display text.
     pub fn kind(&self) -> &'static str {
         match self {
+            Self::Clock(_) => "clock_unavailable",
+            Self::Authority(error) => error.kind(),
+            Self::Reservation(error) => error.kind(),
             Self::Serialization(_) => "persistence_failed",
             Self::Event(error) | Self::Transition { source: error, .. } => error.kind(),
             Self::InvalidId(_) | Self::InvalidParams => "invalid_params",
@@ -86,6 +98,9 @@ impl OperationError {
     /// Recovery guidance suitable for structured boundary errors.
     pub const fn hint(&self) -> &'static str {
         match self {
+            Self::Clock(_) => "restore a clock at or after the Unix epoch",
+            Self::Authority(error) => error.hint(),
+            Self::Reservation(error) => error.hint(),
             Self::Event(error) | Self::Transition { source: error, .. } => error.hint(),
             Self::Serialization(_) | Self::InvalidLedger => {
                 "inspect retained operation and recovery evidence"

@@ -5,12 +5,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use ovis_terminal_protocol::schema::scalar::{ByteCount, ByteOffset, EventSeq};
-use ovis_terminal_store::{EventKind, Mutation, NewEvent, Payload, Store};
+use ovis_terminal_store::Store;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use super::delivery::{Charge, Sink};
-use super::record::{Body, SCHEMA_VERSION};
 use super::snapshot::{PageCount, Pinned, SnapshotDigest};
 use super::{
     Commit, Cursor, EventData, EventError, Filter, SnapshotLease, SnapshotPage, SnapshotProducer,
@@ -170,51 +169,8 @@ impl<D: EventData + Clone + Serialize + DeserializeOwned, P: SnapshotProducer> C
     /// # Errors
     ///
     /// Returns typed serialization, admission, CAS or persistence failures.
-    pub fn commit(&self, mut commit: Commit<D>) -> Result<Cursor, EventError> {
-        if commit.affected.is_empty() {
-            return Err(EventError::MissingResources);
-        }
-        let mut state = self.lock()?;
-        let next = state
-            .store
-            .snapshot()?
-            .revision()
-            .get()
-            .checked_add(1)
-            .ok_or(EventError::LimitExceeded)?;
-        commit.data.at_sequence(EventSeq::new(next));
-        let body = Body {
-            schema_version: SCHEMA_VERSION,
-            identity: self.identity,
-            affected: commit.affected,
-            origin: commit.origin,
-            data: commit.data,
-        };
-        let bytes = serde_json::to_vec(&body)?;
-        // Includes the encoded body and an upper bound for sequence/type/envelope fields.
-        let charged = bytes.len().saturating_add(1024);
-        let event = NewEvent::new(EventKind::new(body.data.event_type()), Payload::from(bytes));
-        let mut mutation = Mutation::new(commit.op, Payload::from("{}"), event);
-        for write in commit.writes {
-            mutation = mutation.compare_and_swap(write);
-        }
-        let receipt = state.store.submit(mutation)?.wait()?;
-        let event = body.into_event(EventSeq::new(receipt.first_event.get()));
-        state.sinks.retain(|sink| sink.lost.strong_count() > 0);
-        for sink in &state.sinks {
-            if sink.filter.matches(&event) {
-                match self.charge(charged) {
-                    Some(charge) => sink.publish(&event, charge),
-                    None => {
-                        if let Some(lost) = sink.lost.upgrade() {
-                            lost.store(true, Ordering::SeqCst);
-                        }
-                    }
-                }
-            }
-        }
-        drop(state);
-        Ok(event.cursor)
+    pub fn commit(&self, commit: Commit<D>) -> Result<Cursor, EventError> {
+        self.commit_unit(|_snapshot| Ok(commit))
     }
 
     /// Captures implemented sections and pins their complete serialized representation.

@@ -18,7 +18,7 @@ pub use lifecycle::{
     HostIdentity, LifecycleEvent, LifecycleTransitionError, ProcessHandle, ProcessIdentity,
     RelaunchEvidence, RuntimeIdentity, SurvivalEvidence, TerminalLifecycle, TerminalState,
 };
-pub use reservation::{IdentityReservation, ReservationError};
+pub use reservation::{IdentityReservation, ReservationError, ReservedIdentity};
 pub use resolution::{
     MachineRuntime, ResourceTarget, ResourceTargetKey, TargetIndex, TargetRequest,
     TargetResolutionError,

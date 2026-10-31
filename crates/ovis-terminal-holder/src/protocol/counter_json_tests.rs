@@ -55,7 +55,13 @@ fn raise_counters(message: &mut Message) {
         }
         Message::Output(output) => {
             raise_target_counters(&mut output.target);
-            output.offset = ABOVE_SAFE_INTEGER;
+            output.offset = match output.hangup.as_mut() {
+                Some(hangup) => {
+                    hangup.pid = crate::process::ProcessId::new(u32::MAX);
+                    u64::MAX
+                }
+                None => ABOVE_SAFE_INTEGER,
+            };
         }
         Message::Input(input) => {
             raise_target_counters(&mut input.target);

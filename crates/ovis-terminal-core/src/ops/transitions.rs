@@ -53,20 +53,7 @@ where
         permit: RunningOperation,
         result: Value,
     ) -> Result<OpRecord, OperationError> {
-        let mut row = self.permitted(&permit)?;
-        if let Some(evidence) = &row.entry.record.evidence
-            && let Some(intent) = &evidence.intent
-            && evidence
-                .write
-                .as_ref()
-                .is_none_or(|write| write.written_bytes != intent.requested_bytes)
-        {
-            let unknown = self.outcome_unknown(permit)?;
-            return Err(OperationError::Settled(Box::new(unknown)));
-        }
-        row.entry.record.state = OpenEnum::Known(OpState::Committed);
-        row.entry.record.result = Some(result);
-        self.update(row)
+        self.commit_unit(permit, |_snapshot| Ok(super::Completion::new(result)))
     }
 
     /// Retains a failure known to have occurred before external effects.

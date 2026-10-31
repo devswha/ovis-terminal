@@ -1,5 +1,7 @@
 //! State and incarnation history for one terminal.
 
+mod persisted;
+
 use super::{
     LifecycleEvent, LifecycleTransitionError, ProcessIdentity, RelaunchEvidence, RuntimeIdentity,
     SurvivalEvidence, TerminalState,
@@ -7,7 +9,8 @@ use super::{
 use crate::registry::{ProcessGeneration, TerminalGeneration, TerminalId};
 
 /// The state and incarnation history for one opaque terminal.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(try_from = "persisted::PersistedLifecycle")]
 pub struct TerminalLifecycle {
     identity: RuntimeIdentity,
     id: TerminalId,
@@ -46,6 +49,11 @@ impl TerminalLifecycle {
         self.identity.runtime_id()
     }
 
+    /// Machine, host, runtime and control boot backing this lifecycle.
+    pub const fn identity(&self) -> RuntimeIdentity {
+        self.identity
+    }
+
     /// Current terminal incarnation.
     pub const fn generation(&self) -> TerminalGeneration {
         self.generation
@@ -61,6 +69,18 @@ impl TerminalLifecycle {
         self.current_process.as_ref()
     }
 
+    /// Last owned process, retained after loss or an evidenced exit.
+    pub fn last_process(&self) -> Option<&ProcessIdentity> {
+        self.current_process
+            .as_ref()
+            .or(self.previous_process.as_ref())
+    }
+
+    /// The previous process retained across a confirmed relaunch.
+    pub const fn previous_process(&self) -> Option<&ProcessIdentity> {
+        self.previous_process.as_ref()
+    }
+
     /// Applies one lifecycle event without claiming unproven survival or relaunch.
     ///
     /// # Errors
@@ -69,6 +89,13 @@ impl TerminalLifecycle {
     pub fn transition(&self, event: LifecycleEvent) -> Result<Self, LifecycleTransitionError> {
         let mut next = self.clone();
         match event {
+            LifecycleEvent::ProcessEnded => {
+                if next.state != TerminalState::Running {
+                    return Err(LifecycleTransitionError::InvalidTransition);
+                }
+                next.previous_process = next.current_process.take();
+                next.state = TerminalState::Finished;
+            }
             LifecycleEvent::InitialSpawn { evidence, process } => {
                 match evidence {
                     RelaunchEvidence::SpawnConfirmed => {}
@@ -153,7 +180,7 @@ impl TerminalLifecycle {
                     .checked_next()
                     .map_err(|_| LifecycleTransitionError::TerminalGenerationOverflow)?;
                 next.last_process_generation = Some(process.generation());
-                next.previous_process = next.current_process.replace(process);
+                next.current_process = Some(process);
                 next.state = TerminalState::Running;
             }
         }

@@ -248,7 +248,7 @@ where
     }
 }
 
-fn encode_entry(entry: &Entry) -> Result<Vec<u8>, OperationError> {
+pub(super) fn encode_entry(entry: &Entry) -> Result<Vec<u8>, OperationError> {
     let bytes = serde_json::to_vec(entry)?;
     if bytes.len() > 16 << 10 {
         return Err(OperationError::TooLarge);

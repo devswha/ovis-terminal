@@ -2,7 +2,7 @@
 
 use super::*;
 
-pub(super) const MESSAGE_CASES: usize = 17;
+pub(super) const MESSAGE_CASES: usize = 18;
 
 #[expect(
     clippy::too_many_lines,
@@ -87,6 +87,16 @@ pub(super) fn message_examples() -> Vec<Message> {
             target: target.clone(),
             offset: 4,
             bytes: b"tail".to_vec(),
+            hangup: None,
+        }),
+        Message::Output(Output {
+            target: target.clone(),
+            offset: u64::MAX,
+            bytes: Vec::new(),
+            hangup: Some(Hangup {
+                pid: crate::process::ProcessId::new(u32::MAX),
+                start_token: ProcessStartToken::new("start-token-a".into()),
+            }),
         }),
         Message::Input(Input {
             target: target.clone(),

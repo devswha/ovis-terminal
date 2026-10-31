@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::sync::mpsc::{Receiver, SyncSender};
 
 use portable_pty::SlavePty;
+use rustix::process::{Pid, WaitId, WaitIdOptions, waitid};
 
 use super::Shared;
 use super::ending::{Ending, ExitEvidence, WaiterReport};
@@ -54,6 +55,32 @@ pub(super) fn wait_for_exit(waiter: Waiter, report: &SyncSender<WaiterReport>) {
         probe,
         drain,
     } = waiter;
+    // WNOWAIT preserves both the PID and the exit status while the master drains.
+    // Reaping first would make a later PTY EOF an unprovable pre-reap stage.
+    let observed = loop {
+        match waitid(
+            WaitId::Pid(Pid::from_child(&child)),
+            WaitIdOptions::EXITED | WaitIdOptions::NOWAIT,
+        ) {
+            Err(rustix::io::Errno::INTR) => {}
+            result => break result,
+        }
+    };
+    if let Err(source) = observed {
+        shared.lock().record_io_error(
+            &terminal_id,
+            TerminalIoError::Wait {
+                source: source.into(),
+            },
+        );
+    }
+    // A failed pending-byte query must not hold the exit forever: the slave is
+    // closed anyway, the pump records what the kernel still returns, and the
+    // failure is reported with the exit.
+    let drained = drain.wait_until_drained(&probe);
+    drop(slave);
+    drain.wait_until_finished();
+    shared.lock().begin_reap(&terminal_id);
     let evidence = match child.wait() {
         Ok(status) => ExitEvidence::Status {
             code: status.code(),
@@ -61,14 +88,6 @@ pub(super) fn wait_for_exit(waiter: Waiter, report: &SyncSender<WaiterReport>) {
         },
         Err(source) => ExitEvidence::Unknown(TerminalIoError::Wait { source }),
     };
-    // A failed pending-byte query must not hold the exit forever: the slave is
-    // closed anyway, the pump records what the kernel still returns, and the
-    // failure is reported with the exit.
-    let drained = drain.wait_until_drained(&probe);
-    if drained.is_err() {
-        drain.finish();
-    }
-    drop(slave);
     let report_value = WaiterReport {
         evidence,
         drain: drained.err().map(|source| TerminalIoError::Poll { source }),
@@ -100,7 +119,10 @@ pub(super) fn pump_output(shared: &Shared, pump: Pump) {
     let mut buffer = vec![0_u8; OUTPUT_CHUNK];
     loop {
         let failure = match read_chunk(&mut reader, &mut buffer) {
-            Ok(ReadOutcome::Hangup) => break,
+            Ok(ReadOutcome::Hangup) => {
+                shared.lock().record_hangup(&terminal_id);
+                break;
+            }
             Ok(ReadOutcome::Data(read)) => buffer
                 .get(..read)
                 .and_then(|chunk| shared.lock().record_output(&terminal_id, chunk).err())
