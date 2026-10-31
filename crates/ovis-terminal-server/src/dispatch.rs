@@ -5,6 +5,7 @@ mod deadline;
 mod error;
 mod execution;
 mod job;
+pub mod lanes;
 mod registry;
 mod runtime;
 mod tasks;
