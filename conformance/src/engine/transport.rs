@@ -106,9 +106,10 @@ async fn socket(path: &Path) -> Result<Opened, RunnerError> {
     })
 }
 
+/// No Unix socket exists here; the refusal is already settled.
 #[cfg(not(unix))]
-async fn socket(_: &Path) -> Result<Opened, RunnerError> {
-    Err(RunnerError::UnsupportedPlatform)
+fn socket(_: &Path) -> std::future::Ready<Result<Opened, RunnerError>> {
+    std::future::ready(Err(RunnerError::UnsupportedPlatform))
 }
 
 impl Bridge {

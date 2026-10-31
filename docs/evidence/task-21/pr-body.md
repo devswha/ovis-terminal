@@ -41,7 +41,7 @@ Parsed from `docs/evidence/task-21/task-21-ovis-terminal-v1.happy.json`:
 
 ```
 $ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-21 --isolated --case failure --evidence "$ATTEMPT_DIR/task-21-ovis-terminal-v1.json"
-{"case":"failure",...,"result":"passed","scenario":"part-a/task-21","totals":{"assertions":"40","cases":"1","failed":"0","passed":"1","skipped":"0"}}
+{"case":"failure",...,"result":"passed","scenario":"part-a/task-21","totals":{"assertions":"42","cases":"1","failed":"0","passed":"1","skipped":"0"}}
 exit 0
 ```
 
@@ -53,7 +53,8 @@ This exit-0 means the typed rejections were observed (`docs/evidence/task-21/qa-
 - `pane.split` returned `method_not_found` at `method`.
 - An ambiguous name returned `ambiguous_target`; an unknown id returned `not_found`.
 - The effect directory is `[]` both after the rejections and after the close.
-- A 9-byte header declaring 16 MiB + 1 got `$/closing` `{"reason":"frame_too_large"}` and end of stream. The fixture's serve report counts `failures.frame_too_large = "1"`.
+- Before any byte is sent, the runner decodes the `oversized-header` wire fixture itself (whole and byte-at-a-time) and asserts the declared `{"error":"frame_too_large"}` (`wire[oversized-header]/decode/whole`, `/decode/bytewise`).
+- That 9-byte header, declaring 16 MiB + 1, got `$/closing` `{"reason":"frame_too_large"}` and end of stream. The fixture's serve report counts `failures.frame_too_large = "1"`.
 
 DEFERRED VERIFICATION (runner lands in Todo 21): this PR is that runner. `part-a/task-21` now executes and exits 0 as shown above. The earlier part-A descriptor files (for example `part-a/task-5`) carry no `"format": "ovis-conformance/1"` marker; the runner now reports them as `scenario_not_executable`, exit 1, instead of the old scaffold exit 2. Making those descriptors executable stays with their owning todos.
 
@@ -65,7 +66,17 @@ DEFERRED VERIFICATION (runner lands in Todo 21): this PR is that runner. `part-a
 - **Fixture process.** The runner re-executes itself as `conformance fixture --root <dir>`. The fixture serves the real `ovis-terminal-server` listener, connection layer and `Dispatcher` over the real `ovis-terminal-store` SQLite coordinator and `Authority` on a private Unix socket. It announces readiness on stdout and stops when its stdin closes, then prints its `ServeReport`. No signal is ever sent; after a bound, only that child's own handle is killed.
 - **Methods.** The fixture registers `doc.set`, `doc.get` and `terminal.keep` (over a real `TargetIndex`) through `Dispatcher::register`. Their effects are files the runner reads directly. `rpc.discover` and paged `terminal.output` (a deterministic 64 MiB output) are served directly by the handler.
 - **Transports.** A connection goes through the binary's `ovis-terminal connect` bridge or through the runner's own socket, for exact write segmentation.
-- **Scenarios.** Scenarios are closed JSON (`deny_unknown_fields`; unknown matcher operators are refused). A file is executable only with `"format": "ovis-conformance/1"`; files without it are declarations and are reported as `scenario_not_executable`. That is the descriptor-versus-predicate rule the earlier lanes asked for.
+- **Scenarios.** Scenarios are closed JSON (`deny_unknown_fields`; unknown matcher operators are refused). A file is executable only with `"format": "ovis-conformance/1"`; files without it are declarations and are reported as `scenario_not_executable`.
+
+## Descriptor rule
+
+Every key the runner reads from a scenario or fixture file is in one of three classes. There is no fourth class, and no key is read and then ignored.
+
+1. **Asserted.** Steps, expectations, fixture requests with `kind`/`field_path`, and wire `hex` with exactly one of `decodes` or `error`. Each one produces an assertion in the evidence. Wire `decodes`/`error` are checked at run time: `send_wire` decodes the bytes with `ovis_terminal_protocol::wire::FrameDecoder`, whole and byte-at-a-time, before writing them.
+2. **Descriptors.** Free text never asserted: a scenario's `title`, a case's `summary`, and a fixture's `descriptors` map (`{"summary": ...}`). The runner copies them into the evidence (`declared`, `summary`, `descriptors[] {source, descriptors}`) and nothing compares them.
+3. **Anything else is rejected.** Every schema struct is `#[serde(deny_unknown_fields)]`. An unknown key fails the load with `scenario_invalid` and its field path (for example `cases[0].steps[0].serve.extra`); a wire entry with both or neither outcome fails with `scenario_inconsistent`.
+
+The earlier part-A descriptor files that carry keys such as `unasserted-may-follow-leader-reap` have no format marker. The runner therefore reports them as `scenario_not_executable` instead of running them with skipped keys. Their owners register them in this format.
 - **Pass rule.** Every check becomes an assertion in the evidence. A case passes only with at least one assertion and no failure. Missing scenario, missing case, timeout, unexpected record, zero assertions and unwritable evidence all exit 1. There are no retries.
 - **Evidence.** Each run records requests, replies, every write and decoded record with absolute offsets and sha256, byte accounting, process argv/pid/exit/stderr, the fixture report, OS/arch and the binary digest. Every counter is a decimal string.
 
@@ -81,15 +92,16 @@ Shared, language-neutral fixtures:
 
 | Command | Exit | What is asserted |
 |---|---|---|
-| `bash scripts/check.sh` (on the merged head da3388c, after merging origin/integration ef1d8c1) | 0 | fmt, clippy `-D warnings` on the workspace, nextest `521 passed, 1 skipped` (the skip is pre-existing, outside this crate), doctests, hygiene (250 LOC / 3 params), manifests, JSON |
-| `cargo nextest run -p ovis-terminal-conformance --all-targets` | 0 | 16 tests: 10 unit, 6 process (below) |
+| `bash scripts/check.sh` (on the final PR head, which includes origin/integration ef1d8c1) | 0 | fmt, clippy `-D warnings` on the workspace, nextest `523 passed, 1 skipped` (the skip is pre-existing, outside this crate), doctests, hygiene (250 LOC / 3 params), manifests, JSON |
+| `cargo nextest run -p ovis-terminal-conformance --all-targets` | 0 | 18 tests: 12 unit, 6 process (below) |
 | `cargo clippy -p ovis-terminal-conformance --all-targets -- -D warnings` | 0 | |
+| `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` | 0 | Windows compile with no warnings. On the earlier head 5bf6fd2 the same Windows-target clippy reproduced the 11 CI errors (unused `fixture::output` items, a never-constructed `RunnerError::Fixture`, 2 needless `async`, 1 needless `mut`) |
 
 The plan's acceptance line says `-p conformance`, but the scaffold's package name is `ovis-terminal-conformance`, so that is the spec used above. The package was not renamed.
 
 Process tests (`conformance/src/runner_tests.rs`, which run the real runner binary against the real `ovis-terminal`):
 - `happy`: `part-a/task-21 --case happy` exits 0. It asserts `fixture.accepted == "1"`, exactly one connection with `via == "bridge"` and `bytes_received == bytes_decoded`, bridge exit 0, the `held` reply kind `cancelled`, and that `set-alpha` passed.
-- `failure`: `--case failure` exits 0. It asserts the `params.target.terminal_idd` field path, effects `[]`, the `$/closing` reason `frame_too_large`, and `fixture.failures.frame_too_large == "1"`.
+- `failure`: `--case failure` exits 0. It asserts the `params.target.terminal_idd` field path, effects `[]`, the `$/closing` reason `frame_too_large`, `fixture.failures.frame_too_large == "1"`, both runtime `wire[oversized-header]/decode/*` assertions passed with `frame_too_large`, and the evidence records the rejection fixture's descriptors.
 - `a_missing_scenario_fails_and_a_declaration_is_not_executable`: exit 1 with `scenario_missing`, and exit 1 with `scenario_not_executable` for `part-a/task-5`.
 - `a_run_without_isolation_is_a_usage_error_before_anything_starts`: exit 2, `isolation_required`, and no evidence file is created.
 - `runner_self_test_detects_its_own_failure_modes`: `_runner/self-test` exits 0, and its evidence shows that `expect_failure` observed `assertion_failed` and `timeout`.
@@ -100,7 +112,8 @@ Unit tests:
 - Scenario-id grammar, including path traversal rejected.
 - Labels: one UUIDv7 per label.
 - Matcher: every operator both holds and fails; unknown and mixed operators are refused.
-- Wire fixtures: every fixture decodes identically at every single split point and bytewise through `ovis_terminal_protocol::wire::FrameDecoder`, and errors keep their kind. A proptest decodes the coalesced valid fixtures identically under arbitrary segmentation.
+- Wire fixtures: every fixture decodes as declared at every single split point and bytewise through `ovis_terminal_protocol::wire::FrameDecoder`, and errors keep their kind. A wire entry with both or neither outcome is refused, and so is an entry carrying an undeclared `summary` key.
+- Rejection fixture: `descriptors` is accepted and recorded, while a top-level `summary` or a misspelled case key (`feild_path`) is refused. A proptest decodes the coalesced valid fixtures identically under arbitrary segmentation.
 - Pagination: the largest allowed page fits one frame, one byte more is `frame_too_large`, and a numeric offset is `invalid_params`.
 - Traceability: the id sets equal the table rows of `ideal-state.md` and `gap-list.md`; every id has owners in todos 1..70 and at least one scenario, with no repeats. Every registered scenario's declared `delivers`/`closes`/`excludes` ids list that scenario and its todo.
 
@@ -128,7 +141,7 @@ macOS stress: `gh workflow run probe-stress-macos.yml --ref lane/t21-conformance
 2. **Typed errors.** `RunnerError` is one `thiserror` enum with `kind()` and `hint()`, with `#[source]` on every inner error. Display text never repeats the kind token.
 3. **Newtypes.** `ScenarioId`, `CaseName`, `ConnName` and `Decimal` are distinct newtypes; `Option` is used only where absence is a real state.
 4. **Tests assert behavior.** Socket records, effect files, server counters and exit codes. Proptest covers fragmentation.
-5. **No suppressions.** No `#[allow]` and no crate-wide `#[expect]`. Five item-level `expect(dead_code, reason)` attributes (four in `fixture/wire.rs`, one in `engine/exchange.rs`) cover fixture documentation fields and decode expectations that only the decode tests or the TypeScript client read; four of them apply only outside test builds (`cfg_attr(not(test), ...)`). No TODOs.
+5. **No suppressions.** The crate has no `#[allow]` and no `#[expect]` of any kind. Fixture prose lives in recorded `descriptors` (see Descriptor rule), and wire `decodes`/`error` drive a run-time assertion, so every deserialized field is read. No TODOs.
 6. **Stated evidence.** This body states what the tests assert.
 
 ## Seams
@@ -143,5 +156,5 @@ macOS stress: `gh workflow run probe-stress-macos.yml --ref lane/t21-conformance
 - **Dispatcher race, found by this runner (todo 14 code; not fixed here).** An `op.cancel` that arrives before an admitted operation's durable `accept` returns `not_found` and never signals the in-flight task, which then runs to `deadline_exceeded`. It was reproduced over the socket before the barrier was added. The scenarios now await `$/fixture/held` (sent by the held method after accept) before inspecting or cancelling, so they are deterministic and do not mask the behavior. A follow-up is needed for the todo 14 owner.
 - **Hello counter form (todo 13 code; not fixed here).** The hello result carries `"event_replay_events":10000` as a JSON number, against the decimal-string rule. It is visible in the transcripts.
 - **`terminal.output` has no `total` field.** Its result has `next_offset`/`floor_offset`/`gap` but no explicit total, which IDEAL-007 asks for; the pagination scenario therefore ends on an empty page. This is a schema follow-up for the protocol owner.
-- **Windows.** The runner compiles on Windows, but the fixture's listener is Unix-only (`unsupported_platform`), and the scenarios declare linux and macos only. The process tests are `#![cfg(unix)]`.
+- **Windows.** The runner compiles and lints clean for Windows. Its fixture listener is Unix-only, so the modules that exist only to serve it (`fixture::{documents, handler, output, serve, terminals}`) carry the same module-level `#[cfg(unix)]` as their caller. Off Unix, the fixture mode returns `RunnerError::Fixture { stage: "bind a listener", source: Unsupported }`, and a `socket` connection returns `unsupported_platform`; both are already-settled futures, not empty `async fn`s. The scenarios declare linux and macos only, and the process tests are `#![cfg(unix)]`. A named-pipe fixture transport belongs with todo 54. There are no lint attributes.
 - **Process tests need the built binary.** They need `target/debug/ovis-terminal` (or `$OVIS_TERMINAL_BINARY`). A workspace test run builds it; a missing binary fails the test, it is never skipped.

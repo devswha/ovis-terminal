@@ -24,19 +24,32 @@ impl IsolatedRoot {
             std::env::temp_dir()
         };
         let path = base.join(format!("ovc-{}-{unique}", std::process::id()));
-        let mut builder = std::fs::DirBuilder::new();
-        #[cfg(unix)]
-        std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
-        builder.create(&path).map_err(|source| RunnerError::Io {
-            operation: "create the isolated root",
-            source,
-        })?;
+        owner_only()
+            .create(&path)
+            .map_err(|source| RunnerError::Io {
+                operation: "create the isolated root",
+                source,
+            })?;
         Ok(Self { path })
     }
 
     pub(crate) fn path(&self) -> &Path {
         &self.path
     }
+}
+
+/// A builder for a directory only its owner can enter.
+#[cfg(unix)]
+fn owner_only() -> std::fs::DirBuilder {
+    let mut builder = std::fs::DirBuilder::new();
+    std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+    builder
+}
+
+/// Directory permissions here come from the inherited ACL of the per-user temp directory.
+#[cfg(not(unix))]
+fn owner_only() -> std::fs::DirBuilder {
+    std::fs::DirBuilder::new()
 }
 
 impl Drop for IsolatedRoot {
