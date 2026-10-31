@@ -43,6 +43,15 @@ impl StreamLimits {
         }
     }
 
+    /// Replaces the output credit a stream opens with.
+    #[must_use]
+    pub const fn with_credit_window(self, bytes: u64) -> Self {
+        Self {
+            credit_window: bytes,
+            ..self
+        }
+    }
+
     /// Replaces the time an unwritable stream may stall before it closes.
     #[must_use]
     pub const fn with_stall_after(self, stall_after: Duration) -> Self {

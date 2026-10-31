@@ -147,6 +147,28 @@ All changes outside the write scope are additive:
 ## Risks
 
 - Framed mode: `StreamChannels` implements the download-only channel contract: never-reused channels, eight-byte CREDIT and DATA as `direction_violation`. However, `conn/core.rs` (todo 13, outside this scope) still closes a connection on any non-control frame, and `attach.open{stream_mode: channel}` returns `needs_framed`. Routing stream frames through `StreamChannels` belongs to the assembly todo.
+- Round 2 seam: `StreamLimits::with_credit_window(bytes)` (additive builder, used by the fence test).
 - Explicit takeover inside `attach.open` (`takeover:{lease_epoch}`) goes through `TerminalLeases::take_over`. The displaced viewer gets CLOSE `taken_over` with `by`. No socket test in this PR exercises that path; todo 24's lease tests cover the table.
 - `TerminalStreams::recovering`/`recovered` and `publish`/`finish` are driven by the test, not yet by a holder pump (todo 31).
 - `integration` moved from 846a210 to 664ded7 during this lane. Per the lane rules it was not merged into the lane. Integration added `ovis-terminal-holder` to the server manifest on the same line this lane uses (see the `fix(streams)` commit), so the PR merges cleanly. A scratch merge of this head with 664ded7 (`git merge-tree`, built in a throwaway worktree outside the lane) passes `bash scripts/check.sh`: 757/757 tests and 0 hygiene violations.
+
+## Round 2 (gate blocker B1: the first-paint fence was unprotected)
+
+New real-socket tests in `crates/ovis-terminal-server/src/streams/qa/fence.rs`, run by `tests/streams.rs`:
+
+- `paint_is_fenced_ahead_of_live_bytes_under_credit_pressure`:
+  - A viewer opens with a 64-byte credit window. Its first paint is larger than 4 windows, and the test asserts that.
+  - Exactly 64 bytes arrive. Live output is then published while the paint is still blocked on credit.
+  - The test acknowledges in 64-byte steps and asserts the following. The bytes received first equal, byte for byte, the paint that an independent reference VT produces for the pre-attach output. Every remaining byte equals the published live output. The first control record is `checkpoint` at stream offset 0. The client VT equals a VT that saw every raw byte in lines, cursor and modes.
+- `an_exited_terminal_answers_ended`:
+  - After exit code 3, an interact `attach.open` returns `outcome=ended`, `reason=exited`, `final_output_offset` equal to the raw length, `lease=null`, and a first paint at the raw end.
+  - The stream ends with CLOSE `exited` and `exit_code=3`, never sends `input_ready`, and its screen equals the continuous VT.
+
+Mutant check (`docs/evidence/task-23/mutant-live-before-paint.log`). `Viewer::next` was mutated to serve live log bytes before the queued checkpoint/paint, and `cargo nextest run -p ovis-terminal-server --test streams --no-fail-fast` then reported 2 passed, 3 failed:
+- `paint_is_fenced_ahead_of_live_bytes_under_credit_pressure` fails at `paint first`: live bytes follow the first 64-byte window.
+- `an_exited_terminal_answers_ended` fails on screen parity.
+- `failure` fails because `input_ready` overtakes the checkpoint.
+
+The mutant was reverted, and `git diff` on `viewer.rs` is clean.
+
+Round-2 gates: the streams socket suite passed 20 of 20 repeats (5 tests each); `bash scripts/check.sh` exit 0 (707/707, hygiene 0 violations); `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exit 0.

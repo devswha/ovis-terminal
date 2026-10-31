@@ -21,6 +21,9 @@ pub mod happy;
 #[path = "../src/streams/qa/failure.rs"]
 pub mod failure;
 
+#[path = "../src/streams/qa/fence.rs"]
+pub mod fence;
+
 #[path = "../src/streams/qa/stall.rs"]
 pub mod stall;
 
@@ -37,4 +40,14 @@ async fn failure() -> TestResult {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn stalled_viewers_close_without_pausing_others() -> TestResult {
     stall::stalled_viewers_close_without_pausing_others().await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn paint_is_fenced_ahead_of_live_bytes_under_credit_pressure() -> TestResult {
+    fence::paint_is_fenced_ahead_of_live_bytes_under_credit_pressure().await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_exited_terminal_answers_ended() -> TestResult {
+    fence::an_exited_terminal_answers_ended().await
 }
