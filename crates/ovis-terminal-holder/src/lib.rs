@@ -5,6 +5,7 @@
 
 pub mod process;
 pub mod protocol;
+pub mod service;
 #[cfg(unix)]
 pub mod unix;
 

@@ -1,0 +1,313 @@
+{
+  "format": "ovis-conformance-evidence/1",
+  "runner_version": "0.1.0",
+  "host": {
+    "os": "linux",
+    "arch": "x86_64",
+    "family": "unix"
+  },
+  "binary": {
+    "path": "target/debug/ovis-terminal",
+    "sha256": "da46d3ea976417b7f9e289e0402a6ee2dc81d92a24914bf27099fdc531835b5f",
+    "bytes": "128387000"
+  },
+  "scenario": "platform/unix-service",
+  "case": "failure",
+  "result": "passed",
+  "totals": {
+    "cases": "1",
+    "passed": "1",
+    "failed": "0",
+    "skipped": "0",
+    "declared_only": "0",
+    "assertions": "16"
+  },
+  "error": null,
+  "inventory": null,
+  "elapsed_ms": "3910",
+  "cases": [
+    {
+      "scenario": "platform/unix-service",
+      "case": "failure",
+      "summary": "Inspecting a stopped service leaves it stopped (a later stop is already_stopped), malformed sessions are refused before anything is touched, and the control-server status of the same root stays stopped.",
+      "declared": {
+        "title": "Unix holder service lifetime is separate from the client that started it, and status never starts or registers anything",
+        "todo": "51",
+        "closes": [
+          "GAP-001",
+          "GAP-016",
+          "GAP-017",
+          "GAP-121"
+        ],
+        "delivers": [
+          "IDEAL-001",
+          "IDEAL-014",
+          "IDEAL-093",
+          "IDEAL-099"
+        ],
+        "excludes": [
+          "EXCL-001",
+          "EXCL-004",
+          "EXCL-027"
+        ]
+      },
+      "outcome": "passed",
+      "failure": null,
+      "assertions": [
+        {
+          "check": "binary/exit",
+          "expected": 0,
+          "actual": 0,
+          "passed": true
+        },
+        {
+          "check": "binary/stdout/state",
+          "expected": "stopped",
+          "actual": "stopped",
+          "passed": true
+        },
+        {
+          "check": "binary/exit",
+          "expected": 0,
+          "actual": 0,
+          "passed": true
+        },
+        {
+          "check": "binary/stdout/state",
+          "expected": "stopped",
+          "actual": "stopped",
+          "passed": true
+        },
+        {
+          "check": "binary/exit",
+          "expected": 11,
+          "actual": 11,
+          "passed": true
+        },
+        {
+          "check": "binary/stderr/error/exit_code",
+          "expected": 11,
+          "actual": 11,
+          "passed": true
+        },
+        {
+          "check": "binary/stderr/error/kind",
+          "expected": "already_stopped",
+          "actual": "already_stopped",
+          "passed": true
+        },
+        {
+          "check": "binary/exit",
+          "expected": 2,
+          "actual": 2,
+          "passed": true
+        },
+        {
+          "check": "binary/stderr/error/kind",
+          "expected": "invalid_session",
+          "actual": "invalid_session",
+          "passed": true
+        },
+        {
+          "check": "binary/exit",
+          "expected": 2,
+          "actual": 2,
+          "passed": true
+        },
+        {
+          "check": "binary/stderr/error/kind",
+          "expected": "usage",
+          "actual": "usage",
+          "passed": true
+        },
+        {
+          "check": "binary/exit",
+          "expected": 0,
+          "actual": 0,
+          "passed": true
+        },
+        {
+          "check": "binary/stdout/state",
+          "expected": "stopped",
+          "actual": "stopped",
+          "passed": true
+        },
+        {
+          "check": "binary/exit",
+          "expected": 0,
+          "actual": 0,
+          "passed": true
+        },
+        {
+          "check": "binary/stdout/registered",
+          "expected": null,
+          "actual": null,
+          "passed": true
+        },
+        {
+          "check": "binary/stdout/state",
+          "expected": "stopped",
+          "actual": "stopped",
+          "passed": true
+        }
+      ],
+      "descriptors": [],
+      "connections": [],
+      "processes": [
+        {
+          "role": "binary",
+          "argv": [
+            "target/debug/ovis-terminal",
+            "--json",
+            "service",
+            "status"
+          ],
+          "pid": "2992816",
+          "exit_code": 0,
+          "stdout": {
+            "bytes": "121",
+            "sha256": "0982c721ad9d4e6bf7ad43da4145759baa276387a0bf287f4a2d0eeaa42a8a4a",
+            "text": "{\"label\":\"ovis-terminal-holder-default\",\"missing_prerequisites\":[\"service_manager\"],\"registered\":null,\"state\":\"stopped\"}\n"
+          },
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "role": "binary",
+          "argv": [
+            "target/debug/ovis-terminal",
+            "--json",
+            "service",
+            "status"
+          ],
+          "pid": "2992817",
+          "exit_code": 0,
+          "stdout": {
+            "bytes": "121",
+            "sha256": "0982c721ad9d4e6bf7ad43da4145759baa276387a0bf287f4a2d0eeaa42a8a4a",
+            "text": "{\"label\":\"ovis-terminal-holder-default\",\"missing_prerequisites\":[\"service_manager\"],\"registered\":null,\"state\":\"stopped\"}\n"
+          },
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "role": "binary",
+          "argv": [
+            "target/debug/ovis-terminal",
+            "--json",
+            "service",
+            "stop"
+          ],
+          "pid": "2992821",
+          "exit_code": 11,
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stderr": {
+            "bytes": "174",
+            "sha256": "0dac0d551660b4e71e1849851bf5f7b48adf05269d2e8ea45c4f22908932ac9d",
+            "text": "{\"error\":{\"exit_code\":11,\"hint\":\"start the service explicitly; status never starts one\",\"kind\":\"already_stopped\",\"message\":\"no holder runs for this service\",\"origin\":\"cli\"}}\n"
+          }
+        },
+        {
+          "role": "binary",
+          "argv": [
+            "target/debug/ovis-terminal",
+            "--json",
+            "service",
+            "start",
+            "--manager",
+            "detached",
+            "--session",
+            "../escape"
+          ],
+          "pid": "2992825",
+          "exit_code": 2,
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stderr": {
+            "bytes": "181",
+            "sha256": "d31f574e9428f5c94f74816f3ea9f68b796a0cc414059c6af91a02a7f8bf7dab",
+            "text": "{\"error\":{\"exit_code\":2,\"hint\":\"use 1 to 32 ASCII letters, digits, '-' or '_'\",\"kind\":\"invalid_session\",\"message\":\"the session name is not a valid service session\",\"origin\":\"cli\"}}\n"
+          }
+        },
+        {
+          "role": "binary",
+          "argv": [
+            "target/debug/ovis-terminal",
+            "--json",
+            "service",
+            "start"
+          ],
+          "pid": "2992827",
+          "exit_code": 2,
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stderr": {
+            "bytes": "227",
+            "sha256": "934576ed3a2f1a1a262a6023716c6ac06bb00ca08df772a5bf7c6c3e7b0d8026",
+            "text": "{\"error\":{\"exit_code\":2,\"hint\":\"run `ovis-terminal --json schema cli` for every command and flag\",\"kind\":\"usage\",\"message\":\"the command line does not parse: the following required arguments were not provided:\",\"origin\":\"cli\"}}\n"
+          }
+        },
+        {
+          "role": "binary",
+          "argv": [
+            "target/debug/ovis-terminal",
+            "--json",
+            "server",
+            "status"
+          ],
+          "pid": "2992828",
+          "exit_code": 0,
+          "stdout": {
+            "bytes": "119",
+            "sha256": "9cd716f44bde7fa341cbd5cf270fc897e22d4be57ae0e098bae817ec4ad1cdfb",
+            "text": "{\"holder_count\":0,\"live_terminals\":0,\"runtime_lifetime\":null,\"server_boot_id\":null,\"state\":\"stopped\",\"uptime_ms\":null}\n"
+          },
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "role": "binary",
+          "argv": [
+            "target/debug/ovis-terminal",
+            "--json",
+            "service",
+            "status"
+          ],
+          "pid": "2992829",
+          "exit_code": 0,
+          "stdout": {
+            "bytes": "121",
+            "sha256": "0982c721ad9d4e6bf7ad43da4145759baa276387a0bf287f4a2d0eeaa42a8a4a",
+            "text": "{\"label\":\"ovis-terminal-holder-default\",\"missing_prerequisites\":[\"service_manager\"],\"registered\":null,\"state\":\"stopped\"}\n"
+          },
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        }
+      ],
+      "fixture": null,
+      "elapsed_ms": "23"
+    }
+  ]
+}
