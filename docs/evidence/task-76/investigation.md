@@ -105,6 +105,86 @@ variants with stable kinds, hints and sources. The safe wait wrapper reuses
 rustix 1.1.6 already in the lockfile; no unsafe block or dependency version was
 added, and holder wire generation remains 2.
 
+## Gate round 1 regression and repair
+
+AdversarialVerify round 1 rejected head `33f4d3b`. Its real-process probe ran
+`trap '' HUP; sleep 777 & exit 0`: the leader exited and was reaped, but the
+same-group `sleep` retained the PTY slave. The first fix returned
+`AlreadyExited` before group delivery, so the pump never observed hang-up and
+`join_outcome` waited without a bound. Base `8db5609` signalled the group and
+returned in 599 microseconds.
+
+`shutdown_kills_same_group_descendant_after_leader_is_reaped` reproduces that
+schedule with the real holder workers. A condition variable observes the exact
+waiter reap without polling or sleeping. The pre-fix run times out after two
+seconds, signals the group only for cleanup, and exits 101; its transcript is
+`round-2-pre-fix.log`.
+
+The repair separates leader state (`Live`, `Exited`, `Replaced`) from group
+delivery. A reaped or waitable leader still permits SIGKILL to the original
+process group because its ID cannot be reused while members remain. A replaced
+live PID prevents delivery. Successful group delivery after leader exit counts
+the leader in `already_exited`; ESRCH and Darwin EPERM are reclassified only
+through fresh evidence, while EPERM against a matching live leader remains a
+sourced `signal_failed`.
+
+`shutdown_stops_pump_when_reaped_leader_group_is_gone` enables shell job
+control so the PTY-holding descendant moves to another group, proves the
+original group is absent, then runs shutdown. The absent-group path drops a
+Unix-stream pump-stop endpoint. The pump drains available bytes before
+observing the stop, records Exit after output, closes the remaining master
+descriptors and joins all workers within the two-second test budget.
+
+### Round-2 hunk review (inherited uncommitted worktree)
+
+A second executor inherited the uncommitted round-2 diff. Decision per hunk:
+
+- `signalling.rs` `LeaderState` split and group delivery after leader exit:
+  **keep**. It is the B1 fix: the leader's exit no longer suppresses SIGKILL
+  to its group. The `Replaced` arm before the token comparison is correct,
+  because once the waiter has reaped, any process now holding that PID is a
+  different incarnation.
+- `failed_delivery` ESRCH -> `AlreadyExited`, EPERM -> `AlreadyExited` only
+  if fresh `leader_state` is not `Live`: **keep**, with the following scope.
+  For a group, Darwin EPERM means the group exists but has no member this
+  caller may signal (zombies are excluded). Linux EPERM means a live member
+  with different credentials. After a fresh check proves the leader exited,
+  both mean that no member remains that this holder can signal. That is
+  what shutdown reports. It does not prove that every member is dead (see
+  Risks).
+- `#[cfg(test)] fn target_exited` in production code: **fixed**. Removed;
+  the tests module calls `leader_state` directly.
+- `kill_all` counting `Delivered { leader_exited: true }` in
+  `already_exited`: **keep**. The leader is counted, and its group is still
+  killed.
+- `PumpStop`/`PumpWake` socketpair dropped on `AlreadyExited`: **keep**.
+  Closing the holder's master would not wake the pump, which polls a
+  duplicated descriptor. Closing a descriptor another thread is polling is
+  also unsound. The stop endpoint is dropped only when the group is gone, so
+  the same-group test can return within budget only if group SIGKILL closed
+  the descendant's slave.
+- `Shared::reaped` condvar: **keep**. It is the test's event-based wait for
+  the real reap, with no sleeping or polling.
+- Workflow `START_TOKEN_PS_LOOKUP_NS` timing probe: **redo**. Removed. The
+  200x loop now also selects `shutdown_tests::`, so both round-2 regression
+  tests run natively 200 times.
+
+### Nextest parallel "failure"
+
+The round-2 brief reported an unidentified nextest failure under
+parallelism. `cargo nextest run --workspace --all-targets --locked
+--no-fail-fast -j 8` on the round-2 source exited 0: 370 passed, 1 skipped,
+1 slow. The slow test is
+`ovis-terminal-core::ops bounds::capacity_accepts_1024_and_rejects_1025_without_eviction`,
+which took about 110 s while CPU-bound in SQLite. Its process held only
+`state.db*` descriptors and spawned no children. Core sources are
+unchanged on this branch, and that test reaches no holder code. No nextest
+timeout is configured, so a slow test is not a failure. The previous
+executor's watch probably expired on this test and was misread as a
+failure; that is an inference, not observed. No failing test was
+reproduced, so no fix was made. Logs:
+`round-2-nextest-parallel.log`, `round-2-check.log`.
+
 ## Syscall-level toggle proof
 
 The original red-test executable was retained by Cargo under its pre-rustix

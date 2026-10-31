@@ -16,12 +16,14 @@ use crate::protocol::{
     AdoptionError, AdoptionTable, HeldTerminal, InputWritten, Message, ProcessIncarnation,
     PtyIoFailure, TerminalId, TerminalTarget,
 };
+use crate::unix::pty_io::PumpStop;
 
 /// The running side of a terminal; dropped once its exit is recorded.
 pub(super) struct LiveTerminal {
     pub(super) master: Box<dyn MasterPty + Send>,
     pub(super) input: Arc<InputQueue>,
     pub(super) pid: ProcessId,
+    pub(super) pump_stop: Option<PumpStop>,
 }
 
 /// Process evidence is independent of the PTY/output completion barrier.

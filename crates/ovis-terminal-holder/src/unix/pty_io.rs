@@ -9,6 +9,7 @@
 use std::fs::File;
 use std::io::{self, ErrorKind, Read, Write};
 use std::os::fd::{AsFd, AsRawFd, BorrowedFd, RawFd};
+use std::os::unix::net::UnixStream;
 
 use super::io_error::TerminalIoError;
 
@@ -22,6 +23,18 @@ pub(super) enum ReadOutcome {
 pub(super) struct WriteOutcome {
     pub(super) written: usize,
     pub(super) failure: Option<TerminalIoError>,
+}
+
+/// Dropping this endpoint wakes the output pump during shutdown.
+pub(super) struct PumpStop {
+    _stream: UnixStream,
+}
+
+/// Pump-owned endpoint paired with [`PumpStop`].
+pub(super) struct PumpWake(UnixStream);
+
+pub(super) fn pump_stop_pair() -> io::Result<(PumpStop, PumpWake)> {
+    UnixStream::pair().map(|(stop, wake)| (PumpStop { _stream: stop }, PumpWake(wake)))
 }
 
 /// Puts the master's open file description (shared by every duplicate) in
@@ -49,6 +62,7 @@ fn is_hangup(error: &io::Error) -> bool {
 pub(super) fn read_chunk(
     file: &mut File,
     buffer: &mut [u8],
+    wake: &PumpWake,
 ) -> Result<ReadOutcome, TerminalIoError> {
     loop {
         match file.read(buffer) {
@@ -57,7 +71,12 @@ pub(super) fn read_chunk(
             Err(error) if error.kind() == ErrorKind::Interrupted => {}
             Err(error) if error.kind() == ErrorKind::WouldBlock => {
                 // After a hang-up the next read drains what remains, then reports EIO.
-                wait(file.as_fd(), libc::POLLIN)?;
+                match wait_for_read(file.as_fd(), wake.0.as_fd())? {
+                    PumpReadiness::Pty(Readiness::Ready) => {}
+                    PumpReadiness::Pty(Readiness::Hangup) | PumpReadiness::Stopped => {
+                        return Ok(ReadOutcome::Hangup);
+                    }
+                }
             }
             Err(error) if is_hangup(&error) => return Ok(ReadOutcome::Hangup),
             Err(source) => return Err(TerminalIoError::Read { source }),
@@ -100,6 +119,47 @@ pub(super) fn write_prefix(file: &mut File, bytes: &[u8]) -> WriteOutcome {
 enum Readiness {
     Ready,
     Hangup,
+}
+
+enum PumpReadiness {
+    Pty(Readiness),
+    Stopped,
+}
+
+fn wait_for_read(
+    pty: BorrowedFd<'_>,
+    stop: BorrowedFd<'_>,
+) -> Result<PumpReadiness, TerminalIoError> {
+    let mut entries = [
+        libc::pollfd {
+            fd: pty.as_raw_fd(),
+            events: libc::POLLIN,
+            revents: 0,
+        },
+        libc::pollfd {
+            fd: stop.as_raw_fd(),
+            events: libc::POLLIN,
+            revents: 0,
+        },
+    ];
+    loop {
+        // SAFETY: `entries` is an initialized two-element pollfd array.
+        let status = unsafe { libc::poll(entries.as_mut_ptr(), 2, -1) };
+        if status >= 0 {
+            if entries[0].revents != 0 {
+                return classify(entries[0].revents).map(PumpReadiness::Pty);
+            }
+            if entries[1].revents != 0 {
+                classify(entries[1].revents)?;
+                return Ok(PumpReadiness::Stopped);
+            }
+        } else {
+            let source = io::Error::last_os_error();
+            if source.kind() != ErrorKind::Interrupted {
+                return Err(TerminalIoError::Poll { source });
+            }
+        }
+    }
 }
 
 /// Waits until `fd` is ready for `events`. POLLHUP is the normal hang-up;
@@ -147,16 +207,17 @@ const fn classify(revents: libc::c_short) -> Result<Readiness, TerminalIoError> 
 mod tests {
     use std::fs::File;
 
-    use super::{Readiness, classify, poll_raw, read_chunk, write_prefix};
+    use super::{Readiness, classify, poll_raw, pump_stop_pair, read_chunk, write_prefix};
     use crate::protocol::{PtyIoFailure, PtyOperation};
 
     #[test]
     fn unexpected_read_failure_is_typed_not_a_hangup() {
         // Given: a descriptor whose reads fail with EISDIR, not a PTY hang-up.
         let mut directory = File::open(std::env::temp_dir()).expect("open directory");
+        let (_stop, wake) = pump_stop_pair().expect("pump stop pair");
 
         // When: the pump reads from it.
-        let Err(failure) = read_chunk(&mut directory, &mut [0; 16]) else {
+        let Err(failure) = read_chunk(&mut directory, &mut [0; 16], &wake) else {
             panic!("a failed read must not look like data or EOF");
         };
 

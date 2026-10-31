@@ -100,7 +100,7 @@ jobs:
             for iteration in $(seq 1 200); do
               printf '\nITERATION %s/200\n' "$iteration"
               cargo nextest run -p ovis-terminal-holder --locked --lib \
-                newer_fence_revokes_queued_input_behind_a_blocked_write \
+                -E 'test(newer_fence_revokes_queued_input_behind_a_blocked_write) | test(/shutdown_tests::/)' \
                 --no-tests=fail --success-output immediate
               printf 'PASS %s/200\n' "$iteration"
             done

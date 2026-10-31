@@ -23,7 +23,7 @@ use crate::protocol::TerminalId;
 use crate::unix::drain::DrainSignal;
 use crate::unix::input::{Dequeued, InputQueue};
 use crate::unix::io_error::TerminalIoError;
-use crate::unix::pty_io::{ReadOutcome, read_chunk, write_prefix};
+use crate::unix::pty_io::{PumpWake, ReadOutcome, read_chunk, write_prefix};
 
 /// Output is read in chunks no larger than the stream chunk size.
 const OUTPUT_CHUNK: usize = 16 * 1024;
@@ -67,6 +67,7 @@ pub(super) fn wait_for_exit(waiter: Waiter, report: &SyncSender<WaiterReport>) {
         if let Some(terminal) = state.terminals.get_mut(&terminal_id) {
             terminal.waiter = WaiterState::Reaped;
         }
+        shared.reaped.notify_all();
         drop(state);
         Ok(status)
     });
@@ -104,6 +105,7 @@ pub(super) struct Pump {
     pub(super) reader: File,
     pub(super) finish: FinishOnDrop,
     pub(super) report: Receiver<WaiterReport>,
+    pub(super) wake: PumpWake,
 }
 
 pub(super) fn pump_output(shared: &Shared, pump: Pump) {
@@ -112,10 +114,11 @@ pub(super) fn pump_output(shared: &Shared, pump: Pump) {
         mut reader,
         finish,
         report,
+        wake,
     } = pump;
     let mut buffer = vec![0_u8; OUTPUT_CHUNK];
     loop {
-        let failure = match read_chunk(&mut reader, &mut buffer) {
+        let failure = match read_chunk(&mut reader, &mut buffer, &wake) {
             Ok(ReadOutcome::Hangup) => break,
             Ok(ReadOutcome::Data(read)) => buffer
                 .get(..read)

@@ -13,7 +13,7 @@ mod workers;
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
 use std::fmt;
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
 
 use self::ending::Completion;
@@ -34,6 +34,7 @@ use crate::protocol::{
 pub(super) struct Shared {
     config: HolderConfig,
     state: Mutex<HolderState>,
+    reaped: Condvar,
     spawning: Mutex<()>,
     workers: Mutex<Workers>,
 }
@@ -87,6 +88,7 @@ impl Holder {
             shared: Arc::new(Shared {
                 config,
                 state: Mutex::new(HolderState::default()),
+                reaped: Condvar::new(),
                 spawning: Mutex::new(()),
                 workers: Mutex::new(Workers::default()),
             }),
@@ -188,6 +190,7 @@ impl Holder {
                     master: parts.master,
                     input,
                     pid,
+                    pump_stop: Some(parts.pump_stop),
                 }),
                 geometry_epoch: None,
                 admitted_sequence: None,

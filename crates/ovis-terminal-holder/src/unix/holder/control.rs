@@ -112,7 +112,7 @@ impl Holder {
                 SignalKind::Terminate | SignalKind::Kill => live.pid,
             };
             match signal(terminal, SignalScope::ProcessGroup(group), request.signal)? {
-                SignalOutcome::Delivered => Ok(()),
+                SignalOutcome::Delivered { .. } => Ok(()),
                 SignalOutcome::AlreadyExited => Err(HolderError::ProcessExited),
             }
         })
@@ -221,19 +221,23 @@ fn kill_all(state: &mut HolderState) -> Result<usize, HolderError> {
     state.draining = true;
     state.detach(LinkClosed::HolderStopped);
     let mut already_exited = 0_usize;
-    for terminal in state.terminals.values() {
+    for terminal in state.terminals.values_mut() {
         let Some(live) = &terminal.live else {
             already_exited = already_exited.saturating_add(1);
             continue;
         };
-        match signal(
-            terminal,
-            SignalScope::ProcessGroup(live.pid),
-            SignalKind::Kill,
-        )? {
-            SignalOutcome::Delivered => {}
+        let pid = live.pid;
+        match signal(terminal, SignalScope::ProcessGroup(pid), SignalKind::Kill)? {
+            SignalOutcome::Delivered { leader_exited } => {
+                if leader_exited {
+                    already_exited = already_exited.saturating_add(1);
+                }
+            }
             SignalOutcome::AlreadyExited => {
                 already_exited = already_exited.saturating_add(1);
+                if let Some(live) = terminal.live.as_mut() {
+                    live.pump_stop.take();
+                }
             }
         }
     }

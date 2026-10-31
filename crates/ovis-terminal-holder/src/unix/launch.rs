@@ -10,7 +10,7 @@ use portable_pty::{Child, CommandBuilder, MasterPty, PtySize, SlavePty, native_p
 
 use super::config::ProcessEnvironment;
 use super::launch_error::LaunchError;
-use super::pty_io::set_nonblocking;
+use super::pty_io::{PumpStop, PumpWake, pump_stop_pair, set_nonblocking};
 use crate::process::{ProcessId, read_start_token};
 use crate::protocol::{ProcessStartToken, TerminalId, TerminalIncarnation};
 
@@ -118,6 +118,8 @@ pub(super) struct PtyProcess {
     pub(super) reader: File,
     pub(super) writer: File,
     pub(super) probe: OwnedFd,
+    pub(super) pump_stop: PumpStop,
+    pub(super) pump_wake: PumpWake,
 }
 
 /// Starts `spec` on a new PTY.
@@ -154,6 +156,10 @@ pub(super) fn launch(spec: &LaunchSpec) -> Result<PtyProcess, LaunchError> {
     let reader = File::from(duplicate_master(pair.master.as_ref())?);
     let writer = File::from(duplicate_master(pair.master.as_ref())?);
     let probe = duplicate_master(pair.master.as_ref())?;
+    let (pump_stop, pump_wake) =
+        pump_stop_pair().map_err(|source| LaunchError::PtyUnavailable {
+            source: source.into(),
+        })?;
     set_nonblocking(probe.as_fd()).map_err(|error| LaunchError::PtyUnavailable {
         source: error.into(),
     })?;
@@ -185,6 +191,8 @@ pub(super) fn launch(spec: &LaunchSpec) -> Result<PtyProcess, LaunchError> {
         reader,
         writer,
         probe,
+        pump_stop,
+        pump_wake,
     })
 }
 

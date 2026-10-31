@@ -9,8 +9,15 @@ use crate::unix::error::HolderError;
 
 #[derive(Debug, Eq, PartialEq)]
 pub(super) enum SignalOutcome {
-    Delivered,
+    Delivered { leader_exited: bool },
     AlreadyExited,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum LeaderState {
+    Live,
+    Exited,
+    Replaced,
 }
 
 /// The caller holds the holder state mutex until delivery/reclassification ends.
@@ -19,25 +26,34 @@ pub(super) fn signal(
     scope: SignalScope,
     kind: SignalKind,
 ) -> Result<SignalOutcome, HolderError> {
-    if target_exited(terminal)? {
-        return Ok(SignalOutcome::AlreadyExited);
+    let leader = leader_state(terminal)?;
+    match (scope, leader) {
+        (SignalScope::Process(_), LeaderState::Exited | LeaderState::Replaced)
+        | (SignalScope::ProcessGroup(_), LeaderState::Replaced) => {
+            return Ok(SignalOutcome::AlreadyExited);
+        }
+        (SignalScope::Process(_) | SignalScope::ProcessGroup(_), LeaderState::Live)
+        | (SignalScope::ProcessGroup(_), LeaderState::Exited) => {}
     }
     match send_signal(scope, kind) {
-        Ok(()) => Ok(SignalOutcome::Delivered),
+        Ok(()) => Ok(SignalOutcome::Delivered {
+            leader_exited: leader == LeaderState::Exited,
+        }),
         Err(error) => failed_delivery(terminal, error),
     }
 }
 
-fn target_exited(terminal: &Terminal) -> Result<bool, HolderError> {
-    if matches!(terminal.waiter, WaiterState::Reaped) {
-        return Ok(true);
-    }
+fn leader_state(terminal: &Terminal) -> Result<LeaderState, HolderError> {
     let Some(live) = &terminal.live else {
-        return Ok(true);
+        return Ok(LeaderState::Exited);
     };
     match read_start_token(live.pid) {
+        Ok(_) if matches!(terminal.waiter, WaiterState::Reaped) => {
+            return Ok(LeaderState::Replaced);
+        }
         Ok(actual) if terminal.held.start_token.as_ref() == Some(&actual) => {}
-        Ok(_) | Err(StartTokenError::ProcessGone { .. }) => return Ok(true),
+        Ok(_) => return Ok(LeaderState::Replaced),
+        Err(StartTokenError::ProcessGone { .. }) => return Ok(LeaderState::Exited),
         Err(source) => return Err(HolderError::ProcessStart { source }),
     }
     let invalid_pid = || SignalError::PidOutOfRange {
@@ -49,7 +65,13 @@ fn target_exited(terminal: &Terminal) -> Result<bool, HolderError> {
         WaitId::Pid(pid),
         WaitIdOptions::EXITED | WaitIdOptions::NOWAIT | WaitIdOptions::NOHANG,
     )
-    .map(|status| status.is_some())
+    .map(|status| {
+        if status.is_some() {
+            LeaderState::Exited
+        } else {
+            LeaderState::Live
+        }
+    })
     .map_err(|source| HolderError::ProcessWait {
         source: source.into(),
     })
@@ -58,14 +80,16 @@ fn target_exited(terminal: &Terminal) -> Result<bool, HolderError> {
 /// Only fresh exit/incarnation evidence can turn a delivery failure into exit.
 fn failed_delivery(terminal: &Terminal, error: SignalError) -> Result<SignalOutcome, HolderError> {
     match &error {
-        SignalError::Delivery { source }
-            if matches!(source.raw_os_error(), Some(libc::EPERM | libc::ESRCH)) =>
-        {
-            if target_exited(terminal)? {
-                return Ok(SignalOutcome::AlreadyExited);
+        SignalError::Delivery { source } => match source.raw_os_error() {
+            Some(libc::ESRCH) => return Ok(SignalOutcome::AlreadyExited),
+            Some(libc::EPERM) => {
+                if leader_state(terminal)? != LeaderState::Live {
+                    return Ok(SignalOutcome::AlreadyExited);
+                }
             }
-        }
-        SignalError::Delivery { .. } | SignalError::PidOutOfRange { .. } => {}
+            Some(_) | None => {}
+        },
+        SignalError::PidOutOfRange { .. } => {}
     }
     Err(error.into())
 }
@@ -74,7 +98,7 @@ fn failed_delivery(terminal: &Terminal, error: SignalError) -> Result<SignalOutc
 mod tests {
     use std::io;
 
-    use super::{SignalOutcome, failed_delivery, signal, target_exited};
+    use super::{LeaderState, SignalOutcome, failed_delivery, leader_state, signal};
     use crate::process::{SignalError, SignalScope};
     use crate::protocol::{ProcessStartToken, SignalKind, Spawned};
     use crate::unix::Holder;
@@ -104,7 +128,8 @@ mod tests {
             // When: the stale incarnation requests an actual kill.
             let outcome = signal(terminal, scope, SignalKind::Kill);
             terminal.held.start_token = original;
-            let survived = !target_exited(terminal).expect("real exit readiness");
+            let survived =
+                leader_state(terminal).expect("real exit readiness") == LeaderState::Live;
             drop(state);
             (outcome, survived)
         };
