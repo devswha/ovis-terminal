@@ -36,7 +36,8 @@ struct Served {
 
 impl Served {
     fn new(root: &std::path::Path, group: GroupId) -> TestResult<Self> {
-        let socket = root.join(format!("holder-{}.sock", uuid::Uuid::now_v7().simple()));
+        let id = uuid::Uuid::now_v7().simple().to_string();
+        let socket = root.join(format!("h-{}.sock", id.get(24..).unwrap_or_default()));
         let holder = Holder::new(HolderConfig::new(
             HolderDescriptor::new(
                 HolderBuildId::new("task-49".into()),
@@ -118,7 +119,9 @@ struct State(PathBuf);
 
 impl State {
     fn new() -> TestResult<Self> {
-        let root = std::env::temp_dir().join(format!("ovis-t49-{}", uuid::Uuid::now_v7().simple()));
+        // Darwin's temp directory is long and sun_path holds 104 bytes: keep socket paths short.
+        let id = uuid::Uuid::now_v7().simple().to_string();
+        let root = PathBuf::from("/tmp").join(format!("t49-{}", id.get(20..).unwrap_or_default()));
         std::fs::create_dir_all(&root)?;
         Ok(Self(root))
     }
