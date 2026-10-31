@@ -80,7 +80,7 @@ Conformance execution is NOT deferred: the todo-21 runner has landed and `platfo
 
 - happy / failure / all: commands and outputs above (real PTY, real processes, real kill + relaunch through the core lifecycle service).
 - No leftover processes after fixture runs (`ps` shows no `FG_READY` / guard `cat` processes; the fixture's stop runs `program_stop`, closes the lifecycle service and shuts the holder down).
-- macOS native stress: see the run linked in a comment below (`gh workflow run probe-stress-macos.yml --ref lane/t55-darwin-contract -f probe=process-info`).
+- macOS native stress: 30/30 on Darwin arm64 at 38ea141 after three failures and one hang (history below).
 
 ## Adversarial
 
@@ -116,3 +116,15 @@ Conformance execution is NOT deferred: the todo-21 runner has landed and `platfo
 - Windows reports foreground/background/argv/cwd as `unsupported: platform` (ConPTY has no process groups); it proves the launcher by CreationTime only.
 - Persisted macOS start tokens from an older build (`lstart:`) no longer match and would read as `process_replaced` after upgrade (pre-release).
 - Core's Linux-only lifecycle QA tests (`terminals/qa/administration.rs`) were not widened to macOS here (outside the write scope).
+
+## macOS native stress history (`gh workflow run probe-stress-macos.yml --ref lane/t55-darwin-contract -f probe=process-info`)
+
+| Run | Head | Outcome | Cause / fix |
+|---|---|---|---|
+| https://github.com/devswha/ovis-terminal/actions/runs/41235061804 | d9c9f47 | failed | `KERN_PROCARGS2` reports `EINVAL`, not `ESRCH`, for a reaped PID, so argv was `process_record_unreadable`; fixed in 8e7a56d (absence confirmed through `proc_pidinfo`). |
+| https://github.com/devswha/ovis-terminal/actions/runs/41235292955 | 8e7a56d | failed | `platform/process-info` happy: foreground/background `unsupported: permission` (the whole-table scan hit EPERM on system processes); evidence upload fixed in 3682184. |
+| https://github.com/devswha/ovis-terminal/actions/runs/41235547372 | 3682184 | failed | same cause, now with evidence; fixed in 3c64ded: candidates come from `proc_listpids(PROC_TTY_ONLY, tdev)`. |
+| https://github.com/devswha/ovis-terminal/actions/runs/41236025053 | 3c64ded | hung, cancelled | test defect: the new PTY test never read the master and Darwin holds an exiting session leader until its tty output drains; fixed in 38ea141 (the test drains the master). |
+| https://github.com/devswha/ovis-terminal/actions/runs/41239420744 | 38ea141 | success | 30/30 iterations of holder `process::`, core `process_info`, server `process_info` tests and `platform/process-info --case all` on Darwin arm64. |
+
+Known pre-existing flake (not touched, outside scope): `ovis-terminal-holder` `service::unix::observe` tests (todo 51) fail ~2/20 runs of `cargo test -p ovis-terminal-holder --lib` locally even with every new table test skipped.
