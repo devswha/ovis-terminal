@@ -18,7 +18,8 @@ mod permission;
 mod scope;
 
 pub use authority::{
-    AccessRequest, Authority, CommitCheck, Decision, IssuedCredential, Presentation, Session,
+    AccessRequest, AttestRequest, Attestation, Authority, CommitCheck, Decision, IssuedCredential,
+    Presentation, Session,
 };
 pub use config::{AuthorityConfig, AuthorityLimits, OwnerSpec, RuntimeBinding};
 pub use credential::{Issuance, IssueRequest, Revocation};

@@ -925,6 +925,59 @@
         ],
         "type": "object"
       },
+      "BootChallenge": {
+        "description": "Fresh random challenge, 32 bytes as lowercase hexadecimal.",
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "BootProof": {
+        "additionalProperties": false,
+        "description": "A runtime's answer to a boot challenge, keyed by the credential of the connection.",
+        "properties": {
+          "mac": {
+            "$ref": "#/components/schemas/ProofMac",
+            "description": "HMAC-SHA256 of the statement's signed bytes keyed by the presented bearer."
+          },
+          "statement": {
+            "$ref": "#/components/schemas/BootStatement",
+            "description": "The vouched statement."
+          }
+        },
+        "required": [
+          "statement",
+          "mac"
+        ],
+        "type": "object"
+      },
+      "BootStatement": {
+        "additionalProperties": false,
+        "description": "What a runtime vouches for when it answers a boot challenge.",
+        "properties": {
+          "challenge": {
+            "$ref": "#/components/schemas/BootChallenge",
+            "description": "The caller's challenge, echoed."
+          },
+          "machine_id": {
+            "$ref": "#/components/schemas/MachineId",
+            "description": "Stable machine identity."
+          },
+          "runtime_lifetime": {
+            "$ref": "#/components/schemas/RuntimeLifetimeId",
+            "description": "Holder-supervisor lifetime."
+          },
+          "server_boot_id": {
+            "$ref": "#/components/schemas/ServerBootId",
+            "description": "Control-server boot identity at the moment of the answer."
+          }
+        },
+        "required": [
+          "challenge",
+          "machine_id",
+          "runtime_lifetime",
+          "server_boot_id"
+        ],
+        "type": "object"
+      },
       "BracketedPolicy": {
         "description": "Bracketed-paste policy of `input.paste`.",
         "oneOf": [
@@ -1641,6 +1694,11 @@
           "host_key_unknown",
           "remote_incompatible",
           "install_refused",
+          "trust_required",
+          "trust_mismatch",
+          "boot_proof_stale",
+          "handshake_timeout",
+          "machine_exists",
           "needs_tty",
           "integrity_failed",
           "incompatible",
@@ -2484,6 +2542,17 @@
         "additionalProperties": false,
         "description": "Parameters of `hello`, the first request on every connection.",
         "properties": {
+          "challenge": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BootChallenge"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fresh challenge the result must answer with a boot proof keyed by the credential."
+          },
           "client": {
             "$ref": "#/components/schemas/ClientInfo",
             "description": "Client identity."
@@ -2516,6 +2585,17 @@
       "HelloResult": {
         "description": "Result of `hello`.",
         "properties": {
+          "boot_proof": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BootProof"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Answer to the request's challenge; absent when no challenge was sent."
+          },
           "capabilities": {
             "$ref": "#/components/schemas/Capabilities",
             "description": "Served capabilities."
@@ -3708,6 +3788,17 @@
             "description": "Credential that authorizes the remote runtime.",
             "type": "string"
           },
+          "expected_machine_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MachineId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Machine identity the remote runtime must prove; the add is refused without it."
+          },
           "name": {
             "$ref": "#/components/schemas/MachineName",
             "description": "Machine name."
@@ -3958,6 +4049,17 @@
           "name": {
             "$ref": "#/components/schemas/MachineName",
             "description": "Current name."
+          },
+          "remote_boot_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServerBootId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Remote control-server boot proven by the last fresh challenge, when known."
           },
           "remote_lifetime": {
             "anyOf": [
@@ -5572,6 +5674,11 @@
             "type": "string"
           }
         ]
+      },
+      "ProofMac": {
+        "description": "Keyed proof of credential possession, 32 bytes as lowercase hexadecimal.",
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
       },
       "ProtocolGeneration": {
         "description": "ProtocolGeneration carried as a canonical decimal string.",
@@ -9029,6 +9136,21 @@
       "name": "hello",
       "paramStructure": "by-name",
       "params": [
+        {
+          "name": "challenge",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BootChallenge"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fresh challenge the result must answer with a boot proof keyed by the credential."
+          }
+        },
         {
           "name": "client",
           "required": true,
@@ -17372,6 +17494,26 @@
         {
           "code": -32000,
           "message": "install_refused"
+        },
+        {
+          "code": -32000,
+          "message": "trust_required"
+        },
+        {
+          "code": -32000,
+          "message": "trust_mismatch"
+        },
+        {
+          "code": -32000,
+          "message": "boot_proof_stale"
+        },
+        {
+          "code": -32000,
+          "message": "handshake_timeout"
+        },
+        {
+          "code": -32000,
+          "message": "machine_exists"
         }
       ],
       "name": "machine.add",
@@ -17383,6 +17525,21 @@
           "schema": {
             "description": "Credential that authorizes the remote runtime.",
             "type": "string"
+          }
+        },
+        {
+          "name": "expected_machine_id",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MachineId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Machine identity the remote runtime must prove; the add is refused without it."
           }
         },
         {
@@ -19532,6 +19689,31 @@
       "code": -32000,
       "description": "The remote install was refused.",
       "kind": "install_refused"
+    },
+    {
+      "code": -32000,
+      "description": "No expected machine identity was configured for the remote runtime.",
+      "kind": "trust_required"
+    },
+    {
+      "code": -32000,
+      "description": "The remote runtime proved a machine identity other than the expected one.",
+      "kind": "trust_mismatch"
+    },
+    {
+      "code": -32000,
+      "description": "The boot proof does not answer this connection's fresh challenge.",
+      "kind": "boot_proof_stale"
+    },
+    {
+      "code": -32000,
+      "description": "The remote runtime did not complete the handshake within its bound.",
+      "kind": "handshake_timeout"
+    },
+    {
+      "code": -32000,
+      "description": "The machine is already added under another name.",
+      "kind": "machine_exists"
     },
     {
       "code": -32000,
