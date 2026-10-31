@@ -6,14 +6,13 @@ use serde_json::Value;
 
 use super::support::{TestResult, Tree, conformance, field, scenario, strings};
 
-const EXECUTABLE: [&str; 17] = [
+const EXECUTABLE: [&str; 16] = [
     "_runner/self-test.json",
     "agent/binding.json",
     "agent/prompts.json",
     "agent/status.json",
     "all/all.json",
     "part-a/task-21.json",
-    "part-a/task-31.json",
     "part-a/task-77.json",
     "part-a/task-78.json",
     "part-a/task-79.json",
@@ -26,16 +25,27 @@ const EXECUTABLE: [&str; 17] = [
     "protocol/strict-target.json",
 ];
 
+/// Executable scenarios whose server is the assembled binary itself (plan todo 31).
+const ASSEMBLED: [&str; 1] = ["part-a/task-31.json"];
+
+/// Every executable scenario file, sorted as the inventory reports them.
+fn executable() -> Vec<String> {
+    let mut files: Vec<String> = EXECUTABLE
+        .iter()
+        .chain(&ASSEMBLED)
+        .map(|file| (*file).to_owned())
+        .collect();
+    files.sort();
+    files
+}
+
 /// Every executable file runs and passes; every other file is a listed declaration.
 #[test]
 fn every_scenario_file_is_executed_or_a_listed_declaration() -> TestResult {
     let ran = conformance("all/all", "all", &[])?;
     assert_eq!(ran.output.status.code(), Some(0), "{}", ran.explain());
     let evidence = &ran.evidence;
-    assert_eq!(
-        strings(evidence, "/inventory/executed"),
-        EXECUTABLE.map(str::to_owned).to_vec()
-    );
+    assert_eq!(strings(evidence, "/inventory/executed"), executable());
     let allowlist: Value = serde_json::from_slice(&std::fs::read(
         Path::new(env!("CARGO_MANIFEST_DIR")).join("scenarios/declared.json"),
     )?)?;
@@ -60,7 +70,7 @@ fn every_scenario_file_is_executed_or_a_listed_declaration() -> TestResult {
         .iter()
         .filter_map(|case| field(case, "/scenario").as_str())
         .collect();
-    for file in EXECUTABLE.iter().filter(|file| **file != "all/all.json") {
+    for file in executable().iter().filter(|file| *file != "all/all.json") {
         let id = file.trim_end_matches(".json");
         assert!(ran_ids.contains(id), "{id} did not run");
     }
