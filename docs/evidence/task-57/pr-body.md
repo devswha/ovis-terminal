@@ -137,7 +137,7 @@ Tests added (all pass in the runs above):
   reported cancelled or delivered without holder evidence.
 - mutation probe: with `Revalidated::call`'s `validate` line removed, the failure command
   exits 1 (`inject[0]/error/data/kind`: expected `credential_revoked`, actual
-  `invalid_params`); log `docs/evidence/task-57/mutation-no-revalidate.stdout` (+ `.json``.
+  `invalid_params`); logs `docs/evidence/task-57/mutation-no-revalidate.stdout` and `.json`.
 
 ## Contract checklist
 
@@ -185,4 +185,4 @@ and register the credential lane with a `QueuedWrites` over the runtime's sequen
   it was not merged here. Only `Cargo.lock` overlaps (separate hunks).
 - The macOS stress job is not in this PR's workflow file (integration's a74fba7 rewrote it);
   the job block is in `docs/evidence/task-57/stress-job.yml` for the orchestrator union and
-  was dispatched from a stress-only branch: @STRESS@.
+  was dispatched from a stress-only branch: run https://github.com/devswha/ovis-terminal/actions/runs/41247294624 (branch `lane/t57-stress` = this head + integration a74fba7's workflow + the job; result recorded after it finishes).
