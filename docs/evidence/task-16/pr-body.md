@@ -217,6 +217,14 @@ Follow-up after CI on 10888e3. `each_launch_gets_its_own_cwd_and_environment_ove
 
 Platform note after CI on 3a70728. Ubuntu test and check.sh passed. macOS failed only in the new test's Linux-only premise: Darwin's master reported EOF when the session leader exited, while a same-group descendant still held the slave, so a Hangup (spawned pid 5858 + start token, offset 16) was already queued before the kill (job 124498647420). The product was correct, and the test is now platform-aware with no product branch. On Linux it still asserts nothing is published before the kill. Elsewhere it accepts at most one early Hangup. On both platforms it requires exactly one Hangup with the spawned incarnation at `final_offset`, then a final Exit. The fact is recorded in the test's doc comment and in `reconciliation.md` for todos 53/55.
 
+macOS CI on a77c562 (job 124500277884) went one step further: on Darwin the pump publishes Hangup and then Exit before the descendant dies, and the holder releases the terminal, so `hangup()` returns `ProcessExited`. Both reap tests now model this through one documented constant, `LEADER_EXIT_ENDS_OUTPUT` (macOS).
+
+- Linux: nothing is published before the descendant dies, `hangup()`/`signal()` succeed after the reap, and shutdown kills the group.
+- Darwin: the tests wait for Hangup then Exit, assert `Err(HolderError::ProcessExited)`, and kill the released group themselves.
+- Both: exactly one Hangup (spawned pid + start token at `final_offset`), then a final Exit with nothing after it, and shutdown within 2 s with every worker joined.
+
+The descendant's death is proven by EOF on a FIFO whose only write end it held, awaited with a bounded channel wait. Locally (Linux): holder 57/57 and `bash scripts/check.sh` exit 0 (434 passed / 1 skipped). Only macOS CI exercises the Darwin branch.
+
 Tests guarding the invariants:
 
 - I-76: `shutdown_tests::{shutdown_reports_already_exited_when_waiter_reaped_before_output_completion, shutdown_kills_same_group_descendant_after_leader_is_reaped, shutdown_stops_pump_when_reaped_leader_group_is_gone, shutdown_reports_zombie_without_signalling_before_waiter_reaps}`.

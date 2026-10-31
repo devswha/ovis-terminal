@@ -83,13 +83,31 @@ Hangup carried the spawned incarnation, it preceded Exit, and Exit was last.
 Only the test's Linux-only premise ("nothing published before the kill") was
 wrong.
 
-`reap_tests::hangup_after_reap_carries_spawned_incarnation_and_precedes_exit`
-keeps that premise on Linux only. Elsewhere it accepts at most one Hangup
-before the kill. Across both phases it requires exactly one Hangup with the
-spawned pid + start token at `final_offset`, followed by a final Exit. The
-product has no platform branch. Later todos (53/55) must not read Hangup as
+macOS CI on a77c562 (job 124500277884) showed the full consequence. On Darwin
+the pump publishes Hangup and then Exit while the descendant still lives. The
+holder then releases the terminal (`live` is dropped at Exit), so `hangup()`
+and `signal()` answer `ProcessExited`, and shutdown no longer kills the
+orphaned descendant's group. On Linux the group stays held and addressable
+until the descendant closes the slave, and shutdown kills it.
+
+Both reap tests now branch on one documented constant
+(`reap_tests::LEADER_EXIT_ENDS_OUTPUT`, true on macOS).
+
+- Linux: nothing is published until the descendant dies, `hangup()`/`signal()`
+  after the reap succeed, and shutdown kills the group.
+- Darwin: the tests wait for Hangup then Exit, assert
+  `hangup() == Err(ProcessExited)`, and kill the released group themselves.
+- Both: exactly one Hangup with the spawned pid + start token at
+  `final_offset`, then a final Exit with nothing after it, and shutdown within
+  budget with every worker joined. Death of the descendant is proven by EOF on
+  a FIFO whose only write end it held (bounded channel wait, no sleeps).
+
+The product has no platform branch. Only the Linux branch runs locally; the
+Darwin branch is exercised by macOS CI. Later todos (53/55) must not read Hangup as
 "every descendant released the PTY" on Darwin: there it only means the session
-leader's terminal hung up.
+leader's terminal hung up. On Darwin, a same-group descendant that ignores HUP
+outlives the holder's ownership of the terminal, so the kill escalation and
+shutdown cannot reach it once Exit is recorded.
 
 ## Which test guards which invariant
 
