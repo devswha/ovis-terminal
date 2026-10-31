@@ -1,0 +1,62 @@
+{
+  "scenario": "services/plugins",
+  "todo": 46,
+  "title": "Persist scoped plugin catalogs and bounded run outcomes",
+  "closes": ["GAP-117", "GAP-118", "GAP-136", "GAP-144"],
+  "delivers": ["IDEAL-090", "IDEAL-091", "IDEAL-109", "IDEAL-117"],
+  "excludes": ["EXCL-003", "EXCL-020", "EXCL-021"],
+  "platforms": ["linux", "macos"],
+  "verification": {
+    "status": "declared_until_routable",
+    "blocked_by": {
+      "52": "composes plugin.list, plugin.invoke and plugin.run_get (crates/ovis-terminal-server/src/dispatch/lanes/plugins.rs routes()) into a served process",
+      "21": "the runner's fixture registers only doc.set, doc.get and terminal.keep, and has no --inject, --append or principal_fixture support"
+    },
+    "covered_meanwhile_by": "cargo test -p ovis-terminal-server --lib lanes::plugins (real Unix socket, Dispatcher, Authority and SQLite ledger)"
+  },
+  "fixture": {
+    "plugins": {
+      "fixture": {
+        "enabled": true,
+        "actions": {
+          "report": "/bin/sh report.sh: printf 'OK\\n'; exit 7",
+          "admin-action": "/bin/sh admin.sh: writes admin.sh.spawned when it runs",
+          "hang": "/bin/sh hang.sh: writes its FIFO, then exec sleep 600"
+        }
+      },
+      "off": {"enabled": false, "actions": {"noop": "/bin/sh"}}
+    },
+    "principals": {"owner": "every permission", "observe": "observe over the machine"}
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {"as": "owner", "rpc": "plugin.list", "params": {},
+         "expect": {"/plugins/1/actions/0/unavailable": "plugin_disabled"}},
+        {"as": "owner", "rpc": "plugin.invoke",
+         "params": {"op_id": "$uuidv7.report", "plugin_id": "fixture", "action_id": "report", "input": {}, "target": null},
+         "expect": {"/state": "failed", "/exit_code": 7, "/output_b64": "T0sK", "/output_floor": "0", "/truncated": false, "/created_terminals": []}},
+        {"as": "owner", "rpc": "plugin.run_get", "params": {"run_id": "plugin-run:$uuidv7.report"},
+         "expect": {"/state": "failed", "/exit_code": 7}},
+        {"as": "owner", "rpc": "op.get", "params": {"op_id": "$uuidv7.report"},
+         "expect": {"/state": "committed", "/result/exit_code": 7}}
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {"as": "observe", "rpc": "plugin.invoke",
+         "params": {"op_id": "$uuidv7.denied", "plugin_id": "fixture", "action_id": "admin-action", "input": {}, "target": null},
+         "expect_error": "forbidden", "expect_absent_file": "plugins/fixture/admin.sh.spawned"},
+        {"as": "owner", "rpc": "plugin.invoke",
+         "params": {"op_id": "$uuidv7.off", "plugin_id": "off", "action_id": "noop", "input": {}, "target": null},
+         "expect_error": "plugin_disabled"},
+        {"as": "owner", "rpc": "plugin.invoke",
+         "params": {"op_id": "$uuidv7.hang", "plugin_id": "fixture", "action_id": "hang", "input": {}, "target": null},
+         "await_fifo": "plugins/fixture/hang.sh.fifo", "then_rpc": "op.cancel",
+         "expect": {"/state": "cancelled", "/exit_code": null}}
+      ]
+    }
+  ]
+}

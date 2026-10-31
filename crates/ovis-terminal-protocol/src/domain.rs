@@ -1,3 +1,4 @@
-//! Domain records owned by feature lanes and shared with clients through the schema.
+//! Typed construction of published records owned by domain services.
 
 pub mod agent_status;
+pub mod plugins;

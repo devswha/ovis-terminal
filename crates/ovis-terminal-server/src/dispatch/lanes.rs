@@ -1,3 +1,4 @@
-//! Domain lanes registered on the dispatcher by assembly.
+//! Typed domain routes registered on the dispatcher by assembly.
 
 pub mod agent_status;
+pub mod plugins;
