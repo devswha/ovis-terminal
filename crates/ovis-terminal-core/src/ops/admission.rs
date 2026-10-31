@@ -80,6 +80,11 @@ where
                     Version::new(row.version.get()),
                     None,
                 ));
+                writes.extend(
+                    row.entry
+                        .params
+                        .evict(&row.key, self.context.identity.runtime_id()),
+                );
             }
             keep
         });
@@ -116,6 +121,7 @@ where
             Version::ABSENT,
             Some(Payload::from(serde_json::to_vec(&entry)?)),
         ));
+        writes.push(request.copy_write(&key, self.context.identity.runtime_id()));
         self.persist((prior.as_ref(), entry.record), writes)
             .map(|record| Admitted::New(Box::new(record)))
     }

@@ -1,0 +1,542 @@
+{
+  "binary": {
+    "bytes": "139162168",
+    "path": "target/debug/ovis-terminal",
+    "sha256": "2d267a1c629256c7d6e2f783b6db8f4732dd0307ab55ea140b03798f8573f515"
+  },
+  "case": "all",
+  "cases": [
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[first]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "kept",
+          "check": "reply[first]/result/value",
+          "expected": "kept",
+          "passed": true
+        },
+        {
+          "actual": [
+            "first"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "first"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[retry]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "kept",
+          "check": "reply[retry]/result/value",
+          "expected": "kept",
+          "passed": true
+        },
+        {
+          "actual": [
+            "retry"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "retry"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "01a19322-7845-710e-8f7b-c6bbe32d0b2c",
+          "check": "reply[inspect]/result/op_id",
+          "expected": "01a19322-7845-710e-8f7b-c6bbe32d0b2c",
+          "passed": true
+        },
+        {
+          "actual": "kept",
+          "check": "reply[inspect]/result/result/value",
+          "expected": "kept",
+          "passed": true
+        },
+        {
+          "actual": "committed",
+          "check": "reply[inspect]/result/state",
+          "expected": "committed",
+          "passed": true
+        },
+        {
+          "actual": [
+            "inspect"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "inspect"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "digest.json"
+          ],
+          "check": "effects/files",
+          "expected": [
+            "digest.json"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "kept",
+          "check": "effects/digest.json",
+          "expected": "kept",
+          "passed": true
+        },
+        {
+          "actual": "1580",
+          "check": "connection[client]/bytes_received=bytes_decoded",
+          "expected": "1580",
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "fixture/accepted",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": {},
+          "check": "fixture/failures",
+          "expected": {},
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "happy",
+      "connections": [
+        {
+          "bytes_decoded": "1580",
+          "bytes_received": "1580",
+          "bytes_sent": "649",
+          "name": "client",
+          "records_received": "4",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "e739ce27c1adf713e75b147ac78b7955b3d45aa8009a3668e4a3e22a03492516",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "1231",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "f8af199d10f3798af5542c74db4d51af63d3377263ddfc6bf2edadeeed20a725",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.keep\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"agent.register\",\"agent.get\",\"doc.get\",\"doc.set\",\"rpc.discover\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793469872196\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "153",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "f639f6a04a958702ff33b7745c1c793e674dd05e1f01e3d2cb2fb124f692db1e",
+              "text": "{\"id\":\"first\",\"jsonrpc\":\"2.0\",\"method\":\"doc.set\",\"params\":{\"name\":\"digest\",\"op_id\":\"01a19322-7845-710e-8f7b-c6bbe32d0b2c\",\"value\":\"kept\",\"version\":\"0\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "18",
+              "bytes": "73",
+              "direction": "received",
+              "offset": "1231",
+              "sha256": "33d8738d0b7236c8174b007e01df4a2e02b13610c5d7e883aef1392cd40792f4",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"first\",\"result\":{\"name\":\"digest\",\"value\":\"kept\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "18",
+              "bytes": "153",
+              "direction": "sent",
+              "offset": "387",
+              "sha256": "2117dae56797d6d8777e70f3fa0fa067b378eb5153ccccfcf92dab584ee8aaac",
+              "text": "{\"id\":\"retry\",\"jsonrpc\":\"2.0\",\"method\":\"doc.set\",\"params\":{\"name\":\"digest\",\"op_id\":\"01a19322-7845-710e-8f7b-c6bbe32d0b2c\",\"value\":\"kept\",\"version\":\"0\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "23",
+              "bytes": "73",
+              "direction": "received",
+              "offset": "1304",
+              "sha256": "9919d9b0cdc94a6054d94984ead2e40ef56efce221a9ee9739428c6631cac3bc",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"retry\",\"result\":{\"name\":\"digest\",\"value\":\"kept\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "23",
+              "bytes": "109",
+              "direction": "sent",
+              "offset": "540",
+              "sha256": "aa56799d860bce8ada53b2058a7959650ee65a8857e837332ea329a36f0b4496",
+              "text": "{\"id\":\"inspect\",\"jsonrpc\":\"2.0\",\"method\":\"op.get\",\"params\":{\"op_id\":\"01a19322-7845-710e-8f7b-c6bbe32d0b2c\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "27",
+              "bytes": "203",
+              "direction": "received",
+              "offset": "1377",
+              "sha256": "2d8dc141967dd68344adef347f7110b183ed12efbd1500b4d06f1f86c08394ed",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inspect\",\"result\":{\"error\":null,\"method\":\"doc.set\",\"op_id\":\"01a19322-7845-710e-8f7b-c6bbe32d0b2c\",\"result\":{\"name\":\"digest\",\"value\":\"kept\"},\"state\":\"committed\",\"updated_seq\":\"3\"}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "4"
+        }
+      ],
+      "declared": {
+        "closes": [],
+        "delivers": [],
+        "excludes": [],
+        "title": "A retried op_id is deduplicated by its canonical params digest",
+        "todo": "78"
+      },
+      "descriptors": [],
+      "elapsed_ms": "108",
+      "failure": null,
+      "fixture": {
+        "accepted": "1",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "/home/devswha/workspace/ovis-terminal-wt/lane-t78/target/debug/conformance",
+            "fixture",
+            "--root",
+            "/tmp/ovc-3238718-0"
+          ],
+          "exit_code": 0,
+          "pid": "3246705",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "part-a/task-78",
+      "summary": "doc.set commits once; the identical retry under the same op_id replays the receipt and op.get shows it committed; one effect exists."
+    },
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": "kept",
+          "check": "reply[first]/result/value",
+          "expected": "kept",
+          "passed": true
+        },
+        {
+          "actual": [
+            "first"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "first"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "op_reused",
+          "check": "reply[changed]/error/data/kind",
+          "expected": "op_reused",
+          "passed": true
+        },
+        {
+          "actual": "01a19322-78b9-74ab-932f-046c6457803c",
+          "check": "reply[changed]/error/data/op_id",
+          "expected": "01a19322-78b9-74ab-932f-046c6457803c",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[changed]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "changed"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "changed"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "invalid_params",
+          "check": "reply[numeric]/error/data/kind",
+          "expected": "invalid_params",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[numeric]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "numeric"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "numeric"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "digest.json"
+          ],
+          "check": "effects/files",
+          "expected": [
+            "digest.json"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "kept",
+          "check": "effects/digest.json",
+          "expected": "kept",
+          "passed": true
+        },
+        {
+          "actual": "1794",
+          "check": "connection[client]/bytes_received=bytes_decoded",
+          "expected": "1794",
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "fixture/accepted",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": {},
+          "check": "fixture/failures",
+          "expected": {},
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "failure",
+      "connections": [
+        {
+          "bytes_decoded": "1794",
+          "bytes_received": "1794",
+          "bytes_sent": "695",
+          "name": "client",
+          "records_received": "4",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "3e4f75b1496cdeef268594c9e5c950eddab21258b939625391ff22c59422740b",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "1231",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "436504e9079ccf55106dbcd3025c0b8444bbae8f40069fcf8218d78581214827",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.keep\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"agent.register\",\"agent.get\",\"doc.get\",\"doc.set\",\"rpc.discover\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793469872312\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1",
+              "bytes": "153",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "f902e8ffd824ab9c4fc8ad198bfacf22784206ac4e4de9b3e763b1d98582683b",
+              "text": "{\"id\":\"first\",\"jsonrpc\":\"2.0\",\"method\":\"doc.set\",\"params\":{\"name\":\"digest\",\"op_id\":\"01a19322-78b9-74ab-932f-046c6457803c\",\"value\":\"kept\",\"version\":\"0\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "14",
+              "bytes": "73",
+              "direction": "received",
+              "offset": "1231",
+              "sha256": "33d8738d0b7236c8174b007e01df4a2e02b13610c5d7e883aef1392cd40792f4",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"first\",\"result\":{\"name\":\"digest\",\"value\":\"kept\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "14",
+              "bytes": "155",
+              "direction": "sent",
+              "offset": "387",
+              "sha256": "69432f57c137163c5decadbbae698aa13975ca8ee98dfad6956890229bd65f29",
+              "text": "{\"id\":\"changed\",\"jsonrpc\":\"2.0\",\"method\":\"doc.set\",\"params\":{\"name\":\"digest\",\"op_id\":\"01a19322-78b9-74ab-932f-046c6457803c\",\"value\":\"kepT\",\"version\":\"0\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "17",
+              "bytes": "257",
+              "direction": "received",
+              "offset": "1304",
+              "sha256": "e83149f71f54f308bde0f42f13396679ca369dced19f805037e3dd7d6d3b3511",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"changed\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"op_reused\",\"hint\":\"inspect the original operation; use a new identity only for new work\",\"retryable\":false,\"op_id\":\"01a19322-78b9-74ab-932f-046c6457803c\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "17",
+              "bytes": "153",
+              "direction": "sent",
+              "offset": "542",
+              "sha256": "09b0d4e49f066989e30e302c6fa3193f8f6d5519f395b9ad19072c9881983cf9",
+              "text": "{\"id\":\"numeric\",\"jsonrpc\":\"2.0\",\"method\":\"doc.set\",\"params\":{\"name\":\"digest\",\"op_id\":\"01a19322-78c9-759f-b303-2263818be92e\",\"value\":\"kepT\",\"version\":0}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "17",
+              "bytes": "233",
+              "direction": "received",
+              "offset": "1561",
+              "sha256": "3bd4e2bcf13461404ce7d7170ebbe1ac54e038d86e0d8c238811a885b0b1e422",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"numeric\",\"error\":{\"code\":-32602,\"message\":\"method parameters violate the closed schema\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"correct the method parameters\",\"retryable\":false,\"field_path\":\"params.version\"}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "4"
+        }
+      ],
+      "declared": {
+        "closes": [],
+        "delivers": [],
+        "excludes": [],
+        "title": "A retried op_id is deduplicated by its canonical params digest",
+        "todo": "78"
+      },
+      "descriptors": [],
+      "elapsed_ms": "103",
+      "failure": null,
+      "fixture": {
+        "accepted": "1",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "/home/devswha/workspace/ovis-terminal-wt/lane-t78/target/debug/conformance",
+            "fixture",
+            "--root",
+            "/tmp/ovc-3238718-1"
+          ],
+          "exit_code": 0,
+          "pid": "3247058",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "part-a/task-78",
+      "summary": "The same op_id with one changed byte is op_reused naming the original op; a numeric version is invalid_params; the effect keeps the first value."
+    }
+  ],
+  "elapsed_ms": "4731",
+  "error": null,
+  "format": "ovis-conformance-evidence/1",
+  "host": {
+    "arch": "x86_64",
+    "family": "unix",
+    "os": "linux"
+  },
+  "inventory": null,
+  "result": "passed",
+  "runner_version": "0.1.0",
+  "scenario": "part-a/task-78",
+  "totals": {
+    "assertions": "35",
+    "cases": "2",
+    "declared_only": "0",
+    "failed": "0",
+    "passed": "2",
+    "skipped": "0"
+  }
+}
