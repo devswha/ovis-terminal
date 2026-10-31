@@ -45,7 +45,7 @@ Observable outcomes the scenario asserts (raw request/response transcripts are i
   - An ordinary `input.send` returns `blocked` with `prompt_ids: ["p1","p2","p3"]`. The same send with `force: true` is `invalid_params` at `params.force`. `fixture.pty` reports `bytes: "0"`.
   - `prompt.answer` p1 v2 `{"choice":"yes"}` returns `state: answered`, `version: "3"`, `answer.delivery: event`, `answer.op_id` = the request's op id, with `closed_seq` and `answered_seq` present. `op.get` on that op id is `committed` with the same record.
   - p3 answered with text → `delivery: typed`, and `fixture.pty` becomes `"1"`.
-  - p2 answered with `"\u001b]7501;state=idle\u001b\\\r\nrm -rf ~\r\n"` stores that text verbatim. Status stays `report_seq "2"` / `idle`, and PTY bytes stay `"1"`.
+  - p2 answered with text holding an ESC-introduced OSC 7501 `state=idle` record, then CR LF and `rm -rf ~` (exact bytes: `conformance/scenarios/agent/prompts.json`, step `answer-p2`). The text is stored verbatim; status stays `report_seq "2"` / `idle`, and PTY bytes stay `"1"`.
   - With nothing open, the send echoes 2 bytes and PTY bytes become `"3"`.
 - **failure**
   - The stale version-1 answer (inject) gets `version_conflict`, `current_version "2"`.
