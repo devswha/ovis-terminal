@@ -131,6 +131,7 @@ impl JsonSchema for ErrorData {
                 "deadline_ms": generator.subschema_for::<super::scalar::DurationMs>(),
                 "elapsed_ms": generator.subschema_for::<super::scalar::DurationMs>(),
                 "candidates": generator.subschema_for::<Vec<crate::errors::TargetCandidate>>(),
+                "affected": generator.subschema_for::<Vec<TargetId>>(),
             },
             "required": ["kind", "hint", "retryable"],
         })

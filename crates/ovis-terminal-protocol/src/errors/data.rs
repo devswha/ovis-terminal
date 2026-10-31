@@ -35,6 +35,9 @@ pub struct ErrorData {
     /// Fully qualified alternatives for an ambiguous target.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub candidates: Vec<super::TargetCandidate>,
+    /// Every resource a refusal would touch or a partial effect already committed.
+    #[serde(default, skip_serializing_if = "<[TargetId]>::is_empty")]
+    pub affected: Box<[TargetId]>,
 }
 
 impl ErrorData {
@@ -49,6 +52,7 @@ impl ErrorData {
             deadline_ms: None,
             elapsed_ms: None,
             candidates: Vec::new(),
+            affected: Box::default(),
         }
     }
 

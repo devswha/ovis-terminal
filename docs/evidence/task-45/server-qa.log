@@ -1,0 +1,85 @@
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t45/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.56s
+────────────
+ Nextest run ID e1f57c31-2e61-49f1-81b1-d86170f6af47 with nextest profile: default
+    Starting 3 tests across 1 binary (14 tests skipped)
+       START [         ] (1/3) ovis-terminal-server::dispatch worktrees::failure_dirty_checkout_is_refused_with_its_identity_and_kept
+
+running 1 test
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","worktree.list","worktree.create","worktree.open","worktree.remove"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793459311439","version":"0.1.0"}}
+
+-> {"id":"list","jsonrpc":"2.0","method":"worktree.list","params":{"repository_id":"repo:main"}}
+<- {"jsonrpc":"2.0","id":"list","result":{"worktrees":[{"branch":"main","checkout_id":"checkout:01a19281-535d-739a-bc3d-077db337372f","dirty":false,"locked":false,"path":"/tmp/ovt14-01a19281-533b-7155-b8b7-baf87084ea8d/root/repo","repository_id":"repo:main","revision":"0","source":null,"workspaces":[]}]}}
+
+-> {"id":"create","jsonrpc":"2.0","method":"worktree.create","params":{"branch":"dirty","op_id":"01a19281-534f-7548-b2be-9380a4bafb0a","repository_id":"repo:main","source":"checkout:01a19281-535d-739a-bc3d-077db337372f"}}
+<- {"jsonrpc":"2.0","id":"create","result":{"affected_workspaces":[],"seq":"6","worktree":{"branch":"dirty","checkout_id":"checkout:01a19281-5394-740e-b3b0-7cea46dcd18a","dirty":false,"locked":false,"path":"/tmp/ovt14-01a19281-533b-7155-b8b7-baf87084ea8d/root/checkouts/dirty","repository_id":"repo:main","revision":"1","source":"checkout:01a19281-535d-739a-bc3d-077db337372f","workspaces":[]}}}
+
+-> {"id":"flat","jsonrpc":"2.0","method":"worktree.remove","params":{"checkout_id":"checkout:01a19281-5394-740e-b3b0-7cea46dcd18a","force":false,"group":false}}
+<- {"jsonrpc":"2.0","id":"flat","error":{"code":-32602,"message":"method parameters violate the closed schema","data":{"kind":"invalid_params","hint":"correct the method parameters","retryable":false,"field_path":"params.force"}}}
+
+-> {"id":"dirty","jsonrpc":"2.0","method":"worktree.remove","params":{"checkout_id":"checkout:01a19281-5394-740e-b3b0-7cea46dcd18a","op_id":"01a19281-534f-7548-b2be-938107d5364d","scope":{"force":false,"group":false}}}
+<- {"jsonrpc":"2.0","id":"dirty","error":{"code":-32000,"message":"operation failed","data":{"kind":"checkout_dirty","hint":"commit or discard the changes, or retry with force scope","retryable":false,"op_id":"01a19281-534f-7548-b2be-938107d5364d","affected":["checkout:01a19281-5394-740e-b3b0-7cea46dcd18a"]}}}
+
+-> {"id":"list","jsonrpc":"2.0","method":"worktree.list","params":{"repository_id":"repo:main"}}
+<- {"jsonrpc":"2.0","id":"list","result":{"worktrees":[{"branch":"main","checkout_id":"checkout:01a19281-535d-739a-bc3d-077db337372f","dirty":false,"locked":false,"path":"/tmp/ovt14-01a19281-533b-7155-b8b7-baf87084ea8d/root/repo","repository_id":"repo:main","revision":"0","source":null,"workspaces":[]},{"branch":"dirty","checkout_id":"checkout:01a19281-5394-740e-b3b0-7cea46dcd18a","dirty":true,"locked":false,"path":"/tmp/ovt14-01a19281-533b-7155-b8b7-baf87084ea8d/root/checkouts/dirty","repository_id":"repo:main","revision":"1","source":"checkout:01a19281-535d-739a-bc3d-077db337372f","workspaces":[]}]}}
+
+test worktrees::failure_dirty_checkout_is_refused_with_its_identity_and_kept ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 16 filtered out; finished in 0.18s
+
+        PASS [   0.193s] (1/3) ovis-terminal-server::dispatch worktrees::failure_dirty_checkout_is_refused_with_its_identity_and_kept
+       START [         ] (2/3) ovis-terminal-server::dispatch worktrees::happy_create_open_and_enumerated_group_removal
+
+running 1 test
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","worktree.list","worktree.create","worktree.open","worktree.remove"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793459311632","version":"0.1.0"}}
+
+-> {"id":"list","jsonrpc":"2.0","method":"worktree.list","params":{"repository_id":"repo:main"}}
+<- {"jsonrpc":"2.0","id":"list","result":{"worktrees":[{"branch":"main","checkout_id":"checkout:01a19281-541f-76df-bdbc-15aeea9ea1ca","dirty":false,"locked":false,"path":"/tmp/ovt14-01a19281-53fc-71b2-bde4-9ca044a8acca/root/repo","repository_id":"repo:main","revision":"0","source":null,"workspaces":[]}]}}
+
+-> {"id":"create","jsonrpc":"2.0","method":"worktree.create","params":{"branch":"feature/a","op_id":"01a19281-5410-72ee-aa13-262eb4fb6657","repository_id":"repo:main","source":"checkout:01a19281-541f-76df-bdbc-15aeea9ea1ca"}}
+<- {"jsonrpc":"2.0","id":"create","result":{"affected_workspaces":[],"seq":"6","worktree":{"branch":"feature/a","checkout_id":"checkout:01a19281-5456-77ee-a728-576e4a9cd555","dirty":false,"locked":false,"path":"/tmp/ovt14-01a19281-53fc-71b2-bde4-9ca044a8acca/root/checkouts/feature-a","repository_id":"repo:main","revision":"1","source":"checkout:01a19281-541f-76df-bdbc-15aeea9ea1ca","workspaces":[]}}}
+
+-> {"id":"open","jsonrpc":"2.0","method":"worktree.open","params":{"checkout_id":"checkout:01a19281-5456-77ee-a728-576e4a9cd555","op_id":"01a19281-5410-72ee-aa13-262f8ef4748d"}}
+<- {"jsonrpc":"2.0","id":"open","result":{"affected_workspaces":["workspace:1"],"seq":"10","worktree":{"branch":"feature/a","checkout_id":"checkout:01a19281-5456-77ee-a728-576e4a9cd555","dirty":false,"locked":false,"path":"/tmp/ovt14-01a19281-53fc-71b2-bde4-9ca044a8acca/root/checkouts/feature-a","repository_id":"repo:main","revision":"2","source":"checkout:01a19281-541f-76df-bdbc-15aeea9ea1ca","workspaces":["workspace:1"]}}}
+
+-> {"id":"narrow","jsonrpc":"2.0","method":"worktree.remove","params":{"checkout_id":"checkout:01a19281-5456-77ee-a728-576e4a9cd555","op_id":"01a19281-5410-72ee-aa13-263062a7abe5","scope":{"force":false,"group":false}}}
+<- {"jsonrpc":"2.0","id":"narrow","error":{"code":-32000,"message":"operation failed","data":{"kind":"scope_required","hint":"review the affected workspaces and retry with group scope","retryable":false,"op_id":"01a19281-5410-72ee-aa13-263062a7abe5","affected":["checkout:01a19281-5456-77ee-a728-576e4a9cd555","workspace:1"]}}}
+
+-> {"id":"op","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19281-5410-72ee-aa13-263062a7abe5"}}
+<- {"jsonrpc":"2.0","id":"op","result":{"error":{"affected":["checkout:01a19281-5456-77ee-a728-576e4a9cd555","workspace:1"],"hint":"review the affected workspaces and retry with group scope","kind":"scope_required","retryable":false},"method":"worktree.remove","op_id":"01a19281-5410-72ee-aa13-263062a7abe5","result":null,"state":"failed","updated_seq":"13"}}
+
+-> {"id":"group","jsonrpc":"2.0","method":"worktree.remove","params":{"checkout_id":"checkout:01a19281-5456-77ee-a728-576e4a9cd555","op_id":"01a19281-5410-72ee-aa13-26316a60ef20","scope":{"force":false,"group":true}}}
+<- {"jsonrpc":"2.0","id":"group","result":{"affected_workspaces":["workspace:1"],"seq":"16","worktree":{"branch":"feature/a","checkout_id":"checkout:01a19281-5456-77ee-a728-576e4a9cd555","dirty":false,"locked":false,"path":"/tmp/ovt14-01a19281-53fc-71b2-bde4-9ca044a8acca/root/checkouts/feature-a","repository_id":"repo:main","revision":"3","source":"checkout:01a19281-541f-76df-bdbc-15aeea9ea1ca","workspaces":[]}}}
+
+-> {"id":"after","jsonrpc":"2.0","method":"worktree.list","params":{"repository_id":"repo:main"}}
+<- {"jsonrpc":"2.0","id":"after","result":{"worktrees":[{"branch":"main","checkout_id":"checkout:01a19281-541f-76df-bdbc-15aeea9ea1ca","dirty":false,"locked":false,"path":"/tmp/ovt14-01a19281-53fc-71b2-bde4-9ca044a8acca/root/repo","repository_id":"repo:main","revision":"0","source":null,"workspaces":[]}]}}
+
+test worktrees::happy_create_open_and_enumerated_group_removal ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 16 filtered out; finished in 0.27s
+
+        PASS [   0.285s] (2/3) ovis-terminal-server::dispatch worktrees::happy_create_open_and_enumerated_group_removal
+       START [         ] (3/3) ovis-terminal-server::dispatch worktrees::op_cancel_kills_a_hung_create_and_reports_what_committed
+
+running 1 test
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","worktree.list","worktree.create","worktree.open","worktree.remove"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793459311936","version":"0.1.0"}}
+
+-> {"id":"list","jsonrpc":"2.0","method":"worktree.list","params":{"repository_id":"repo:main"}}
+<- {"jsonrpc":"2.0","id":"list","result":{"worktrees":[{"branch":"main","checkout_id":"checkout:01a19281-5551-71a2-8ce8-911306b5f785","dirty":false,"locked":false,"path":"/tmp/ovt14-01a19281-552d-746e-80d7-f56910c6216d/root/repo","repository_id":"repo:main","revision":"0","source":null,"workspaces":[]}]}}
+
+-> {"id":"slow","jsonrpc":"2.0","method":"worktree.create","params":{"branch":"partial","op_id":"01a19281-5556-769c-b2b1-efb6626dfc01","repository_id":"repo:main","source":"checkout:01a19281-5551-71a2-8ce8-911306b5f785"}}
+-> {"id":"cancel","jsonrpc":"2.0","method":"op.cancel","params":{"op_id":"01a19281-5556-769c-b2b1-efb6626dfc01"}}
+<- {"jsonrpc":"2.0","id":"cancel","result":{"error":null,"evidence":{"cancellation_requested":true,"exit":null,"incarnations":null,"intent":null,"terminal_id":null,"write":null},"method":"worktree.create","op_id":"01a19281-5556-769c-b2b1-efb6626dfc01","outcome":"pending","result":null,"state":"running","updated_seq":"6"}}
+
+<- {"jsonrpc":"2.0","id":"slow","error":{"code":-32000,"message":"operation failed","data":{"kind":"cancelled","hint":"inspect the affected resources; they were committed","retryable":false,"op_id":"01a19281-5556-769c-b2b1-efb6626dfc01","affected":["branch:partial","checkout:01a19281-55a1-74e2-94de-b7a21bef7fb7"]}}}
+
+-> {"id":"after","jsonrpc":"2.0","method":"worktree.list","params":{"repository_id":"repo:main"}}
+<- {"jsonrpc":"2.0","id":"after","result":{"worktrees":[{"branch":"main","checkout_id":"checkout:01a19281-5551-71a2-8ce8-911306b5f785","dirty":false,"locked":false,"path":"/tmp/ovt14-01a19281-552d-746e-80d7-f56910c6216d/root/repo","repository_id":"repo:main","revision":"0","source":null,"workspaces":[]},{"branch":"partial","checkout_id":"checkout:01a19281-55a1-74e2-94de-b7a21bef7fb7","dirty":false,"locked":false,"path":"/tmp/ovt14-01a19281-552d-746e-80d7-f56910c6216d/root/checkouts/partial","repository_id":"repo:main","revision":"1","source":"checkout:01a19281-5551-71a2-8ce8-911306b5f785","workspaces":[]}]}}
+
+test worktrees::op_cancel_kills_a_hung_create_and_reports_what_committed ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 16 filtered out; finished in 0.22s
+
+        PASS [   0.236s] (3/3) ovis-terminal-server::dispatch worktrees::op_cancel_kills_a_hung_create_and_reports_what_committed
+────────────
+     Summary [   0.715s] 3 tests run: 3 passed, 14 skipped
