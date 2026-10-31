@@ -26,12 +26,13 @@ struct ReadyLine {
     ready: Ready,
 }
 
-/// Where the fixture listens and the owner bearer it issued.
+/// Where the fixture listens, the owner bearer it issued and an observe-only bearer.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Ready {
     pub(crate) socket: PathBuf,
     pub(crate) bearer: String,
+    pub(crate) observer: String,
 }
 
 /// A running fixture process owned by one case.

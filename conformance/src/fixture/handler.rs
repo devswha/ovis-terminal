@@ -1,6 +1,7 @@
-//! The fixture's request handler: the real dispatcher plus two read-only protocol methods
-//! served directly, `rpc.discover` and paged `terminal.output`, and the fixture-only
-//! `fixture.transcript` provider write.
+//! The fixture's request handler: the real dispatcher plus methods served directly.
+//!
+//! Those are the read-only protocol methods `rpc.discover` and paged `terminal.output`,
+//! the fixture-only `fixture.transcript` provider write and `fixture.pty` input byte count.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -15,7 +16,9 @@ use ovis_terminal_server::conn::{Call, RequestHandler};
 use ovis_terminal_server::dispatch::Dispatcher;
 use serde_json::Value;
 
+use super::agents::Directory;
 use super::output;
+use super::prompts::Gate;
 use super::serve::at;
 use crate::error::RunnerError;
 
@@ -28,15 +31,27 @@ const DIRECT: [&str; 2] = ["rpc.discover", "terminal.output"];
 /// The provider-store stand-in; served but never advertised, since it is no catalog method.
 const PROVIDER_WRITE: &str = "fixture.transcript";
 
+/// The PTY stand-in's byte count; served but never advertised.
+const PTY_READ: &str = "fixture.pty";
+
 #[derive(Debug)]
 pub(crate) struct FixtureHandler {
     dispatch: Arc<Dispatch>,
     root: PathBuf,
+    pty: (Arc<Gate>, Arc<Directory>),
 }
 
 impl FixtureHandler {
-    pub(crate) const fn new(dispatch: Arc<Dispatch>, root: PathBuf) -> Self {
-        Self { dispatch, root }
+    pub(crate) const fn new(
+        dispatch: Arc<Dispatch>,
+        root: PathBuf,
+        pty: (Arc<Gate>, Arc<Directory>),
+    ) -> Self {
+        Self {
+            dispatch,
+            root,
+            pty,
+        }
     }
 
     /// Cancels and joins every dispatcher-owned operation task.
@@ -68,6 +83,7 @@ impl RequestHandler for FixtureHandler {
             "rpc.discover" => discover(&call.request),
             "terminal.output" => output::page(&call.request),
             PROVIDER_WRITE => super::transcripts::write(&self.root, &call.request),
+            PTY_READ => super::prompts::pty((&self.pty.0, &self.pty.1), &call.request),
             _ => self.dispatch.call(call).await,
         }
     }

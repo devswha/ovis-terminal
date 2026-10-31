@@ -4,7 +4,8 @@ use thiserror::Error;
 
 use super::{ErrorData, ErrorKind, FieldPath, JsonRpcCode, OpId, TargetId};
 use crate::domain::session_binding::HistoryHead;
-use crate::schema::scalar::ReportSeq;
+use crate::schema::ids::PromptId;
+use crate::schema::scalar::{RecordVersion, ReportSeq};
 
 /// Error raised while parsing, validating or correlating protocol records.
 #[derive(Debug, Error)]
@@ -213,6 +214,20 @@ impl BoundaryError {
     #[must_use]
     pub fn with_history(mut self, history: HistoryHead) -> Self {
         self.data_mut().history = Some(Box::new(history));
+        self
+    }
+
+    /// Adds the version a compare-and-swap record has now.
+    #[must_use]
+    pub fn with_current_version(mut self, current: RecordVersion) -> Self {
+        self.data_mut().current_version = Some(current);
+        self
+    }
+
+    /// Names the open prompts that block ordinary input.
+    #[must_use]
+    pub fn with_prompt_ids(mut self, prompt_ids: Vec<PromptId>) -> Self {
+        self.data_mut().prompt_ids = prompt_ids;
         self
     }
 

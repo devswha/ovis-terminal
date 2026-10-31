@@ -6,6 +6,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::agent_status::IngestCounters;
+pub use crate::domain::prompts::{AnswerDelivery, PromptAnswerReceipt};
 use crate::errors::OpId;
 use crate::schema::common::Target;
 use crate::schema::ids::{AgentId, LeaseId, ProcessToken, PromptId, TerminalId};
@@ -124,6 +125,17 @@ pub struct PromptChoice {
     pub label: String,
 }
 
+/// One field of a form prompt; a `fields` answer names only declared fields.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct PromptField {
+    /// Field name.
+    pub name: String,
+    /// Whether an answer must supply it.
+    pub required: bool,
+}
+
 /// Prompt definition a producer opens.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -135,6 +147,9 @@ pub struct PromptDefinition {
     pub text: String,
     /// Choices, for choice prompts.
     pub choices: Vec<PromptChoice>,
+    /// Fields, for form prompts.
+    #[serde(default)]
+    pub fields: Vec<PromptField>,
     /// Delivery mechanism.
     pub mechanism: PromptMechanism,
 }
@@ -151,18 +166,28 @@ pub struct PromptRecord {
     pub terminal_id: TerminalId,
     /// Program incarnation that opened it.
     pub process_incarnation: Incarnation,
+    /// Registered agent of that program, when one registered.
+    pub agent_id: Option<AgentId>,
+    /// Provider session of that agent, when declared.
+    pub session: Option<SessionRef>,
     /// Kind.
     pub kind: OpenEnum<PromptKind>,
     /// Question text.
     pub text: String,
     /// Choices, for choice prompts.
     pub choices: Vec<PromptChoice>,
+    /// Fields, for form prompts.
+    pub fields: Vec<PromptField>,
     /// Delivery mechanism.
     pub mechanism: OpenEnum<PromptMechanism>,
     /// State.
     pub state: OpenEnum<PromptState>,
     /// Sequence of the opening event.
     pub opened_seq: EventSeq,
+    /// Sequence of the closing event, once closed.
+    pub closed_seq: Option<EventSeq>,
+    /// The accepted answer, once answered.
+    pub answer: Option<PromptAnswerReceipt>,
 }
 
 /// Parameters of `prompt.open`.
@@ -176,6 +201,9 @@ pub struct PromptOpenParams {
     pub target: Target,
     /// Token handed to the program at spawn.
     pub process_token: ProcessToken,
+    /// The program's own identity for the prompt; naming an open prompt it owns
+    /// republishes it at the next version.
+    pub prompt_id: Option<PromptId>,
     /// Definition.
     pub prompt: PromptDefinition,
 }
