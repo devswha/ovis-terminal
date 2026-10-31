@@ -110,7 +110,7 @@ Gates:
 - `bash scripts/check.sh` exit 0 (fmt, clippy `-D warnings` on the workspace, nextest 705/705, doc tests, hygiene 0 violations, manifests, json).
 - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exit 0.
 - The streams socket suite was repeated 25 times locally with 25 passes.
-- macOS stress job `streams` added at the end of `.github/workflows/probe-stress-macos.yml`.
+- macOS stress: the `streams` option and job (50 iterations of `--test streams` plus `streams::` unit tests) were committed in 54c18a9 and dispatched from this branch: https://github.com/devswha/ovis-terminal/actions/runs/41226681019. The shared workflow file was then restored to its base content, because integration's edits to the same options line make the PR conflict and a conflicting PR gets no CI. The job block to union-append is in 54c18a9 (`git show 54c18a9 -- .github/workflows/probe-stress-macos.yml`).
 
 ## Adversarial
 
