@@ -28,7 +28,7 @@ Workspace w1 from an earlier herdr run reappeared after a server restart, but th
   - `admit_relaunch` allows only a proven loss or restored metadata; otherwise it returns `recovering` / `not_lost` / `not_found`.
   - `evidence` feeds the `server.metrics` recovery list, and `incidents` reads the journal without clearing it.
 - `conformance/scenarios/recovery/crash.json` (declared) plus its `declared.json` entry.
-- `.github/workflows/probe-stress-macos.yml`: appended the `recovery` option and job at the end (26 jobs / 26 options, YAML parses).
+- macOS stress: the `recovery` option and job are appended at the end of `.github/workflows/probe-stress-macos.yml` (26 jobs / 26 options, YAML parses) in commit aff08e3, kept on branch `lane/t49-stress`. Integration has since added other lanes' jobs to the same lists, which made this PR CONFLICTING. Because lanes never run `git merge`, commit 7e9a584 restores the merge-base workflow file here so CI can run, and the orchestrator unions the `recovery` block from aff08e3.
 
 ## After
 
@@ -78,7 +78,7 @@ The acceptance criterion "exit 0 with failed:0, skipped:0" for `recovery/crash` 
 
 - Happy: the crash test above, plus `a_damaged_checkpoint_is_quarantined_and_a_repeated_recovery_reaches_the_same_verdict`.
 - Failure: the isolation decode test and the unreachable dedicated holder test above.
-- macOS stress: `probe-stress-macos.yml` `recovery` job, 25 iterations; run URL in the PR comments once dispatched.
+- macOS stress: `gh workflow run probe-stress-macos.yml --ref lane/t49-recover-holders-checkpoints -f probe=recovery` (25 iterations of the recovery tests), run https://github.com/devswha/ovis-terminal/actions/runs/41250874516.
 
 ## Adversarial
 
