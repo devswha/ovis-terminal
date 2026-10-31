@@ -106,7 +106,7 @@ Mutation check (run locally, then reverted):
 - Forcing `input_ready()` to `Ok` fails `failure`, `happy`, and two model tests.
 - Disabling supersede fails the storm and unchanged tests.
 
-macOS: `probe-stress-macos.yml` gains the option `geometry` and a job running `--test geometry` 100 times (appended at the end of both lists). Run: STRESS_RUN_URL.
+macOS: `probe-stress-macos.yml` gains the option `geometry` and a job running `--test geometry` 100 times (appended at the end of both lists). Run: https://github.com/devswha/ovis-terminal/actions/runs/41235004014 (dispatched on this branch; result recorded below when finished).
 
 ## Adversarial
 
@@ -132,6 +132,8 @@ macOS: `probe-stress-macos.yml` gains the option `geometry` and a job running `-
 - Tests reuse `src/input/sequencer/qa/fixture.rs` read-only via `#[path]`.
 
 ## Risks
+
+- **PR status: CONFLICTING (no pull_request CI yet).** `git merge-tree HEAD origin/integration` reports exactly one conflict, in `.github/workflows/probe-stress-macos.yml`: todo 78's `ops-digest` and this lane's `geometry` option/job were both appended at the end of the same lists. Resolution is the orchestrator's union merge; this lane does not merge (hard process rule).
 
 - origin/integration moved to `b1c68ef` (todo 78) after dispatch. No merge was done in this lane, per the hard process rule. The only overlapping file is `.github/workflows/probe-stress-macos.yml` (append-only union).
 - After a control restart the controller starts at a caller-supplied epoch. Todo 48 must pass the holder's applied epoch, or the holder answers `stale_geometry`.
