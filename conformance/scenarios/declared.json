@@ -152,6 +152,11 @@
       "reason": "The named-pipe listener (ovis-terminal-server listen::pipe), the Windows service host (ovis-terminal-holder service::windows) and the service verbs exist, but the todo-21 runner's fixture serves only a Unix socket and its isolated environment clears the variables a Windows pipe name and service need, so a windows-only case would be skipped on every runner it has; terminal.run, attach and leases over the pipe are served only once todo 31 assembles the binary. Covered meanwhile by the native Windows tests in the descriptor, run by ci.yml on windows-2025 and by the windows-service job of probe-stress-macos.yml with a CI-owned service account; todo 60 runs this scenario in Windows smoke CI."
     },
     {
+      "file": "recovery/crash.json",
+      "owner_todo": "49",
+      "reason": "Crash recovery (ovis_terminal_core::recovery::recover) and its admission lane (dispatch::lanes::recovery) exist, but no served binary runs recovery at an unplanned boot or registers terminal.run until todo 31 assembles it, and the runner's only fixture (todo 21) holds no holder-owned program and cannot kill and restart its own core; todo 52 composes the fault-injection scenario over real endpoints. Covered meanwhile by the real-holder socket tests in recovery::qa, lanes::recovery and domain::recovery."
+    },
+    {
       "file": "recovery/restart.json",
       "owner_todo": "48",
       "reason": "server.restart and server.stop are routed by dispatch::lanes::restart over ovis_terminal_core::restart::Control, but no served binary registers the lane or replaces its listener at the restart boundary until todo 31 assembles it, and the runner's only fixture (todo 21) holds no holder-owned program and asserts server.stop is unserved. Covered meanwhile by the real-holder core tests (restart) and the real-socket lane tests (lanes::restart)."

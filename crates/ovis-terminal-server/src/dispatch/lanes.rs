@@ -8,6 +8,7 @@ pub mod machine_identity;
 pub mod plugins;
 pub mod prompt_bridge;
 pub mod prompts;
+pub mod recovery;
 #[cfg(unix)]
 pub mod restart;
 
