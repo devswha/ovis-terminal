@@ -17,7 +17,6 @@ use ovis_terminal_core::registry::{
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use serde_json::Value;
-use tokio::net::unix::pipe;
 use tokio::task::JoinHandle;
 
 use super::TestResult;
@@ -124,9 +123,11 @@ impl Remote {
                 ))
             })
             .await??;
+            // Blocking reads see the FIFO's end of file on every platform; kqueue readiness
+            // on a Darwin FIFO did not report it once the relay exited.
             let stream = tokio::io::join(
-                pipe::Receiver::from_file(from_local)?,
-                pipe::Sender::from_file(to_local)?,
+                tokio::fs::File::from_std(from_local),
+                tokio::fs::File::from_std(to_local),
             );
             let admission = EndpointPolicy::new(LocalAccount::Unix(UnixUid::new(0)))
                 .admit(&PeerEvidence::Remote(RemoteTransport::Ssh));
