@@ -9,8 +9,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use ovis_terminal_agent::status::{Ingested, OscOutput, ProcessOwner, StatusService};
 use ovis_terminal_authz::{Action, ResolvedTarget, Session, TargetResource};
-use ovis_terminal_core::events::Coordinator;
-use ovis_terminal_core::ops::OperationProducer;
+use ovis_terminal_core::events::{Coordinator, EventError};
+use ovis_terminal_core::ops::{Completion, OperationProducer};
 use ovis_terminal_core::registry::{
     MachineRuntime, ResourceName, ResourceTarget, ResourceTargetKey, RuntimeIdentity, TargetIndex,
     TargetRequest, TargetResolutionError, TerminalGeneration, TerminalId,
@@ -28,6 +28,7 @@ use ovis_terminal_vt::{Geometry, HistoryLimit, Vt, VtConfig};
 use serde_json::{Value, json};
 
 use super::handler::{Dispatch, Event};
+use super::prompts::Gate;
 use super::serve::at;
 use crate::error::RunnerError;
 
@@ -104,8 +105,10 @@ impl TerminalDirectory for Directory {
 ///
 /// This stands in for a PTY until the input path is assembled (todos 28-31); it applies
 /// no lease, encoding or submission semantics and returns the echo, not an input receipt.
+/// A program blocked on an open prompt or a `blocked` report receives nothing.
 #[derive(Debug)]
 pub(crate) struct EchoProgram {
+    gate: Arc<Gate>,
     service: Arc<StatusService>,
     core: Arc<Core>,
     directory: Arc<Directory>,
@@ -132,12 +135,13 @@ fn directory(runtime: RuntimeIdentity) -> Result<Directory, RunnerError> {
 /// The status service and terminal directory other agent lanes share.
 pub(crate) type AgentParts = (Arc<StatusService>, Arc<Directory>);
 
-/// Registers the agent status methods and the echoing programs, binding their tokens.
+/// Registers the agent status methods and the echoing programs, binding their tokens;
+/// the returned gate holds the prompts that block those programs' input.
 pub(crate) fn register(
     dispatch: &mut Dispatch,
     runtime: RuntimeIdentity,
     core: Arc<Core>,
-) -> Result<AgentParts, RunnerError> {
+) -> Result<(AgentParts, Arc<Gate>), RunnerError> {
     let service = Arc::new(StatusService::new(runtime.runtime_id()));
     for (id, _, token) in TERMINALS {
         let terminal = TerminalId::try_from(id).map_err(at("build a terminal id"))?;
@@ -165,15 +169,17 @@ pub(crate) fn register(
     dispatch
         .register(ClearStatus::new(&lane))
         .map_err(at("register status.clear"))?;
+    let gate = Gate::new(runtime, &service);
     dispatch
         .register(EchoProgram {
+            gate: Arc::clone(&gate),
             service: Arc::clone(&service),
             core,
             directory: Arc::clone(&directory),
             screens: Arc::new(Mutex::new(BTreeMap::new())),
         })
         .map_err(at("register input.send"))?;
-    Ok((service, directory))
+    Ok(((service, directory), gate))
 }
 
 fn echo(program: &EchoProgram, terminal: TerminalId, text: &str) -> Result<Value, DispatchError> {
@@ -207,6 +213,11 @@ fn echo(program: &EchoProgram, terminal: TerminalId, text: &str) -> Result<Value
             _ => "ignored",
         });
     }
+    program
+        .gate
+        .pty
+        .wrote(terminal, text.len())
+        .map_err(|error| DispatchError::Io(std::io::Error::other(error)))?;
     Ok(json!({ "echoed_bytes": text.len().to_string(), "osc_records": ingested }))
 }
 
@@ -238,7 +249,22 @@ impl Method<Event, OperationProducer> for EchoProgram {
             return Err(DispatchError::Registration);
         };
         let terminal = *terminal;
+        let (gate, core) = (Arc::clone(&self.gate), Arc::clone(&self.core));
+        let admitted = tokio::task::spawn_blocking(move || {
+            core.read_view(|snapshot| {
+                Ok::<_, EventError>(gate.prompts.admission(snapshot, terminal))
+            })
+        })
+        .await?
+        .map_err(|error| DispatchError::Io(std::io::Error::other(error)))?;
+        if let Err(blocked) = admitted {
+            let refusal = blocked.error_data();
+            return execution
+                .commit_unit(move |_| Ok(Completion::failed(refusal)))
+                .await;
+        }
         let program = Self {
+            gate: Arc::clone(&self.gate),
             service: Arc::clone(&self.service),
             core: Arc::clone(&self.core),
             directory: Arc::clone(&self.directory),

@@ -87,9 +87,19 @@
       "reason": "Free-form descriptor written by todo 25 before the runner existed; it runs once its steps are rewritten as ovis-conformance/1 over RPC routes wired by todos 23, 25 and 28-31 (real-binary serving lands with todo 31)."
     },
     {
+      "file": "part-a/task-26.json",
+      "owner_todo": "26",
+      "reason": "ovis_terminal_core::geometry (resize admission under the geometry lease, ordered geometry.changed/checkpoint/input_ready commits, coalescing, repaint, focus) is a core seam no RPC route serves yet: attach.resize/release_geometry/focus/repaint reach it when todo 31 assembles the attach routes with the holder link (todo 31 is blocked by this todo). Until then the behavior runs as cargo nextest run -p ovis-terminal-core --test geometry (happy on a real holder PTY running unmodified bash; failure on the real authority, lease table and coordinator)."
+    },
+    {
       "file": "part-a/task-27.json",
       "owner_todo": "27",
       "reason": "ovis_terminal_core::waits is a core seam that no RPC route serves yet: terminal.wait_output, turn.wait, events.wait and input.interrupt are wired to it by todos 28-31 (real-binary serving lands with todo 31). Until then the behavior runs as cargo nextest run -p ovis-terminal-core --test waits (happy/failure on a real holder PTY)."
+    },
+    {
+      "file": "part-a/task-28.json",
+      "owner_todo": "28",
+      "reason": "ovis_terminal_server::ws::serve_websocket serves any RequestHandler over ws:// and is proven against the local socket by crates/ovis-terminal-server/tests/ws.rs; the todo-21 runner speaks only the Unix endpoint through the ovis-terminal bridge, its fixture opens no WebSocket listener and registers no attach routes, and no served binary binds a WebSocket endpoint until todo 31 assembles the server."
     },
     {
       "file": "part-a/task-3.json",
@@ -135,6 +145,11 @@
       "file": "platform/conpty.json",
       "owner_todo": "53",
       "reason": "The ConPTY terminal (ovis-terminal-holder windows::ConptyTerminal) and terminal.run admission (lanes::conpty::admit/spawn) exist, but no served binary routes terminal.run to them: todo 54 serves named pipes and the Windows service host that owns ConPTY holders, todo 31 assembles the served terminal.run, and the todo-21 runner's fixture serves only a Unix socket, so a windows-only case would be skipped on every runner it has. Covered meanwhile by the native Windows tests listed in the descriptor, run by ci.yml on windows-2025; todo 60 runs this scenario in Windows smoke CI."
+    },
+    {
+      "file": "platform/windows-service.json",
+      "owner_todo": "54",
+      "reason": "The named-pipe listener (ovis-terminal-server listen::pipe), the Windows service host (ovis-terminal-holder service::windows) and the service verbs exist, but the todo-21 runner's fixture serves only a Unix socket and its isolated environment clears the variables a Windows pipe name and service need, so a windows-only case would be skipped on every runner it has; terminal.run, attach and leases over the pipe are served only once todo 31 assembles the binary. Covered meanwhile by the native Windows tests in the descriptor, run by ci.yml on windows-2025 and by the windows-service job of probe-stress-macos.yml with a CI-owned service account; todo 60 runs this scenario in Windows smoke CI."
     },
     {
       "file": "remote/identity.json",

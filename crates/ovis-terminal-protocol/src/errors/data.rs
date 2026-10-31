@@ -6,7 +6,8 @@ use super::bound::ExceededBound;
 use super::identity::{FieldPath, OpId, TargetId};
 use super::kinds::ErrorKind;
 use crate::domain::session_binding::HistoryHead;
-use crate::schema::scalar::{DurationMs, QueuePosition, ReportSeq};
+use crate::schema::ids::PromptId;
+use crate::schema::scalar::{DurationMs, QueuePosition, RecordVersion, ReportSeq};
 
 /// Machine-readable context attached to a boundary failure.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -52,6 +53,12 @@ pub struct ErrorData {
     /// Current history identity and revision, present on a `history_changed` refusal.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub history: Option<Box<HistoryHead>>,
+    /// Current version of the record, present on a `version_conflict` refusal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_version: Option<RecordVersion>,
+    /// Open prompts a `blocked` refusal names as the way through.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prompt_ids: Vec<PromptId>,
 }
 
 impl ErrorData {
@@ -71,6 +78,8 @@ impl ErrorData {
             queued_position: None,
             bound: None,
             history: None,
+            current_version: None,
+            prompt_ids: Vec::new(),
         }
     }
 

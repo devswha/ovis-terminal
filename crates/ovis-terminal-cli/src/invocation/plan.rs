@@ -27,8 +27,8 @@ pub(super) enum Plan {
     Status,
     Call(RpcRequest),
     NeedsTarget,
-    #[cfg(unix)]
-    Service(crate::service::unix::ServiceCommand),
+    #[cfg(any(unix, windows))]
+    Service(crate::service::ServiceCommand),
 }
 
 /// Builds a request and proves its params decode as the method's closed type `P`.
@@ -101,7 +101,7 @@ pub(super) fn plan(cli: Cli) -> Result<Plan, CliError> {
             &json!({ "op_id": args.op_id }),
         )?),
         Command::Call(args) => Plan::Call(call(args)?),
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         Command::Service(command) => Plan::Service(command),
     })
 }

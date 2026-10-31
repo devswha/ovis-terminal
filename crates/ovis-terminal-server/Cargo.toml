@@ -25,9 +25,11 @@ ovis-terminal-remote = { workspace = true }
 ovis-terminal-store = { workspace = true }
 ovis-terminal-vt = { workspace = true }
 base64 = { workspace = true }
+httparse = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 schemars = { workspace = true }
+sha1 = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
@@ -35,6 +37,11 @@ uuid = { workspace = true }
 # SO_NOSIGPIPE through a safe API; the version tokio already resolves.
 [target.'cfg(target_vendor = "apple")'.dependencies]
 socket2 = { version = "0.6", features = ["all"] }
+
+# The anonymous-client test of the pipe listener (plan todo 54); the version
+# Cargo.lock already resolves.
+[target.'cfg(windows)'.dev-dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Threading"] }
 
 [dev-dependencies]
 proptest = { workspace = true }

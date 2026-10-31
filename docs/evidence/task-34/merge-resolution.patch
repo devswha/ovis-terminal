@@ -1,0 +1,390 @@
+diff --git a/.github/workflows/probe-stress-macos.yml b/.github/workflows/probe-stress-macos.yml
+index daac510..695c82d 100644
+--- a/.github/workflows/probe-stress-macos.yml
++++ b/.github/workflows/probe-stress-macos.yml
+@@ -7,7 +7,7 @@ on:
+         description: Stress selection
+         type: choice
+         default: platform
+-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission]
++        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, prompts]
+ 
+ permissions:
+   contents: read
+@@ -689,3 +689,37 @@ jobs:
+           name: ops-admission-stress-macos-${{ github.run_id }}
+           path: ops-admission-stress-macos.log
+           if-no-files-found: error
++
++  prompts:
++    if: inputs.probe == 'prompts'
++    runs-on: macos-latest
++    timeout-minutes: 60
++    steps:
++      - uses: actions/checkout@v4
++      - uses: dtolnay/rust-toolchain@1.99.1
++      - uses: Swatinem/rust-cache@v2
++      - uses: taiki-e/install-action@nextest
++      - name: repeat prompt tests and scenario 25 times
++        shell: bash
++        run: |
++          set -euo pipefail
++          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
++          {
++            uname -a
++            rustc --version
++            git rev-parse HEAD
++            for iteration in $(seq 1 25); do
++              printf '\nITERATION %s/25\n' "$iteration"
++              cargo nextest run -p ovis-terminal-agent --locked --no-tests=fail -E 'test(prompts::)'
++              cargo nextest run -p ovis-terminal-server --test dispatch --locked --no-tests=fail -E 'test(prompts::)'
++              cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/prompts --isolated --case all --evidence "prompts-$iteration.json"
++              printf 'PASS %s/25\n' "$iteration"
++            done
++            printf 'RESULT 25/25\n'
++          } 2>&1 | tee prompts-stress-macos.log
++      - uses: actions/upload-artifact@v4
++        if: always()
++        with:
++          name: prompts-stress-macos-${{ github.run_id }}
++          path: prompts-stress-macos.log
++          if-no-files-found: error
+diff --git a/conformance/src/runner_tests/suite.rs b/conformance/src/runner_tests/suite.rs
+index 8c5d4e3..c00523a 100644
+--- a/conformance/src/runner_tests/suite.rs
++++ b/conformance/src/runner_tests/suite.rs
+@@ -6,9 +6,10 @@ use serde_json::Value;
+ 
+ use super::support::{TestResult, Tree, conformance, field, scenario, strings};
+ 
+-const EXECUTABLE: [&str; 15] = [
++const EXECUTABLE: [&str; 16] = [
+     "_runner/self-test.json",
+     "agent/binding.json",
++    "agent/prompts.json",
+     "agent/status.json",
+     "all/all.json",
+     "part-a/task-21.json",
+diff --git a/crates/ovis-terminal-protocol/src/errors/boundary.rs b/crates/ovis-terminal-protocol/src/errors/boundary.rs
+index 8d513fc..49a5c53 100644
+--- a/crates/ovis-terminal-protocol/src/errors/boundary.rs
++++ b/crates/ovis-terminal-protocol/src/errors/boundary.rs
+@@ -4,7 +4,8 @@ use thiserror::Error;
+ 
+ use super::{ErrorData, ErrorKind, ExceededBound, FieldPath, JsonRpcCode, OpId, TargetId};
+ use crate::domain::session_binding::HistoryHead;
+-use crate::schema::scalar::{QueuePosition, ReportSeq};
++use crate::schema::ids::PromptId;
++use crate::schema::scalar::{QueuePosition, RecordVersion, ReportSeq};
+ 
+ /// Error raised while parsing, validating or correlating protocol records.
+ #[derive(Debug, Error)]
+@@ -230,6 +231,20 @@ impl BoundaryError {
+         self
+     }
+ 
++    /// Adds the version a compare-and-swap record has now.
++    #[must_use]
++    pub fn with_current_version(mut self, current: RecordVersion) -> Self {
++        self.data_mut().current_version = Some(current);
++        self
++    }
++
++    /// Names the open prompts that block ordinary input.
++    #[must_use]
++    pub fn with_prompt_ids(mut self, prompt_ids: Vec<PromptId>) -> Self {
++        self.data_mut().prompt_ids = prompt_ids;
++        self
++    }
++
+     /// Adds an operation identity when effects may have begun.
+     #[must_use]
+     pub fn with_op_id(mut self, op_id: OpId) -> Self {
+diff --git a/crates/ovis-terminal-protocol/src/errors/data.rs b/crates/ovis-terminal-protocol/src/errors/data.rs
+index bc01759..86cdd56 100644
+--- a/crates/ovis-terminal-protocol/src/errors/data.rs
++++ b/crates/ovis-terminal-protocol/src/errors/data.rs
+@@ -6,7 +6,8 @@ use super::bound::ExceededBound;
+ use super::identity::{FieldPath, OpId, TargetId};
+ use super::kinds::ErrorKind;
+ use crate::domain::session_binding::HistoryHead;
+-use crate::schema::scalar::{DurationMs, QueuePosition, ReportSeq};
++use crate::schema::ids::PromptId;
++use crate::schema::scalar::{DurationMs, QueuePosition, RecordVersion, ReportSeq};
+ 
+ /// Machine-readable context attached to a boundary failure.
+ #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+@@ -52,6 +53,12 @@ pub struct ErrorData {
+     /// Current history identity and revision, present on a `history_changed` refusal.
+     #[serde(default, skip_serializing_if = "Option::is_none")]
+     pub history: Option<Box<HistoryHead>>,
++    /// Current version of the record, present on a `version_conflict` refusal.
++    #[serde(default, skip_serializing_if = "Option::is_none")]
++    pub current_version: Option<RecordVersion>,
++    /// Open prompts a `blocked` refusal names as the way through.
++    #[serde(default, skip_serializing_if = "Vec::is_empty")]
++    pub prompt_ids: Vec<PromptId>,
+ }
+ 
+ impl ErrorData {
+@@ -71,6 +78,8 @@ impl ErrorData {
+             queued_position: None,
+             bound: None,
+             history: None,
++            current_version: None,
++            prompt_ids: Vec::new(),
+         }
+     }
+ 
+diff --git a/schema/ovis-terminal.openrpc.json b/schema/ovis-terminal.openrpc.json
+index d9e2476..1a0778d 100644
+--- a/schema/ovis-terminal.openrpc.json
++++ b/schema/ovis-terminal.openrpc.json
+@@ -562,6 +562,26 @@
+         ],
+         "type": "object"
+       },
++      "AnswerDelivery": {
++        "description": "How an accepted answer reached the program.",
++        "oneOf": [
++          {
++            "const": "typed",
++            "description": "Admitted as typed input through the terminal's input path.",
++            "type": "string"
++          },
++          {
++            "const": "event",
++            "description": "Published as the prompt's closing event.",
++            "type": "string"
++          },
++          {
++            "const": "extension",
++            "description": "Published for the program's in-process extension.",
++            "type": "string"
++          }
++        ]
++      },
+       "AttachControl": {
+         "description": "Params of the `attach.control` notification.",
+         "properties": {
+@@ -1849,6 +1869,9 @@
+           "current_seq": {
+             "$ref": "#/components/schemas/ReportSeq"
+           },
++          "current_version": {
++            "$ref": "#/components/schemas/RecordVersion"
++          },
+           "deadline_ms": {
+             "$ref": "#/components/schemas/DurationMs"
+           },
+@@ -1871,6 +1894,12 @@
+           "op_id": {
+             "$ref": "#/components/schemas/OpId"
+           },
++          "prompt_ids": {
++            "items": {
++              "$ref": "#/components/schemas/PromptId"
++            },
++            "type": "array"
++          },
+           "queued_position": {
+             "$ref": "#/components/schemas/QueuePosition"
+           },
+@@ -5798,6 +5827,35 @@
+         ],
+         "type": "object"
+       },
++      "PromptAnswerReceipt": {
++        "description": "The accepted answer of a prompt and the operation that committed it.",
++        "properties": {
++          "answer": {
++            "$ref": "#/components/schemas/PromptAnswer",
++            "description": "The answer, kept as data."
++          },
++          "answered_seq": {
++            "$ref": "#/components/schemas/EventSeq",
++            "description": "Sequence of the closing event."
++          },
++          "delivery": {
++            "$ref": "#/components/schemas/AnswerDelivery",
++            "description": "How it was delivered.",
++            "x-ovis-open-enum": true
++          },
++          "op_id": {
++            "$ref": "#/components/schemas/OpId",
++            "description": "Operation that answered; a retry with it returns this receipt."
++          }
++        },
++        "required": [
++          "op_id",
++          "answer",
++          "delivery",
++          "answered_seq"
++        ],
++        "type": "object"
++      },
+       "PromptChoice": {
+         "additionalProperties": false,
+         "description": "One answer choice.",
+@@ -5877,6 +5935,14 @@
+             },
+             "type": "array"
+           },
++          "fields": {
++            "default": [],
++            "description": "Fields, for form prompts.",
++            "items": {
++              "$ref": "#/components/schemas/PromptField"
++            },
++            "type": "array"
++          },
+           "kind": {
+             "$ref": "#/components/schemas/PromptKind",
+             "description": "Kind."
+@@ -5898,6 +5964,25 @@
+         ],
+         "type": "object"
+       },
++      "PromptField": {
++        "additionalProperties": false,
++        "description": "One field of a form prompt; a `fields` answer names only declared fields.",
++        "properties": {
++          "name": {
++            "description": "Field name.",
++            "type": "string"
++          },
++          "required": {
++            "description": "Whether an answer must supply it.",
++            "type": "boolean"
++          }
++        },
++        "required": [
++          "name",
++          "required"
++        ],
++        "type": "object"
++      },
+       "PromptGetParams": {
+         "additionalProperties": false,
+         "description": "Parameters of `prompt.get`.",
+@@ -6026,6 +6111,17 @@
+             "$ref": "#/components/schemas/PromptDefinition",
+             "description": "Definition."
+           },
++          "prompt_id": {
++            "anyOf": [
++              {
++                "$ref": "#/components/schemas/PromptId"
++              },
++              {
++                "type": "null"
++              }
++            ],
++            "description": "The program's own identity for the prompt; naming an open prompt it owns\nrepublishes it at the next version."
++          },
+           "target": {
+             "$ref": "#/components/schemas/Target",
+             "description": "Terminal."
+@@ -6042,6 +6138,28 @@
+       "PromptRecord": {
+         "description": "Versioned prompt record.",
+         "properties": {
++          "agent_id": {
++            "anyOf": [
++              {
++                "$ref": "#/components/schemas/AgentId"
++              },
++              {
++                "type": "null"
++              }
++            ],
++            "description": "Registered agent of that program, when one registered."
++          },
++          "answer": {
++            "anyOf": [
++              {
++                "$ref": "#/components/schemas/PromptAnswerReceipt"
++              },
++              {
++                "type": "null"
++              }
++            ],
++            "description": "The accepted answer, once answered."
++          },
+           "choices": {
+             "description": "Choices, for choice prompts.",
+             "items": {
+@@ -6049,6 +6167,24 @@
+             },
+             "type": "array"
+           },
++          "closed_seq": {
++            "anyOf": [
++              {
++                "$ref": "#/components/schemas/EventSeq"
++              },
++              {
++                "type": "null"
++              }
++            ],
++            "description": "Sequence of the closing event, once closed."
++          },
++          "fields": {
++            "description": "Fields, for form prompts.",
++            "items": {
++              "$ref": "#/components/schemas/PromptField"
++            },
++            "type": "array"
++          },
+           "kind": {
+             "$ref": "#/components/schemas/PromptKind",
+             "description": "Kind.",
+@@ -6071,6 +6207,17 @@
+             "$ref": "#/components/schemas/PromptId",
+             "description": "Prompt identity."
+           },
++          "session": {
++            "anyOf": [
++              {
++                "$ref": "#/components/schemas/SessionRef"
++              },
++              {
++                "type": "null"
++              }
++            ],
++            "description": "Provider session of that agent, when declared."
++          },
+           "state": {
+             "$ref": "#/components/schemas/PromptState",
+             "description": "State.",
+@@ -6097,6 +6244,7 @@
+           "kind",
+           "text",
+           "choices",
++          "fields",
+           "mechanism",
+           "state",
+           "opened_seq"
+@@ -15231,6 +15379,21 @@
+             "description": "Definition."
+           }
+         },
++        {
++          "name": "prompt_id",
++          "required": false,
++          "schema": {
++            "anyOf": [
++              {
++                "$ref": "#/components/schemas/PromptId"
++              },
++              {
++                "type": "null"
++              }
++            ],
++            "description": "The program's own identity for the prompt; naming an open prompt it owns\nrepublishes it at the next version."
++          }
++        },
+         {
+           "name": "target",
+           "required": true,
+
