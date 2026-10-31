@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection]
 
 permissions:
   contents: read
@@ -688,4 +688,34 @@ jobs:
         with:
           name: ops-admission-stress-macos-${{ github.run_id }}
           path: ops-admission-stress-macos.log
+          if-no-files-found: error
+  connection:
+    if: inputs.probe == 'connection'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat server connection tests 200 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 200); do
+              printf '\nITERATION %s/200\n' "$iteration"
+              cargo nextest run -p ovis-terminal-server --test connection --locked --no-tests=fail
+              printf 'PASS %s/200\n' "$iteration"
+            done
+            printf 'RESULT 200/200\n'
+          } 2>&1 | tee connection-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: connection-stress-macos-${{ github.run_id }}
+          path: connection-stress-macos.log
           if-no-files-found: error
