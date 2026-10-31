@@ -5,98 +5,16 @@
 //! binary fails the test; it is never skipped.
 #![cfg(unix)]
 
-use std::error::Error;
-use std::path::{Path, PathBuf};
-use std::process::Output;
+use std::path::Path;
 
 use serde_json::Value;
 
-type TestResult<T = ()> = Result<T, Box<dyn Error>>;
+#[path = "runner_tests/suite.rs"]
+mod suite;
+#[path = "runner_tests/support.rs"]
+pub mod support;
 
-fn binary() -> TestResult<PathBuf> {
-    let runner = Path::new(env!("CARGO_BIN_EXE_conformance"));
-    let path = std::env::var_os("OVIS_TERMINAL_BINARY")
-        .map_or_else(|| runner.with_file_name("ovis-terminal"), PathBuf::from);
-    if path.is_file() {
-        Ok(path)
-    } else {
-        Err(format!(
-            "{} is missing: cargo build -p ovis-terminal-cli",
-            path.display()
-        )
-        .into())
-    }
-}
-
-struct Ran {
-    output: Output,
-    evidence: Value,
-}
-
-impl Ran {
-    /// The summary line plus every failed case's typed failure and failed assertions.
-    fn explain(&self) -> String {
-        let mut lines = vec![String::from_utf8_lossy(&self.output.stdout).into_owned()];
-        let cases = self.evidence.pointer("/cases").and_then(Value::as_array);
-        for case in cases.into_iter().flatten() {
-            if field(case, "/outcome") == "passed" {
-                continue;
-            }
-            let (scenario, name) = (field(case, "/scenario"), field(case, "/case"));
-            lines.push(format!("{scenario} {name}: {}", field(case, "/failure")));
-            let assertions = field(case, "/assertions").as_array().into_iter().flatten();
-            lines.extend(
-                assertions
-                    .filter(|assertion| field(assertion, "/passed") != true)
-                    .map(|failed| format!("  {failed}")),
-            );
-        }
-        lines.join("\n")
-    }
-}
-
-fn field<'a>(value: &'a Value, pointer: &str) -> &'a Value {
-    value.pointer(pointer).unwrap_or(&Value::Null)
-}
-
-fn conformance(scenario: &str, case: &str, extra: &[&str]) -> TestResult<Ran> {
-    let dir = std::env::temp_dir().join(format!(
-        "ovc-test-{}-{}-{case}",
-        std::process::id(),
-        scenario.replace('/', "-")
-    ));
-    std::fs::create_dir_all(&dir)?;
-    let evidence = dir.join(format!("{case}.json"));
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_conformance"))
-        .arg("--binary")
-        .arg(binary()?)
-        .args([
-            "--scenario",
-            scenario,
-            "--isolated",
-            "--case",
-            case,
-            "--evidence",
-        ])
-        .arg(&evidence)
-        .args(extra)
-        .output()?;
-    let evidence = std::fs::read(&evidence).map_or(Value::Null, |bytes| {
-        serde_json::from_slice(&bytes).unwrap_or(Value::Null)
-    });
-    std::fs::remove_dir_all(&dir)?;
-    Ok(Ran { output, evidence })
-}
-
-fn assertion<'a>(evidence: &'a Value, check: &str) -> Option<&'a Value> {
-    evidence
-        .pointer("/cases")?
-        .as_array()?
-        .iter()
-        .filter_map(|case| case.get("assertions")?.as_array())
-        .flatten()
-        .find(|assertion| assertion.get("check").and_then(Value::as_str) == Some(check))
-}
+use support::{TestResult, assertion, binary, conformance, field};
 
 /// One bridge connection carries interleaved requests whose replies match by id, the
 /// held request answers after later ones, and every received byte is decoded.
@@ -237,33 +155,6 @@ fn runner_self_test_detects_its_own_failure_modes() -> TestResult {
                 field(a, "/check") == "expect_failure/kind" && field(a, "/actual/kind") == kind
             });
         assert!(detected, "self-test did not observe {kind}");
-    }
-    Ok(())
-}
-
-/// Every registered scenario runs, with no failure and no skip.
-#[test]
-fn every_registered_scenario_passes_with_no_skips() -> TestResult {
-    let ran = conformance("all/all", "all", &["--require-no-skips"])?;
-    assert_eq!(ran.output.status.code(), Some(0), "{}", ran.explain());
-    let evidence = &ran.evidence;
-    assert_eq!(field(evidence, "/totals/skipped"), "0");
-    let scenarios: std::collections::BTreeSet<&str> = field(evidence, "/cases")
-        .as_array()
-        .ok_or("cases")?
-        .iter()
-        .filter_map(|case| field(case, "/scenario").as_str())
-        .collect();
-    for required in [
-        "protocol/multiplex",
-        "protocol/strict-target",
-        "protocol/fragmentation",
-        "protocol/discovery",
-        "protocol/deadline",
-        "protocol/pagination",
-        "_runner/self-test",
-    ] {
-        assert!(scenarios.contains(required), "{required} did not run");
     }
     Ok(())
 }

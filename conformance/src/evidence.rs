@@ -45,8 +45,11 @@ pub(crate) struct Evidence {
     pub(crate) case: &'static str,
     pub(crate) result: Outcome,
     pub(crate) totals: Totals,
-    /// Why nothing ran: a missing scenario or binary, or a declaration-only file.
+    /// Why the run failed as a whole: a missing scenario or binary, an invalid or unlisted
+    /// scenario file, a stale allowlist entry, or declarations under `--require-no-skips`.
     pub(crate) error: Option<Failure>,
+    /// For a suite: every file under the scenario root, classified.
+    pub(crate) inventory: Option<crate::scenario::inventory::Inventory>,
     pub(crate) elapsed_ms: Decimal,
     pub(crate) cases: Vec<CaseReport>,
 }
@@ -90,6 +93,8 @@ pub(crate) struct Totals {
     pub(crate) passed: Decimal,
     pub(crate) failed: Decimal,
     pub(crate) skipped: Decimal,
+    /// Declaration files the suite found and did not execute.
+    pub(crate) declared_only: Decimal,
     pub(crate) assertions: Decimal,
 }
 
@@ -103,6 +108,7 @@ impl Totals {
             passed: count(Outcome::Passed),
             failed: count(Outcome::Failed),
             skipped: count(Outcome::Skipped),
+            declared_only: Decimal(0),
             assertions: Decimal::from_usize(cases.iter().map(|case| case.assertions.len()).sum()),
         }
     }

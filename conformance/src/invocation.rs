@@ -1,6 +1,5 @@
 //! One runner invocation: plan, run every case, write the evidence, choose the exit status.
 
-use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -15,6 +14,8 @@ use crate::evidence::{
     BinaryRecord, CaseReport, Evidence, Failure, Host, Outcome, Totals, sha256_hex,
 };
 use crate::ids::{CaseName, Decimal, ScenarioId};
+use crate::report::{summary, transcript, write_evidence};
+use crate::scenario::inventory::Inventory;
 use crate::scenario::load::{Repo, plan};
 
 const USAGE_EXIT: u8 = 2;
@@ -27,6 +28,7 @@ struct Invocation {
     evidence: PathBuf,
     require_no_skips: bool,
     manual_transcript: bool,
+    scenario_root: Option<PathBuf>,
 }
 
 impl Invocation {
@@ -53,6 +55,7 @@ impl Invocation {
             evidence,
             require_no_skips: cli.require_no_skips,
             manual_transcript: cli.manual_transcript,
+            scenario_root: cli.scenario_root,
         })
     }
 }
@@ -88,15 +91,35 @@ pub(crate) async fn main(cli: Cli) -> ExitCode {
             return ExitCode::from(USAGE_EXIT);
         }
     };
-    let (binary, cases, error) = match prepare(&invocation).await {
-        Ok((binary, cases)) => (Some(binary), cases, None),
-        Err(error) => (None, Vec::new(), Some(top_failure(&error))),
+    let (binary, cases, inventory, error) = match prepare(&invocation).await {
+        Ok(Prepared {
+            binary,
+            cases,
+            inventory,
+        }) => {
+            let declared = inventory
+                .as_ref()
+                .map_or(0, |inventory| inventory.declared_only.len());
+            let problem = inventory.as_ref().and_then(Inventory::problem).or_else(|| {
+                (invocation.require_no_skips && declared > 0)
+                    .then_some(RunnerError::DeclaredOnly { count: declared })
+            });
+            (
+                Some(binary),
+                cases,
+                inventory,
+                problem.as_ref().map(top_failure),
+            )
+        }
+        Err(error) => (None, Vec::new(), None, Some(top_failure(&error))),
     };
-    let totals = Totals::of(&cases);
-    let failed = error.is_some()
-        || cases.is_empty()
-        || totals.failed.0 > 0
-        || (invocation.require_no_skips && totals.skipped.0 > 0);
+    let mut totals = Totals::of(&cases);
+    totals.declared_only = Decimal::from_usize(
+        inventory
+            .as_ref()
+            .map_or(0, |inventory| inventory.declared_only.len()),
+    );
+    let failed = failed(error.as_ref(), &totals, invocation.require_no_skips);
     let evidence = Evidence {
         format: "ovis-conformance-evidence/1",
         runner_version: env!("CARGO_PKG_VERSION"),
@@ -111,6 +134,7 @@ pub(crate) async fn main(cli: Cli) -> ExitCode {
         },
         totals,
         error,
+        inventory,
         elapsed_ms: Decimal(u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX)),
         cases,
     };
@@ -134,75 +158,49 @@ pub(crate) async fn main(cli: Cli) -> ExitCode {
     }
 }
 
-async fn prepare(invocation: &Invocation) -> Result<(BinaryRecord, Vec<CaseReport>), RunnerError> {
+/// The run fails on any top-level error, no case at all, any failed case, or, with
+/// `--require-no-skips`, any skipped case.
+const fn failed(error: Option<&Failure>, totals: &Totals, require_no_skips: bool) -> bool {
+    error.is_some()
+        || totals.cases.0 == 0
+        || totals.failed.0 > 0
+        || (require_no_skips && totals.skipped.0 > 0)
+}
+
+struct Prepared {
+    binary: BinaryRecord,
+    cases: Vec<CaseReport>,
+    inventory: Option<Inventory>,
+}
+
+async fn prepare(invocation: &Invocation) -> Result<Prepared, RunnerError> {
     let binary = binary_record(&invocation.binary)?;
     let runner = std::env::current_exe().map_err(|source| RunnerError::Io {
         operation: "locate the runner executable",
         source,
     })?;
+    let repo = invocation
+        .scenario_root
+        .as_ref()
+        .map_or_else(Repo::of_build, |dir| {
+            Repo::of_build().with_scenarios(dir.clone())
+        });
     let ctx = Context {
-        repo: Repo::of_build(),
+        repo,
         binary: invocation.binary.clone(),
         runner,
     };
     let planned = plan(&ctx.repo, &invocation.scenario, invocation.case)?;
-    let mut cases = Vec::with_capacity(planned.len());
-    for case in &planned {
+    let mut cases = Vec::with_capacity(planned.cases.len());
+    for case in &planned.cases {
         cases.push(run_case(&ctx, case).await);
     }
-    Ok((binary, cases))
+    Ok(Prepared {
+        binary,
+        cases,
+        inventory: planned.inventory,
+    })
 }
 
-fn write_evidence(path: &std::path::Path, evidence: &Evidence) -> Result<(), RunnerError> {
-    let io = |source| RunnerError::Io {
-        operation: "write the evidence file",
-        source,
-    };
-    if let Some(parent) = path
-        .parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-    {
-        std::fs::create_dir_all(parent).map_err(io)?;
-    }
-    let bytes = serde_json::to_vec_pretty(evidence)?;
-    std::fs::write(path, bytes).map_err(io)
-}
-
-fn summary(value: &serde_json::Value) {
-    let mut stdout = std::io::stdout().lock();
-    if writeln!(stdout, "{value}").is_err() {
-        drop(writeln!(
-            std::io::stderr().lock(),
-            "conformance: stdout is closed"
-        ));
-    }
-}
-
-fn transcript(cases: &[CaseReport]) {
-    let mut stderr = std::io::stderr().lock();
-    for case in cases {
-        for conn in &case.connections {
-            for record in &conn.transcript {
-                let direction = match record.direction {
-                    crate::evidence::Direction::Sent => ">>",
-                    crate::evidence::Direction::Received => "<<",
-                };
-                let text = record.text.as_deref().unwrap_or("<elided: see sha256>");
-                let line = writeln!(
-                    stderr,
-                    "{}/{} {} {direction} @{} {}B {}: {}",
-                    case.scenario,
-                    case.case.as_str(),
-                    conn.name,
-                    record.offset.0,
-                    record.bytes.0,
-                    record.unit,
-                    text.trim_end()
-                );
-                if line.is_err() {
-                    return;
-                }
-            }
-        }
-    }
-}
+#[cfg(test)]
+mod tests;

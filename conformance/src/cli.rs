@@ -37,6 +37,9 @@ pub(crate) struct Cli {
     /// Also print every connection transcript to stderr for manual inspection.
     #[arg(long)]
     pub(crate) manual_transcript: bool,
+    /// Read scenarios from this directory instead of `conformance/scenarios`.
+    #[arg(long)]
+    pub(crate) scenario_root: Option<PathBuf>,
 }
 
 #[derive(Debug, Subcommand)]

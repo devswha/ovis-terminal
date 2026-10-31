@@ -6,7 +6,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::Deserialize;
 
 use crate::ids::ScenarioId;
-use crate::scenario::load::{Repo, registered};
+use crate::scenario::inventory::take;
+use crate::scenario::load::Repo;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -104,7 +105,7 @@ fn every_ledger_id_is_mapped_exactly_once_to_known_todos() -> TestResult {
 #[test]
 fn every_registered_scenario_is_listed_under_each_id_it_declares() -> TestResult {
     let map = load()?;
-    let files = registered(&Repo::of_build())?;
+    let (_, files) = take(&Repo::of_build())?;
     assert!(!files.is_empty());
     for file in files {
         let declared = file

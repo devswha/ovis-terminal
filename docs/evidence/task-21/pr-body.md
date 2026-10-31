@@ -68,6 +68,14 @@ DEFERRED VERIFICATION (runner lands in Todo 21): this PR is that runner. `part-a
 - **Transports.** A connection goes through the binary's `ovis-terminal connect` bridge or through the runner's own socket, for exact write segmentation.
 - **Scenarios.** Scenarios are closed JSON (`deny_unknown_fields`; unknown matcher operators are refused). A file is executable only with `"format": "ovis-conformance/1"`; files without it are declarations and are reported as `scenario_not_executable`.
 
+## Round 2 (gate review B1, B2)
+
+- **B1, no file is dropped.** `all/all` now classifies every file under the scenario root as `executed` (format marker and loads), `declared_only` (a JSON file with no `format` key), or `invalid` (misspelled marker, a name outside the id grammar, a non-JSON file, a parse or schema error). `invalid` is `scenario_invalid` with the file path and always fails the run. Declarations must be listed in `conformance/scenarios/declared.json` (`{file, owner_todo, reason}`; 22 entries, `part-a/task-{1..20,24,32}.json`, each owner equal to the file's own `todo`). A declaration missing from the list fails with `declaration_unlisted`. An entry whose file became executable, vanished or changed owner fails with `declaration_stale`. `--require-no-skips` fails with `declared_only_present` while the list is non-empty; the F3 final wave empties it. The evidence carries `inventory {executed, declared_only, invalid, unlisted, stale}` and `totals.declared_only`.
+- **B2, the runner's exit is guarded.** The verdict is `invocation::failed`, and the case outcome is `engine::run::case_outcome`. A purpose-built failing scenario in a temp scenario root (`--scenario-root`) must give process exit 1, `result: failed` and `totals.failed: "1"`.
+- **M4.** A transport read error is `io`, never end of stream.
+- **Mutants re-run (`docs/evidence/task-21/mutants-r2.log`).** M2 (drop `|| totals.failed.0 > 0`) is killed by `any_failed_case_error_empty_run_or_required_skip_fails_the_run` and `a_failing_case_fails_the_process`. M5 (`... && false` in the case outcome) is killed by `a_failed_assertion_or_a_failure_fails_the_case` and `a_failing_case_fails_the_process`. M4 (`.unwrap_or(0)` on the read) is killed by `a_read_error_is_a_typed_io_failure_and_only_a_clean_end_is_end_of_stream`.
+- **Reviewer's B1 probe replayed (`docs/evidence/task-21/b1-probe.log`).** With `protocol/zztypo.json` (marker `ovis-conformance/l`) and `protocol/Zz_Bad.json` added, `all/all --require-no-skips` exits 1 with `scenario_invalid`, and both files are listed in `inventory.invalid`. The probe files were deleted afterwards.
+
 ## Descriptor rule
 
 Every key the runner reads from a scenario or fixture file is in one of three classes. There is no fourth class, and no key is read and then ignored.
@@ -92,8 +100,8 @@ Shared, language-neutral fixtures:
 
 | Command | Exit | What is asserted |
 |---|---|---|
-| `bash scripts/check.sh` (on the final PR head, which includes origin/integration ef1d8c1) | 0 | fmt, clippy `-D warnings` on the workspace, nextest `523 passed, 1 skipped` (the skip is pre-existing, outside this crate), doctests, hygiene (250 LOC / 3 params), manifests, JSON |
-| `cargo nextest run -p ovis-terminal-conformance --all-targets` | 0 | 18 tests: 12 unit, 6 process (below) |
+| `bash scripts/check.sh` (on the final PR head, which includes origin/integration ef1d8c1) | 0 | fmt, clippy `-D warnings` on the workspace, nextest `529 passed, 1 skipped` (the skip is pre-existing, outside this crate), doctests, hygiene (250 LOC / 3 params), manifests, JSON |
+| `cargo nextest run -p ovis-terminal-conformance --all-targets` | 0 | 24 tests: 15 unit, 9 process (below) |
 | `cargo clippy -p ovis-terminal-conformance --all-targets -- -D warnings` | 0 | |
 | `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` | 0 | Windows compile with no warnings. On the earlier head 5bf6fd2 the same Windows-target clippy reproduced the 11 CI errors (unused `fixture::output` items, a never-constructed `RunnerError::Fixture`, 2 needless `async`, 1 needless `mut`) |
 
@@ -105,7 +113,10 @@ Process tests (`conformance/src/runner_tests.rs`, which run the real runner bina
 - `a_missing_scenario_fails_and_a_declaration_is_not_executable`: exit 1 with `scenario_missing`, and exit 1 with `scenario_not_executable` for `part-a/task-5`.
 - `a_run_without_isolation_is_a_usage_error_before_anything_starts`: exit 2, `isolation_required`, and no evidence file is created.
 - `runner_self_test_detects_its_own_failure_modes`: `_runner/self-test` exits 0, and its evidence shows that `expect_failure` observed `assertion_failed` and `timeout`.
-- `every_registered_scenario_passes_with_no_skips`: `all/all --require-no-skips` exits 0 with `skipped == "0"`, and every protocol scenario plus `_runner/self-test` ran.
+- `every_scenario_file_is_executed_or_a_listed_declaration`: `all/all` without `--require-no-skips` exits 0. The report's `inventory.executed` equals the 9 executable files exactly. Its `inventory.declared_only` equals `declared.json`'s entries exactly. `invalid`, `unlisted` and `stale` are empty, `totals.declared_only` is the list length, `totals.skipped` is "0", and every executable non-suite scenario ran.
+- `require_no_skips_fails_while_declarations_remain`: `all/all --require-no-skips` exits 1 with `result: failed` and `error.kind: declared_only_present`.
+- `a_failing_case_fails_the_process`: a purpose-built scenario (`run --version` expecting exit 3) in a temp `--scenario-root` exits 1, with `result: failed`, `totals.failed: "1"`, case `outcome: failed` and `failure.kind: assertion_failed`. The same scenario expecting exit 0 exits 0.
+- `invalid_unlisted_and_stale_files_fail_the_suite`: a temp scenario root holding a misspelled marker, a `Zz_Bad` name, a `.txt` file, an unlisted declaration and a stale allowlist entry exits 1 with `scenario_invalid`. Each appears in its `inventory` list, and the one valid scenario still ran and passed.
 
 Unit tests:
 - `ids`: u64::MAX decimal round trip, and rejection of numeric, leading-zero, negative, overflowing and empty forms.
@@ -114,6 +125,7 @@ Unit tests:
 - Matcher: every operator both holds and fails; unknown and mixed operators are refused.
 - Wire fixtures: every fixture decodes as declared at every single split point and bytewise through `ovis_terminal_protocol::wire::FrameDecoder`, and errors keep their kind. A wire entry with both or neither outcome is refused, and so is an entry carrying an undeclared `summary` key.
 - Rejection fixture: `descriptors` is accepted and recorded, while a top-level `summary` or a misspelled case key (`feild_path`) is refused. A proptest decodes the coalesced valid fixtures identically under arbitrary segmentation.
+- Verdict and outcome: `invocation::tests::any_failed_case_error_empty_run_or_required_skip_fails_the_run`; `engine::run::tests::a_failed_assertion_or_a_failure_fails_the_case`; `engine::conn::tests::a_read_error_is_a_typed_io_failure_and_only_a_clean_end_is_end_of_stream`.
 - Pagination: the largest allowed page fits one frame, one byte more is `frame_too_large`, and a numeric offset is `invalid_params`.
 - Traceability: the id sets equal the table rows of `ideal-state.md` and `gap-list.md`; every id has owners in todos 1..70 and at least one scenario, with no repeats. Every registered scenario's declared `delivers`/`closes`/`excludes` ids list that scenario and its todo.
 
@@ -123,7 +135,10 @@ What each scenario checks over the socket:
 - **protocol/deadline**: a held mutation gets `deadline_exceeded` with `op_id`, `deadline_ms` "10000" and `elapsed_ms` >= "10000", while the unrelated `doc.get` sent after it on the same connection is answered first. `op.get` reports `accepted`, and `op.cancel` returns `cancelled_before_commit` with no effect. Cancelling committed work returns `already_committed` with the retained result; an unknown op is `not_found`.
 - **protocol/pagination**: through the bridge on a framed connection, 8 MiB `terminal.output` pages reassemble 67108864 bytes. Their SHA-256 equals a digest computed independently (in Python) and pinned in the scenario, every reply record is at most 16 MiB, and the run ends on an empty page at `next_offset`. Asking for the whole 64 MiB at once is `frame_too_large`.
 
-macOS stress: `gh workflow run probe-stress-macos.yml --ref lane/t21-conformance-runner -f probe=conformance` runs 25 iterations of the package tests: https://github.com/devswha/ovis-terminal/actions/runs/41201714418 (its result is recorded in `docs/evidence/task-21/README.md` once it finishes).
+macOS stress: `gh workflow run probe-stress-macos.yml --ref lane/t21-conformance-runner -f probe=conformance` runs 25 iterations of the package tests.
+- https://github.com/devswha/ovis-terminal/actions/runs/41203118363: success, RESULT 25/25, on fcf71d3.
+- https://github.com/devswha/ovis-terminal/actions/runs/41201714418: success, RESULT 25/25, on da3388c.
+- A run on this round's head is recorded in `docs/evidence/task-21/README.md`.
 
 ## Adversarial
 
@@ -153,8 +168,11 @@ macOS stress: `gh workflow run probe-stress-macos.yml --ref lane/t21-conformance
 ## Risks
 
 - **The server is a fixture, not the assembled binary.** The binary under test (`ovis-terminal`) has no serve command before todo 31. In this PR the binary is exercised as the client and bridge (`connect`, `--json schema`, `--json call`). The server side is the real server crate, dispatcher and store hosted by the fixture process. The fixture's `doc.*` and `terminal.keep` are effect stand-ins registered through `Dispatcher::register`, not the document or terminal services. Real-binary server conformance remains todo 31's assembly gate.
-- **Dispatcher race, found by this runner (todo 14 code; not fixed here).** An `op.cancel` that arrives before an admitted operation's durable `accept` returns `not_found` and never signals the in-flight task, which then runs to `deadline_exceeded`. It was reproduced over the socket before the barrier was added. The scenarios now await `$/fixture/held` (sent by the held method after accept) before inspecting or cancelling, so they are deterministic and do not mask the behavior. A follow-up is needed for the todo 14 owner.
-- **Hello counter form (todo 13 code; not fixed here).** The hello result carries `"event_replay_events":10000` as a JSON number, against the decimal-string rule. It is visible in the transcripts.
-- **`terminal.output` has no `total` field.** Its result has `next_offset`/`floor_offset`/`gap` but no explicit total, which IDEAL-007 asks for; the pagination scenario therefore ends on an empty page. This is a schema follow-up for the protocol owner.
+- **Landed-code defects found by this runner and the gate review (not fixed here; each with its owning follow-up):**
+  1. `op.cancel` before an admitted operation's durable accept returns `not_found` and never signals the in-flight task, which then runs to `deadline_exceeded` (dispatcher, todo 14 code). Reproduced over the socket. The scenarios await `$/fixture/held`, which is sent after accept, so they stay deterministic without masking the defect. Follow-up: todo 77.
+  2. `hello.limits.event_replay_events` (10000) is a JSON number, not a decimal string (todo 13 code). Follow-up: todo 22.
+  3. `hello.limits.history_lines` (100000) is a JSON number (todo 13 code). Follow-up: todo 22.
+  4. `hello.limits.max_in_flight_requests` (64) is a JSON number (todo 13 code). Follow-up: todo 22.
+  5. `terminal.output`'s result has no `total` field (`data_b64/from_offset/next_offset/floor_offset/gap` only), which IDEAL-007 asks for. The pagination scenario therefore ends on an empty page. Follow-up: todo 23.
 - **Windows.** The runner compiles and lints clean for Windows. Its fixture listener is Unix-only, so the modules that exist only to serve it (`fixture::{documents, handler, output, serve, terminals}`) carry the same module-level `#[cfg(unix)]` as their caller. Off Unix, the fixture mode returns `RunnerError::Fixture { stage: "bind a listener", source: Unsupported }`, and a `socket` connection returns `unsupported_platform`; both are already-settled futures, not empty `async fn`s. The scenarios declare linux and macos only, and the process tests are `#![cfg(unix)]`. A named-pipe fixture transport belongs with todo 54. There are no lint attributes.
 - **Process tests need the built binary.** They need `target/debug/ovis-terminal` (or `$OVIS_TERMINAL_BINARY`). A workspace test run builds it; a missing binary fails the test, it is never skipped.

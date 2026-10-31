@@ -9,6 +9,7 @@ use crate::error::RunnerError;
 use crate::evidence::{CaseReport, Failure, Outcome};
 use crate::ids::Decimal;
 use crate::scenario::load::PlannedCase;
+use crate::scenario::matcher::Assertion;
 use crate::scenario::model::Platform;
 
 /// Bound on one case, including fixture start and every step.
@@ -37,6 +38,15 @@ fn report(planned: &PlannedCase, outcome: Outcome, failure: Option<Failure>) -> 
         processes: Vec::new(),
         fixture: None,
         elapsed_ms: Decimal(0),
+    }
+}
+
+/// A case passes only with no failure and every assertion held.
+fn case_outcome(failure: Option<&Failure>, assertions: &[Assertion]) -> Outcome {
+    if failure.is_some() || assertions.iter().any(|assertion| !assertion.passed) {
+        Outcome::Failed
+    } else {
+        Outcome::Passed
     }
 }
 
@@ -86,9 +96,7 @@ pub(crate) async fn run_case(ctx: &Context, planned: &PlannedCase) -> CaseReport
     let none = (first.is_none() && session.assertions.is_empty())
         .then(|| failure(&RunnerError::NoAssertions, None));
     case.failure = first.or(none);
-    if case.failure.is_some() || session.assertions.iter().any(|assertion| !assertion.passed) {
-        case.outcome = Outcome::Failed;
-    }
+    case.outcome = case_outcome(case.failure.as_ref(), &session.assertions);
     case.assertions = std::mem::take(&mut session.assertions);
     case.descriptors = std::mem::take(&mut session.descriptors);
     case.connections = std::mem::take(&mut session.connections);
@@ -96,4 +104,41 @@ pub(crate) async fn run_case(ctx: &Context, planned: &PlannedCase) -> CaseReport
     case.fixture = session.fixture_report.take();
     case.elapsed_ms = Decimal(u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX));
     case
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::{case_outcome, failure};
+    use crate::error::RunnerError;
+    use crate::evidence::Outcome;
+    use crate::scenario::matcher::Assertion;
+
+    #[test]
+    fn a_failed_assertion_or_a_failure_fails_the_case() {
+        let held = Assertion::equal("held".to_owned(), json!(1), json!(1));
+        let broken = Assertion::equal("broken".to_owned(), json!(1), json!(2));
+        assert_eq!(
+            case_outcome(None, std::slice::from_ref(&held)),
+            Outcome::Passed
+        );
+        assert_eq!(
+            case_outcome(None, &[held.clone(), broken]),
+            Outcome::Failed,
+            "a failed assertion fails the case"
+        );
+        let timeout = failure(
+            &RunnerError::Timeout {
+                waiting_for: "a record",
+                bound_ms: 1,
+            },
+            Some(0),
+        );
+        assert_eq!(
+            case_outcome(Some(&timeout), &[held]),
+            Outcome::Failed,
+            "a failure fails the case"
+        );
+    }
 }

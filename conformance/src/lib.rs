@@ -13,6 +13,7 @@ pub mod evidence;
 pub mod fixture;
 pub mod ids;
 pub mod invocation;
+pub mod report;
 pub mod scenario;
 #[cfg(test)]
 mod traceability;

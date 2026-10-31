@@ -34,6 +34,18 @@ pub(crate) enum RunnerError {
         #[source]
         source: serde_json::Error,
     },
+    /// A file under the scenario root is neither executable nor a declaration.
+    #[error("{file} under the scenario root is invalid: {detail}")]
+    ScenarioFileInvalid { file: String, detail: String },
+    /// A declaration file is missing from `declared.json`.
+    #[error("{file} is a declaration that declared.json does not list")]
+    DeclarationUnlisted { file: String },
+    /// A `declared.json` entry no longer names a declaration with that owner.
+    #[error("declared.json lists {file}, which is no longer a declaration with that owner")]
+    DeclarationStale { file: String },
+    /// `--require-no-skips` was given while declarations remain unexecuted.
+    #[error("{count} declaration files are not executed")]
+    DeclaredOnly { count: usize },
     /// A scenario's declared identity, cases or includes are inconsistent.
     #[error("{scenario} is inconsistent: {detail}")]
     ScenarioInconsistent {
@@ -117,7 +129,10 @@ impl RunnerError {
             Self::BinaryMissing { .. } => "binary_missing",
             Self::ScenarioMissing { .. } => "scenario_missing",
             Self::ScenarioNotExecutable { .. } => "scenario_not_executable",
-            Self::ScenarioInvalid { .. } => "scenario_invalid",
+            Self::ScenarioInvalid { .. } | Self::ScenarioFileInvalid { .. } => "scenario_invalid",
+            Self::DeclarationUnlisted { .. } => "declaration_unlisted",
+            Self::DeclarationStale { .. } => "declaration_stale",
+            Self::DeclaredOnly { .. } => "declared_only_present",
             Self::ScenarioInconsistent { .. } => "scenario_inconsistent",
             Self::CaseMissing { .. } => "case_missing",
             Self::NoAssertions => "no_assertions",
@@ -150,8 +165,17 @@ impl RunnerError {
             Self::ScenarioNotExecutable { .. } => {
                 "register the scenario with \"format\": \"ovis-conformance/1\" and typed steps"
             }
-            Self::ScenarioInvalid { .. } | Self::ScenarioInconsistent { .. } => {
+            Self::ScenarioInvalid { .. }
+            | Self::ScenarioFileInvalid { .. }
+            | Self::ScenarioInconsistent { .. } => {
                 "fix the scenario file; unknown keys are never ignored"
+            }
+            Self::DeclarationUnlisted { .. } => {
+                "list the declaration in declared.json with its owning todo, or register it"
+            }
+            Self::DeclarationStale { .. } => "remove or correct the declared.json entry",
+            Self::DeclaredOnly { .. } => {
+                "register the remaining declarations; declared.json must be empty"
             }
             Self::CaseMissing { .. } => "request a case the scenario declares, or --case all",
             Self::NoAssertions => "add at least one expectation to the case",

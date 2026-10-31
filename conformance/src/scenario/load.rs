@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
+use super::inventory::{Inventory, take};
 use super::model::{Case, FORMAT, Platform, ScenarioFile, Step};
 use crate::error::RunnerError;
 use crate::evidence::Declared;
@@ -15,15 +16,30 @@ const MAX_INCLUDE_DEPTH: usize = 4;
 #[derive(Debug, Clone)]
 pub(crate) struct Repo {
     root: PathBuf,
+    scenarios: PathBuf,
 }
 
 impl Repo {
     /// The checkout containing this crate.
     pub(crate) fn of_build() -> Self {
         let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let root = manifest.parent().unwrap_or(manifest).to_path_buf();
         Self {
-            root: manifest.parent().unwrap_or(manifest).to_path_buf(),
+            scenarios: root.join("conformance").join("scenarios"),
+            root,
         }
+    }
+
+    /// The same checkout with scenarios read from `dir` instead of `conformance/scenarios`.
+    pub(crate) fn with_scenarios(self, dir: PathBuf) -> Self {
+        Self {
+            scenarios: dir,
+            ..self
+        }
+    }
+
+    pub(crate) fn scenarios_dir(&self) -> &Path {
+        &self.scenarios
     }
 
     pub(crate) fn root(&self) -> &Path {
@@ -36,17 +52,21 @@ impl Repo {
 
     /// Reads and parses a JSON file below `conformance/`.
     pub(crate) fn json(&self, relative: &str) -> Result<Value, RunnerError> {
-        let path = self.conformance(relative);
-        let bytes = std::fs::read(&path).map_err(|source| RunnerError::Io {
-            operation: "read a conformance file",
-            source,
-        })?;
-        serde_json::from_slice(&bytes).map_err(|source| RunnerError::ScenarioInvalid {
-            path,
-            field: ".".to_owned(),
-            source,
-        })
+        read_json(&self.conformance(relative))
     }
+}
+
+/// Reads and parses one JSON file.
+pub(crate) fn read_json(path: &Path) -> Result<Value, RunnerError> {
+    let bytes = std::fs::read(path).map_err(|source| RunnerError::Io {
+        operation: "read a conformance file",
+        source,
+    })?;
+    serde_json::from_slice(&bytes).map_err(|source| RunnerError::ScenarioInvalid {
+        path: path.to_path_buf(),
+        field: ".".to_owned(),
+        source,
+    })
 }
 
 /// One case ready to run, with includes already spliced in.
@@ -60,17 +80,25 @@ pub(crate) struct PlannedCase {
     pub(crate) steps: Vec<Step>,
 }
 
+/// What a run executes: its cases and, for a suite, the classification of every file.
+#[derive(Debug)]
+pub(crate) struct Plan {
+    pub(crate) cases: Vec<PlannedCase>,
+    pub(crate) inventory: Option<Inventory>,
+}
+
 /// Cases to run for `scenario`; `case` of `None` selects every declared case.
 pub(crate) fn plan(
     repo: &Repo,
     scenario: &ScenarioId,
     case: Option<CaseName>,
-) -> Result<Vec<PlannedCase>, RunnerError> {
+) -> Result<Plan, RunnerError> {
     let file = load(repo, scenario)?;
-    let members = if file.suite.is_some() {
-        registered(repo)?
+    let (inventory, members) = if file.suite.is_some() {
+        let (inventory, runnable) = take(repo)?;
+        (Some(inventory), runnable)
     } else {
-        vec![file]
+        (None, vec![file])
     };
     let mut planned = Vec::new();
     for member in members {
@@ -103,54 +131,21 @@ pub(crate) fn plan(
             });
         }
     }
-    Ok(planned)
-}
-
-/// Every registered scenario except suites, ordered by identity.
-pub(crate) fn registered(repo: &Repo) -> Result<Vec<ScenarioFile>, RunnerError> {
-    let io = |source| RunnerError::Io {
-        operation: "list conformance/scenarios",
-        source,
-    };
-    let mut found = Vec::new();
-    for family in std::fs::read_dir(repo.conformance("scenarios")).map_err(io)? {
-        let family = family.map_err(io)?.path();
-        if !family.is_dir() {
-            continue;
-        }
-        for entry in std::fs::read_dir(&family).map_err(io)? {
-            let path = entry.map_err(io)?.path();
-            let Some(id) = scenario_id(repo, &path) else {
-                continue;
-            };
-            match load(repo, &id) {
-                Ok(file) if file.suite.is_none() => found.push(file),
-                Ok(_) | Err(RunnerError::ScenarioNotExecutable { .. }) => {}
-                Err(error) => return Err(error),
-            }
-        }
-    }
-    found.sort_by(|left, right| left.scenario.cmp(&right.scenario));
-    Ok(found)
-}
-
-/// The identity a `<family>/<name>.json` path declares, if it is a JSON scenario path.
-fn scenario_id(repo: &Repo, path: &Path) -> Option<ScenarioId> {
-    let relative = path.strip_prefix(repo.conformance("scenarios")).ok()?;
-    let text = relative.to_str()?.strip_suffix(".json")?.replace('\\', "/");
-    ScenarioId::parse(&text).ok()
+    Ok(Plan {
+        cases: planned,
+        inventory,
+    })
 }
 
 /// Loads one registered scenario file and checks it against its own path.
 pub(crate) fn load(repo: &Repo, scenario: &ScenarioId) -> Result<ScenarioFile, RunnerError> {
-    let relative = format!("scenarios/{}", scenario.relative_path().display());
-    let path = repo.conformance(&relative);
+    let path = repo.scenarios_dir().join(scenario.relative_path());
     if !path.is_file() {
         return Err(RunnerError::ScenarioMissing {
             scenario: scenario.to_string(),
         });
     }
-    let value = repo.json(&relative)?;
+    let value = read_json(&path)?;
     if value.get("format").and_then(Value::as_str) != Some(FORMAT) {
         return Err(RunnerError::ScenarioNotExecutable {
             scenario: scenario.to_string(),

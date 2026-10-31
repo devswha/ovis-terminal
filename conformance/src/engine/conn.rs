@@ -257,3 +257,6 @@ impl Connection {
         (self.report, process)
     }
 }
+
+#[cfg(test)]
+mod tests;
