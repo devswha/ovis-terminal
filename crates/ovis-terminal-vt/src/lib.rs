@@ -6,6 +6,7 @@
 //! replies located in the stream, and bounded OSC records for the agent owner.
 
 mod engine;
+mod shard;
 
 pub use engine::{
     CHECKPOINT_ENGINE, CHECKPOINT_FORMAT, CHECKPOINT_VERSION, Checkpoint, CheckpointVersion,
@@ -17,6 +18,7 @@ pub use engine::{
     ReadFormat, ReadSource, ScreenBuffer, ScreenLine, ScreenModes, ScreenRead, SearchMatch,
     TerminalModes, TerminalQuery, Vt, VtConfig, VtError,
 };
+pub use shard::{ParseBudget, PendingCap, Shard, ShardError, Turn};
 
 /// Cargo package name of this crate, used by the workspace layering record.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");

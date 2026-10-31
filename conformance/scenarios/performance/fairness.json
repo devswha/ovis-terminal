@@ -1,0 +1,61 @@
+{
+  "scenario": "performance/fairness",
+  "todo": 56,
+  "title": "Bounded VT scheduling preserves control latency",
+  "closes": [
+    "GAP-030",
+    "GAP-035",
+    "GAP-061",
+    "GAP-063",
+    "GAP-074",
+    "GAP-128"
+  ],
+  "delivers": [
+    "IDEAL-021",
+    "IDEAL-027",
+    "IDEAL-040",
+    "IDEAL-041",
+    "IDEAL-044",
+    "IDEAL-051",
+    "IDEAL-101"
+  ],
+  "excludes": [
+    "EXCL-017",
+    "EXCL-019",
+    "EXCL-024",
+    "EXCL-025"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "16 PTYs, eight clients, 16 requests in flight and 1 MiB/s aggregate output: every input.send admission and every committed control event is delivered within 100 ms (admission_max_ms <= 100, event_max_ms <= 100), with sample counts and zero lost events reported; a 50-terminal/400-viewer run stays within 1 GiB total RSS and the 4 GiB data budget while stalled viewers are told how many events they lost.",
+      "routes": [
+        "input.send",
+        "input.raw",
+        "input.cancel",
+        "attach.resize",
+        "events.subscribe"
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "input.raw with data_b64 fixture:input-queue-cap-plus-one (16 MiB + 1 byte) returns input_overflow before admission (no receipt, zero bytes held) while the program never reads stdin; a cancel of a queued entry is still served within 100 ms and reports withdrawn; an acknowledgement beyond the bytes sent grants no credit.",
+      "inject": {
+        "method": "input.raw",
+        "params": {
+          "data_b64": "fixture:input-queue-cap-plus-one"
+        }
+      }
+    }
+  ],
+  "verified_in_crate": [
+    "cargo nextest run -p ovis-terminal-server --lib scheduler::qa::profile",
+    "cargo nextest run -p ovis-terminal-server --lib scheduler::qa::failure",
+    "cargo nextest run -p ovis-terminal-vt --lib shard",
+    "target/release/fairness-tuning load 16 0 1048576 10 16384 4"
+  ]
+}
