@@ -23,6 +23,8 @@ use uuid::Uuid;
 
 type TestResult = Result<(), Box<dyn Error>>;
 
+#[path = "../src/events/qa/admission.rs"]
+mod admission;
 #[path = "../src/events/qa/contracts.rs"]
 mod contracts;
 #[path = "../src/events/qa/durable.rs"]
