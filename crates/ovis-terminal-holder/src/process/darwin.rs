@@ -138,6 +138,15 @@ fn sysctl(mib: &mut [c_int], buffer: &mut [u8]) -> Result<usize, ProbeError> {
     }
 }
 
+/// `KERN_PROCARGS2` reports `EINVAL`, not `ESRCH`, for a PID with no process, so a
+/// failure is attributed to a vanished process only when `proc_pidinfo` confirms it.
+fn gone_or(pid: ProcessId, error: ProbeError) -> ProbeError {
+    match pidinfo::<libc::proc_bsdinfo>(pid, libc::PROC_PIDTBSDINFO) {
+        Err(gone @ ProbeError::Gone { .. }) => gone,
+        Ok(_) | Err(_) => error,
+    }
+}
+
 /// `KERN_PROCARGS2`: argc, the executable path, padding, then argc strings.
 pub(super) fn argv(pid: ProcessId) -> Result<Vec<String>, ProbeError> {
     let mut limit = [0_u8; size_of::<c_int>()];
@@ -147,7 +156,8 @@ pub(super) fn argv(pid: ProcessId) -> Result<Vec<String>, ProbeError> {
     let used = sysctl(
         &mut [libc::CTL_KERN, libc::KERN_PROCARGS2, raw_pid(pid)?],
         &mut buffer,
-    )?;
+    )
+    .map_err(|error| gone_or(pid, error))?;
     let record = buffer.get(..used).ok_or(ProbeError::Malformed)?;
     let (count, rest) = record
         .split_first_chunk::<{ size_of::<c_int>() }>()
