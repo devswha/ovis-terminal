@@ -12,6 +12,7 @@ mod directory;
 mod error;
 mod handler;
 mod input;
+mod inspect;
 mod live;
 mod mutations;
 mod reads;
