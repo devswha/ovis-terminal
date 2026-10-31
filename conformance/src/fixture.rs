@@ -29,6 +29,8 @@ pub mod template_lane;
 pub mod terminals;
 #[cfg(unix)]
 pub mod transcripts;
+#[cfg(unix)]
+pub mod tree;
 pub mod wire;
 
 #[cfg(unix)]

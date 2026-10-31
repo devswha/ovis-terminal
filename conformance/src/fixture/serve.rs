@@ -94,7 +94,9 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let (status, directory) = (Arc::clone(&agents.0), Arc::clone(&agents.1));
     super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
     let parts = (&authority, &*core, agents.clone());
-    super::template_lane::register(&mut dispatch, (runtime, root), parts)?;
+    let template = super::template_lane::register(&mut dispatch, (runtime, root), parts)?;
+    let launch = (runtime, Arc::clone(&core), template);
+    let tree = super::tree::register(&mut dispatch, (&agents, &gate), launch)?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
     let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
     let writer = delegate(&authority, issued.bearer(), ("writer", WRITER))?;
@@ -105,6 +107,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         directory: Arc::clone(&directory),
         extension: Extension::new(bridge, Arc::clone(&core)),
         sequenced,
+        tree,
     };
     let handler = Arc::new(FixtureHandler::new(
         Arc::new(dispatch),

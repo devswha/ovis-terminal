@@ -12,6 +12,7 @@ use ovis_terminal_server::dispatch::lanes::agent_status::{ResolvedTerminal, Term
 use super::TERMINALS;
 use crate::error::RunnerError;
 use crate::fixture::serve::at;
+use crate::fixture::tree::TREE_TERMINALS;
 
 /// The fixture's terminal registry; it never selects a focused terminal. Launched
 /// terminals join it under their names.
@@ -75,8 +76,9 @@ impl TerminalDirectory for Directory {
 
 pub(super) fn directory(runtime: RuntimeIdentity) -> Result<Directory, RunnerError> {
     let scope = MachineRuntime::new(runtime.machine_id(), runtime.runtime_id());
-    let mut targets = Vec::with_capacity(TERMINALS.len());
-    for (id, name, _) in TERMINALS {
+    let named = TERMINALS.iter().map(|(id, name, _)| (*id, *name));
+    let mut targets = Vec::new();
+    for (id, name) in named.chain(TREE_TERMINALS) {
         targets.push(ResourceTarget::new(
             scope,
             TerminalId::try_from(id).map_err(at("build a terminal id"))?,
