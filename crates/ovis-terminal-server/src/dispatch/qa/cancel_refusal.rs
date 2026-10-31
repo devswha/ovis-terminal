@@ -75,7 +75,15 @@ pub(crate) async fn failure() -> TestResult {
     let held = op_id();
     owner.send(&set("held", &held, ("held", "v"))).await?;
     owner.send(&set("probe", &held, ("held", "other"))).await?;
-    assert_eq!(error_kind(&owner.expect_next().await?), "op_reused");
+    // One connection dispatches both concurrently: either may reserve the identity, and
+    // the other's op_reused reply proves the winner is reserved.
+    let loser = owner.expect_next().await?;
+    assert_eq!(error_kind(&loser), "op_reused", "{loser}");
+    let (winner, value) = if at(&loser, "/id") == "held" {
+        ("probe", "other")
+    } else {
+        ("held", "v")
+    };
     for op in [&done, &held] {
         other
             .send(&request("foreign", "op.cancel", &json!({"op_id": op})))
@@ -89,9 +97,12 @@ pub(crate) async fn failure() -> TestResult {
     assert_eq!(at(&late, "/result/result"), at(&receipt, "/result"));
     fixture.gate.release.notify_one();
     let committed = owner.expect_next().await?;
-    assert_eq!(at(&committed, "/id"), "held");
-    assert_eq!(at(&committed, "/result/value"), "v", "{committed}");
-    assert_eq!(std::fs::read(fixture.effect("held"))?, b"\"v\"");
+    assert_eq!(at(&committed, "/id"), winner, "{committed}");
+    assert_eq!(at(&committed, "/result/value"), value, "{committed}");
+    assert_eq!(
+        std::fs::read(fixture.effect("held"))?,
+        format!("\"{value}\"").into_bytes()
+    );
     drop((owner, other));
     server.shutdown().await?;
     fixture.close().await

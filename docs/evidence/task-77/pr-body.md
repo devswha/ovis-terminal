@@ -38,7 +38,7 @@ CI run URL: the PR checks for this head. The manual macOS stress dispatch (`prob
 ## What the tests assert
 
 - `ops_cancel happy` runs on a multi-thread runtime with exactly one blocking worker, which the test holds, so the durable accept is queued.
-  1. A second `doc.set` with the same `op_id` and different params gets `op_reused`. That reply proves the first request is reserved.
+  1. A `doc.set` and a same-`op_id` probe with different params are pipelined; whichever loses the reservation gets `op_reused`. That reply proves the other one is reserved, and the test takes the winner from the loser's id.
   2. `op.cancel` is sent, then another `op_reused` probe; the worker is released after that probe's reply.
   3. It asserts:
      - the cancel reply has `outcome == "cancel_pending"`, `state == "cancelled"` and the same `op_id`;
@@ -52,7 +52,9 @@ CI run URL: the PR checks for this head. The manual macOS stress dispatch (`prob
   - an unknown `op_id` gives `not_found`;
   - cancelling a committed operation gives `already_committed` with `state == "committed"` and `result` equal to the original reply's result;
   - a foreign principal (credential issued for another document) gets `forbidden` for the committed op and for the owner's reserved, held op (reservation proven by `op_reused`);
-  - after release, the owner's held op commits with its effect `"v"`, so the foreign cancel was not delivered.
+  - after release, the owner's held op commits with its own value and effect, so the foreign cancel was not delivered.
+
+  Both orders are legitimate here. The held request and its same-`op_id` probe are pipelined on one connection, which dispatches them concurrently, so either may reserve the identity. The test takes the winner from the loser's `op_reused` reply and asserts the winner's id, value and effect. CI on ubuntu caught the original fixed-order assumption (`left: "probe", right: "held"` at `cancel_refusal.rs:92`).
 - `cancel_race::cancel_wins_the_race_against_the_durable_accept` (current-thread runtime) pipelines `doc.set` then `op.cancel` 200 times. Per iteration it asserts:
   - `cancel_pending`: request `cancelled`, handler never entered, no effect;
   - `cancelled_before_commit`: request `cancelled`, no effect;
@@ -79,6 +81,8 @@ CI run URL: the PR checks for this head. The manual macOS stress dispatch (`prob
   The outcome token is deliberately not asserted, because over a socket the cancel can land on either side of the accept. In the recorded run it landed after the accept (`cancelled_before_commit`). The pre-accept path is proven by the ops_cancel tests above, not by this scenario.
 
 ## QA
+
+- refusal ordering fix: `cargo nextest run -p ovis-terminal-server --test ops_cancel` run 50 times under 8 busy-loop CPU hogs (`stress-50.log`).
 
 - happy: `cargo test -p ovis-terminal-server --test ops_cancel happy -- --exact --nocapture` gives exit 0 with `outcomes=["cancel_pending"]`. Transcript: cancel reply `"outcome":"cancel_pending","state":"cancelled","updated_seq":"2"`, the request `"kind":"cancelled"`, and `op.get` `"state":"cancelled"`.
 - failure: `cargo test -p ovis-terminal-server --test ops_cancel failure -- --exact --nocapture` gives exit 0. Replies: `not_found`; `already_committed` with `result {"name":"done","value":"kept"}`; `forbidden` twice; then the held op commits.
