@@ -52,7 +52,7 @@ proptest! {
         let text = serde_json::to_string(&provenance).map_err(|e| TestCaseError::fail(e.to_string()))?;
         let back: OscProvenance = serde_json::from_str(&text).map_err(|e| TestCaseError::fail(e.to_string()))?;
         prop_assert_eq!(back, provenance);
-        let counters = IngestCounters::new(oversize, malformed);
+        let counters = IngestCounters::new(oversize, malformed, oversize ^ malformed);
         let wire = serde_json::to_value(counters).map_err(|e| TestCaseError::fail(e.to_string()))?;
         prop_assert_eq!(wire.get("oversize"), Some(&json!(oversize.to_string())));
         let back: IngestCounters = serde_json::from_value(wire).map_err(|e| TestCaseError::fail(e.to_string()))?;

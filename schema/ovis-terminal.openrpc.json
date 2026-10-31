@@ -2609,11 +2609,16 @@
           "oversize": {
             "$ref": "#/components/schemas/RecordCount",
             "description": "Payloads above the 4 KiB record bound, including unterminated ones cut at it."
+          },
+          "stale": {
+            "$ref": "#/components/schemas/RecordCount",
+            "description": "Records refused because their program incarnation was no longer current, or\nbecause no producer sequence above the accepted one remained."
           }
         },
         "required": [
           "oversize",
-          "malformed"
+          "malformed",
+          "stale"
         ],
         "type": "object"
       },

@@ -9,3 +9,34 @@ status::qa::rpc::only_the_current_program_of_the_target_terminal_may_report --- 
 status::qa::rpc::unknown_states_out_of_range_progress_and_bad_labels_are_refused --- FAILED
 test result: FAILED. 12 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
 
+
+
+# round 2: incarnation binding (each mutant applied alone, then restored)
+== mutant: ingest current-owner check removed
+rc=0
+status::qa::incarnation::osc_output_of_a_replaced_program_cannot_fabricate_a_row_before_its_successor_reports --- FAILED
+test result: FAILED. 19 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
+error: test failed, to rerun pass `-p ovis-terminal-agent --lib`
+
+
+== mutant: exited current-owner check removed
+rc=0
+status::qa::incarnation::the_exit_of_a_replaced_program_ends_no_turn_before_its_successor_reports --- FAILED
+test result: FAILED. 19 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s
+error: test failed, to rerun pass `-p ovis-terminal-agent --lib`
+
+
+== mutant: row older-incarnation guard removed
+rc=0
+status::qa::incarnation::a_stored_row_of_a_newer_program_is_never_read_as_an_older_one --- FAILED
+test result: FAILED. 19 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.54s
+error: test failed, to rerun pass `-p ovis-terminal-agent --lib`
+
+
+== mutant: osc u64::MAX refusal replaced by saturation
+rc=0
+status::qa::incarnation::an_osc_record_after_the_last_producer_sequence_is_refused --- FAILED
+test result: FAILED. 19 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+error: test failed, to rerun pass `-p ovis-terminal-agent --lib`
+
+

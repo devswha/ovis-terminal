@@ -1,5 +1,6 @@
 //! Behavior of agent status over a real store, coordinator and operation ledger.
 
+mod incarnation;
 mod machine;
 mod osc;
 mod rpc;

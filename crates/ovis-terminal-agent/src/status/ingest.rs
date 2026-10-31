@@ -6,7 +6,7 @@
 use ovis_terminal_core::events::{Commit, Coordinator, EventData, ResourceId, SnapshotProducer};
 use ovis_terminal_core::registry::TerminalId;
 use ovis_terminal_protocol::schema::methods::status::TurnRecord;
-use ovis_terminal_protocol::schema::records::{StatusEntry, StatusOrigin, StatusSnapshot};
+use ovis_terminal_protocol::schema::records::{StatusEntry, StatusOrigin};
 use ovis_terminal_protocol::schema::scalar::{ReportSeq, TimestampMs};
 use ovis_terminal_store::OpId;
 use ovis_terminal_vt::OscRecord;
@@ -41,12 +41,13 @@ impl<'a> OscOutput<'a> {
 }
 
 /// What ingesting one OSC record did.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Ingested {
-    /// The status changed; the committed snapshot.
-    Applied(Box<StatusSnapshot>),
-    /// An oversize or malformed 7501 record was counted and dropped.
+    /// The status change was committed.
+    Applied,
+    /// The record was counted and dropped: oversize, malformed, from a program that
+    /// is no longer current, or with no producer sequence left.
     Dropped,
     /// Another OSC number or a query; nothing changed.
     Ignored,
@@ -57,16 +58,15 @@ fn unit<D: From<AgentStatusEvent>>(
     ended: Option<TurnRecord>,
 ) -> Result<Commit<D>, StatusError> {
     let affected = vec![ResourceId::Terminal(stored.terminal)];
-    let mut events = changes(&stored.row, ended).into_iter();
-    let first = events.next().ok_or(StatusError::Poisoned)?;
+    let (status, turn) = changes(&stored.row, ended);
     let mut commit = Commit::new(
         OpId::new(uuid::Uuid::now_v7().to_string()),
-        D::from(first),
+        D::from(status),
         affected.clone(),
     )
     .write(stored.write()?);
-    for event in events {
-        commit = commit.event(D::from(event), affected.clone());
+    if let Some(turn) = turn {
+        commit = commit.event(D::from(turn), affected);
     }
     Ok(commit)
 }
@@ -83,6 +83,18 @@ fn osc_entry(report: OscReport, seq: ReportSeq, at: TimestampMs) -> Accepted {
     Accepted { entry, lifecycle }
 }
 
+const fn bump_oversize(tally: &mut Tally) {
+    tally.oversize = tally.oversize.saturating_add(1);
+}
+
+const fn bump_malformed(tally: &mut Tally) {
+    tally.malformed = tally.malformed.saturating_add(1);
+}
+
+const fn bump_stale(tally: &mut Tally) {
+    tally.stale = tally.stale.saturating_add(1);
+}
+
 impl StatusService {
     fn tally(&self, terminal: TerminalId, bump: fn(&mut Tally)) -> Result<Ingested, StatusError> {
         bump(
@@ -96,6 +108,10 @@ impl StatusService {
     }
 
     /// Applies, counts or ignores one OSC record of a program's output.
+    ///
+    /// Only the terminal's current program changes its status: a record from a replaced
+    /// incarnation is counted as stale and dropped, as is a record after the producer
+    /// sequence reached `u64::MAX`.
     ///
     /// # Errors
     ///
@@ -112,33 +128,31 @@ impl StatusService {
         let terminal = output.owner.terminal;
         let report = match classify(output.record) {
             OscOutcome::Report(report) => *report,
-            OscOutcome::Oversize => {
-                return self.tally(terminal, |t| t.oversize = t.oversize.saturating_add(1));
-            }
-            OscOutcome::Malformed => {
-                return self.tally(terminal, |t| t.malformed = t.malformed.saturating_add(1));
-            }
+            OscOutcome::Oversize => return self.tally(terminal, bump_oversize),
+            OscOutcome::Malformed => return self.tally(terminal, bump_malformed),
             OscOutcome::Query | OscOutcome::Foreign => return Ok(Ingested::Ignored),
         };
-        let mut applied = None;
         let committed = coordinator.commit_unit(|snapshot| {
+            self.require_current(output.owner)?;
             let mut stored = self
                 .location(terminal)
                 .read(snapshot, Some(output.owner.process))?;
-            let current = stored.row.status.report_seq.map_or(0, ReportSeq::get);
-            let accepted = osc_entry(report, ReportSeq::new(current.saturating_add(1)), output.at);
+            let current = stored.row.status.report_seq.unwrap_or(ReportSeq::new(0));
+            let next = current
+                .get()
+                .checked_add(1)
+                .ok_or(StatusError::StaleSeq { current })?;
+            let accepted = osc_entry(report, ReportSeq::new(next), output.at);
             within_bounds(&stored.row, &accepted)?;
             let ended = stored.row.accept(accepted, next_event(snapshot));
-            applied = Some(stored.row.status.clone());
             unit(&stored, ended)
         });
         match committed {
-            Ok(_) => Ok(applied.map_or(Ingested::Ignored, |status| {
-                Ingested::Applied(Box::new(status))
-            })),
-            Err(error) if error.is_rejection() => {
-                self.tally(terminal, |t| t.malformed = t.malformed.saturating_add(1))
+            Ok(_) => Ok(Ingested::Applied),
+            Err(StatusError::StaleIncarnation | StatusError::StaleSeq { .. }) => {
+                self.tally(terminal, bump_stale)
             }
+            Err(error) if error.is_rejection() => self.tally(terminal, bump_malformed),
             Err(error) => Err(error),
         }
     }
@@ -147,25 +161,25 @@ impl StatusService {
     ///
     /// # Errors
     ///
-    /// Returns a store, decoding or coordinator failure; nothing was committed.
+    /// Returns `stale_incarnation` without any change when `owner` is not the terminal's
+    /// current program, or a store, decoding or coordinator failure.
     pub fn exited<D, P>(
         &self,
         coordinator: &Coordinator<D, P>,
         owner: ProcessOwner,
-    ) -> Result<StatusSnapshot, StatusError>
+    ) -> Result<(), StatusError>
     where
         D: EventData + From<AgentStatusEvent> + Clone + Serialize + DeserializeOwned,
         P: SnapshotProducer,
     {
-        let mut status = None;
         coordinator.commit_unit(|snapshot| {
+            self.require_current(owner)?;
             let mut stored = self
                 .location(owner.terminal)
                 .read(snapshot, Some(owner.process))?;
             let ended = stored.row.exited(next_event(snapshot));
-            status = Some(stored.row.status.clone());
             unit(&stored, ended)
         })?;
-        status.ok_or(StatusError::Poisoned)
+        Ok(())
     }
 }

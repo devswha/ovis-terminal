@@ -17,6 +17,9 @@ pub enum StatusError {
     /// The token does not belong to the target terminal's current program.
     #[error("the process token does not own the target terminal's current program")]
     NotOwner,
+    /// The update names a program incarnation that is not the terminal's current one.
+    #[error("the update comes from a program incarnation that is no longer current")]
+    StaleIncarnation,
     /// A record field is outside its accepted form.
     #[error("the status record field {field} is outside its accepted form")]
     InvalidRecord {
@@ -47,6 +50,7 @@ impl StatusError {
         match self {
             Self::StaleSeq { .. } => "stale_seq",
             Self::NotOwner => "not_owner",
+            Self::StaleIncarnation => "stale_incarnation",
             Self::InvalidRecord { .. } => "invalid_record",
             Self::InvalidAgent => "invalid_agent",
             Self::AgentConflict => "agent_conflict",
@@ -60,6 +64,7 @@ impl StatusError {
         match self {
             Self::StaleSeq { .. } => "report again with a sequence above current_seq",
             Self::NotOwner => "report with the token handed to the terminal's current program",
+            Self::StaleIncarnation => "only the terminal's current program changes its status",
             Self::InvalidRecord { .. } => {
                 "send a known state, progress 0-100 and fields within their bounds"
             }

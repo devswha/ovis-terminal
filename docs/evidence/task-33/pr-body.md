@@ -30,12 +30,12 @@ The crate has no screen detector, process-name rule, brand list or manifest. It 
 - **OSC 7501 ingestion.**
   - Payloads are UTF-8 `key=value` pairs separated by `:`, with keys state, id, kind, progress, app, title and msg. Unknown or duplicate keys, a missing or unknown state, progress above 100 and non-UTF-8 payloads are malformed: they are dropped and counted.
   - Payloads above the engine's 4 KiB record bound, including unterminated ones that the engine cuts at 64 KiB, are dropped and counted as `oversize`.
-  - Counts are visible as `ingest {oversize, malformed}` on `status.get`/`status.report` results.
+  - Counts are visible as `ingest {oversize, malformed, stale}` on `status.get`/`status.report` results.
   - Accepted records keep `raw`, verbatim `osc.fields`, `osc.decoded` and typed `osc.decode_errors` (`invalid_base64`/`invalid_utf8`). A field that fails to decode has no decoded text.
   - `7501;?` and other OSC numbers change nothing.
 - **Server lane.** `crates/ovis-terminal-server/src/dispatch/lanes/agent_status.rs` registers `agent.register`, `agent.get`, `status.report`, `status.get` and `status.clear`. They use the catalog param types and a `TerminalDirectory` seam that resolves explicit targets, never focus.
 
-Executed on Linux 7.0.0-38-generic x86_64, rustc 1.99.1, `ATTEMPT_DIR=/home/devswha/workspace/ovis-terminal-wt/lane-t33/.omo/evidence/ovis-terminal-v1/task-33`. Binary `target/debug/ovis-terminal` sha256 `4f6540e42b87dc82009927880e06165ae7be5fbfecd5ce32ceaee06f8488b97e`. The full transcript is `docs/evidence/task-33/qa-transcript.log`; the evidence (4 appended runs, every request and reply) is `docs/evidence/task-33/task-33-ovis-terminal-v1.json`.
+Executed on Linux 7.0.0-38-generic x86_64, rustc 1.99.1, `ATTEMPT_DIR=/home/devswha/workspace/ovis-terminal-wt/lane-t33/.omo/evidence/ovis-terminal-v1/task-33`. Binary `target/debug/ovis-terminal` sha256 `9ae6130c55f052a7d012d17540595056c3e69d912f03b1ea5ccd38aecaa60e04`. The full transcript is `docs/evidence/task-33/qa-transcript.log`; the evidence (4 appended runs, every request and reply) is `docs/evidence/task-33/task-33-ovis-terminal-v1.json`.
 
 ```text
 $ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/status --isolated --case happy --evidence "$ATTEMPT_DIR/task-33-ovis-terminal-v1.json"
@@ -83,13 +83,34 @@ Zero mutation is asserted after each inject. The status event sequence (`root.se
 
 The QA commands use two runner additions, `--inject` and `--append` (see Seams). An inject that the case does not plan fails the run. Probe: `--inject '{"method":"status.report","params":{"seq":"9",...}}'` exits 1 with `inject/planned` failing.
 
+## Round 2: incarnation binding (gate review blockers B1/B2)
+
+- **B1 (OSC).** `StatusService::ingest` now checks the record's owner against `ProcessTokens::current` inside the commit unit. A record from a replaced program incarnation is dropped and counted in `ingest.stale`. It changes no status row and publishes no event.
+- **Row guard.** `Location::read` never fabricates or replaces a row for an older incarnation; it refuses with the typed `stale_incarnation`. Incarnations only grow, so only a newer program replaces a row.
+- **B2 (exit).** `StatusService::exited` refuses a non-current owner with `StatusError::StaleIncarnation` and makes no change. It now returns `()`, so it no longer reports a snapshot it could fail to capture.
+- **u64::MAX note.** After a producer sequence of `u64::MAX`, an OSC record is refused rather than applied at the same sequence. It is counted as stale.
+- **settle note.** `settle()` maps each `StatusError` variant explicitly, so persistence errors keep their source. `Ingested::Applied` carries no snapshot, and `unit()` no longer has a fabricated `Poisoned` fallback.
+- **New tests** (`crates/ovis-terminal-agent/src/status/qa/incarnation.rs`):
+  - `osc_output_of_a_replaced_program_is_counted_stale_and_changes_nothing`
+  - `osc_output_of_a_replaced_program_cannot_fabricate_a_row_before_its_successor_reports`
+  - `the_exit_of_a_replaced_program_is_refused_and_changes_nothing`
+  - `the_exit_of_a_replaced_program_ends_no_turn_before_its_successor_reports`
+  - `a_stored_row_of_a_newer_program_is_never_read_as_an_older_one`
+  - `an_osc_record_after_the_last_producer_sequence_is_refused`
+- **Mutants** (`docs/evidence/task-33/mutations.log`, round 2): each was applied alone, then restored.
+  - Removing the ingest current-owner check fails `..._cannot_fabricate_a_row_before_its_successor_reports`.
+  - Removing the exited check fails `the_exit_..._ends_no_turn_before_its_successor_reports`.
+  - Removing the row guard fails `a_stored_row_..._never_read_as_an_older_one`.
+  - Saturating instead of refusing at u64::MAX fails `an_osc_record_after_the_last_producer_sequence_is_refused`.
+- **Seam.** `IngestCounters` gains the additive output field `stale`. The OpenRPC file is regenerated, and the compat check against the released baseline passes.
+
 ## QA
 
 - `cargo build --locked -p ovis-terminal-cli --bin ovis-terminal`: exit 0.
 - `cargo test --locked -p ovis-terminal-agent -p ovis-terminal-protocol -p ovis-terminal-server --all-targets`: exit 0 (`docs/evidence/task-33/acceptance.log`). The lane-relevant tests are 14 agent status tests plus 3 protocol domain tests.
 - `cargo clippy --locked -p ovis-terminal-agent -p ovis-terminal-protocol -p ovis-terminal-server --all-targets -- -D warnings`: exit 0.
 - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked`: exit 0.
-- `bash scripts/check.sh`: exit 0. That covers fmt, clippy over the workspace, nextest (573 passed, 1 skipped), doctests and the hygiene checks (`docs/evidence/task-33/check.log`).
+- `bash scripts/check.sh`: exit 0. That covers fmt, clippy over the workspace, nextest (579 passed, 1 skipped), doctests and the hygiene checks (`docs/evidence/task-33/check.log`).
 - Conformance: the four commands above all exit 0 with failed 0 and skipped 0.
 
 What the agent tests assert, all over a real SQLite store, coordinator and operation ledger:

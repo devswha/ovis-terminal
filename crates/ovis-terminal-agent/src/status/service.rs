@@ -21,7 +21,7 @@ use ovis_terminal_store::Snapshot;
 use super::machine::Accepted;
 use super::request::validated;
 use super::row::{Location, Row, Stored};
-use super::{AgentStatusEvent, Clear, ProcessTokens, Register, Report, StatusError};
+use super::{AgentStatusEvent, Clear, ProcessOwner, ProcessTokens, Register, Report, StatusError};
 
 /// Most child records one terminal keeps.
 const CHILD_LIMIT: usize = 64;
@@ -30,6 +30,7 @@ const CHILD_LIMIT: usize = 64;
 pub(super) struct Tally {
     pub oversize: u64,
     pub malformed: u64,
+    pub stale: u64,
 }
 
 /// Agent status of every terminal of one runtime.
@@ -52,11 +53,14 @@ const fn operation_event(snapshot: &Snapshot) -> EventSeq {
 }
 
 /// The status event and, when a turn finished, its turn event.
-pub(super) fn changes(row: &Row, ended: Option<TurnRecord>) -> Vec<AgentStatusEvent> {
-    let status = AgentStatusEvent::StatusChanged(Box::new(row.status.clone()));
-    std::iter::once(status)
-        .chain(ended.map(|turn| AgentStatusEvent::TurnEnded(Box::new(turn))))
-        .collect()
+pub(super) fn changes(
+    row: &Row,
+    ended: Option<TurnRecord>,
+) -> (AgentStatusEvent, Option<AgentStatusEvent>) {
+    (
+        AgentStatusEvent::StatusChanged(Box::new(row.status.clone())),
+        ended.map(|turn| AgentStatusEvent::TurnEnded(Box::new(turn))),
+    )
 }
 
 /// Refuses a child record beyond the per-terminal bound.
@@ -74,10 +78,17 @@ pub(super) fn within_bounds(row: &Row, accepted: &Accepted) -> Result<(), Status
 fn settle<D>(outcome: Result<Completion<D>, StatusError>) -> Result<Completion<D>, OperationError> {
     match outcome {
         Ok(completion) => Ok(completion),
-        Err(error) if error.is_rejection() => Ok(Completion::failed(error.error_data())),
         Err(StatusError::Encode(error)) => Err(error.into()),
         Err(StatusError::Event(error)) => Err(error.into()),
-        Err(_) => Err(EventError::Poisoned.into()),
+        Err(StatusError::Poisoned) => Err(EventError::Poisoned.into()),
+        Err(
+            refusal @ (StatusError::StaleSeq { .. }
+            | StatusError::NotOwner
+            | StatusError::StaleIncarnation
+            | StatusError::InvalidRecord { .. }
+            | StatusError::InvalidAgent
+            | StatusError::AgentConflict),
+        ) => Ok(Completion::failed(refusal.error_data())),
     }
 }
 
@@ -113,7 +124,19 @@ impl StatusService {
             .get(&terminal)
             .copied()
             .unwrap_or_default();
-        Ok(IngestCounters::new(tally.oversize, tally.malformed))
+        Ok(IngestCounters::new(
+            tally.oversize,
+            tally.malformed,
+            tally.stale,
+        ))
+    }
+
+    /// Refuses `owner` unless it is the current program of its terminal.
+    pub(super) fn require_current(&self, owner: ProcessOwner) -> Result<(), StatusError> {
+        match self.tokens.current(owner.terminal)? {
+            Some(current) if current == owner => Ok(()),
+            Some(_) | None => Err(StatusError::StaleIncarnation),
+        }
     }
 
     fn current(&self, snapshot: &Snapshot, terminal: TerminalId) -> Result<Stored, StatusError> {
@@ -134,7 +157,8 @@ impl StatusService {
         );
         let affected = vec![ResourceId::Terminal(stored.terminal)];
         let mut completion = Completion::new(serde_json::to_value(result)?).write(stored.write()?);
-        for event in changes(row, ended) {
+        let (status, turn) = changes(row, ended);
+        for event in std::iter::once(status).chain(turn) {
             completion = completion.event(D::from(event), affected.clone());
         }
         Ok(completion)

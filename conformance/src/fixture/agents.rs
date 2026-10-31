@@ -167,7 +167,7 @@ fn echo(program: &EchoProgram, terminal: TerminalId, text: &str) -> Result<Value
             .ingest(&*program.core, OscOutput::new(owner, record, now))
             .map_err(internal)?;
         ingested.push(match outcome {
-            Ingested::Applied(_) => "applied",
+            Ingested::Applied => "applied",
             Ingested::Dropped => "dropped",
             _ => "ignored",
         });

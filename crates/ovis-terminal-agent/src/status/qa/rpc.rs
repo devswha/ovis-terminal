@@ -196,11 +196,11 @@ fn a_clear_ends_no_turn_and_an_exit_ends_a_working_turn() -> TestResult {
     assert_eq!(cleared.finish_generation, FinishGeneration::new(0));
     h.state(AgentState::Working, 2)?;
     let owner = ProcessOwner::new(terminal(AGENT)?, Incarnation::new(1));
-    let exited = h.service.exited(&h.core, owner)?;
+    h.service.exited(&h.core, owner)?;
+    let exited = h.status(AGENT)?.status;
     assert_eq!(exited.root, None);
     assert_eq!(exited.finish_generation, FinishGeneration::new(1));
-    let turn = exited.last_turn.clone().ok_or("exited turn")?;
+    let turn = exited.last_turn.ok_or("exited turn")?;
     assert_eq!(turn.outcome, Some(OpenEnum::Known(TurnOutcome::Exited)));
-    assert_eq!(h.status(AGENT)?.status, exited);
     Ok(())
 }

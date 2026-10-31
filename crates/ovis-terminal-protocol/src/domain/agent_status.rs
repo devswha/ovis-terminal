@@ -127,15 +127,19 @@ pub struct IngestCounters {
     pub oversize: RecordCount,
     /// Payloads whose fields could not be read as a status record.
     pub malformed: RecordCount,
+    /// Records refused because their program incarnation was no longer current, or
+    /// because no producer sequence above the accepted one remained.
+    pub stale: RecordCount,
 }
 
 impl IngestCounters {
     /// Builds counters from dropped-record counts.
     #[must_use]
-    pub const fn new(oversize: u64, malformed: u64) -> Self {
+    pub const fn new(oversize: u64, malformed: u64, stale: u64) -> Self {
         Self {
             oversize: RecordCount::new(oversize),
             malformed: RecordCount::new(malformed),
+            stale: RecordCount::new(stale),
         }
     }
 }

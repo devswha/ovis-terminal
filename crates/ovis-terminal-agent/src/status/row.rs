@@ -67,7 +67,8 @@ impl Location {
         )
     }
 
-    /// Reads the row as seen by program `process`; a row of another incarnation is replaced.
+    /// Reads the row as seen by program `process`; a newer incarnation replaces the row,
+    /// an older one is refused with `stale_incarnation`.
     pub(super) fn read(
         self,
         snapshot: &Snapshot,
@@ -81,10 +82,14 @@ impl Location {
             ResourceLookup::Absent => (Row::unreported(process), Version::ABSENT),
             _ => return Err(EventError::SnapshotUnavailable.into()),
         };
-        let row = if row.status.process_incarnation == process {
-            row
-        } else {
-            row.replaced(process)
+        // Incarnations only grow: a newer program replaces the row, an older one never
+        // reads or writes it.
+        let row = match (row.status.process_incarnation, process) {
+            (Some(stored), Some(requested)) if requested < stored => {
+                return Err(StatusError::StaleIncarnation);
+            }
+            (stored, Some(requested)) if stored != Some(requested) => row.replaced(process),
+            _ => row,
         };
         Ok(Stored {
             row,

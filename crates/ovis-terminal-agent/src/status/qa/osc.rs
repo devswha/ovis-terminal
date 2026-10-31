@@ -60,7 +60,7 @@ fn an_osc_report_takes_the_next_sequence_and_keeps_raw_and_decoding_provenance()
     h.state(AgentState::Idle, 4)?;
     let payload = "state=working:app=custom:title=aGVsbG8=:msg=%%not-base64%%";
     let outcomes = ingest(&h, &osc(payload))?;
-    assert!(matches!(outcomes.as_slice(), [Ingested::Applied(_)]));
+    assert_eq!(outcomes, [Ingested::Applied]);
     let status = h.status(AGENT)?.status;
     let root = status.root.ok_or("root")?;
     assert_eq!(root.origin, OpenEnum::Known(StatusOrigin::Osc));
@@ -126,7 +126,7 @@ fn oversized_and_malformed_records_are_counted_and_change_nothing() -> TestResul
     assert_eq!(outcomes.len(), 7);
     let after = h.status(AGENT)?;
     assert_eq!(after.status, before.status);
-    assert_eq!(after.ingest, IngestCounters::new(2, 5));
+    assert_eq!(after.ingest, IngestCounters::new(2, 5, 0));
     Ok(())
 }
 
