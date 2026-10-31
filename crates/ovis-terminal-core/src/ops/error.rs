@@ -2,8 +2,10 @@
 
 use ovis_terminal_protocol::errors::OpId;
 use ovis_terminal_protocol::schema::methods::server::OpRecord;
+use ovis_terminal_protocol::schema::scalar::ByteCount;
 use ovis_terminal_store::StoreError;
 
+use super::ParamsBound;
 use crate::events::EventError;
 
 /// A rejected operation action, preserving its prior receipt when one exists.
@@ -55,9 +57,17 @@ pub enum OperationError {
     /// Too much retained work is already admitted.
     #[error("the retained operation capacity is exhausted")]
     Capacity,
-    /// Params or the resulting receipt exceed a payload bound.
+    /// The resulting receipt or holder evidence exceeds its byte bound.
     #[error("the operation payload exceeds its byte bound")]
     TooLarge,
+    /// Canonical params exceed the bound of their method.
+    #[error("canonical params of {} bytes exceed the {}-byte bound", actual.get(), bound.bytes().get())]
+    ParamsTooLarge {
+        /// The method's bound.
+        bound: ParamsBound,
+        /// Length of the canonical params encoding.
+        actual: ByteCount,
+    },
     /// Persisted data does not match its index or runtime.
     #[error("the operation ledger does not match its committed identity")]
     InvalidLedger,
@@ -89,7 +99,7 @@ impl OperationError {
                 _ => "already_started",
             },
             Self::Capacity => "backpressure",
-            Self::TooLarge => "too_large",
+            Self::TooLarge | Self::ParamsTooLarge { .. } => "too_large",
             Self::InvalidLedger => "operation_store_invalid",
             Self::EvidenceMismatch => "stale_target",
         }
@@ -120,6 +130,7 @@ impl OperationError {
                 "wait for the advertised retention floor to advance before admitting new work"
             }
             Self::TooLarge => "bound output and parameters before submitting the operation",
+            Self::ParamsTooLarge { bound, .. } => bound.hint(),
             Self::EvidenceMismatch => {
                 "join holder evidence only to its original terminal and process incarnation"
             }

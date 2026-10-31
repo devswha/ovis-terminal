@@ -1,0 +1,33 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running tests/ops_digest.rs (target/debug/deps/ops_digest-3201f288defcdcd9)
+
+running 1 test
+<- {"jsonrpc":"2.0","id":"hello","result":{"boot_proof":null,"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":"10000","heartbeat_ms":"15000","histo... [1098 chars, truncated for the evidence file]
+
+-> {"id":"01a19322-3ec5-7dc6-9a25-f7fbe24139b5","jsonrpc":"2.0","method":"doc.set","params":{"name":"big","op_id":"01a19322-3ec5-7dc6-9a25-f7fbe24139b5","value":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx... [1048754 chars, truncated for the evidence file]
+<- {"jsonrpc":"2.0","id":"01a19322-3ec5-7dc6-9a25-f7fbe24139b5","result":{"seq":"4","version":"1"}}
+
+-> {"id":"01a19322-3ec5-7dc6-9a25-f7fbe24139b5","jsonrpc":"2.0","method":"doc.set","params":{"name":"big","op_id":"01a19322-3ec5-7dc6-9a25-f7fbe24139b5","value":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx... [1048754 chars, truncated for the evidence file]
+<- {"jsonrpc":"2.0","id":"01a19322-3ec5-7dc6-9a25-f7fbe24139b5","error":{"code":-32000,"message":"operation failed","data":{"kind":"op_reused","hint":"inspect the original operation; use a new identity only for new work","retryable":false,"op_id":"01a19322-3ec5-7dc6-9a25-f7fbe24139b5"}}}
+
+-> {"id":"01a19322-40ca-76f6-afe5-e6d3509220f5","jsonrpc":"2.0","method":"doc.set","params":{"name":"big","op_id":"01a19322-40ca-76f6-afe5-e6d3509220f5","value":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx... [1048755 chars, truncated for the evidence file]
+<- {"jsonrpc":"2.0","id":"01a19322-40ca-76f6-afe5-e6d3509220f5","error":{"code":-32000,"message":"operation failed","data":{"kind":"too_large","hint":"shrink the value below the advertised doc_max_bytes","retryable":false,"op_id":"01a19322-40ca-76f6-afe5-e6d3509220f5"}}}
+
+-> {"id":"01a19322-41ec-7e56-9ea2-bde7dd762c9b","jsonrpc":"2.0","method":"doc.set","params":{"name":"big","op_id":"01a19322-41ec-7e56-9ea2-bde7dd762c9b","value":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx... [1052799 chars, truncated for the evidence file]
+<- {"jsonrpc":"2.0","id":"01a19322-41ec-7e56-9ea2-bde7dd762c9b","error":{"code":-32000,"message":"operation failed","data":{"kind":"too_large","hint":"keep doc.set params within doc_max_bytes plus 4096 bytes for name, version and machine","retryable":false}}}
+
+-> {"id":"01a19322-42c2-71fd-a86f-e65adf48d922","jsonrpc":"2.0","method":"doc.set","params":{"name":"big","op_id":"01a19322-42c2-71fd-a86f-e65adf48d922","value":"small","version":1}}
+<- {"jsonrpc":"2.0","id":"01a19322-42c2-71fd-a86f-e65adf48d922","error":{"code":-32602,"message":"method parameters violate the closed schema","data":{"kind":"invalid_params","hint":"correct the method parameters","retryable":false,"field_path":"params.version"}}}
+
+-> {"id":"get","jsonrpc":"2.0","method":"doc.get","params":{"name":"big"}}
+<- {"jsonrpc":"2.0","id":"get","result":{"name":"big","value":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx... [1048655 chars, truncated for the evidence file]
+
+changed 1 MiB retry -> {"hint":"inspect the original operation; use a new identity only for new work","kind":"op_reused","op_id":"01a19322-3ec5-7dc6-9a25-f7fbe24139b5","retryable":false}
+1 MiB + 1 byte value -> {"hint":"shrink the value below the advertised doc_max_bytes","kind":"too_large","op_id":"01a19322-40ca-76f6-afe5-e6d3509220f5","retryable":false}
+params of 1052673 bytes (bound 1052672) -> {"hint":"keep doc.set params within doc_max_bytes plus 4096 bytes for name, version and machine","kind":"too_large","retryable":false}
+numeric version -> {"field_path":"params.version","hint":"correct the method parameters","kind":"invalid_params","retryable":false}
+test failure ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 1.11s
+
+EXIT=0
