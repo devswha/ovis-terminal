@@ -26,6 +26,9 @@ pub mod support;
 /// Explicit and ambiguous registry targets.
 pub mod targeting;
 
+#[path = "../src/dispatch/lanes/conversation_records/qa.rs"]
+/// The conversation record lane: typed appends and reads over a real socket.
+pub mod conversation_records;
 #[path = "../src/dispatch/lanes/prompts/qa.rs"]
 /// The prompt lane's independent answer authorization over a real socket.
 pub mod prompts;

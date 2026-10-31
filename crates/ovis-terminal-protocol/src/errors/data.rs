@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::bound::ExceededBound;
 use super::identity::{FieldPath, OpId, TargetId};
 use super::kinds::ErrorKind;
+use crate::domain::conversation_records::Unavailable;
 use crate::domain::session_binding::HistoryHead;
 use crate::schema::ids::PromptId;
 use crate::schema::scalar::{DurationMs, QueuePosition, RecordVersion, ReportSeq};
@@ -59,6 +60,9 @@ pub struct ErrorData {
     /// Open prompts a `blocked` refusal names as the way through.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub prompt_ids: Vec<PromptId>,
+    /// Reason and provenance, present on a `conversation_unavailable` refusal of records.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unavailable: Option<Box<Unavailable>>,
 }
 
 impl ErrorData {
@@ -80,6 +84,7 @@ impl ErrorData {
             history: None,
             current_version: None,
             prompt_ids: Vec::new(),
+            unavailable: None,
         }
     }
 

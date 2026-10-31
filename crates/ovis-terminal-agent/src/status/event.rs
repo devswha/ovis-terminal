@@ -2,6 +2,7 @@
 
 use ovis_terminal_core::events::EventData;
 use ovis_terminal_core::ops::OperationEvent;
+use ovis_terminal_protocol::domain::conversation_records::RecordsAppended;
 use ovis_terminal_protocol::domain::session_binding::SessionBindingRecord;
 use ovis_terminal_protocol::schema::methods::status::{PromptRecord, TurnRecord};
 use ovis_terminal_protocol::schema::records::{AgentBinding, StatusSnapshot};
@@ -21,6 +22,8 @@ pub enum AgentStatusEvent {
     AgentRegistered(Box<AgentBinding>),
     /// An owning process bound, resumed, branched or replaced its session.
     SessionBound(Box<SessionBindingRecord>),
+    /// An owning process appended typed conversation records.
+    RecordsAppended(Box<RecordsAppended>),
     /// A program opened a prompt.
     PromptOpened(Box<PromptRecord>),
     /// A program republished an open prompt at a new version.
@@ -45,6 +48,7 @@ impl EventData for AgentStatusEvent {
             Self::TurnEnded(_) => "turn.ended",
             Self::AgentRegistered(_) => "agent.registered",
             Self::SessionBound(_) => "agent.session_bound",
+            Self::RecordsAppended(_) => "agent.records_appended",
             Self::PromptOpened(_) => "prompt.opened",
             Self::PromptUpdated(_) => "prompt.updated",
             Self::PromptClosed(_) => "prompt.closed",
@@ -59,6 +63,7 @@ impl EventData for AgentStatusEvent {
             | Self::TurnEnded(_)
             | Self::AgentRegistered(_)
             | Self::SessionBound(_)
+            | Self::RecordsAppended(_)
             | Self::PromptOpened(_)
             | Self::PromptUpdated(_)
             | Self::PromptClosed(_) => {}

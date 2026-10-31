@@ -1,5 +1,5 @@
-//! The session binding lane over the fixture's agent terminals, and the provider store
-//! the scenarios write transcripts into.
+//! The session binding and conversation record lanes over the fixture's agent
+//! terminals, and the provider store the scenarios write transcripts into.
 //!
 //! `fixture.transcript` stands in for the agent program writing its own native store:
 //! it appends, rewrites in place (a shorter text truncates) or replaces (a new file under
@@ -12,14 +12,16 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use ovis_terminal_agent::conversation::binding::{BindingService, Stores};
+use ovis_terminal_agent::conversation::records::RecordsService;
 use ovis_terminal_agent::status::StatusService;
 use ovis_terminal_core::registry::RuntimeIdentity;
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::rpc::RpcRequest;
 use ovis_terminal_protocol::schema::decode_params;
-use ovis_terminal_server::dispatch::lanes::session_binding::{
-    Conversation, SessionBindingLane, UpdateSession,
+use ovis_terminal_server::dispatch::lanes::conversation_records::{
+    AppendRecords, Conversation, ConversationRecordsLane,
 };
+use ovis_terminal_server::dispatch::lanes::session_binding::{SessionBindingLane, UpdateSession};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -36,7 +38,8 @@ pub(crate) fn store(root: &Path) -> PathBuf {
     root.join("transcripts")
 }
 
-/// Registers `agent.update_session` and `agent.conversation` over the agent terminals.
+/// Registers `agent.update_session`, `agent.append_records` and `agent.conversation`
+/// over the agent terminals.
 pub(crate) fn register(
     dispatch: &mut Dispatch,
     (status, directory): (Arc<StatusService>, Arc<Directory>),
@@ -45,13 +48,21 @@ pub(crate) fn register(
     let dir = store(root);
     std::fs::create_dir(&dir).map_err(at("create the transcript store"))?;
     let stores = Stores::new(&[(STORE, dir)]).map_err(at("authorize the transcript store"))?;
+    let records = Arc::new(RecordsService::new(
+        runtime.runtime_id(),
+        Arc::clone(&status),
+    ));
     let service = Arc::new(BindingService::new(runtime.runtime_id(), status, stores));
-    let lane = SessionBindingLane::new(directory, service);
+    let lane = SessionBindingLane::new(Arc::clone(&directory), Arc::clone(&service));
     dispatch
         .register(UpdateSession::new(&lane))
         .map_err(at("register agent.update_session"))?;
+    let conversation = ConversationRecordsLane::new(directory, service, records);
     dispatch
-        .register(Conversation::new(&lane))
+        .register(AppendRecords::new(&conversation))
+        .map_err(at("register agent.append_records"))?;
+    dispatch
+        .register(Conversation::new(&conversation))
         .map_err(at("register agent.conversation"))
 }
 
