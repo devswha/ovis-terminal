@@ -62,9 +62,10 @@ The happy and failure observables run as unit tests in `crates/ovis-terminal-ser
 
 - `bash scripts/check.sh`: exit 0. fmt, workspace clippy `-D warnings`, nextest 589 passed / 1 skipped, doc tests and hygiene all pass (`docs/evidence/task-43/check-summary.log`).
 - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked`: exit 0 (`windows-check.log`).
+- `RUSTDOCFLAGS='-D warnings' cargo doc --no-deps --workspace --all-features --locked`: exit 0. The first CI round failed on a public doc linking to the private `Link::received`; fixed in the second commit.
 - `cargo nextest run -p ovis-terminal-conformance --all-targets --locked`: 24 passed, including `every_scenario_file_is_executed_or_a_listed_declaration` with the new declaration.
 - `openrpc write schema/ovis-terminal.openrpc.json` regenerated; `openrpc compat schema/released.openrpc.json` reports `compatible_with`.
-- macOS stress: new `machine-identity` option and job in `probe-stress-macos.yml` (100 iterations of the remote and lane tests). The run URL is recorded below.
+- macOS stress: new `machine-identity` option and job in `probe-stress-macos.yml` (100 iterations of the remote and lane tests): https://github.com/devswha/ovis-terminal/actions/runs/41211223775 (dispatched on the first head).
 
 ## Adversarial
 

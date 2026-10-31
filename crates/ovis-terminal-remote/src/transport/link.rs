@@ -86,7 +86,7 @@ impl Link {
     }
 
     /// Reads one newline-terminated record, without the newline. Cancel safe: bytes of an
-    /// unfinished record stay in the link and are reported by [`Link::received`].
+    /// unfinished record stay in the link and are reported when the handshake times out.
     ///
     /// # Errors
     ///
