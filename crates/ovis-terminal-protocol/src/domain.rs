@@ -1,3 +1,4 @@
-//! Domain values that several crates exchange over the protocol.
+//! Typed construction of published records owned by domain services.
 
 pub mod machine_identity;
+pub mod plugins;

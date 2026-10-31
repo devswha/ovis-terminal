@@ -50,14 +50,14 @@ pub enum DispatchError {
     /// The monotonic clock cannot represent the deadline.
     #[error("the monotonic clock cannot represent the dispatch deadline")]
     DeadlineOverflow,
-    /// A registered domain refused the request with its own stable kind.
-    #[error("the domain refused the request")]
+    /// A registered domain refused the request with its own published kind.
+    #[error("the domain service refused the request")]
     Domain {
-        /// The domain's stable kind.
+        /// The domain error's stable machine token.
         kind: &'static str,
-        /// The domain's recovery guidance.
+        /// The domain error's recovery guidance.
         hint: &'static str,
-        /// The domain's typed failure.
+        /// The typed domain error.
         #[source]
         source: Box<dyn std::error::Error + Send + Sync>,
     },
