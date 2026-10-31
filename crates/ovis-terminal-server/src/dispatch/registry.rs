@@ -47,7 +47,7 @@ type RunFuture = Pin<Box<dyn Future<Output = Result<Completed, DispatchError>> +
 type Run<D, P> = Box<dyn FnOnce(Execution<D, P>) -> RunFuture + Send>;
 
 pub(super) struct Prepared<D, P> {
-    pub request: Request,
+    pub request: Arc<Request>,
     pub access: Access,
     pub run: Run<D, P>,
 }
@@ -96,7 +96,7 @@ impl<D: Send + 'static, P: Send + Sync + 'static, M: Method<D, P>> Route<D, P> f
         let operation = Request::new(op_id, M::NAME.to_owned(), canonical)?;
         let method = Arc::clone(&self.method);
         Ok(Prepared {
-            request: operation,
+            request: Arc::new(operation),
             access,
             run: Box::new(move |execution| {
                 Box::pin(async move { method.run(params, execution).await })

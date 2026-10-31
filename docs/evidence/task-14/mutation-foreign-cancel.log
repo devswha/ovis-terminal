@@ -1,0 +1,41 @@
+TEMPORARY MUTANT: principal == &session.principal becomes (principal == &session.principal || request.action == Action::CancelOperation)
+COMMAND: cargo test -p ovis-terminal-authz --test authority operations::foreign_operation_ -- --nocapture
+   Compiling ovis-terminal-authz v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t14/crates/ovis-terminal-authz)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.81s
+     Running tests/authority.rs (target/debug/deps/authority-4ff3d2ac798b21aa)
+
+running 2 tests
+
+thread 'operations::foreign_operation_cancellation_is_forbidden' (1208934) panicked at crates/ovis-terminal-authz/tests/authority/operations.rs:85:5:
+assertion `left == right` failed
+  left: "allowed"
+ right: "forbidden"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test operations::foreign_operation_inspection_is_forbidden ... ok
+test operations::foreign_operation_cancellation_is_forbidden ... FAILED
+
+failures:
+
+failures:
+    operations::foreign_operation_cancellation_is_forbidden
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 33 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p ovis-terminal-authz --test authority`
+
+EXIT_CODE=101
+
+--- Predicate restored before normal verification ---
+RESTORED: principal == &session.principal
+   Compiling ovis-terminal-authz v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t14/crates/ovis-terminal-authz)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.90s
+     Running tests/authority.rs (target/debug/deps/authority-4ff3d2ac798b21aa)
+
+running 2 tests
+test operations::foreign_operation_cancellation_is_forbidden ... ok
+test operations::foreign_operation_inspection_is_forbidden ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 33 filtered out; finished in 0.00s
+
+
+EXIT_CODE=0

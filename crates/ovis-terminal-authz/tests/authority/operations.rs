@@ -67,3 +67,41 @@ fn operation_ownership_cannot_authorize_other_principals_or_domain_effects() -> 
     }
     Ok(())
 }
+
+#[test]
+fn foreign_operation_cancellation_is_forbidden() -> TestResult {
+    // Given an interactor who owns no operation of the other principal.
+    let fixture = Fixture::new()?;
+    let (session, _) = fixture.session(
+        "agent",
+        vec![grant(Permission::Interact, terminal_scope("one"))],
+    )?;
+    let foreign = target(TargetResource::Operation {
+        principal: PrincipalId::parse("other")?,
+        op_id: OpId::new("01800000-0000-7000-8000-000000000001".into()),
+    });
+    // When that principal attempts cancellation.
+    let request = AccessRequest::new(Action::CancelOperation, foreign, NOW);
+    // Then the authority itself denies it, independently of ledger lookup.
+    assert_eq!(fixture.outcome(&session, &request), "forbidden");
+    Ok(())
+}
+
+#[test]
+fn foreign_operation_inspection_is_forbidden() -> TestResult {
+    // Given an observer who owns no operation of the other principal.
+    let fixture = Fixture::new()?;
+    let (session, _) = fixture.session(
+        "agent",
+        vec![grant(Permission::Observe, terminal_scope("one"))],
+    )?;
+    let foreign = target(TargetResource::Operation {
+        principal: PrincipalId::parse("other")?,
+        op_id: OpId::new("01800000-0000-7000-8000-000000000001".into()),
+    });
+    // When that principal attempts inspection.
+    let request = AccessRequest::new(Action::InspectOperation, foreign, NOW);
+    // Then the authority denies inspection before storage is consulted.
+    assert_eq!(fixture.outcome(&session, &request), "forbidden");
+    Ok(())
+}

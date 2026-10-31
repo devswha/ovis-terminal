@@ -10,12 +10,15 @@ use uuid::Uuid;
 
 use super::OperationError;
 
+#[cfg(test)]
+mod tests;
+
 /// Fingerprint of canonical method parameters, not raw request formatting.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(super) struct ParamsDigest(Vec<u8>);
 
 /// An operation identity, method and already schema-validated parameter object.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Request {
     /// Client-minted `UUIDv7` operation identity.
     pub(super) op_id: OpId,

@@ -14,11 +14,12 @@ use serde_json::json;
 
 use super::support::{Fixture, TestResult, at, error_kind, op_id, request, runtime};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Terminal {
     index: TargetIndex,
     scope: MachineRuntime,
-    root: PathBuf,
+    pub(crate) root: PathBuf,
+    pub(crate) generation: TerminalGeneration,
 }
 
 impl Terminal {
@@ -40,16 +41,12 @@ impl Terminal {
             index: TargetIndex::from_targets(targets),
             scope,
             root,
+            generation: TerminalGeneration::new(2)?,
         })
     }
-}
 
-impl Method<OperationEvent, OperationProducer> for Terminal {
-    const NAME: &'static str = "terminal.keep";
-    type Params = TerminalKeepParams;
-
-    fn resolve(&self, params: &Self::Params, _: &Session) -> Result<Access, DispatchError> {
-        let request = match &params.target {
+    pub(crate) fn access(&self, target: &Target) -> Result<Access, DispatchError> {
+        let request = match target {
             Target::TerminalId(id) => TargetRequest::Id(ResourceTargetKey::new(
                 self.scope,
                 id.as_str().parse().map_err(TargetResolutionError::from)?,
@@ -69,10 +66,19 @@ impl Method<OperationEvent, OperationProducer> for Terminal {
                 TargetResource::Terminal {
                     placement: None,
                     terminal: target.terminal_id(),
-                    incarnation: TerminalGeneration::new(1).map_err(TargetResolutionError::from)?,
+                    incarnation: self.generation,
                 },
             ),
         ))
+    }
+}
+
+impl Method<OperationEvent, OperationProducer> for Terminal {
+    const NAME: &'static str = "terminal.keep";
+    type Params = TerminalKeepParams;
+
+    fn resolve(&self, params: &Self::Params, _: &Session) -> Result<Access, DispatchError> {
+        self.access(&params.target)
     }
 
     async fn run(

@@ -4,6 +4,7 @@ mod context;
 mod error;
 mod evidence;
 mod ledger;
+mod ownership;
 mod request;
 mod transitions;
 

@@ -1,18 +1,22 @@
 //! The RPC wait expires independently of its owned operation task.
 
+use std::future::Future;
 use std::time::Duration;
 
-use ovis_terminal_protocol::errors::{BoundaryError, OpId};
+use ovis_terminal_protocol::errors::{BoundaryError, ErrorData, OpId};
 use ovis_terminal_protocol::schema::limits::Limits;
 use ovis_terminal_protocol::schema::scalar::DurationMs;
 use serde_json::Value;
-use tokio::sync::oneshot;
+use tokio::sync::watch;
 use tokio::time::Instant;
 
 use super::DispatchError;
 
+#[cfg(test)]
+mod tests;
+
 pub(super) async fn wait(
-    received: oneshot::Receiver<Result<Value, BoundaryError>>,
+    received: impl Future<Output = Result<Value, BoundaryError>> + Send,
     op_id: OpId,
     start: Instant,
 ) -> Result<Value, BoundaryError> {
@@ -24,16 +28,35 @@ pub(super) async fn wait(
                 .boundary()
                 .with_op_id(op_id.clone())
         })?;
-    match tokio::time::timeout_at(expires, received).await {
-        Ok(Ok(result)) => result,
-        Ok(Err(_)) => Err(DispatchError::Closed.boundary().with_op_id(op_id)),
-        Err(_) => {
-            let elapsed = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
+    let outcome = tokio::time::timeout_at(expires, received).await;
+    let settled = Instant::now();
+    match outcome {
+        Ok(result) if settled < expires => result.map_err(|error| error.with_op_id(op_id)),
+        Ok(_) | Err(_) => {
+            let elapsed =
+                u64::try_from(settled.duration_since(start).as_millis()).unwrap_or(u64::MAX);
             Err(BoundaryError::deadline_exceeded(
                 op_id,
                 deadline,
                 DurationMs::new(elapsed),
             ))
         }
+    }
+}
+
+pub(super) type Reply = Result<Value, ErrorData>;
+pub(super) type Response = watch::Receiver<Option<Reply>>;
+
+pub(super) async fn receive(mut response: Response) -> Result<Value, BoundaryError> {
+    let reply = response
+        .wait_for(Option::is_some)
+        .await
+        .map_err(|_| DispatchError::Closed.boundary())?;
+    match reply.as_ref() {
+        Some(Ok(value)) => Ok(value.clone()),
+        Some(Err(data)) => Err(BoundaryError::Domain {
+            data: Box::new(data.clone()),
+        }),
+        None => Err(DispatchError::Closed.boundary()),
     }
 }

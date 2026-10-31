@@ -4,17 +4,20 @@ use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
 use ovis_terminal_authz::{PrincipalId, Session};
-use ovis_terminal_protocol::errors::OpId;
+use ovis_terminal_core::ops::Request;
+use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind};
 use ovis_terminal_protocol::schema::limits::Limits;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore, watch};
 use tokio::task::{Id, JoinSet};
 
 use super::DispatchError;
+use super::deadline::Response;
 
 pub(super) struct Active {
     pub principal: PrincipalId,
-    pub op_id: OpId,
+    pub request: Arc<Request>,
     pub cancel: watch::Sender<bool>,
+    pub response: Response,
 }
 
 #[derive(Default)]
@@ -26,6 +29,30 @@ pub(super) struct Tasks {
 }
 
 impl Tasks {
+    pub(super) fn joined(
+        &self,
+        principal: &PrincipalId,
+        request: &Request,
+    ) -> Result<Option<Response>, BoundaryError> {
+        if self.closed {
+            return Err(DispatchError::Closed.boundary());
+        }
+        let active = self.active.values().find(|active| {
+            &active.principal == principal && active.request.op_id() == request.op_id()
+        });
+        match active {
+            Some(active) if active.request.as_ref() == request => Ok(Some(active.response.clone())),
+            Some(_) => Err(
+                BoundaryError::domain(ErrorKind::from("op_reused".to_owned()), false)
+                    .with_hint(
+                        "inspect the original operation; use a new identity only for new work",
+                    )
+                    .with_op_id(request.op_id().clone()),
+            ),
+            None => Ok(None),
+        }
+    }
+
     pub(super) fn take_running(&mut self) -> Self {
         Self {
             set: std::mem::take(&mut self.set),

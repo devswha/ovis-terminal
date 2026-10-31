@@ -1,0 +1,92 @@
+{
+  "task": 14,
+  "round": 2,
+  "reviewed_head": "5e9e98c51111c6d6893c7a3efe2d145ffd8f85ce",
+  "platform": "Linux x86_64",
+  "blockers": {
+    "B1": {
+      "status": "fixed",
+      "mechanism": "Enforce same-clock expiry at settlement, including a ready result at or after expiry.",
+      "tests": [
+        "dispatch::deadline::tests::ready_result_at_or_after_expiry_is_not_success",
+        "dispatch::deadline::tests::ready_result_before_expiry_is_success",
+        "dispatch::deadline::tests::shared_outcome_keeps_each_callers_own_deadline"
+      ],
+      "red_exit": 101,
+      "green_exit": 0
+    },
+    "B2": {
+      "status": "fixed",
+      "mechanism": "Join identical principal/op_id/canonical-request work to one owned execution and shared outcome; each caller retains its own start time.",
+      "test": "convergence::eight_identical_dispatches_converge_on_one_execution_and_outcome",
+      "assertions": [
+        "8 distinct correlated successful replies",
+        "8 identical results containing the same op_id",
+        "1 preparation",
+        "1 create-new filesystem effect",
+        "same retained committed outcome"
+      ],
+      "red_exit": 101,
+      "green_exit": 0
+    },
+    "B3": {
+      "status": "fixed",
+      "mechanism": "Resolve retained ledger owner before authz authorize and recheck.",
+      "test": "authority::resource_scope_is_checked_before_handlers_and_receipts_are_principal_bound",
+      "foreign_get_kind": "forbidden",
+      "foreign_cancel_kind": "forbidden",
+      "red_exit": 101,
+      "green_exit": 0
+    },
+    "B4": {
+      "status": "fixed",
+      "tests": [
+        "operations::foreign_operation_cancellation_is_forbidden",
+        "operations::foreign_operation_inspection_is_forbidden"
+      ],
+      "mutant_exit": 101,
+      "mutant_failed_test": "operations::foreign_operation_cancellation_is_forbidden",
+      "mutant_observed": "allowed",
+      "expected": "forbidden",
+      "restored_exit": 0,
+      "production_table_restored": true,
+      "log": "docs/evidence/task-14/mutation-foreign-cancel.log"
+    }
+  },
+  "stale_incarnation": {
+    "test": "incarnation::stale_incarnation_is_rejected_before_admission_or_effect",
+    "expected_incarnation": "1",
+    "current_incarnation": "2",
+    "kind": "stale_target",
+    "effect": false,
+    "operation_admitted": false,
+    "matching_incarnation_reaches_effect": true,
+    "red_exit": 101,
+    "green_exit": 0
+  },
+  "verification": {
+    "repository_gate": {
+      "exit_code": 0,
+      "passed": 390,
+      "skipped": 1
+    },
+    "server": {
+      "exit_code": 0,
+      "passed": 50
+    },
+    "socket_cases": 14,
+    "paused_clock_cases": 3,
+    "authority_seam_cases": 4,
+    "openrpc_freshness": 0,
+    "released_compatibility": 0
+  },
+  "seams": [
+    "Core Request equality exposes the existing canonical fingerprint semantics.",
+    "Core Operations::owner resolves retained owner for authorization, preferring a caller-owned record when UUIDs were independently reused by different principals.",
+    "Authz production predicate and protocol schema are unchanged in round 2."
+  ],
+  "limits": [
+    "Fixture terminal.kill proves dispatch stale-incarnation behavior, not implementation of the Todo 16 terminal service.",
+    "Assembled conformance remains deferred until Todo 21; the recorded exit-2 attempt remains the applicable runner evidence."
+  ]
+}

@@ -32,6 +32,8 @@ mod concurrency;
 pub mod holder;
 #[path = "../src/ops/qa/inspection.rs"]
 mod inspection;
+#[path = "../src/ops/qa/ownership.rs"]
+mod ownership;
 
 struct Fixture(PathBuf);
 

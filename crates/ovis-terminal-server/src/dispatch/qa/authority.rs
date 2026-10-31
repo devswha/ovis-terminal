@@ -91,10 +91,12 @@ async fn resource_scope_is_checked_before_handlers_and_receipts_are_principal_bo
     );
     let mut other = fixture.socket.connect().await?;
     other.hello("1", &fixture.socket.bearer).await?;
-    other
-        .send(&request("foreign", "op.get", &json!({"op_id":op})))
-        .await?;
-    assert_eq!(error_kind(&other.expect_next().await?), "not_found");
+    for method in ["op.get", "op.cancel"] {
+        other
+            .send(&request("foreign", method, &json!({"op_id":op})))
+            .await?;
+        assert_eq!(error_kind(&other.expect_next().await?), "forbidden");
+    }
     drop((client, other));
     server.shutdown().await?;
     fixture.close().await

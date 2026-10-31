@@ -10,6 +10,10 @@ pub mod bounds;
 #[path = "../src/dispatch/qa/cancellation.rs"]
 /// Cancellation and joined operation lifetimes.
 pub mod cancellation;
+#[path = "../src/dispatch/qa/convergence.rs"]
+pub mod convergence;
+#[path = "../src/dispatch/qa/incarnation.rs"]
+pub mod incarnation;
 #[path = "../src/dispatch/qa/lifecycle.rs"]
 /// Deadline recovery over the real socket.
 pub mod lifecycle;

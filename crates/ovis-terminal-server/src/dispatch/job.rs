@@ -1,4 +1,4 @@
-//! Running requests and operation-control calls against the landed ledger.
+//! Run one execution and retain its outcome in the landed operation ledger.
 
 use std::sync::Arc;
 
@@ -8,7 +8,7 @@ use ovis_terminal_core::ops::{
     Context, OperationError, OperationEvent, OperationSnapshot, Operations,
 };
 use ovis_terminal_core::registry::RegistryIdentities;
-use ovis_terminal_protocol::errors::{BoundaryError, OpId};
+use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::schema::methods::server::OpState;
 use ovis_terminal_protocol::schema::scalar::OpenEnum;
 use serde::Serialize;
@@ -18,7 +18,7 @@ use tokio::sync::watch;
 
 use super::execution::{State, now};
 use super::registry::Prepared;
-use super::{Access, DispatchError, Execution};
+use super::{DispatchError, Execution};
 
 pub(super) struct Job<D, P> {
     pub state: Arc<State<D, P>>,
@@ -111,43 +111,4 @@ where
             }
         }
     }
-
-    pub(super) async fn control(
-        self,
-        request: Control,
-        signals: Vec<watch::Sender<bool>>,
-    ) -> Result<Value, BoundaryError> {
-        let op_id = request.op_id.clone();
-        let result = tokio::task::spawn_blocking(move || {
-            let at = now()?;
-            self.state
-                .authority
-                .recheck(&self.decision, &request.access.at(at))?;
-            let operations = Operations::new(
-                &self.state.core,
-                Context::new(self.session.principal().clone(), self.state.identity, at),
-            );
-            let value = if request.cancel {
-                let result = operations.cancel(&request.op_id)?;
-                for signal in signals {
-                    signal.send_replace(true);
-                }
-                serde_json::to_value(result)?
-            } else {
-                serde_json::to_value(operations.get(&request.op_id)?)?
-            };
-            Ok::<_, DispatchError>(value)
-        })
-        .await;
-        result
-            .map_err(DispatchError::from)
-            .and_then(std::convert::identity)
-            .map_err(|error| error.boundary().with_op_id(op_id))
-    }
-}
-
-pub(super) struct Control {
-    pub op_id: OpId,
-    pub access: Access,
-    pub cancel: bool,
 }

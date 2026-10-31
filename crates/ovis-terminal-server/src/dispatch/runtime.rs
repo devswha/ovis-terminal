@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::Arc;
 
-use ovis_terminal_authz::{Action, Authority, ResolvedTarget, TargetResource};
+use ovis_terminal_authz::Authority;
 use ovis_terminal_core::events::{Coordinator, EventData, SnapshotProducer};
 use ovis_terminal_core::ops::{OperationEvent, OperationSnapshot};
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
@@ -15,15 +15,16 @@ use ovis_terminal_protocol::schema::methods::server::OpRefParams;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
-use tokio::sync::{Mutex, Semaphore, oneshot, watch};
+use tokio::sync::{Mutex, Semaphore, watch};
 use tokio::time::Instant;
 
-use super::deadline::wait;
+use super::control::{self, Control};
+use super::deadline::{receive, wait};
 use super::execution::{State, now};
-use super::job::{Control, Job};
+use super::job::Job;
 use super::registry::{Registered, Route};
 use super::tasks::{Active, Tasks};
-use super::{Access, DispatchError, Method};
+use super::{DispatchError, Method};
 use crate::conn::{Call, RequestHandler};
 
 /// Strict dispatcher sharing the core's actual operation/event coordinator.
@@ -151,19 +152,25 @@ where
             .authorize(&call.session, &prepared.access.at(at))
             .map_err(|error| DispatchError::from(error).boundary())?;
         let op_id = prepared.request.op_id().clone();
+        let mut tasks = self.tasks.lock().await;
+        tasks.reap().map_err(|error| error.boundary())?;
+        if let Some(received) = tasks.joined(call.session.principal(), &prepared.request)? {
+            drop(tasks);
+            return wait(receive(received), op_id, start).await;
+        }
         let global = Arc::clone(&self.work)
             .try_acquire_owned()
             .map_err(|_| DispatchError::Backpressure.boundary())?;
-        let mut tasks = self.tasks.lock().await;
         let permit = tasks
             .permit(&call.session)
             .map_err(|error| error.boundary())?;
         let (cancel, cancellation) = watch::channel(false);
-        let (reply, received) = oneshot::channel();
+        let (reply, received) = watch::channel(None);
         let active = Active {
             principal: call.session.principal().clone(),
-            op_id: op_id.clone(),
+            request: Arc::clone(&prepared.request),
             cancel,
+            response: received.clone(),
         };
         let job = Job {
             state: Arc::clone(&self.state),
@@ -174,39 +181,17 @@ where
         let task = tasks.set.spawn(async move {
             let result = job.run(prepared, cancellation).await;
             // A disappeared RPC waiter does not cancel or discard the durable operation.
-            match reply.send(result) {
-                Ok(()) | Err(_) => {}
-            }
+            reply.send_replace(Some(result.map_err(|error| error.data().clone())));
             drop((permit, global));
         });
         tasks.active.insert(task.id(), active);
         drop(tasks);
-        wait(received, op_id, start).await
+        wait(receive(received), op_id, start).await
     }
 
     async fn control_call(&self, call: Call, start: Instant) -> Result<Value, BoundaryError> {
         let params: OpRefParams = decode_params(&call.request).map_err(BoundaryError::from)?;
         let cancel = call.request.method() == "op.cancel";
-        let access = Access::new(
-            if cancel {
-                Action::CancelOperation
-            } else {
-                Action::InspectOperation
-            },
-            ResolvedTarget::new(
-                self.state.identity.machine_id(),
-                TargetResource::Operation {
-                    principal: call.session.principal().clone(),
-                    op_id: params.op_id.clone(),
-                },
-            ),
-        );
-        let at = now().map_err(|error| error.boundary())?;
-        let decision = self
-            .state
-            .authority
-            .authorize(&call.session, &access.at(at))
-            .map_err(|error| DispatchError::from(error).boundary())?;
         let permit = Arc::clone(&self.control)
             .try_acquire_owned()
             .map_err(|_| DispatchError::Backpressure.boundary())?;
@@ -219,32 +204,26 @@ where
             .active
             .values()
             .filter(|active| {
-                active.principal == *call.session.principal() && active.op_id == params.op_id
+                active.principal == *call.session.principal()
+                    && active.request.op_id() == &params.op_id
             })
             .map(|active| active.cancel.clone())
             .collect();
         let op_id = params.op_id;
         let control = Control {
             op_id: op_id.clone(),
-            access,
             cancel,
+            signals,
         };
-        let (reply, received) = oneshot::channel();
-        let job = Job {
-            state: Arc::clone(&self.state),
-            session: call.session,
-            decision,
-            notifier: call.notifier,
-        };
+        let (reply, received) = watch::channel(None);
+        let state = Arc::clone(&self.state);
         tasks.set.spawn(async move {
-            let result = job.control(control, signals).await;
-            match reply.send(result) {
-                Ok(()) | Err(_) => {}
-            }
+            let result = control::run(state, call.session, control).await;
+            reply.send_replace(Some(result.map_err(|error| error.data().clone())));
             drop(permit);
         });
         drop(tasks);
-        wait(received, op_id, start).await
+        wait(receive(received), op_id, start).await
     }
 }
 

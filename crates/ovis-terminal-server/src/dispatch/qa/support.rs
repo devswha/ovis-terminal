@@ -50,7 +50,9 @@ impl Fixture {
             effect: socket.path("effect"),
             machine: identity.machine_id(),
         })?;
-        dispatch.register(super::targeting::Terminal::new(socket.path("effects"))?)?;
+        let terminals = super::targeting::Terminal::new(socket.path("effects"))?;
+        dispatch.register(terminals.clone())?;
+        dispatch.register(super::incarnation::Kill(terminals))?;
         Ok(Self {
             socket,
             core,
@@ -128,6 +130,7 @@ impl Method<OperationEvent, OperationProducer> for Document {
         // A real filesystem effect at dispatch's boundary; not a document-service claim.
         let effect = self.effect.clone();
         let gate = Arc::clone(&self.gate);
+        let op_id = execution.op_id().clone();
         execution
             .commit(move || {
                 gate.effect_started.send_replace(true);
@@ -147,7 +150,7 @@ impl Method<OperationEvent, OperationProducer> for Document {
                     .write(true)
                     .open(effect)?;
                 file.write_all(serde_json::to_string(&params.value)?.as_bytes())?;
-                Ok(json!({"version": params.version, "value": params.value}))
+                Ok(json!({"op_id": op_id, "version": params.version, "value": params.value}))
             })
             .await
     }
