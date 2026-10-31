@@ -2,9 +2,8 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
-use crate::errors::{ErrorData, OpId};
+use crate::errors::OpId;
 use crate::schema::common::{NoParams, PageInfo, PageRequest};
 use crate::schema::ids::{
     BuildVersion, ClientId, MachineId, MethodName, RuntimeLifetimeId, ServerBootId,
@@ -16,6 +15,14 @@ use crate::schema::scalar::{
     ByteCount, DurationMs, EventSeq, Incarnation, OpenEnum, ProtocolGeneration, Revision,
     TimestampMs,
 };
+
+mod operation;
+mod receipt;
+pub use operation::{
+    AckEpoch, CancelOutcome, FenceEpoch, GrantEpoch, OpCancelResult, OperationEvidence,
+    ProcessExitEvidence, WriteEvidence, WriteIntent, WriteSequence,
+};
+pub use receipt::{OpRecord, OpRefParams, OpState};
 
 /// Client identity presented in `hello`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -205,52 +212,6 @@ pub struct ServerMetricsResult {
     pub recovery: Vec<RecoveryEvidence>,
 }
 
-/// State of an operation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-#[non_exhaustive]
-pub enum OpState {
-    /// Admitted, not started.
-    Accepted,
-    /// In progress.
-    Running,
-    /// Durably committed.
-    Committed,
-    /// Failed without effects.
-    Failed,
-    /// Cancelled before commit.
-    Cancelled,
-    /// Effects may have begun; the outcome cannot be proven.
-    OutcomeUnknown,
-}
-
-/// Parameters of `op.get` and `op.cancel`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[non_exhaustive]
-pub struct OpRefParams {
-    /// Operation identity.
-    pub op_id: OpId,
-}
-
-/// Inspectable operation record.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[non_exhaustive]
-pub struct OpRecord {
-    /// Operation identity.
-    pub op_id: OpId,
-    /// Method that created the operation.
-    pub method: MethodName,
-    /// Current state.
-    pub state: OpenEnum<OpState>,
-    /// Method result, once committed.
-    pub result: Option<Value>,
-    /// Structured error, once failed.
-    pub error: Option<ErrorData>,
-    /// Sequence of the latest state change.
-    pub updated_seq: EventSeq,
-}
-
 /// Parameters of `session.snapshot`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -296,7 +257,7 @@ pub(crate) const METHODS: &[MethodSpec] = &[
     "Read per-consumer queues, lag and recovery evidence.", []},
     method! {"op.get", Query, Lookup, OpRefParams => OpRecord,
     "Inspect an operation by its identity.", [OpExpired]},
-    method! {"op.cancel", Mutation, Lookup, OpRefParams => OpRecord,
+    method! {"op.cancel", Mutation, Lookup, OpRefParams => OpCancelResult,
     "Cancel an operation before it commits.", []},
     method! {"session.snapshot", Query, Untargeted, SessionSnapshotParams => SessionSnapshotResult,
     "Read one atomic, paginated snapshot of the session.", [StaleEndpoint]},

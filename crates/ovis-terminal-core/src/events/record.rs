@@ -115,6 +115,12 @@ pub enum ResourceId {
 pub trait EventData {
     /// Name of the variant being committed.
     fn event_type(&self) -> &'static str;
+
+    /// Stamps embedded revision fields while the coordinator owns the commit barrier.
+    ///
+    /// Data without embedded sequence fields needs no adjustment. Composite event
+    /// enums must forward this call to variants that carry such fields.
+    fn at_sequence(&mut self, _seq: EventSeq) {}
 }
 
 /// A mutation and its mandatory typed event, committed in one store transaction.

@@ -170,11 +170,19 @@ impl<D: EventData + Clone + Serialize + DeserializeOwned, P: SnapshotProducer> C
     /// # Errors
     ///
     /// Returns typed serialization, admission, CAS or persistence failures.
-    pub fn commit(&self, commit: Commit<D>) -> Result<Cursor, EventError> {
+    pub fn commit(&self, mut commit: Commit<D>) -> Result<Cursor, EventError> {
         if commit.affected.is_empty() {
             return Err(EventError::MissingResources);
         }
         let mut state = self.lock()?;
+        let next = state
+            .store
+            .snapshot()?
+            .revision()
+            .get()
+            .checked_add(1)
+            .ok_or(EventError::LimitExceeded)?;
+        commit.data.at_sequence(EventSeq::new(next));
         let body = Body {
             schema_version: SCHEMA_VERSION,
             identity: self.identity,

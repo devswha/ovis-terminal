@@ -1,0 +1,177 @@
+{
+  "task": 15,
+  "verification": "component_verified_assembly_deferred",
+  "platform": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "kernel": "7.0.0-38-generic"
+  },
+  "toolchain": {
+    "cargo": "1.99.1 (5f94df478 2026-08-27)",
+    "rustc": "1.99.1 (58cf8f9c3 2026-10-13)"
+  },
+  "baseline": "absent (GAP-013, GAP-144, GAP-147)",
+  "checks": [
+    {
+      "command": "cargo clippy -p ovis-terminal-core --all-targets -- -D warnings",
+      "exit": 0
+    },
+    {
+      "command": "cargo nextest run -p ovis-terminal-core",
+      "exit": 0,
+      "passed": "66",
+      "skipped": "0"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops happy -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops failure -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    },
+    {
+      "command": "bash scripts/check.sh",
+      "exit": 0,
+      "workspace_passed": "327",
+      "existing_child_fixtures_skipped": "1",
+      "hygiene_violations": "0",
+      "hygiene_files": "332",
+      "json_files": "31"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops admission::concurrent_identical_accepts_return_one_record_and_grant_one_effect -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops admission::concurrent_changed_payloads_return_the_winner_and_seven_reuse_errors -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops adversarial::running_failure_is_durable_and_cancellation_reports_no_effect -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops inspection::inspection_enforces_the_snapshot_lease_byte_budget -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1",
+      "mutation": "direct store capture fails this assertion; see mutation-accessor.log"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops inspection::inspection_requires_an_available_snapshot_lease -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1",
+      "mutation": "budget-preserving direct store capture fails this assertion; see mutation-accessor-budget.log"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops bounds::capacity_accepts_1024_and_rejects_1025_without_eviction -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core --test ops bounds::canonical_parameters_accept_262144_bytes_and_reject_262145 -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-core ops::context::tests::persisted_receipt_accepts_16384_bytes_and_rejects_16385 -- --exact --nocapture",
+      "exit": 0,
+      "passed": "1"
+    }
+  ],
+  "deduplication_window_ms": "86400000",
+  "receipt": {
+    "op_id": "000005f5-e100-7000-8000-000000000001",
+    "method": "terminal.run",
+    "state": "committed",
+    "result": {
+      "delivered_bytes": "4"
+    },
+    "error": null,
+    "updated_seq": "6",
+    "evidence": {
+      "terminal_id": "terminal:1",
+      "incarnations": {
+        "terminal_incarnation": "1",
+        "process_incarnation": "1",
+        "status_seq": null
+      },
+      "intent": {
+        "sequence": "1",
+        "grant_epoch": "1",
+        "fence_epoch": "1",
+        "requested_bytes": "4"
+      },
+      "write": {
+        "written_bytes": "4",
+        "output_offset": "7",
+        "intent": {
+          "sequence": "1",
+          "grant_epoch": "1",
+          "fence_epoch": "1",
+          "requested_bytes": "4"
+        },
+        "ack_epoch": "1"
+      },
+      "exit": {
+        "code": 0,
+        "signal": null,
+        "observed": true,
+        "io_failure": false,
+        "final_offset": "19"
+      },
+      "cancellation_requested": false
+    }
+  },
+  "unknown": {
+    "op_id": "000005f5-e100-7000-8000-000000000001",
+    "method": "terminal.run",
+    "state": "outcome_unknown",
+    "result": null,
+    "error": null,
+    "updated_seq": "3"
+  },
+  "holder_bytes": [
+    65,
+    82,
+    77,
+    69,
+    68,
+    13,
+    10,
+    69,
+    70,
+    70,
+    69,
+    67,
+    84,
+    58,
+    111,
+    110,
+    101,
+    13,
+    10
+  ],
+  "conformance": {
+    "status": "DEFERRED VERIFICATION (runner lands in Todo 21)",
+    "exit": 2,
+    "command": "cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-15 --isolated --case happy --evidence \"$ATTEMPT_DIR/task-15-ovis-terminal-v1.json\"",
+    "stderr": "conformance: no scenarios are registered in this build (protocol crate ovis-terminal-protocol)",
+    "transcript": "docs/evidence/task-15/conformance-attempt.log",
+    "real_cli_socket_result_claimed": false
+  },
+  "cleanup": {
+    "holder_workers_joined": true,
+    "fixture_roots_removed": true
+  },
+  "limits": {
+    "indexed_operations_per_runtime": "1024",
+    "receipt_bytes": "16384",
+    "canonical_param_bytes": "262144"
+  }
+}

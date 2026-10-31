@@ -1,6 +1,10 @@
 {
   "components": {
     "schemas": {
+      "AckEpoch": {
+        "$ref": "#/components/schemas/DecimalCounter",
+        "description": "Holder AckEpoch as a canonical decimal string."
+      },
       "AgentBinding": {
         "description": "Agent registered on a terminal by its owning process.",
         "properties": {
@@ -955,6 +959,26 @@
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "CancelOutcome": {
+        "description": "What cancellation can truthfully guarantee.",
+        "oneOf": [
+          {
+            "const": "cancelled_before_commit",
+            "description": "No effect was permitted.",
+            "type": "string"
+          },
+          {
+            "const": "already_committed",
+            "description": "The committed outcome cannot be undone.",
+            "type": "string"
+          },
+          {
+            "const": "pending",
+            "description": "Work may have begun; inspect the operation rather than replaying it.",
+            "type": "string"
+          }
+        ]
+      },
       "Capabilities": {
         "description": "Features this runtime serves; a client never assumes an absent entry.",
         "properties": {
@@ -1183,6 +1207,11 @@
           "provenance"
         ],
         "type": "object"
+      },
+      "DecimalCounter": {
+        "description": "Unsigned 64-bit integer carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
       },
       "Digest": {
         "description": "Opaque identity string.",
@@ -2179,6 +2208,10 @@
         },
         "type": "object"
       },
+      "FenceEpoch": {
+        "$ref": "#/components/schemas/DecimalCounter",
+        "description": "Holder FenceEpoch as a canonical decimal string."
+      },
       "FieldPath": {
         "description": "Dotted path to the offending input field.",
         "type": "string"
@@ -2369,6 +2402,10 @@
           "rows"
         ],
         "type": "object"
+      },
+      "GrantEpoch": {
+        "$ref": "#/components/schemas/DecimalCounter",
+        "description": "Holder GrantEpoch as a canonical decimal string."
       },
       "Heartbeat": {
         "description": "Idle heartbeat of one subscription.",
@@ -4161,6 +4198,66 @@
           }
         ]
       },
+      "OpCancelResult": {
+        "description": "Cancellation adds a typed outcome while preserving every released `OpRecord` field.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Structured error, once failed."
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OperationEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Supporting delivery, process and cancellation facts, when recorded."
+          },
+          "method": {
+            "$ref": "#/components/schemas/MethodName",
+            "description": "Method that created the operation."
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation identity."
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/CancelOutcome",
+            "description": "Cancellation guarantee, independent of the operation's execution state.",
+            "x-ovis-open-enum": true
+          },
+          "result": {
+            "description": "Method result, once committed."
+          },
+          "state": {
+            "$ref": "#/components/schemas/OpState",
+            "description": "Current state.",
+            "x-ovis-open-enum": true
+          },
+          "updated_seq": {
+            "$ref": "#/components/schemas/EventSeq",
+            "description": "Sequence of the latest state change."
+          }
+        },
+        "required": [
+          "op_id",
+          "method",
+          "state",
+          "updated_seq",
+          "outcome"
+        ],
+        "type": "object"
+      },
       "OpId": {
         "description": "Client-minted operation identity used for idempotent retries.",
         "type": "string"
@@ -4178,6 +4275,17 @@
               }
             ],
             "description": "Structured error, once failed."
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OperationEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Supporting delivery, process and cancellation facts, when recorded."
           },
           "method": {
             "$ref": "#/components/schemas/MethodName",
@@ -4256,6 +4364,74 @@
             "type": "string"
           }
         ]
+      },
+      "OperationEvidence": {
+        "description": "Durable facts supporting an operation outcome; reads never clear them.",
+        "properties": {
+          "cancellation_requested": {
+            "description": "Cancellation was requested after work could have begun.",
+            "type": "boolean"
+          },
+          "exit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProcessExitEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Actual process exit status or its explicit absence."
+          },
+          "incarnations": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Expect"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Terminal and process incarnations the evidence names."
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WriteIntent"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Input identity persisted before external effects."
+          },
+          "terminal_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TerminalId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Terminal identity attached to holder evidence."
+          },
+          "write": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WriteEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Actual delivery, independent of process exit."
+          }
+        },
+        "required": [
+          "cancellation_requested"
+        ],
+        "type": "object"
       },
       "OutputCursor": {
         "additionalProperties": false,
@@ -4657,6 +4833,45 @@
             "type": "string"
           }
         ]
+      },
+      "ProcessExitEvidence": {
+        "description": "Holder exit evidence, including explicitly uncertain or incomplete outcomes.",
+        "properties": {
+          "code": {
+            "description": "Observed exit code, absent for signals or unavailable status.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "final_offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "Last retained output offset."
+          },
+          "io_failure": {
+            "description": "PTY failure means the output may be incomplete.",
+            "type": "boolean"
+          },
+          "observed": {
+            "description": "True only when the holder observed a process exit status.",
+            "type": "boolean"
+          },
+          "signal": {
+            "description": "Observed signal, absent for exit codes or unavailable status.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "observed",
+          "io_failure",
+          "final_offset"
+        ],
+        "type": "object"
       },
       "ProcessObservation": {
         "description": "Observed process outcome after an action was delivered.",
@@ -8312,6 +8527,66 @@
           "scope"
         ],
         "type": "object"
+      },
+      "WriteEvidence": {
+        "description": "Receipt of a holder write, not proof of program acceptance or termination.",
+        "properties": {
+          "ack_epoch": {
+            "$ref": "#/components/schemas/AckEpoch",
+            "description": "Holder acknowledgement epoch."
+          },
+          "intent": {
+            "$ref": "#/components/schemas/WriteIntent",
+            "description": "Input entry and authority that the holder acknowledged."
+          },
+          "output_offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "Output cursor reported at the holder's acknowledgement."
+          },
+          "written_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Bytes actually written, including a partial prefix."
+          }
+        },
+        "required": [
+          "written_bytes",
+          "output_offset",
+          "intent",
+          "ack_epoch"
+        ],
+        "type": "object"
+      },
+      "WriteIntent": {
+        "description": "Write identity persisted before handing input to the holder.",
+        "properties": {
+          "fence_epoch": {
+            "$ref": "#/components/schemas/FenceEpoch",
+            "description": "Revocation fence at admission."
+          },
+          "grant_epoch": {
+            "$ref": "#/components/schemas/GrantEpoch",
+            "description": "Granted authority epoch."
+          },
+          "requested_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Exact number of bytes admitted for this input."
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/WriteSequence",
+            "description": "Ordered input entry."
+          }
+        },
+        "required": [
+          "sequence",
+          "grant_epoch",
+          "fence_epoch",
+          "requested_bytes"
+        ],
+        "type": "object"
+      },
+      "WriteSequence": {
+        "$ref": "#/components/schemas/DecimalCounter",
+        "description": "Holder WriteSequence as a canonical decimal string."
       }
     }
   },
@@ -8931,7 +9206,7 @@
       "result": {
         "name": "result",
         "schema": {
-          "$ref": "#/components/schemas/OpRecord"
+          "$ref": "#/components/schemas/OpCancelResult"
         }
       },
       "summary": "Cancel an operation before it commits.",
@@ -19003,6 +19278,34 @@
     }
   ],
   "x-events": [
+    {
+      "name": "op.accepted",
+      "schema": {
+        "$ref": "#/components/schemas/OpRecord"
+      },
+      "summary": "Operation acceptance was persisted."
+    },
+    {
+      "name": "op.running",
+      "schema": {
+        "$ref": "#/components/schemas/OpRecord"
+      },
+      "summary": "Operation intent was persisted before effects."
+    },
+    {
+      "name": "op.cancelled",
+      "schema": {
+        "$ref": "#/components/schemas/OpRecord"
+      },
+      "summary": "Operation was cancelled before effects."
+    },
+    {
+      "name": "op.outcome_unknown",
+      "schema": {
+        "$ref": "#/components/schemas/OpRecord"
+      },
+      "summary": "Operation effects cannot yet be proven."
+    },
     {
       "name": "terminal.created",
       "schema": {

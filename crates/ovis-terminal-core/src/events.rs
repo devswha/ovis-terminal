@@ -3,6 +3,7 @@
 mod coordinator;
 mod delivery;
 mod error;
+mod inspection;
 mod record;
 mod replay;
 mod snapshot;
