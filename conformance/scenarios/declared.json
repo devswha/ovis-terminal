@@ -142,6 +142,11 @@
       "reason": "The ConPTY terminal (ovis-terminal-holder windows::ConptyTerminal) and terminal.run admission (lanes::conpty::admit/spawn) exist, but no served binary routes terminal.run to them: todo 54 serves named pipes and the Windows service host that owns ConPTY holders, todo 31 assembles the served terminal.run, and the todo-21 runner's fixture serves only a Unix socket, so a windows-only case would be skipped on every runner it has. Covered meanwhile by the native Windows tests listed in the descriptor, run by ci.yml on windows-2025; todo 60 runs this scenario in Windows smoke CI."
     },
     {
+      "file": "platform/windows-service.json",
+      "owner_todo": "54",
+      "reason": "The named-pipe listener (ovis-terminal-server listen::pipe), the Windows service host (ovis-terminal-holder service::windows) and the service verbs exist, but the todo-21 runner's fixture serves only a Unix socket and its isolated environment clears the variables a Windows pipe name and service need, so a windows-only case would be skipped on every runner it has; terminal.run, attach and leases over the pipe are served only once todo 31 assembles the binary. Covered meanwhile by the native Windows tests in the descriptor, run by ci.yml on windows-2025 and by the windows-service job of probe-stress-macos.yml with a CI-owned service account; todo 60 runs this scenario in Windows smoke CI."
+    },
+    {
       "file": "remote/identity.json",
       "owner_todo": "43",
       "reason": "machine.add/get/rename are served only by dispatchers assembled in the todo-43 lane tests: no served binary registers the lane until todo 31 assembles it, and the scenario needs two private runtimes joined by a stdio transport plus the plan's --inject/--append runner flags, which the todo-21 runner (one fixture per case) does not have; todo 52 composes remote dispatch across two private runtimes over real endpoints."

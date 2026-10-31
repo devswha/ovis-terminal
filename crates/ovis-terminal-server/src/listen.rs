@@ -7,6 +7,7 @@
 mod continuity;
 mod descriptor;
 mod error;
+pub mod pipe;
 #[cfg(unix)]
 mod probe;
 #[cfg(unix)]
