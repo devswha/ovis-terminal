@@ -124,4 +124,19 @@ The holder wire stays at protocol generation 2, and the contract checklist items
 - **Burst output.** Under heavy output, more distinct revisions than the pin capacity evict older pins, so a slow pager can receive an honest `stale_revision`. Reads without a revision never fail this way.
 - **Recovery.** Checkpoints are kept in memory only (`Screen::checkpoint`). Persistence and restore from checkpoint plus holder tail belong to todo 49.
 - **Wire format of raw bytes.** `OutputSlice.bytes` serializes as a JSON byte array. The RPC layer's base64 form (`data_b64`) is produced at dispatch.
-- **macOS.** The macOS stress run is recorded below once it completes. Darwin's early-EOF timing does not affect these tests, because the happy test waits for the holder `Exit`, not for PTY EOF.
+- **macOS.** Darwin's early-EOF timing does not affect these tests, because the happy test waits for the holder `Exit`, not for PTY EOF.
+
+
+## macOS stress
+
+`gh workflow run probe-stress-macos.yml --ref lane/t17-holder-screen-history -f probe=screen` started run https://github.com/devswha/ovis-terminal/actions/runs/41194300652, which concluded `success`. Its `screen` job repeated `cargo nextest run -p ovis-terminal-core --test screen --locked --no-tests=fail` 100 times on macos-latest. Log excerpt:
+
+```text
+2026-10-31T10:52:52.2100180Z   1.99.1-aarch64-apple-darwin installed - rustc 1.99.1 (58cf8f9c3 2026-10-13)
+2026-10-31T10:52:52.3944900Z   1.99.1-aarch64-apple-darwin unchanged - rustc 1.99.1 (58cf8f9c3 2026-10-13)
+2026-10-31T10:52:52.9584720Z rustc 1.99.1 (58cf8f9c3 2026-10-13)
+2026-10-31T10:52:56.3443720Z     v0-rust-screen-Darwin-arm64-5b752a74
+2026-10-31T10:52:56.3444130Z     v0-rust-screen-Darwin-arm64-5b752a74-f2b0ec02
+```
+
+PR CI on head 446baee: every check passes, including test (ubuntu/macos/windows), probe (ubuntu/macos/windows), scripts/check.sh, msrv 1.89, rustdoc, cargo deny and cargo-machete.
