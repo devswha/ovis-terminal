@@ -42,7 +42,9 @@ impl Isolated {
             .duration_since(std::time::UNIX_EPOCH)?
             .as_nanos();
         let marker = format!("ovt20-{}-{nanos:x}-{unique}", std::process::id());
-        let root = std::env::temp_dir().join(&marker);
+        // Not temp_dir(): on Darwin it is ~50 bytes deep, which pushes
+        // `<root>/ovis-terminal/default.sock` past the 103-byte portable socket limit.
+        let root = Path::new("/tmp").join(format!("ovt20-{}-{unique}", std::process::id()));
         std::os::unix::fs::DirBuilderExt::mode(&mut std::fs::DirBuilder::new(), 0o700)
             .create(&root)?;
         Ok(Self { root, marker })
@@ -80,7 +82,7 @@ impl Isolated {
     /// # Errors
     ///
     /// Fails when the binary cannot be spawned.
-    pub async fn run(&self, args: &[&str], extra: &[(&str, &str)]) -> TestResult<Output> {
+    pub async fn run(&self, args: &[&str], extra: &[(&str, &str)]) -> TestResult<Ran> {
         let mut command = tokio::process::Command::new(env!("CARGO_BIN_EXE_ovis-terminal"));
         command
             .args(args)
@@ -91,7 +93,10 @@ impl Isolated {
             .envs(extra.iter().copied())
             .stdin(std::process::Stdio::null())
             .kill_on_drop(true);
-        Ok(command.output().await?)
+        Ok(Ran {
+            argv: args.iter().map(|arg| (*arg).to_owned()).collect(),
+            output: command.output().await?,
+        })
     }
 
     /// Runs `connect` against `socket`, writing `input` to stdin and closing it.
@@ -99,7 +104,7 @@ impl Isolated {
     /// # Errors
     ///
     /// Fails when the binary cannot be spawned or fed.
-    pub async fn bridge(&self, socket: &str, input: &[u8]) -> TestResult<Output> {
+    pub async fn bridge(&self, socket: &str, input: &[u8]) -> TestResult<Ran> {
         use tokio::io::AsyncWriteExt as _;
         let mut child = tokio::process::Command::new(env!("CARGO_BIN_EXE_ovis-terminal"))
             .arg("connect")
@@ -114,7 +119,10 @@ impl Isolated {
         let mut stdin = child.stdin.take().ok_or("stdin was not piped")?;
         stdin.write_all(input).await?;
         drop(stdin);
-        Ok(child.wait_with_output().await?)
+        Ok(Ran {
+            argv: vec!["connect".to_owned()],
+            output: child.wait_with_output().await?,
+        })
     }
 
     /// Live processes carrying this directory's marker, i.e. anything the binary left behind.
@@ -161,6 +169,37 @@ impl Drop for Isolated {
                 "cleanup failed: {error}"
             );
         }
+    }
+}
+
+/// One finished invocation of the binary and the argv that produced it.
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct Ran {
+    /// Arguments after the program name.
+    pub argv: Vec<String>,
+    /// Exit status and both captured streams.
+    pub output: Output,
+}
+
+impl Ran {
+    /// Checks the exit code, explaining a mismatch with argv, stdout and stderr.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the process did not exit with `code`.
+    pub fn exit(&self, code: i32) -> TestResult<&Output> {
+        if self.output.status.code() == Some(code) {
+            return Ok(&self.output);
+        }
+        Err(format!(
+            "ovis-terminal {:?} exited {:?}, expected {code}\nstdout: {}\nstderr: {}",
+            self.argv,
+            self.output.status.code(),
+            String::from_utf8_lossy(&self.output.stdout),
+            String::from_utf8_lossy(&self.output.stderr),
+        )
+        .into())
     }
 }
 

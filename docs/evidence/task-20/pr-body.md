@@ -126,3 +126,15 @@ CI run 41194283701 job `test (windows-latest)` failed to compile `ovis-terminal-
 - No `#[allow]`/`#[expect]` added.
 - `cargo clippy -p ovis-terminal-cli --all-targets --all-features --locked --target x86_64-pc-windows-msvc -- -D warnings` -> Finished (local, check-only).
 - Linux clippy -> Finished; `cargo nextest run -p ovis-terminal-cli` -> 16 passed; `bash scripts/check.sh` -> exit 0 (log `docs/evidence/task-20/check.log`).
+
+## Follow-up commit: Darwin socket-path limit in the CLI tests
+
+CI on 8e2e122 failed `test (macos-latest)`: `happy` got exit 2 instead of 0 (cli.rs:22) and `failure` got 2 instead of 7 (cli.rs:133), with no explanation in the log.
+
+Cause: the tests' isolated root sat under `std::env::temp_dir()`. On Darwin that is `/var/folders/<..>/T/`, and the resolved default endpoint `<root>/ovis-terminal/default.sock` reaches about 106 bytes, past the 103-byte `MAX_UNIX_SOCKET_PATH`. `EndpointDescriptor::resolve` then correctly refused with `socket_path_too_long`, which the CLI maps to exit 2. That is the product behaving as specified on a test environment that was wrong. Reproduced locally with a 112-byte path: `{"error":{"exit_code":2,"kind":"socket_path_too_long",...}}`, exit 2.
+
+Fix (tests only, no product change):
+- Isolated roots now live at `/tmp/ovt20-<pid>-<n>`.
+- Every exit-code check goes through `Ran::exit(code)`. On a mismatch it fails with the argv, stdout and stderr; this was verified by forcing a wrong expectation locally, and the error printed the typed stderr.
+- `failure` now also asserts the real long-path case: `XDG_RUNTIME_DIR=<root>/d*100` gives exit 2, empty stdout and `kind == socket_path_too_long`.
+- `bash scripts/check.sh` -> exit 0; `cargo nextest run -p ovis-terminal-cli` -> 16 passed.

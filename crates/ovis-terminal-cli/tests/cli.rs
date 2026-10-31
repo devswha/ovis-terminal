@@ -19,7 +19,7 @@ async fn happy() -> TestResult {
     let before = dir.entries()?;
     for _ in 0..STATUS_REPEATS {
         let output = dir.run(&["--json", "server", "status"], &[]).await?;
-        assert_eq!(output.status.code(), Some(0));
+        let output = output.exit(0)?;
         assert_eq!(output.stderr, b"", "stderr: {:?}", output.stderr);
         let status = json(&output.stdout)?;
         assert_eq!(field(&status, "/state"), "stopped");
@@ -29,12 +29,12 @@ async fn happy() -> TestResult {
     }
 
     let schema = dir.run(&["--json", "schema"], &[]).await?;
-    assert_eq!(schema.status.code(), Some(0));
+    let schema = schema.exit(0)?;
     let published = include_bytes!("../../../schema/ovis-terminal.openrpc.json");
     assert_eq!(json(&schema.stdout)?, json(published)?);
 
     let skill = dir.run(&["--json", "--skill"], &[]).await?;
-    assert_eq!(skill.status.code(), Some(0));
+    let skill = skill.exit(0)?;
     let manual = json(&skill.stdout)?;
     assert_eq!(field(&manual, "/version"), env!("CARGO_PKG_VERSION"));
     assert!(
@@ -52,7 +52,7 @@ async fn happy() -> TestResult {
         ("OVIS_TERMINAL_CREDENTIAL", served.bearer.as_str()),
     ];
     let running = dir.run(&["--json", "server", "status"], &env).await?;
-    assert_eq!(running.status.code(), Some(0), "{:?}", running.stderr);
+    let running = running.exit(0)?;
     let status = json(&running.stdout)?;
     assert_eq!(field(&status, "/state"), "running");
     assert_eq!(*field(&status, "/uptime_ms"), u64::MAX.to_string());
@@ -66,7 +66,7 @@ async fn happy() -> TestResult {
         },
     });
     let bridged = dir.bridge(&socket, format!("{hello}\n").as_bytes()).await?;
-    assert_eq!(bridged.status.code(), Some(0), "{:?}", bridged.stderr);
+    let bridged = bridged.exit(0)?;
     let reply = json(&bridged.stdout)?;
     assert_eq!(field(&reply, "/id"), "h");
     assert_eq!(field(&reply, "/result/machine_id"), MACHINE);
@@ -86,7 +86,7 @@ async fn failure() -> TestResult {
         ("OVIS_TERMINAL_CREDENTIAL", served.bearer.as_str()),
     ];
     let targetless = dir.run(&["--json", "terminal", "get"], &env).await?;
-    assert_eq!(targetless.status.code(), Some(7));
+    let targetless = targetless.exit(7)?;
     assert_eq!(targetless.stdout, b"");
     let report = json(&targetless.stderr)?;
     let error = field(&report, "/error");
@@ -114,7 +114,7 @@ async fn failure() -> TestResult {
         &["--json", "call", "hello"],
     ] {
         let refused = dir.run(args, &idle_env).await?;
-        assert_eq!(refused.status.code(), Some(2), "{args:?}");
+        let refused = refused.exit(2)?;
         assert_eq!(refused.stdout, b"");
         let kind = field(&json(&refused.stderr)?, "/error/kind").clone();
         assert!(
@@ -129,8 +129,24 @@ async fn failure() -> TestResult {
         );
     }
 
+    let deep = dir
+        .root()
+        .join("d".repeat(100))
+        .to_string_lossy()
+        .into_owned();
+    let too_long = dir
+        .run(
+            &["--json", "server", "status"],
+            &[("XDG_RUNTIME_DIR", deep.as_str())],
+        )
+        .await?;
+    let too_long = too_long.exit(2)?;
+    assert_eq!(too_long.stdout, b"");
+    let report = json(&too_long.stderr)?;
+    assert_eq!(field(&report, "/error/kind"), "socket_path_too_long");
+
     let stopped = dir.run(&["--json", "terminal", "get"], &[]).await?;
-    assert_eq!(stopped.status.code(), Some(7));
+    let stopped = stopped.exit(7)?;
     let report = json(&stopped.stderr)?;
     let error = field(&report, "/error");
     assert_eq!(field(error, "/candidates_listed"), false);
