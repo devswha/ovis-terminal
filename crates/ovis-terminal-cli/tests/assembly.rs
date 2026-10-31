@@ -2,6 +2,8 @@
 //! methods it routes and refuses everything else with a typed error.
 #![cfg(unix)]
 
+#[path = "assembly/lanes.rs"]
+mod lanes;
 #[path = "assembly/support.rs"]
 pub mod support;
 
@@ -21,31 +23,39 @@ fn hello_advertises_exactly_the_routed_methods_and_the_rest_is_method_not_found(
         "attach.open",
         "attach.repaint",
         "attach.resize",
+        "input.keys",
+        "input.paste",
         "input.raw",
+        "input.send",
         "op.get",
         "server.status",
         "terminal.get",
+        "terminal.keep",
+        "terminal.kill",
+        "terminal.label",
         "terminal.list",
+        "terminal.output",
+        "terminal.process_info",
+        "terminal.recover",
+        "terminal.rename",
+        "terminal.rm",
         "terminal.run",
+        "terminal.screen",
+        "terminal.wait_output",
     ]
     .map(str::to_owned)
     .into();
     assert_eq!(served.advertised()?, expected);
     for unrouted in [
         "layout.get",
-        "terminal.kill",
-        "events.subscribe",
-        "input.send",
+        "machine.list",
+        "template.list",
+        "update.query",
     ] {
-        let params = if unrouted == "layout.get" {
-            "{}"
-        } else {
-            "{\"x\":1}"
-        };
-        let error = served.refused(&["call", unrouted, "--params", params], 4)?;
-        let kind = error.get("kind").and_then(Value::as_str);
-        assert!(
-            matches!(kind, Some("method_not_found" | "invalid_params")),
+        let error = served.refused(&["call", unrouted, "--params", "{}"], 4)?;
+        assert_eq!(
+            error.get("kind"),
+            Some(&json!("method_not_found")),
             "{unrouted}: {error}"
         );
     }
