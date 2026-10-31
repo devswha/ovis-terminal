@@ -98,6 +98,7 @@ Happy observable (same transcript format):
   - failure with the plan's `--inject`: 48 assertions.
   - `--case all`: 137 assertions, 2/2 passed.
   - Every run: failed 0, skipped 0, binary hash recorded.
+- macOS stress: `gh workflow run probe-stress-macos.yml --ref lane/t47-stage-verified-updates-with -f probe=update` ran 25 iterations of the services `update::` tests, the server `lanes::update` tests and `conformance --scenario services/update --case all` on `macos-latest`. Conclusion: success. https://github.com/devswha/ovis-terminal/actions/runs/41252025533
 
 ## Adversarial
 
@@ -144,6 +145,12 @@ Holder wire generation stays 2.
   - New dependencies `ovis-terminal-holder` and `ovis-terminal-services`.
 - **Scenario path**: `conformance/scenarios/services/update.json`, not the plan's `services/update/` directory, because the runner's id grammar is `<family>/<name>.json`.
 - **`.github/workflows/probe-stress-macos.yml`**: the option `update` and its job are appended at the end of the lists.
+- **Integration drift:** `origin/integration` moved to `804e508` (todos 4, 56 and 35) after this lane's base `759c85a`, and this lane does not merge. `git merge-tree` shows three structural conflicts:
+  - `.github/workflows/probe-stress-macos.yml`: both sides appended a job; keep both.
+  - `crates/ovis-terminal-services/src/lib.rs`: union the `pub mod` lines.
+  - `schema/ovis-terminal.openrpc.json`: regenerate with `openrpc write` after the union.
+
+  Also append the baseline ledger entry described above.
 
 ## Risks
 
