@@ -113,6 +113,16 @@ Commands, all exit 0 unless noted:
   - core `launch`: 10;
   - server `template_launch` QA: 2.
 
+## CI and stress runs
+
+- macOS stress (`probe-stress-macos.yml`, probe `template-launch`, 25 iterations of the core/services/protocol launch tests, the server `template_launch` QA and `agent/launch --case all`): https://github.com/devswha/ovis-terminal/actions/runs/41237161460 concluded `success`.
+- PR CI: none ran, because the PR is `CONFLICTING` against `origin/integration` `436506e`. Per the lane rule nothing was merged here. A trial merge in a detached throwaway worktree resolved only union conflicts (suite.rs EXECUTABLE 16, workflow options/jobs, regenerated OpenRPC). On that merge:
+  - `cargo metadata --locked` passes;
+  - workspace clippy `-D warnings` is clean;
+  - all lane tests pass (8/7/10/2);
+  - `agent/launch --case all` passes 103/103;
+  - `openrpc compat` reports compatible.
+
 ## Seams
 
 - `TerminalRunParams.program` is now `Option<LaunchProgram>`, and there is a new optional `template: TemplateSelector` (the spec's top-level `template`, needed by the plan's QA literal). Exactly one of the two is required at the domain level (`invalid_params`). `FirstMessage.deadline_ms` is now optional (default 30 s).
