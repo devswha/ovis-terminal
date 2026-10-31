@@ -136,12 +136,26 @@ impl Remote {
         Ok(argv)
     }
 
-    /// Waits, bounded, for every relayed connection to end once its link is gone.
+    /// Waits, bounded, for every relayed connection to end once its link is gone; on
+    /// expiry it names the relay and the processes still running under the fixture root.
     pub(super) async fn finish(self) -> TestResult {
-        for serving in self.serving {
-            tokio::time::timeout(std::time::Duration::from_secs(15), serving)
-                .await??
-                .map_err(|error| error.to_string())?;
+        const BOUND: std::time::Duration = std::time::Duration::from_secs(15);
+        for (index, serving) in self.serving.into_iter().enumerate() {
+            let Ok(joined) = tokio::time::timeout(BOUND, serving).await else {
+                let table = std::process::Command::new("ps")
+                    .args(["-axo", "pid,ppid,stat,command"])
+                    .output()?;
+                let root = self.root.display().to_string();
+                let live: Vec<String> = String::from_utf8_lossy(&table.stdout)
+                    .lines()
+                    .filter(|line| line.contains(&root))
+                    .map(str::to_owned)
+                    .collect();
+                return Err(
+                    format!("relay {index} still served after {BOUND:?}; live: {live:?}").into(),
+                );
+            };
+            joined?.map_err(|error| error.to_string())?;
         }
         std::fs::remove_dir_all(&self.root)?;
         Ok(())
