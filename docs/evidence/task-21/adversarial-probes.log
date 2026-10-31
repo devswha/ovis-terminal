@@ -1,0 +1,29 @@
+## zero-assertion case
+$ conformance --binary target/debug/ovis-terminal --scenario zz-probe/no-assertions --isolated --evidence <adv.json>
+{"case":"all","error":null,"evidence":".omo/evidence/ovis-terminal-v1/task-21/probe/adv.json","evidence_written":null,"result":"failed","scenario":"zz-probe/no-assertions","totals":{"assertions":"0","cases":"1","failed":"1","passed":"0","skipped":"0"}}
+EXIT=1
+failed None [('happy', 'no_assertions', 'the case ran no assertion')]
+
+## unknown step key
+$ conformance --binary target/debug/ovis-terminal --scenario zz-probe/unknown-key --isolated --evidence <adv.json>
+{"case":"all","error":{"detail":"conformance/scenarios/zz-probe/unknown-key.json does not match the closed scenario schema at cases[0].steps[0].serve.extra","hint":"fix the scenario file; unknown keys are never ignored","kind":"scenario_invalid","step":null},"evidence":".omo/evidence/ovis-terminal-v1/task-21/probe/adv.json","evidence_written":null,"result":"failed","scenario":"zz-probe/unknown-key","totals":{"assertions":"0","cases":"0","failed":"0","passed":"0","skipped":"0"}}
+EXIT=1
+failed scenario_invalid []
+
+## declared id differs from path
+$ conformance --binary target/debug/ovis-terminal --scenario zz-probe/wrong-path --isolated --evidence <adv.json>
+{"case":"all","error":{"detail":"zz-probe/wrong-path is inconsistent: the declared scenario differs from its file path","hint":"fix the scenario file; unknown keys are never ignored","kind":"scenario_inconsistent","step":null},"evidence":".omo/evidence/ovis-terminal-v1/task-21/probe/adv.json","evidence_written":null,"result":"failed","scenario":"zz-probe/wrong-path","totals":{"assertions":"0","cases":"0","failed":"0","passed":"0","skipped":"0"}}
+EXIT=1
+failed scenario_inconsistent []
+
+## fake binary /bin/true as bridge
+$ conformance --binary /bin/true --scenario protocol/multiplex --case happy --isolated --evidence <adv.json>
+{"case":"happy","error":null,"evidence":".omo/evidence/ovis-terminal-v1/task-21/probe/adv.json","evidence_written":null,"result":"failed","scenario":"protocol/multiplex","totals":{"assertions":"0","cases":"1","failed":"1","passed":"0","skipped":"0"}}
+EXIT=1
+failed None [('happy', 'closed', 'the connection ended while the hello reply was expected')]
+
+## missing binary
+$ conformance --binary /nonexistent/ovis-terminal --scenario protocol/multiplex --isolated --evidence <adv.json>
+{"case":"all","error":{"detail":"the binary under test cannot be read at /nonexistent/ovis-terminal","hint":"build the binary first: cargo build -p ovis-terminal-cli","kind":"binary_missing","step":null},"evidence":".omo/evidence/ovis-terminal-v1/task-21/probe/adv.json","evidence_written":null,"result":"failed","scenario":"protocol/multiplex","totals":{"assertions":"0","cases":"0","failed":"0","passed":"0","skipped":"0"}}
+EXIT=1
+failed binary_missing []

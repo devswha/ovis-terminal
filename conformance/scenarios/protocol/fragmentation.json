@@ -1,0 +1,436 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "protocol/fragmentation",
+  "title": "Records decode identically under every write segmentation and coalescing",
+  "todo": 21,
+  "closes": [],
+  "delivers": [
+    "IDEAL-006"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Shared wire-fixture frames, coalesced requests, byte-at-a-time writes and irregular chunks (cutting UTF-8 sequences) give the same replies in framed and NDJSON modes.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "framed",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "framed",
+            "framed": true,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send_wire": {
+            "conn": "framed",
+            "frame": "coalesced-requests"
+          }
+        },
+        {
+          "replies": {
+            "conn": "framed",
+            "expect": {
+              "w2": {
+                "/result/name": "alpha",
+                "/result/value": null
+              },
+              "w3": {
+                "/result/name": "beta",
+                "/result/value": null
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "framed",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "set-utf8",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:utf8",
+                  "name": "utf8",
+                  "value": "π≈3.14 — ✓ 終",
+                  "version": "0"
+                }
+              }
+            ],
+            "split": {
+              "chunks": [
+                1
+              ]
+            }
+          }
+        },
+        {
+          "replies": {
+            "conn": "framed",
+            "expect": {
+              "set-utf8": {
+                "/result/value": "π≈3.14 — ✓ 終"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "framed",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "whole",
+                "method": "doc.get",
+                "params": {
+                  "name": "utf8"
+                }
+              }
+            ],
+            "split": {
+              "chunks": [
+                1
+              ]
+            }
+          }
+        },
+        {
+          "replies": {
+            "conn": "framed",
+            "expect": {
+              "whole": {
+                "/result/value": "π≈3.14 — ✓ 終"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "framed",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "bytewise-1",
+                "method": "doc.get",
+                "params": {
+                  "name": "utf8"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "bytewise-2",
+                "method": "doc.get",
+                "params": {
+                  "name": "alpha"
+                }
+              }
+            ],
+            "split": "bytewise"
+          }
+        },
+        {
+          "replies": {
+            "conn": "framed",
+            "expect": {
+              "bytewise-1": {
+                "/result/value": "π≈3.14 — ✓ 終"
+              },
+              "bytewise-2": {
+                "/result/value": null
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "framed",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "chunked-1",
+                "method": "doc.get",
+                "params": {
+                  "name": "utf8"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "chunked-2",
+                "method": "doc.get",
+                "params": {
+                  "name": "beta"
+                }
+              }
+            ],
+            "split": {
+              "chunks": [
+                1,
+                9,
+                2,
+                17,
+                3,
+                5
+              ]
+            }
+          }
+        },
+        {
+          "replies": {
+            "conn": "framed",
+            "expect": {
+              "chunked-1": {
+                "/result/value": "π≈3.14 — ✓ 終"
+              },
+              "chunked-2": {
+                "/result/value": null
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "lines",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "lines",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "lines",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "line-bytewise",
+                "method": "doc.get",
+                "params": {
+                  "name": "utf8"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "line-coalesced",
+                "method": "doc.get",
+                "params": {
+                  "name": "alpha"
+                }
+              }
+            ],
+            "split": "bytewise"
+          }
+        },
+        {
+          "replies": {
+            "conn": "lines",
+            "expect": {
+              "line-bytewise": {
+                "/result/value": "π≈3.14 — ✓ 終"
+              },
+              "line-coalesced": {
+                "/result/value": null
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "lines",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "line-chunked",
+                "method": "doc.get",
+                "params": {
+                  "name": "utf8"
+                }
+              }
+            ],
+            "split": {
+              "chunks": [
+                3,
+                1,
+                4,
+                1,
+                5,
+                9,
+                2,
+                6
+              ]
+            }
+          }
+        },
+        {
+          "replies": {
+            "conn": "lines",
+            "expect": {
+              "line-chunked": {
+                "/result/value": "π≈3.14 — ✓ 終"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "framed"
+          }
+        },
+        {
+          "closed": {
+            "conn": "framed"
+          }
+        },
+        {
+          "hangup": {
+            "conn": "lines"
+          }
+        },
+        {
+          "closed": {
+            "conn": "lines"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "2",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "An unknown frame kind after the framed upgrade closes that connection with unknown_kind and does not disturb another connection.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "framed",
+            "via": "socket"
+          }
+        },
+        {
+          "connect": {
+            "conn": "other",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "framed",
+            "framed": true,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "hello": {
+            "conn": "other",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send_wire": {
+            "conn": "framed",
+            "frame": "unknown-kind"
+          }
+        },
+        {
+          "notification": {
+            "conn": "framed",
+            "method": "$/closing",
+            "expect": {
+              "/params/reason": "unknown_kind"
+            }
+          }
+        },
+        {
+          "closed": {
+            "conn": "framed"
+          }
+        },
+        {
+          "send": {
+            "conn": "other",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "still-served",
+                "method": "doc.get",
+                "params": {
+                  "name": "alpha"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "other",
+            "expect": {
+              "still-served": {
+                "/result/value": null
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "other"
+          }
+        },
+        {
+          "closed": {
+            "conn": "other"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "2",
+              "/panicked": "0",
+              "/failures/unknown_kind": "1"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

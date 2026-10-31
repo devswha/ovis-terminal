@@ -1,0 +1,104 @@
+{
+  "format": "ovis-protocol-fixture/1",
+  "descriptors": {
+    "summary": "Requests a strict server must reject before dispatch, with the kind and offending field path; none may cause an effect."
+  },
+  "cases": [
+    {
+      "name": "misspelled-target-field",
+      "method": "terminal.keep",
+      "params": {
+        "op_id": "$op:typo",
+        "target": {
+          "terminal_idd": "terminal:2"
+        },
+        "keep": true
+      },
+      "kind": "invalid_params",
+      "field_path": "params.target.terminal_idd"
+    },
+    {
+      "name": "legacy-pane-field",
+      "method": "terminal.keep",
+      "params": {
+        "op_id": "$op:legacy",
+        "pane_id": "terminal:2",
+        "target": {
+          "terminal_id": "terminal:2"
+        },
+        "keep": true
+      },
+      "kind": "invalid_params",
+      "field_path": "params.pane_id"
+    },
+    {
+      "name": "missing-target",
+      "method": "terminal.keep",
+      "params": {
+        "op_id": "$op:missing",
+        "keep": true
+      },
+      "kind": "invalid_params",
+      "field_path": "params.target"
+    },
+    {
+      "name": "two-targets",
+      "method": "terminal.keep",
+      "params": {
+        "op_id": "$op:two",
+        "target": {
+          "terminal_id": "terminal:2",
+          "name": "solo"
+        },
+        "keep": true
+      },
+      "kind": "invalid_params",
+      "field_path": "params.target"
+    },
+    {
+      "name": "ambiguous-name",
+      "method": "terminal.keep",
+      "params": {
+        "op_id": "$op:ambiguous",
+        "target": {
+          "name": "shared"
+        },
+        "keep": true
+      },
+      "kind": "ambiguous_target"
+    },
+    {
+      "name": "unknown-terminal",
+      "method": "terminal.keep",
+      "params": {
+        "op_id": "$op:unknown",
+        "target": {
+          "terminal_id": "terminal:99"
+        },
+        "keep": true
+      },
+      "kind": "not_found"
+    },
+    {
+      "name": "numeric-counter",
+      "method": "doc.set",
+      "params": {
+        "op_id": "$op:numeric",
+        "name": "alpha",
+        "value": 1,
+        "version": 0
+      },
+      "kind": "invalid_params",
+      "field_path": "params.version"
+    },
+    {
+      "name": "unpublished-method",
+      "method": "pane.split",
+      "params": {
+        "pane_id": "p2"
+      },
+      "kind": "method_not_found",
+      "field_path": "method"
+    }
+  ]
+}

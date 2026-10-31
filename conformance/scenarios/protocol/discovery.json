@@ -1,0 +1,227 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "protocol/discovery",
+  "title": "Schema discovery is side-effect free and advertises only served methods",
+  "todo": 21,
+  "closes": [],
+  "delivers": [
+    "IDEAL-008"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "The binary's offline schema, the published file and rpc.discover over the bridge are the same document; hello advertises exactly what is served.",
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--json",
+              "schema"
+            ],
+            "exit": 0,
+            "stdout": {
+              "": {
+                "$equals_file": "schema/ovis-terminal.openrpc.json"
+              }
+            }
+          }
+        },
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021",
+              "/result/methods": {
+                "$contains": [
+                  "rpc.discover",
+                  "terminal.output",
+                  "doc.get",
+                  "doc.set",
+                  "terminal.keep",
+                  "op.get",
+                  "op.cancel"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "discover",
+                "method": "rpc.discover",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "discover": {
+                "/result": {
+                  "$equals_file": "schema/ovis-terminal.openrpc.json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "Unpublished and unserved methods are method_not_found, unknown params are invalid_params, and the binary rejects malformed params before connecting.",
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--json",
+              "call",
+              "doc.get",
+              "--params",
+              "[1]"
+            ],
+            "exit": 2,
+            "stderr": {
+              "/error/kind": "invalid_params"
+            }
+          }
+        },
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021",
+              "/result/methods": {
+                "$excludes": [
+                  "terminal.run",
+                  "pane.split",
+                  "server.stop"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "legacy",
+                "method": "pane.split",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "unserved",
+                "method": "server.stop",
+                "params": {
+                  "op_id": "$op:stop"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "extra",
+                "method": "rpc.discover",
+                "params": {
+                  "verbose": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "legacy": {
+                "/error/data/kind": "method_not_found",
+                "/error/data/field_path": "method"
+              },
+              "unserved": {
+                "/error/data/kind": "method_not_found"
+              },
+              "extra": {
+                "/error/data/kind": "invalid_params",
+                "/error/data/field_path": "params.verbose"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
