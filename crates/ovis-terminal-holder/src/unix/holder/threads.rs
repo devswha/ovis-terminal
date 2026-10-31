@@ -61,6 +61,10 @@ pub(super) fn wait_for_exit(waiter: Waiter, report: &SyncSender<WaiterReport>) {
         },
         Err(source) => ExitEvidence::Unknown(TerminalIoError::Wait { source }),
     };
+    #[cfg(test)]
+    {
+        eprintln!("TASK76 waiter pid={} evidence={evidence:?}", child.id());
+    }
     // A failed pending-byte query must not hold the exit forever: the slave is
     // closed anyway, the pump records what the kernel still returns, and the
     // failure is reported with the exit.

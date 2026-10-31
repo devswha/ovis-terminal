@@ -221,7 +221,24 @@ fn kill_all(state: &mut HolderState) -> Result<(), HolderError> {
             Ok(()) => {}
             Err(SignalError::Delivery { source }) if source.raw_os_error() == Some(libc::ESRCH) => {
             }
-            Err(error) => return Err(error.into()),
+            Err(error) => {
+                #[cfg(test)]
+                {
+                    eprintln!(
+                        "TASK76 shutdown group={} error={error:?} token={:?}",
+                        live.pid.get(),
+                        crate::process::read_start_token(live.pid)
+                    );
+                    eprintln!(
+                        "TASK76 process table: {:?}",
+                        std::process::Command::new("/bin/ps")
+                            .args(["-axo", "pid,ppid,pgid,uid,state,comm"])
+                            .output()
+                            .map(|output| String::from_utf8_lossy(&output.stdout).into_owned())
+                    );
+                }
+                return Err(error.into());
+            }
         }
     }
     Ok(())
