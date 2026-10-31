@@ -179,3 +179,17 @@ impl Drop for Fixture {
 pub(super) fn nth<T>(items: &[T], index: usize) -> TestResult<&T> {
     Ok(items.get(index).ok_or_else(|| format!("no item {index}"))?)
 }
+
+/// Reads what a fake Git writes to `fifo`, bounded; on timeout the writer end is opened
+/// so the blocked reader returns and the runtime can shut down.
+pub(super) async fn signalled(fifo: PathBuf) -> TestResult<String> {
+    let path = fifo.clone();
+    let reader = tokio::task::spawn_blocking(move || std::fs::read_to_string(path));
+    if let Ok(read) = tokio::time::timeout(Duration::from_secs(30), reader).await {
+        return Ok(read??);
+    }
+    let release =
+        tokio::task::spawn_blocking(move || std::fs::OpenOptions::new().write(true).open(fifo));
+    tokio::time::timeout(Duration::from_secs(5), release).await???;
+    Err("git never reported that worktree add ran".into())
+}

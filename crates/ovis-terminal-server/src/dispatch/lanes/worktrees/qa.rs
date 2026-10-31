@@ -5,14 +5,12 @@
 
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use serde_json::{Value, json};
-use tokio::io::AsyncReadExt as _;
 
 use super::support::socket::Client;
 use super::support::{TestResult, at, error_kind, request};
-use super::worktree_fixture::{Fixture, git};
+use super::worktree_fixture::{Fixture, git, signalled};
 
 async fn ask(client: &mut Client, (id, method): (&str, &str), params: &Value) -> TestResult<Value> {
     client.send(&request(id, method, params)).await?;
@@ -183,18 +181,14 @@ async fn op_cancel_kills_a_hung_create_and_reports_what_committed() -> TestResul
     let op = op.as_str();
     let params =
         json!({"op_id": op, "repository_id": "repo:main", "source": source, "branch": "partial"});
-    let mut reached = tokio::net::unix::pipe::OpenOptions::new().open_receiver(&ready)?;
     client
         .send(&request("slow", "worktree.create", &params))
         .await?;
-    let mut line = String::new();
-    let read = tokio::time::timeout(Duration::from_secs(30), reached.read_to_string(&mut line));
-    read.await
-        .map_err(|_| "git never reported that worktree add ran")??;
-    assert_eq!(line.trim(), "ready");
+    let line = signalled(ready).await;
     client
         .send(&request("cancel", "op.cancel", &json!({"op_id": op})))
         .await?;
+    assert_eq!(line?.trim(), "ready");
     let (first, second) = (client.expect_next().await?, client.expect_next().await?);
     let slow = if at(&first, "/id") == "slow" {
         first

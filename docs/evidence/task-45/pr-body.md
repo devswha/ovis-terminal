@@ -86,7 +86,21 @@ Public API changes, each disclosed:
 5. There is no `#[allow]` and no placeholder TODO. The only lint expectations are targeted `#[expect(clippy::exhaustive_structs, reason=…)]` on four structs that other crates construct, following the holder crate's precedent.
 6. This body states what each test asserts. The conformance attempts are recorded verbatim above.
 
+## Round 2 (Darwin)
+On 380aff6, `test (macos-latest)` failed both hung-create tests: the services test hit "Elapsed" after 60 s, and the server test reported "git never reported that worktree add ran" after 30 s. Linux and Windows were green.
+
+The cause is in the test fixture. It waited for the fake Git's `ready` line through `tokio::net::unix::pipe::Receiver`. On macOS that receiver does not report the FIFO's data or end-of-file; todo 43 hit the same problem in stress run 41213460834. The product was unchanged and is not the blocking party.
+
+Fix: the shared `signalled(fifo)` helper in both suites now uses a blocking `read_to_string` on `spawn_blocking`, which is plain `read(2)` and behaves the same on both kernels. It is bounded at 30 s. On timeout it opens the writer end, so the blocked reader returns and runtime shutdown cannot hang. The services test sends the cancellation even when the signal fails, so the hung create always ends.
+
+Verification after the fix:
+- The 13 worktree tests ran 20 times under `timeout 120 cargo nextest run`: 20 of 20 runs passed.
+- `bash scripts/check.sh` → exit 0 (575 passed).
+- The `x86_64-pc-windows-gnu` pre-check → exit 0.
+- Not reproduced locally on Darwin. This round's CI macOS job is the Darwin check.
+
 ## Risks
+- Todos 43 and 46 add `DispatchError::Domain` and the `domain`/`lanes` module roots too. This PR adds `DispatchError::Worktree` and inline `pub mod domain { … }` / `pub mod lanes { … }` blocks. Expect a union merge.
 - Identity state is in memory. Checkout ids and source relationships do not survive a control restart (recovery is todo 49).
 - `Workspaces` is a port: no production implementation exists until todo 42 assembles the layout owner on the shared coordinator. Until then, `worktree.open` needs an assembly-supplied owner.
 - `worktree.list` runs `git status` per checkout under the service lock. That is fine for tens of checkouts, but not tuned for hundreds.

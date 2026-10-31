@@ -177,3 +177,17 @@ impl Fixture {
         Ok(())
     }
 }
+
+/// Reads what a fake Git writes to `fifo`, bounded; on timeout the writer end is opened
+/// so the blocked reader returns and the runtime can shut down.
+pub(crate) async fn signalled(fifo: PathBuf) -> TestResult<String> {
+    let path = fifo.clone();
+    let reader = tokio::task::spawn_blocking(move || std::fs::read_to_string(path));
+    if let Ok(read) = tokio::time::timeout(Duration::from_secs(30), reader).await {
+        return Ok(read??);
+    }
+    let release =
+        tokio::task::spawn_blocking(move || std::fs::OpenOptions::new().write(true).open(fifo));
+    tokio::time::timeout(Duration::from_secs(5), release).await???;
+    Err("git never reported that worktree add ran".into())
+}

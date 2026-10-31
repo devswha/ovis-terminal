@@ -5,9 +5,8 @@ use std::time::Duration;
 
 use ovis_terminal_protocol::schema::methods::worktree::WorktreeCreateParams;
 use serde_json::json;
-use tokio::io::AsyncReadExt as _;
 
-use super::fixture::{Fixture, TestResult, git, nth, params, targets};
+use super::fixture::{Fixture, TestResult, git, nth, params, signalled, targets};
 
 /// A Git that performs `worktree add`, reports it on a FIFO, then hangs until killed.
 fn hanging_git(dir: &std::path::Path) -> TestResult<(PathBuf, PathBuf)> {
@@ -39,22 +38,18 @@ async fn cancelling_a_hung_create_reports_the_effects_it_committed() -> TestResu
     let primary = fixture.primary().await?;
     let create: WorktreeCreateParams = params(json!({"op_id": "op", "repository_id": "repo:main",
         "source": primary, "branch": "partial"}))?;
-    let mut reached = tokio::net::unix::pipe::OpenOptions::new().open_receiver(&ready)?;
     let created = fixture.service.create(fixture.call(&create));
-    let signalled = async {
-        let mut line = String::new();
-        let read = tokio::time::timeout(Duration::from_secs(30), reached.read_to_string(&mut line));
-        read.await
-            .map_err(|_| "git never reported that worktree add ran")??;
-        assert_eq!(line.trim(), "ready");
+    let reported = async {
+        let line = signalled(ready).await;
+        // Cancel even when the signal failed, so the hung create ends and the join returns.
         fixture.cancel.send_replace(true);
-        Ok::<_, Box<dyn std::error::Error>>(())
+        line
     };
-    let (created, signalled) = tokio::time::timeout(Duration::from_secs(60), async {
-        tokio::join!(created, signalled)
+    let (created, reported) = tokio::time::timeout(Duration::from_secs(60), async {
+        tokio::join!(created, reported)
     })
     .await?;
-    signalled?;
+    assert_eq!(reported?.trim(), "ready");
     let interrupted = created.err().ok_or("cancelled create reported success")?;
     assert_eq!(interrupted.kind(), "cancelled");
     let committed = targets(&interrupted);
