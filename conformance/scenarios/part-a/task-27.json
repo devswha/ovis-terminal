@@ -1,0 +1,210 @@
+{
+  "scenario": "part-a/task-27",
+  "todo": 27,
+  "title": "Atomic cursor waits and evidenced interrupt outcomes",
+  "closes": [
+    "GAP-076",
+    "GAP-077",
+    "GAP-086"
+  ],
+  "delivers": [
+    "IDEAL-026",
+    "IDEAL-053",
+    "IDEAL-054",
+    "IDEAL-063"
+  ],
+  "excludes": [
+    "EXCL-025",
+    "EXCL-026"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "verification": {
+    "status": "deferred_by_plan",
+    "runner_todo": 21,
+    "requires_actual_cli_socket_transcript": true,
+    "blocked_on": "terminal.wait_output, turn.wait, events.wait and input.interrupt are not routed by the server until todos 28-31 wire ovis_terminal_core::waits to RPC"
+  },
+  "core_tests": {
+    "happy": "cargo nextest run -p ovis-terminal-core --test waits happy",
+    "failure": "cargo nextest run -p ovis-terminal-core --test waits failure"
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "as": "agent",
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.launch",
+            "program": {
+              "argv": [
+                "/bin/sh",
+                "-c",
+                "printf 'ARMED\\n'; stty raw -echo; exec cat"
+              ]
+            },
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin"
+            },
+            "geometry": {
+              "rows": 24,
+              "cols": 80
+            },
+            "keep": true
+          },
+          "capture": [
+            "terminal_id"
+          ]
+        },
+        {
+          "as": "agent",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.send",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "READY_MARK",
+            "submit": "enter"
+          },
+          "capture": [
+            "receipt.output_cursor",
+            "receipt.queued_seq"
+          ]
+        },
+        {
+          "as": "agent",
+          "rpc": "input.barrier",
+          "params": {
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "queued_seq": "$agent.receipt.queued_seq"
+          },
+          "await": "reached",
+          "assert": {
+            "reached": true
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "terminal.wait_output",
+          "params": {
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "cursor": {
+              "offset": "$agent.receipt.output_cursor"
+            },
+            "pattern": {
+              "text": "READY_MARK"
+            },
+            "timeout_ms": "5000"
+          },
+          "assert": {
+            "outcome": "matched",
+            "matched_at": "$agent.receipt.output_cursor"
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "events.wait",
+          "params": {
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "exit": false,
+            "states": [
+              "idle"
+            ],
+            "timeout_ms": "5000"
+          },
+          "assert": {
+            "outcome": "already_satisfied",
+            "elapsed_ms_max": "100"
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "turn.wait",
+          "params": {
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "send_op": "$uuidv7.send",
+            "timeout_ms": "5000"
+          },
+          "assert": {
+            "outcome": "completed",
+            "send_op": "$uuidv7.send"
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "as": "agent",
+          "rpc": "terminal.wait_output",
+          "params": {
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "cursor": {
+              "offset": "0"
+            },
+            "pattern": {
+              "text": "ARMED"
+            },
+            "timeout_ms": "5000"
+          },
+          "inject": {
+            "fixture": "evict_output_before",
+            "offset": "1"
+          },
+          "assert": {
+            "error.data.kind": "output_gap"
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "input.interrupt",
+          "params": {
+            "op_id": "$uuidv7.esc",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "key": "esc",
+            "observe_ms": "300"
+          },
+          "assert": {
+            "delivered": true,
+            "observed.process": "running",
+            "stopped": false
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "turn.wait",
+          "params": {
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "send_op": "$uuidv7.esc",
+            "timeout_ms": "100"
+          },
+          "assert": {
+            "outcome": "timeout",
+            "outcome_not": "completed"
+          }
+        }
+      ]
+    }
+  ]
+}

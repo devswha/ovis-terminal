@@ -3,6 +3,7 @@
 use thiserror::Error;
 
 use super::{ErrorData, ErrorKind, FieldPath, JsonRpcCode, OpId, TargetId};
+use crate::domain::session_binding::HistoryHead;
 use crate::schema::scalar::ReportSeq;
 
 /// Error raised while parsing, validating or correlating protocol records.
@@ -198,6 +199,20 @@ impl BoundaryError {
     #[must_use]
     pub fn with_affected(mut self, affected: Vec<TargetId>) -> Self {
         self.data_mut().affected = affected.into_boxed_slice();
+        self
+    }
+
+    /// Names the request field a domain refusal is about.
+    #[must_use]
+    pub fn with_field_path(mut self, field_path: &str) -> Self {
+        self.data_mut().field_path = Some(FieldPath::new(field_path.to_owned()));
+        self
+    }
+
+    /// Adds the identity and revision a history has now.
+    #[must_use]
+    pub fn with_history(mut self, history: HistoryHead) -> Self {
+        self.data_mut().history = Some(Box::new(history));
         self
     }
 

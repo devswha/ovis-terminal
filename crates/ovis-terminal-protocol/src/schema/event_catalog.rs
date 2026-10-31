@@ -15,6 +15,7 @@ use super::methods::status::{PromptRecord, TurnRecord};
 use super::methods::update::UpdateRecord;
 use super::methods::worktree::WorktreeRecord;
 use super::records::{AgentBinding, StatusSnapshot, TerminalGeometry, TerminalRecord};
+use crate::domain::session_binding::SessionBindingRecord;
 
 /// Every event type, in publication order of the schema.
 pub(super) const EVENTS: &[EventSpec] = &[
@@ -92,6 +93,11 @@ pub(super) const EVENTS: &[EventSpec] = &[
     event!("prompt.closed", "A prompt closed.", PromptRecord),
     event!("agent.registered", "An agent registered.", AgentBinding),
     event!("agent.updated", "An agent binding changed.", AgentBinding),
+    event!(
+        "agent.session_bound",
+        "An owning process bound, resumed, branched or replaced its session.",
+        SessionBindingRecord
+    ),
     event!(
         "agent.released",
         "An agent binding was released.",
