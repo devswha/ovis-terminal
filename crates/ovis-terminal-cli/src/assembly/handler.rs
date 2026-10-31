@@ -23,6 +23,7 @@ use serde_json::{Value, json};
 use super::actor::{Actor, now};
 use super::directory::Directory;
 use super::error::{refusal, worker_gone};
+use super::lanes::Dispatch;
 
 /// Methods served by the runtime actor and the lease table, besides the attach streams.
 pub(super) const ROUTED: [&str; 21] = [
@@ -60,11 +61,19 @@ fn decode<P: DeserializeOwned>(call: &Call) -> Result<P, BoundaryError> {
 pub(super) struct Served {
     pub(super) actor: Actor,
     pub(super) lane: Arc<Lane>,
+    pub(super) dispatch: Arc<Dispatch>,
 }
 
 impl RequestHandler for Served {
     fn methods(&self) -> Vec<&'static str> {
-        ROUTED.to_vec()
+        let mut methods = ROUTED.to_vec();
+        methods.extend(
+            self.dispatch
+                .methods()
+                .into_iter()
+                .filter(|method| !ROUTED.contains(method)),
+        );
+        methods
     }
 
     async fn call(&self, call: Call) -> Result<Value, BoundaryError> {
@@ -123,7 +132,7 @@ impl RequestHandler for Served {
                     .map_err(|error| error.boundary())?;
                 serde_json::to_value(leases).map_err(|_| refusal("internal", "report the build"))
             }
-            _ => Err(BoundaryError::method_not_found()),
+            _ => self.dispatch.call(call).await,
         }
     }
 }

@@ -92,13 +92,20 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
     let backlog = Arc::new(SessionBacklog::new(SESSION_BACKLOG_BYTES));
     let journal: Arc<dyn LeaseJournal> = Arc::<LeaseLog>::clone(&booted.leases);
     let setup = StreamSetup::new(limits, backlog, journal);
+    let (dispatch, dispatch_log) = super::lanes::host(super::lanes::Hosting {
+        state: &state,
+        identity: booted.identity,
+        authority: Arc::clone(&booted.authority),
+        directory: Arc::clone(&directory),
+    })?;
+    let dispatch = Arc::new(dispatch);
     let runtime = Runtime {
         terminals: booted.terminals,
         holder: booted.holder,
         identity: booted.identity,
         authority: Arc::clone(&booted.authority),
         lane: Arc::clone(&lane),
-        directory,
+        directory: Arc::clone(&directory),
         setup,
         geometry_log: booted.geometry,
         live: BTreeMap::new(),
@@ -110,6 +117,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
     let served = Arc::new(Served {
         actor,
         lane: Arc::clone(&lane),
+        dispatch: Arc::clone(&dispatch),
     });
     let handler = Arc::new(Assembled {
         attach: AttachHandler::new(Arc::clone(&served), Arc::clone(&lane)),
@@ -135,11 +143,22 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
     lane.shutdown()
         .await
         .map_err(AssemblyError::stop("end attach deliveries"))?;
+    dispatch
+        .shutdown()
+        .await
+        .map_err(AssemblyError::stop("join dispatched operations"))?;
+    drop(dispatch);
     drop(handler);
     drop(lane);
     tokio::task::spawn_blocking(move || thread.join())
         .await
         .map_err(AssemblyError::stop("join the runtime thread"))??;
+    let dispatch_log = Arc::try_unwrap(dispatch_log)
+        .map_err(|_| AssemblyError::stop("release the dispatch log")("still shared"))?;
+    tokio::task::spawn_blocking(move || dispatch_log.close())
+        .await
+        .map_err(AssemblyError::stop("join the dispatch log close"))?
+        .map_err(AssemblyError::stop("close the dispatch log"))?;
     let leases = Arc::try_unwrap(booted.leases)
         .map_err(|_| AssemblyError::stop("release the lease log")("still shared"))?;
     tokio::task::spawn_blocking(move || leases.close())

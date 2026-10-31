@@ -140,3 +140,43 @@ fn keys_and_paste_enter_the_same_sequence_with_increasing_queue_positions() -> T
     served.stop()?;
     Ok(())
 }
+
+#[test]
+fn hosted_lanes_answer_documents_plugins_prompts_and_status_over_the_socket() -> TestResult {
+    let served = Served::start()?;
+    served.run_shell("shell")?;
+    let set = call(
+        &served,
+        "doc.set",
+        &json!({"op_id": op_id()?, "name": "notes", "value": "kept", "version": "0"}),
+    )?;
+    assert_eq!(set.get("version"), Some(&json!("1")));
+    let got = call(&served, "doc.get", &json!({"name": "notes"}))?;
+    assert_eq!(
+        (got.get("value"), got.get("version")),
+        (Some(&json!("kept")), Some(&json!("1")))
+    );
+    let stale = served.refused(
+        &[
+            "call",
+            "doc.set",
+            "--params",
+            &json!({"op_id": op_id()?, "name": "notes", "value": "lost", "version": "0"})
+                .to_string(),
+        ],
+        11,
+    )?;
+    assert_eq!(stale.get("kind"), Some(&json!("conflict")));
+    assert_eq!(
+        call(&served, "plugin.list", &json!({}))?,
+        json!({"plugins": []})
+    );
+    assert_eq!(
+        call(&served, "prompt.list", &json!({}))?.get("prompts"),
+        Some(&json!([]))
+    );
+    let status = call(&served, "status.get", &json!({"target": t1()}))?;
+    assert_eq!(status.pointer("/status/reported"), Some(&json!(false)));
+    served.stop()?;
+    Ok(())
+}
