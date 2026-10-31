@@ -33,7 +33,7 @@ impl<T: Serialize> Versioned<T> {
         ))
     }
 
-    fn delete(&self) -> CasWrite {
+    pub(super) fn delete(&self) -> CasWrite {
         CasWrite::new(self.key.clone(), self.version, None)
     }
 }
@@ -140,7 +140,7 @@ impl Index {
 
     /// Marks `prompt` closed and drops the oldest closed prompts of its terminal beyond
     /// the retained bound, returning the dropped identities.
-    fn closed(&mut self, prompt: &PromptId, terminal: TerminalId) -> Vec<PromptId> {
+    pub(super) fn closed(&mut self, prompt: &PromptId, terminal: TerminalId) -> Vec<PromptId> {
         if let Some(entry) = self
             .entries
             .iter_mut()

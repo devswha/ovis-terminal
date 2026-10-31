@@ -2,6 +2,7 @@
 
 use ovis_terminal_core::events::EventData;
 use ovis_terminal_core::ops::OperationEvent;
+use ovis_terminal_protocol::domain::agent_tree::{ChildLink, NoticeAck, OrphanAck, ParentDeath};
 use ovis_terminal_protocol::domain::conversation_records::RecordsAppended;
 use ovis_terminal_protocol::domain::session_binding::SessionBindingRecord;
 use ovis_terminal_protocol::schema::methods::status::{PromptRecord, TurnRecord};
@@ -30,6 +31,14 @@ pub enum AgentStatusEvent {
     PromptUpdated(Box<PromptRecord>),
     /// A prompt was answered, dismissed or expired.
     PromptClosed(Box<PromptRecord>),
+    /// A parent program incarnation finished; opted-in children were ordered to end.
+    ParentFinished(Box<ParentDeath>),
+    /// A linked child program's exit was observed.
+    ChildEnded(Box<ChildLink>),
+    /// A parent acknowledged notices about its children.
+    NoticesAcknowledged(Box<NoticeAck>),
+    /// A machine acknowledged a parent's death.
+    OrphanAcknowledged(Box<OrphanAck>),
     /// Retains the released operation event's unwrapped representation.
     #[serde(untagged)]
     Operation(Box<OperationEvent>),
@@ -52,6 +61,10 @@ impl EventData for AgentStatusEvent {
             Self::PromptOpened(_) => "prompt.opened",
             Self::PromptUpdated(_) => "prompt.updated",
             Self::PromptClosed(_) => "prompt.closed",
+            Self::ParentFinished(_) => "agent.parent_finished",
+            Self::ChildEnded(_) => "agent.child_ended",
+            Self::NoticesAcknowledged(_) => "agent.notices_acknowledged",
+            Self::OrphanAcknowledged(_) => "agent.orphan_acknowledged",
             Self::Operation(event) => event.event_type(),
         }
     }
@@ -66,7 +79,11 @@ impl EventData for AgentStatusEvent {
             | Self::RecordsAppended(_)
             | Self::PromptOpened(_)
             | Self::PromptUpdated(_)
-            | Self::PromptClosed(_) => {}
+            | Self::PromptClosed(_)
+            | Self::ParentFinished(_)
+            | Self::ChildEnded(_)
+            | Self::NoticesAcknowledged(_)
+            | Self::OrphanAcknowledged(_) => {}
         }
     }
 }

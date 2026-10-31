@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use super::support::{TestResult, Tree, conformance, field, scenario, strings};
 
-const EXECUTABLE: [&str; 19] = [
+const EXECUTABLE: &[&str] = &[
     "_runner/self-test.json",
     "agent/binding.json",
     "agent/bridge.json",
@@ -14,6 +14,7 @@ const EXECUTABLE: [&str; 19] = [
     "agent/prompts.json",
     "agent/records.json",
     "agent/status.json",
+    "agent/tree.json",
     "all/all.json",
     "part-a/task-21.json",
     "part-a/task-77.json",
@@ -36,7 +37,10 @@ fn every_scenario_file_is_executed_or_a_listed_declaration() -> TestResult {
     let evidence = &ran.evidence;
     assert_eq!(
         strings(evidence, "/inventory/executed"),
-        EXECUTABLE.map(str::to_owned).to_vec()
+        EXECUTABLE
+            .iter()
+            .map(|file| (*file).to_owned())
+            .collect::<Vec<String>>()
     );
     let allowlist: Value = serde_json::from_slice(&std::fs::read(
         Path::new(env!("CARGO_MANIFEST_DIR")).join("scenarios/declared.json"),
