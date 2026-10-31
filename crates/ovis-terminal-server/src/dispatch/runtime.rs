@@ -10,26 +10,27 @@ use ovis_terminal_core::ops::{OperationEvent, OperationSnapshot};
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::schema::decode_params;
-use ovis_terminal_protocol::schema::method::{Effect, MethodSpec};
-use ovis_terminal_protocol::schema::methods::all_methods;
+use ovis_terminal_protocol::schema::ids::MethodName;
 use ovis_terminal_protocol::schema::methods::server::OpRefParams;
-use schemars::JsonSchema;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tokio::sync::{Mutex, Semaphore, watch};
 use tokio::time::Instant;
 
+use super::DispatchError;
 use super::control::{self, Control};
-use super::deadline::{receive, wait};
+use super::deadline::{receive, wait, wait_queued};
 use super::execution::{State, now};
 use super::job::Job;
-use super::read::{self, ReadRoute, Reader};
-use super::registry::{Registered, Route};
+use super::queue::{Admission, Queued};
+use super::read::{self, ReadRoute};
+use super::registry::Route;
 use super::reservation::Reservation;
-use super::tasks::{Active, Tasks};
-use super::{DispatchError, Method, Read};
+use super::tasks::{Active, Permits, Tasks};
 use crate::conn::{Call, RequestHandler};
+
+mod registration;
 
 /// Strict dispatcher sharing the core's actual operation/event coordinator.
 ///
@@ -80,59 +81,6 @@ where
         }
     }
 
-    /// Registers an implemented module before sharing the dispatcher.
-    ///
-    /// # Errors
-    ///
-    /// Rejects unknown, duplicate, hello and built-in operation-control methods.
-    pub fn register<M: Method<D, P>>(&mut self, method: M) -> Result<(), DispatchError> {
-        let spec = self.declared::<M::Params>(M::NAME)?;
-        self.routes.insert(
-            M::NAME,
-            Box::new(Registered {
-                method: Arc::new(method),
-                effect: spec.effect,
-                targeting: spec.targeting,
-            }),
-        );
-        Ok(())
-    }
-
-    /// Registers a query answered from a committed snapshot, outside the operation ledger.
-    ///
-    /// # Errors
-    ///
-    /// Rejects unknown, duplicate, non-query, hello and built-in operation-control methods.
-    pub fn register_read<R: Read>(&mut self, reader: R) -> Result<(), DispatchError> {
-        if !matches!(self.declared::<R::Params>(R::NAME)?.effect, Effect::Query) {
-            return Err(DispatchError::Registration);
-        }
-        self.reads
-            .insert(R::NAME, Box::new(Reader(Arc::new(reader))));
-        Ok(())
-    }
-
-    /// The catalog entry of `name`, if it is unregistered and declares exactly `T` as params.
-    fn declared<T: JsonSchema>(&self, name: &str) -> Result<&'static MethodSpec, DispatchError> {
-        let spec = all_methods()
-            .find(|spec| spec.name == name)
-            .ok_or(DispatchError::Registration)?;
-        if ["hello", "op.get", "op.cancel"].contains(&name)
-            || self.routes.contains_key(name)
-            || self.reads.contains_key(name)
-        {
-            return Err(DispatchError::Registration);
-        }
-        let mut declared = schemars::SchemaGenerator::default();
-        let mut registered = schemars::SchemaGenerator::default();
-        if (spec.params)(&mut declared) != registered.subschema_for::<T>()
-            || declared.definitions() != registered.definitions()
-        {
-            return Err(DispatchError::Registration);
-        }
-        Ok(spec)
-    }
-
     /// Cooperatively cancels outstanding work and joins every task, including blocking effects.
     ///
     /// # Errors
@@ -143,6 +91,8 @@ where
         tasks.closed = true;
         for active in tasks.active.values() {
             active.cancel.send_replace(true);
+            // A job still waiting for a snapshot slot would otherwise block the join.
+            active.queued.withdraw();
         }
         let running = tasks.take_running();
         drop(tasks);
@@ -186,16 +136,28 @@ where
         let op_id = prepared.request.op_id().clone();
         let mut tasks = self.tasks.lock().await;
         tasks.reap().map_err(|error| error.boundary())?;
-        if let Some(received) = tasks.joined(call.session.principal(), &prepared.request)? {
+        if let Some((received, queued)) =
+            tasks.joined(call.session.principal(), &prepared.request)?
+        {
             drop(tasks);
-            return wait(receive(received), op_id, start).await;
+            return wait_queued(receive(received), (op_id, Some(queued)), start).await;
         }
         let global = Arc::clone(&self.work)
             .try_acquire_owned()
             .map_err(|_| DispatchError::Backpressure.boundary())?;
-        let permit = tasks
+        let Permits {
+            in_flight,
+            queued: queue_place,
+        } = tasks
             .permit(&call.session)
             .map_err(|error| error.boundary())?;
+        let queue = self.state.core.snapshot_queue();
+        let ticket = queue.enqueue();
+        let queued = Queued {
+            queue: Arc::clone(queue),
+            ticket: ticket.id(),
+            method: MethodName::new(call.request.method().to_owned()),
+        };
         let (cancel, cancellation) = watch::channel(false);
         let (reply, received) = watch::channel(None);
         let reservation = Arc::new(Reservation::new());
@@ -205,6 +167,7 @@ where
             cancel,
             response: received.clone(),
             reservation: Arc::clone(&reservation),
+            queued: queued.clone(),
         };
         let job = Job {
             state: Arc::clone(&self.state),
@@ -212,16 +175,21 @@ where
             decision,
             notifier: call.notifier,
             reservation,
+            admission: Admission {
+                ticket,
+                permit: queue_place,
+                queued: queued.clone(),
+            },
         };
         let task = tasks.set.spawn(async move {
             let result = job.run(prepared, cancellation).await;
             // A disappeared RPC waiter does not cancel or discard the durable operation.
             reply.send_replace(Some(result.map_err(|error| error.data().clone())));
-            drop((permit, global));
+            drop((in_flight, global));
         });
         tasks.active.insert(task.id(), active);
         drop(tasks);
-        wait(receive(received), op_id, start).await
+        wait_queued(receive(received), (op_id, Some(queued)), start).await
     }
 
     async fn control_call(&self, call: Call, start: Instant) -> Result<Value, BoundaryError> {
@@ -245,6 +213,7 @@ where
             op_id: op_id.clone(),
             cancel,
             reservation: own.first().map(|active| Arc::clone(&active.reservation)),
+            queued: own.first().map(|active| active.queued.clone()),
             foreign: foreign.first().map(|active| active.principal.clone()),
         };
         let (reply, received) = watch::channel(None);
