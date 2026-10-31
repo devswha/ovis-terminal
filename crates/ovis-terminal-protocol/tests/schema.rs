@@ -6,8 +6,8 @@ use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind, JsonRpcCode};
 use ovis_terminal_protocol::rpc::parse_request;
 use ovis_terminal_protocol::schema::methods::terminal::TerminalGetParams;
 use ovis_terminal_protocol::schema::{
-    SchemaError, check_compatibility, decode_params, openrpc_document, render_openrpc,
-    verify_document,
+    SchemaError, baseline_digest, check_amendments, check_compatibility, decode_params,
+    openrpc_document, render_openrpc, verify_document,
 };
 use serde_json::Value;
 
@@ -90,8 +90,16 @@ fn happy() {
         first.len()
     );
 
-    check_compatibility(&load("released.openrpc.json"), &document)
+    let released = load("released.openrpc.json");
+    check_compatibility(&released, &document)
         .expect("the current document should keep every released contract");
+    let ledger = std::fs::read_to_string(repo_file("BASELINE-AMENDMENTS.md"))
+        .expect("the amendment ledger should be checked in");
+    check_amendments(&released, &ledger).expect("every baseline amendment should be recorded");
+    println!(
+        "released baseline sha256:{}",
+        baseline_digest(&released).expect("digest")
+    );
 }
 
 #[test]

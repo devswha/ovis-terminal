@@ -14,6 +14,8 @@ pub mod documents;
 pub mod handler;
 pub mod launch;
 #[cfg(unix)]
+pub mod launches;
+#[cfg(unix)]
 pub mod output;
 #[cfg(unix)]
 pub mod prompts;
@@ -21,6 +23,8 @@ pub mod prompts;
 pub mod rotation;
 #[cfg(unix)]
 pub mod serve;
+#[cfg(unix)]
+pub mod template_lane;
 #[cfg(unix)]
 pub mod terminals;
 #[cfg(unix)]

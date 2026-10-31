@@ -1,9 +1,11 @@
 //! Alternatives of a schema and the facts each one states.
 //!
-//! A schema is flattened into the alternatives a value may match: `anyOf` and
-//! `oneOf` members (including nullable wrappers), one alternative per entry of a
-//! type array, and `allOf` parts merged into one conjunction. References are
-//! resolved along a [`Trail`] that rejects cycles and excessive depth.
+//! A schema is flattened into the alternatives a value may match. A value must
+//! satisfy the node's own keywords, every `allOf` member, one `anyOf` member and
+//! one `oneOf` member, so each alternative is one combination of those parts;
+//! a type array splits into one alternative per type. Compositions nest to any
+//! depth. References are resolved along a [`Trail`] that rejects cycles and
+//! excessive depth, and the number of alternatives is bounded.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -14,13 +16,52 @@ use crate::schema::document::COMPONENTS_PREFIX;
 use crate::schema::error::SchemaError;
 use crate::schema::scalar::OPEN_ENUM_EXTENSION;
 
-/// One alternative: its conjunct schema parts, an optional single type, and its trail.
+/// Most alternatives one schema may expand to before failing with a typed error.
+pub(super) const MAX_ALTERNATIVES: usize = 256;
+
+/// One alternative: its conjunct schema parts, the single types its type arrays
+/// were split into, and its trail.
 #[derive(Debug, Clone)]
 pub(super) struct Alt<'a> {
     parts: Vec<&'a Value>,
-    only: Option<String>,
+    only: Vec<&'a str>,
     open: bool,
     pub(super) trail: Trail,
+}
+
+impl Alt<'_> {
+    /// The alternative a value matches when it matches both `self` and `other`.
+    fn and(&self, other: &Self) -> Self {
+        let refs = self.trail.refs.iter();
+        let shared = refs.filter(|entered| other.trail.refs.contains(entered));
+        Self {
+            parts: self.parts.iter().chain(&other.parts).copied().collect(),
+            only: self.only.iter().chain(&other.only).copied().collect(),
+            open: self.open || other.open,
+            trail: Trail {
+                refs: shared.cloned().collect(),
+                depth: self.trail.depth.max(other.trail.depth),
+            },
+        }
+    }
+}
+
+/// Every pairing of one alternative of `left` with one of `right`.
+fn conjoin<'a>(
+    left: &[Alt<'a>],
+    right: &[Alt<'a>],
+    location: &str,
+) -> Result<Vec<Alt<'a>>, SchemaError> {
+    if left.len().saturating_mul(right.len()) > MAX_ALTERNATIVES {
+        return Err(SchemaError::TooManyAlternatives {
+            location: location.to_owned(),
+            limit: MAX_ALTERNATIVES,
+        });
+    }
+    Ok(left
+        .iter()
+        .flat_map(|l| right.iter().map(|r| l.and(r)))
+        .collect())
 }
 
 fn is_open(schema: &Value) -> bool {
@@ -52,15 +93,18 @@ fn resolve<'a>(
     Ok(current)
 }
 
-fn type_names(schema: &Value) -> Vec<String> {
+fn type_names(schema: &Value) -> Vec<&str> {
     match schema.get("type") {
-        Some(Value::String(name)) => vec![name.clone()],
-        Some(Value::Array(names)) => names
-            .iter()
-            .filter_map(|n| n.as_str().map(str::to_owned))
-            .collect(),
+        Some(Value::String(name)) => vec![name.as_str()],
+        Some(Value::Array(names)) => names.iter().filter_map(Value::as_str).collect(),
         _ => Vec::new(),
     }
+}
+
+fn members<'a>(node: &'a Value, keyword: &str) -> &'a [Value] {
+    node.get(keyword)
+        .and_then(Value::as_array)
+        .map_or(&[], Vec::as_slice)
 }
 
 /// Flattens `schema` into the alternatives a value may match.
@@ -79,51 +123,32 @@ pub(super) fn alternatives<'a>(
     let open = is_open(schema);
     let node = resolve(document, schema, &mut trail)?;
     let open = open || is_open(node);
-    let members = ["anyOf", "oneOf"]
-        .into_iter()
-        .filter_map(|key| node.get(key)?.as_array());
-    let members: Vec<&Value> = members.flatten().collect();
-    if !members.is_empty() {
-        let mut found = Vec::new();
-        for member in members {
-            found.extend(
-                alternatives(document, member, &trail)?
-                    .into_iter()
-                    .map(|alt| Alt {
-                        open: alt.open || open,
-                        ..alt
-                    }),
-            );
-        }
-        return Ok(found);
-    }
-    let mut parts = vec![node];
-    for part in node
-        .get("allOf")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-    {
-        parts.push(resolve(document, part, &mut trail.clone())?);
-    }
-    let types = type_names(node);
-    if types.len() > 1 {
-        return Ok(types
-            .into_iter()
-            .map(|only| Alt {
-                parts: parts.clone(),
-                only: Some(only),
-                open,
-                trail: trail.clone(),
-            })
-            .collect());
-    }
-    Ok(vec![Alt {
-        parts,
-        only: None,
+    let own = |only| Alt {
+        parts: vec![node],
+        only,
         open,
-        trail,
-    }])
+        trail: trail.clone(),
+    };
+    let types = type_names(node);
+    let mut found: Vec<Alt<'a>> = if types.len() > 1 {
+        types.into_iter().map(|only| own(vec![only])).collect()
+    } else {
+        vec![own(Vec::new())]
+    };
+    let location = trail.refs.last().map_or("schema root", String::as_str);
+    for part in members(node, "allOf") {
+        found = conjoin(&found, &alternatives(document, part, &trail)?, location)?;
+    }
+    for keyword in ["anyOf", "oneOf"] {
+        let mut either = Vec::new();
+        for member in members(node, keyword) {
+            either.extend(alternatives(document, member, &trail)?);
+        }
+        if !either.is_empty() {
+            found = conjoin(&found, &either, location)?;
+        }
+    }
+    Ok(found)
 }
 
 /// Facts one alternative states, with `allOf` parts merged as an intersection.
@@ -160,11 +185,11 @@ pub(super) const LOWER_BOUNDS: [&str; 5] = [
     "minProperties",
 ];
 
-fn intersect_types(types: Option<BTreeSet<String>>, part: Vec<String>) -> Option<BTreeSet<String>> {
+fn intersect_types(types: Option<BTreeSet<String>>, part: Vec<&str>) -> Option<BTreeSet<String>> {
     if part.is_empty() {
         return types;
     }
-    let part: BTreeSet<String> = part.into_iter().collect();
+    let part: BTreeSet<String> = part.into_iter().map(str::to_owned).collect();
     Some(types.map_or_else(
         || part.clone(),
         |known| known.intersection(&part).cloned().collect(),
@@ -250,8 +275,8 @@ pub(super) fn facts<'a>(alt: &Alt<'a>) -> Facts<'a> {
     for part in &alt.parts {
         merge_part(&mut found, part);
     }
-    if let Some(only) = &alt.only {
-        found.types = intersect_types(found.types.take(), vec![only.clone()]);
+    for only in &alt.only {
+        found.types = intersect_types(found.types.take(), vec![only]);
     }
     found
 }

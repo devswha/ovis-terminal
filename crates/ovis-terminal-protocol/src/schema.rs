@@ -3,6 +3,7 @@
 //! released-baseline compatibility gate (plan todo 4).
 
 mod advertise;
+mod amendments;
 pub mod common;
 pub mod compat;
 mod decode;
@@ -22,6 +23,7 @@ mod stream;
 mod verify;
 
 pub use advertise::advertised_methods;
+pub use amendments::{ENTRY_KEYS, baseline_digest, check_amendments};
 pub use compat::{Break, BreakRule, breaking_changes, check_compatibility};
 pub use decode::{ParamsError, decode_params};
 pub use document::{

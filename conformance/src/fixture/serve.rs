@@ -93,6 +93,8 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     super::rotation::register(&mut dispatch, &authority, (runtime, Arc::clone(&sequenced)))?;
     let (status, directory) = (Arc::clone(&agents.0), Arc::clone(&agents.1));
     super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
+    let parts = (&authority, &*core, agents.clone());
+    super::template_lane::register(&mut dispatch, (runtime, root), parts)?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
     let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
     let writer = delegate(&authority, issued.bearer(), ("writer", WRITER))?;

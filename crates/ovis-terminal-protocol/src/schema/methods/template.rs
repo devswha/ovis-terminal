@@ -1,11 +1,15 @@
 //! `template.*`: versioned launch templates discoverable by name.
 
+use std::collections::BTreeMap;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::template_launch::ReadinessContract;
 use crate::schema::common::NoParams;
 use crate::schema::ids::TemplateName;
 use crate::schema::method::{MethodSpec, method};
+use crate::schema::scalar::DurationMs;
 
 /// Versioned launch template.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -19,6 +23,14 @@ pub struct TemplateRecord {
     pub description: String,
     /// Argument vector.
     pub argv: Vec<String>,
+    /// Environment the program starts with, before launch additions.
+    pub env: BTreeMap<String, String>,
+    /// How the program declares it can take its first message.
+    pub readiness: ReadinessContract,
+    /// Readiness deadline of a first message whose launch names none.
+    pub ready_deadline_ms: DurationMs,
+    /// Text placed before the task in the first message.
+    pub body: Option<String>,
 }
 
 /// Parameters of `template.get`.

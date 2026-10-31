@@ -12,18 +12,13 @@ use ovis_terminal_agent::status::{Ingested, OscOutput, ProcessOwner, StatusServi
 use ovis_terminal_authz::{Action, Authority, ResolvedTarget, Session, TargetResource};
 use ovis_terminal_core::events::{Coordinator, EventError};
 use ovis_terminal_core::ops::{Completion, OperationProducer};
-use ovis_terminal_core::registry::{
-    MachineRuntime, RegistryIdentities, ResourceName, ResourceTarget, ResourceTargetKey,
-    RuntimeIdentity, TargetIndex, TargetRequest, TargetResolutionError, TerminalGeneration,
-    TerminalId,
-};
-use ovis_terminal_protocol::schema::common::Target;
+use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity, TerminalId};
 use ovis_terminal_protocol::schema::ids::ProcessToken;
 use ovis_terminal_protocol::schema::methods::input::InputSendParams;
 use ovis_terminal_protocol::schema::scalar::{Incarnation, TimestampMs};
 use ovis_terminal_server::dispatch::lanes::agent_status::{
     AgentStatusLane, ClearStatus, GetAgent, GetStatus, RegisterAgent, ReportStatus,
-    ResolvedTerminal, TerminalDirectory,
+    TerminalDirectory,
 };
 use ovis_terminal_server::dispatch::{Access, Completed, DispatchError, Execution, Method};
 use ovis_terminal_vt::{Geometry, HistoryLimit, Vt, VtConfig};
@@ -34,6 +29,11 @@ use super::prompts::Gate;
 use super::rotation::Sequenced;
 use super::serve::at;
 use crate::error::RunnerError;
+
+pub mod directory;
+
+pub(crate) use directory::Directory;
+use directory::directory;
 
 /// Spawn tokens of the two fixture programs.
 const TERMINALS: [(u64, &str, &str); 3] = [
@@ -47,35 +47,6 @@ const TERMINALS: [(u64, &str, &str); 3] = [
 ];
 
 type Core = Coordinator<Event, OperationProducer>;
-
-/// The fixture's terminal registry; it never selects a focused terminal.
-#[derive(Debug)]
-pub(crate) struct Directory {
-    index: TargetIndex,
-    scope: MachineRuntime,
-    generation: TerminalGeneration,
-}
-
-impl TerminalDirectory for Directory {
-    fn resolve(&self, target: &Target) -> Result<ResolvedTerminal, TargetResolutionError> {
-        let request = match target {
-            Target::TerminalId(id) => {
-                TargetRequest::Id(ResourceTargetKey::new(self.scope, id.as_str().parse()?))
-            }
-            Target::Name(name) => TargetRequest::Name {
-                machine: None,
-                name: ResourceName::new(name.as_str())?,
-            },
-            _ => return Err(TargetResolutionError::NotFound),
-        };
-        let resolved = self.index.resolve(request)?;
-        Ok(ResolvedTerminal::new(
-            resolved.machine_id(),
-            resolved.terminal_id(),
-            self.generation,
-        ))
-    }
-}
 
 /// The fixture programs echo their input, as `cat` does, so `input.send` text becomes
 /// program output: a real VT engine reads it and every OSC record goes to ingestion.
@@ -91,23 +62,6 @@ pub(crate) struct EchoProgram {
     directory: Arc<Directory>,
     screens: Arc<Mutex<BTreeMap<TerminalId, Vt>>>,
     sequenced: Arc<Sequenced>,
-}
-
-fn directory(runtime: RuntimeIdentity) -> Result<Directory, RunnerError> {
-    let scope = MachineRuntime::new(runtime.machine_id(), runtime.runtime_id());
-    let mut targets = Vec::with_capacity(TERMINALS.len());
-    for (id, name, _) in TERMINALS {
-        targets.push(ResourceTarget::new(
-            scope,
-            TerminalId::try_from(id).map_err(at("build a terminal id"))?,
-            ResourceName::new(name).map_err(at("build a terminal name"))?,
-        ));
-    }
-    Ok(Directory {
-        index: TargetIndex::from_targets(targets),
-        scope,
-        generation: TerminalGeneration::new(1).map_err(at("build a generation"))?,
-    })
 }
 
 /// The status service and terminal directory other agent lanes share.

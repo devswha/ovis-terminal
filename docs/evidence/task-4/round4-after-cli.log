@@ -1,0 +1,10 @@
+$ target/debug/openrpc compat schema/released.openrpc.json
+{"compatible_with":"schema/released.openrpc.json"}
+EXIT=0
+$ target/debug/openrpc check schema/ovis-terminal.openrpc.json
+{"bytes":550415,"fresh":"schema/ovis-terminal.openrpc.json"}
+EXIT=0
+$ # copy of released with Count.description edited, shipped ledger beside it
+$ target/debug/openrpc compat /tmp/tmp.ldDQb15yKD/released.openrpc.json
+{"breaks":[],"hint":"add an entry to schema/BASELINE-AMENDMENTS.md with date, pr, fields, reason, previous and current digests","kind":"baseline_amendment_missing","message":"released baseline sha256:2bd3d2d55a66f1079c3a64fb6ab0710cce271330ea26d85de75bf020f95e7ae7 has no amendment entry with previous: sha256:362980ac3f118f9866ae95f33defb0a5542b4d8a20825432a0a580ec809ae971"}
+EXIT=1
