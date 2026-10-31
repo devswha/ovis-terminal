@@ -14,10 +14,9 @@ use ovis_terminal_protocol::schema::methods::server::{HelloResult, ServerState};
 use ovis_terminal_protocol::wire::MAX_FRAME_PAYLOAD;
 use serde_json::json;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixStream;
 
 use super::EndpointError;
-use super::unix::{PathOccupant, io_error, occupant};
+use super::unix::{PathOccupant, connect, io_error, occupant};
 
 /// The observed state of an endpoint path.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,7 +26,7 @@ pub enum EndpointStatus {
     Running(Box<HelloResult>),
     /// Nothing exists at the path.
     Stopped,
-    /// A socket accepts connections but no hello result arrived in time.
+    /// A socket accepts connections but no hello result arrived in time or at all.
     Unreachable,
     /// The path holds a socket nobody listens on, or a file that is not a socket.
     StaleEndpoint,
@@ -73,7 +72,7 @@ impl<'a> Probe<'a> {
             PathOccupant::Other => return Ok(EndpointStatus::StaleEndpoint),
             PathOccupant::Socket => {}
         }
-        let stream = match UnixStream::connect(path).await {
+        let stream = match connect(path).await {
             Ok(stream) => stream,
             Err(error) => {
                 return match error.kind() {
@@ -86,8 +85,12 @@ impl<'a> Probe<'a> {
         let Ok(exchanged) = tokio::time::timeout(self.deadline, self.hello(stream)).await else {
             return Ok(EndpointStatus::Unreachable);
         };
-        let Some(line) = exchanged.map_err(|source| io_error("hello", path, source))? else {
-            return Ok(EndpointStatus::Unreachable);
+        let line = match exchanged {
+            Ok(Some(line)) => line,
+            // A server that hangs up mid-hello accepted the connection but never answered.
+            Ok(None) => return Ok(EndpointStatus::Unreachable),
+            Err(error) if crate::peer_gone(&error) => return Ok(EndpointStatus::Unreachable),
+            Err(source) => return Err(io_error("hello", path, source)),
         };
         match parse_reply(&line).map_err(EndpointError::MalformedReply)? {
             RpcReply::Success(success) => serde_json::from_value(success.result)
@@ -102,7 +105,7 @@ impl<'a> Probe<'a> {
         }
     }
 
-    async fn hello(self, mut stream: UnixStream) -> std::io::Result<Option<String>> {
+    async fn hello(self, mut stream: tokio::net::UnixStream) -> std::io::Result<Option<String>> {
         let request = json!({
             "jsonrpc": "2.0",
             "id": "status-probe",

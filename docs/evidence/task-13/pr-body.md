@@ -1,3 +1,18 @@
+## Fix after CI round 1 (macOS)
+
+`test (macos-latest)` failed on 4e7ecaf: `endpoint::a_live_socket_is_never_taken_over` got `Os { code: 32, kind: BrokenPipe }` from the test client's own write.
+
+Cause, in the product: the contested bind's `reclaim_stale` connects to the live server and drops the stream at once. When the server accepted that connection, macOS `getpeereid` on the already-closed peer failed. `UnixEndpoint::accept` returned that as an `EndpointError`, the accept loop ended the whole server, and the client queued in the backlog then hit EPIPE. One vanished peer stopped the server.
+
+Fixes:
+
+- **Per-connection evidence.** `UnixEndpoint::accept` returns `(stream, Result<PeerEvidence, EndpointError>)`. A peer that closed before its credential could be read is `EndpointError::PeerClosed` (kind `peer_closed`) for that connection only. The server refuses it fail-closed (`peer_rejected` from the authz seam), counts `peer_closed` in `ServeReport::failures`, and keeps serving. Only a listener-level accept failure stops the server.
+- **Probe hang-up.** `Probe::observe` reports a server that hangs up mid-hello (EOF, EPIPE, ECONNRESET, ECONNABORTED, ENOTCONN) as `Unreachable`, never as an unhandled `io::Error`. New test: `endpoint::a_server_that_hangs_up_mid_hello_is_unreachable`.
+- **SIGPIPE.** `SO_NOSIGPIPE` is set on Apple targets through `socket2::SockRef::set_nosigpipe` (safe API; socket2 0.6.5 was already in the lockfile, now with the `all` feature on Apple targets only). It is applied at the one accept point (`UnixEndpoint::accept`) and the one connect point (`listen::unix::connect`, used by the probe and the stale-path check). Linux has no per-socket flag and tokio writes use `write(2)`, so `MSG_NOSIGNAL` is not available there; Rust programs start with `SIGPIPE` ignored, so writes return EPIPE.
+- **Deterministic test.** `a_live_socket_is_never_taken_over` now waits on a real readiness signal: the owner connection completes hello before the second bind. Afterwards the established connection still answers a request, a new client still negotiates, and `ServeReport` shows `accepted=3, panicked=0`. There is no sleep, and no `cfg` skips macOS (the test file is `#![cfg(unix)]`).
+- **Local cross-checks.** `cargo clippy -p ovis-terminal-server --all-targets --target aarch64-apple-darwin -- -D warnings` passes. The local Windows cross-check is blocked by the bundled-SQLite C build under the zig wrapper; the windows-latest CI lane covers it.
+- **Gate.** `bash scripts/check.sh` exits 0: 326 passed, 1 skipped (`docs/evidence/task-13/check-fix.log`).
+
 ## Before
 
 RT-HD-01 (EXCL-014, V-RT-HD-01): `docs/evidence/baseline/smoke/herdr-h02-connection.log:2` (original `/tmp/ulw-ovis-yCJzPH/evidence/smoke/herdr-h02-connection.log:2`):
@@ -88,7 +103,7 @@ EXIT=2
 Gates on the tree merged with `origin/integration` (97c8d00):
 
 - `bash scripts/check.sh` exits 0, with nextest at 325 passed, 1 skipped (`check-merged.log`).
-- `cargo nextest run -p ovis-terminal-server`: 25 passed (`nextest.log`).
+- `cargo nextest run -p ovis-terminal-server`: 26 passed (after the macOS fix) (`nextest.log`).
 - `cargo clippy -p ovis-terminal-server --all-targets -- -D warnings`: exit 0 (`clippy.log`).
 - `openrpc check` and `openrpc compat schema/released.openrpc.json` both exit 0 (`schema-gate.log`).
 

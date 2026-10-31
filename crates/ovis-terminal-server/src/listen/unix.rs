@@ -120,24 +120,35 @@ impl UnixEndpoint {
 
     /// Accepts one connection with the operating system's evidence about its peer.
     ///
+    /// The evidence is per connection: a peer that disconnected before its credential
+    /// could be read yields [`EndpointError::PeerClosed`] for that connection only.
+    ///
     /// # Cancel Safety
     ///
     /// Cancel safe: a dropped call accepts nothing.
     ///
     /// # Errors
     ///
-    /// [`EndpointError::Io`] when accepting or inspecting the peer fails.
-    pub async fn accept(&self) -> Result<(UnixStream, PeerEvidence), EndpointError> {
+    /// [`EndpointError::Io`] when the listener itself cannot accept.
+    pub async fn accept(
+        &self,
+    ) -> Result<(UnixStream, Result<PeerEvidence, EndpointError>), EndpointError> {
         let (stream, _) = self
             .listener
             .accept()
             .await
             .map_err(|source| io_error("accept", &self.path, source))?;
+        let evidence = self.peer_evidence(&stream);
+        Ok((stream, evidence))
+    }
+
+    fn peer_evidence(&self, stream: &UnixStream) -> Result<PeerEvidence, EndpointError> {
+        without_sigpipe(stream).map_err(|source| EndpointError::PeerClosed { source })?;
         let peer = stream
             .peer_cred()
-            .map_err(|source| io_error("read peer credential", &self.path, source))?;
+            .map_err(|source| EndpointError::PeerClosed { source })?;
         let evidence = self.evidence(UnixUid::new(peer.uid()))?;
-        Ok((stream, PeerEvidence::UnixSocket(evidence)))
+        Ok(PeerEvidence::UnixSocket(evidence))
     }
 
     fn evidence(&self, peer: UnixUid) -> Result<UnixSocketEvidence, EndpointError> {
@@ -147,8 +158,34 @@ impl UnixEndpoint {
     }
 }
 
+/// Connects to `path`; the one place this crate opens a client socket.
+pub(super) async fn connect(path: &Path) -> io::Result<UnixStream> {
+    let stream = UnixStream::connect(path).await?;
+    without_sigpipe(&stream)?;
+    Ok(stream)
+}
+
+/// Makes writes to a closed peer fail with `EPIPE` instead of raising `SIGPIPE`.
+///
+/// Apple platforms set `SO_NOSIGPIPE` on each socket. Linux has no per-socket flag and
+/// writes go through `write(2)`, so there the process disposition applies; Rust programs
+/// start with `SIGPIPE` ignored.
+#[cfg(target_vendor = "apple")]
+fn without_sigpipe(stream: &UnixStream) -> io::Result<()> {
+    socket2::SockRef::from(stream).set_nosigpipe(true)
+}
+
+#[cfg(not(target_vendor = "apple"))]
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the Apple variant of this function can fail; both share one signature"
+)]
+const fn without_sigpipe(_stream: &UnixStream) -> io::Result<()> {
+    Ok(())
+}
+
 async fn reclaim_stale(path: &Path) -> Result<(), EndpointError> {
-    match UnixStream::connect(path).await {
+    match connect(path).await {
         Ok(_) => Err(EndpointError::AlreadyServing {
             path: path.to_path_buf(),
         }),

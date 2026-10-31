@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use ovis_terminal_authz::Authority;
+use ovis_terminal_authz::{Authority, AuthzError};
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
 use tokio::sync::watch;
 use tokio::task::{JoinError, JoinHandle, JoinSet};
@@ -63,7 +63,7 @@ impl ServeReport {
         self.accepted
     }
 
-    /// Connections the server closed for a failure, by failure kind.
+    /// Connections the server refused or closed for a failure, by failure kind.
     #[must_use]
     pub const fn failures(&self) -> &BTreeMap<&'static str, u64> {
         &self.failures
@@ -81,13 +81,15 @@ impl ServeReport {
         self.aborted
     }
 
+    fn count(&mut self, kind: &'static str) {
+        let count = self.failures.entry(kind).or_default();
+        *count = count.saturating_add(1);
+    }
+
     fn record(&mut self, ended: Result<Result<(), ConnectionError>, JoinError>) {
         match ended {
             Ok(Ok(())) => {}
-            Ok(Err(error)) => {
-                let count = self.failures.entry(error.kind()).or_default();
-                *count = count.saturating_add(1);
-            }
+            Ok(Err(error)) => self.count(error.kind()),
             Err(error) if error.is_panic() => self.panicked = self.panicked.saturating_add(1),
             Err(_) => self.aborted = self.aborted.saturating_add(1),
         }
@@ -166,7 +168,11 @@ async fn accept_loop<H: RequestHandler>(
                     Err(error) => break Err(error),
                 };
                 report.accepted = report.accepted.saturating_add(1);
-                let admission = endpoint.policy().admit(&evidence);
+                // A peer the operating system cannot describe is refused, never trusted.
+                let admission = evidence
+                    .inspect_err(|error| report.count(error.kind()))
+                    .map_err(|_| AuthzError::PeerRejected)
+                    .and_then(|evidence| endpoint.policy().admit(&evidence));
                 running.spawn(serving.connections.serve(stream, admission));
             }
         }

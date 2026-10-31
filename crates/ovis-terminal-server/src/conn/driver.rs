@@ -15,6 +15,7 @@ use tokio::task::{self, JoinError, JoinSet};
 use super::core::{ConnectionCore, Step};
 use super::outbound::{Closing, OUTBOUND_CAPACITY, Outbound, write_loop};
 use super::{Call, ConnectionError, Notifier, RequestHandler};
+use crate::peer_gone;
 
 const READ_CHUNK: usize = 64 * 1024;
 
@@ -229,17 +230,6 @@ impl<H: RequestHandler> Requests<H> {
             .await
             .map_err(|_| ConnectionError::Io(std::io::Error::from(std::io::ErrorKind::BrokenPipe)))
     }
-}
-
-/// A peer that hung up ends its connection normally; it is not a server failure.
-fn peer_gone(error: &std::io::Error) -> bool {
-    matches!(
-        error.kind(),
-        std::io::ErrorKind::BrokenPipe
-            | std::io::ErrorKind::ConnectionReset
-            | std::io::ErrorKind::ConnectionAborted
-            | std::io::ErrorKind::NotConnected
-    )
 }
 
 fn failure(id: RequestId, error: &BoundaryError) -> Outbound {

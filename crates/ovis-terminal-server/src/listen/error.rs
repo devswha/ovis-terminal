@@ -51,6 +51,13 @@ pub enum EndpointError {
         #[source]
         source: AuthzError,
     },
+    /// The peer disconnected before the operating system could describe it.
+    #[error("the peer closed before its credential could be read")]
+    PeerClosed {
+        /// The failed peer inspection.
+        #[source]
+        source: io::Error,
+    },
     /// An operating-system call on the endpoint failed.
     #[error("{operation} failed on {path}")]
     Io {
@@ -101,6 +108,7 @@ impl EndpointError {
             Self::AlreadyServing { .. } => "already_running",
             Self::NotASocket { .. } => "not_a_socket",
             Self::Insecure { .. } => "endpoint_insecure",
+            Self::PeerClosed { .. } => "peer_closed",
             Self::Io { .. } => "endpoint_io",
             Self::Methods(_) => "uncatalogued_method",
             Self::Identity(_) => "invalid_identity",
@@ -126,6 +134,7 @@ impl EndpointError {
             Self::AlreadyServing { .. } => "connect to the running server or stop it first",
             Self::NotASocket { .. } => "move the file away or choose another socket path",
             Self::Insecure { .. } => "restrict the socket directory to its owner (mode 0700)",
+            Self::PeerClosed { .. } => "reconnect; the connection was refused before hello",
             Self::Io { .. } => "check the path, its permissions and free descriptors",
             Self::Methods(_) => "register only methods published in the OpenRPC catalog",
             Self::Identity(_) => "report the runtime build; its identity is malformed",

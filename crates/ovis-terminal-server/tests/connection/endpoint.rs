@@ -7,27 +7,57 @@ use std::time::Duration;
 
 use ovis_terminal_protocol::schema::error_kinds::DomainErrorKind;
 use ovis_terminal_server::listen::{EndpointStatus, Probe, UnixEndpoint};
+use serde_json::json;
 
 use super::handler::Recorder;
-use super::support::{Fixture, TestResult, WAIT, error_kind};
+use super::support::{Fixture, TestResult, WAIT, at, error_kind, request};
 
 #[tokio::test]
 async fn a_live_socket_is_never_taken_over() -> TestResult {
     let fixture = Fixture::new()?;
     let server = fixture.serve(1, Arc::new(Recorder::default())).await?;
+    let mut owner = fixture.connect().await?;
+    let ready = owner.hello("1", &fixture.bearer).await?;
+    assert!(
+        ready.get("result").is_some(),
+        "the live server answered hello"
+    );
+
     let contested = UnixEndpoint::bind(&fixture.path("s.sock"))
         .await
         .err()
         .ok_or("bound a live path twice")?;
     assert_eq!(contested.kind(), "already_running");
-    let mut client = fixture.connect().await?;
-    let reply = client.hello("1", &fixture.bearer).await?;
+
+    owner
+        .send(&request("after", "doc.get", &json!({ "name": "b" })))
+        .await?;
+    assert_eq!(at(&owner.expect_next().await?, "/result/name"), "b");
+    let mut late = fixture.connect().await?;
+    let reply = late.hello("1", &fixture.bearer).await?;
     assert!(
         reply.get("result").is_some(),
-        "the first server still answers"
+        "the server outlived the probe"
     );
-    drop(client);
-    server.shutdown().await?;
+    drop((owner, late));
+    let report = server.shutdown().await?;
+    assert_eq!((report.accepted(), report.panicked()), (3, 0));
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_server_that_hangs_up_mid_hello_is_unreachable() -> TestResult {
+    let fixture = Fixture::new()?;
+    let rude = fixture.path("rude.sock");
+    DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(rude.parent().ok_or("parent")?)?;
+    let listener = tokio::net::UnixListener::bind(&rude)?;
+    let hang_up = tokio::spawn(async move { listener.accept().await.map(drop) });
+    let observed = Probe::new(&fixture.bearer, WAIT).observe(&rude).await?;
+    assert_eq!(observed, EndpointStatus::Unreachable);
+    hang_up.await??;
     Ok(())
 }
 

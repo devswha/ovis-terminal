@@ -26,6 +26,10 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 
+# SO_NOSIGPIPE through a safe API; the version tokio already resolves.
+[target.'cfg(target_vendor = "apple")'.dependencies]
+socket2 = { version = "0.6", features = ["all"] }
+
 [dev-dependencies]
 proptest = { workspace = true }
 # Paused virtual time drives the unreachable-endpoint deadline without a real wait.
