@@ -38,7 +38,7 @@ No sleeps, retries, larger bounds or buffers, serialization, or weakened or remo
 - `bash scripts/check.sh` (fmt, clippy -D warnings, `cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail`: `1025 tests run: 1025 passed (1 slow), 1 skipped`, doc tests, hygiene `0 violation(s)`, manifests, json): exit 0.
 - Windows pre-check `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked`: exit 0.
 - Host: Linux 7.0.0-38-generic x86_64 (AMD Ryzen Threadripper PRO 3995WX).
-- macOS: existing `probe-stress-macos.yml` job `subscriptions` (100 nextest iterations) dispatched on this branch: MACOS_RUN.
+- macOS: existing `probe-stress-macos.yml` job `subscriptions` (100 nextest iterations) dispatched on this branch: https://github.com/devswha/ovis-terminal/actions/runs/41254376898 (result recorded in the DoneClaim).
 
 ## QA
 
