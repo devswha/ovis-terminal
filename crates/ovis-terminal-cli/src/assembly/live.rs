@@ -33,6 +33,8 @@ pub(super) struct Live {
     pub(super) sequencer: Sequencer,
     pub(super) geometry: GeometryController,
     pub(super) spawned_ms: TimestampMs,
+    pub(super) generation: TerminalGeneration,
+    pub(super) ended: bool,
 }
 
 impl Live {
@@ -119,6 +121,8 @@ impl Runtime {
             sequencer,
             geometry,
             spawned_ms: now()?,
+            generation,
+            ended: false,
         };
         self.live.insert(terminal, live);
         Ok(())
@@ -147,6 +151,7 @@ impl Runtime {
             Message::Exit(exit) => {
                 live.hub.finish(exit)?;
                 live.sequencer.exited();
+                live.ended = true;
                 self.directory.exited(terminal);
                 return Ok(());
             }

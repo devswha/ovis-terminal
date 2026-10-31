@@ -56,7 +56,7 @@ fn launch(params: TerminalRunParams) -> Result<Launch, TerminalError> {
 }
 
 impl Runtime {
-    fn resolve_id(&self, target: &Target) -> Result<TerminalId, BoundaryError> {
+    pub(super) fn resolve_id(&self, target: &Target) -> Result<TerminalId, BoundaryError> {
         match target {
             Target::TerminalId(id) => id
                 .as_str()

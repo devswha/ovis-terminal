@@ -26,11 +26,18 @@ use super::directory::Directory;
 use super::error::{refusal, worker_gone};
 
 /// Methods served by the runtime actor and the lease table, besides the attach streams.
-pub(super) const ROUTED: [&str; 8] = [
+pub(super) const ROUTED: [&str; 15] = [
     "server.status",
     "terminal.run",
     "terminal.list",
     "terminal.get",
+    "terminal.kill",
+    "terminal.rm",
+    "terminal.keep",
+    "terminal.rename",
+    "terminal.label",
+    "terminal.recover",
+    "terminal.process_info",
     "op.get",
     "input.raw",
     "attach.resize",
@@ -82,6 +89,13 @@ impl RequestHandler for Served {
                     .call(move |runtime| runtime.get_terminal(&session, &params.target))
                     .await
             }
+            "terminal.kill"
+            | "terminal.rm"
+            | "terminal.keep"
+            | "terminal.rename"
+            | "terminal.label"
+            | "terminal.recover"
+            | "terminal.process_info" => self.mutate(call).await,
             "op.get" => {
                 let params: OpRefParams = decode(&call)?;
                 self.actor

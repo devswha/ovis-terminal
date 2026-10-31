@@ -20,7 +20,7 @@ use super::error::refusal;
 use super::live::Live;
 
 fn internal<E: std::fmt::Debug>(cause: E) -> BoundaryError {
-    super::error::internal("input admission")(&cause)
+    super::error::internal("input admission")(cause)
 }
 
 /// The client label of `lease` when `session` owns it; knowing an id grants nothing.

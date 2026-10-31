@@ -21,7 +21,7 @@ use super::input::{live_terminal, owned_client};
 use super::live::Live;
 
 fn internal<E: std::fmt::Debug>(cause: E) -> BoundaryError {
-    super::error::internal("geometry transition")(&cause)
+    super::error::internal("geometry transition")(cause)
 }
 
 fn result(outcome: &str, (cols, rows): (u16, u16), revision: u64) -> Result<Value, BoundaryError> {

@@ -13,8 +13,10 @@ mod error;
 mod handler;
 mod input;
 mod live;
+mod mutations;
 mod records;
 mod resize;
+mod routes;
 mod serve;
 mod terminal;
 

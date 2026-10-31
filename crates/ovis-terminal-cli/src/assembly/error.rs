@@ -9,7 +9,7 @@ pub(super) fn refusal(kind: &str, hint: &'static str) -> BoundaryError {
 
 /// An `internal` refusal; its cause goes to the server's stderr as one JSON line, never
 /// to the client.
-pub(super) fn internal(stage: &'static str) -> impl FnOnce(&dyn std::fmt::Debug) -> BoundaryError {
+pub(super) fn internal<E: std::fmt::Debug>(stage: &'static str) -> impl FnOnce(E) -> BoundaryError {
     move |cause| {
         let line = serde_json::json!({"warning": {"stage": stage, "detail": format!("{cause:?}")}});
         match std::io::Write::write_all(
