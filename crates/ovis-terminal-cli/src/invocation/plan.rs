@@ -1,0 +1,167 @@
+//! Turning parsed arguments into typed requests. Planning touches no file or socket, so
+//! every malformed invocation is refused before a connection is attempted.
+
+use ovis_terminal_protocol::rpc::{RpcRequest, parse_request};
+use ovis_terminal_protocol::schema::decode_params;
+use ovis_terminal_protocol::schema::methods::all_methods;
+use ovis_terminal_protocol::schema::methods::server::OpRefParams;
+use ovis_terminal_protocol::schema::methods::terminal::{TerminalGetParams, TerminalListParams};
+use serde::de::DeserializeOwned;
+use serde_json::{Map, Value, json};
+
+use super::args::{
+    CallArgs, Cli, Command, OpCommand, SchemaPart, ServerCommand, TargetArgs, TerminalCommand,
+};
+use super::error::CliError;
+
+/// Request id of the one call an invocation sends.
+pub(super) const REQUEST_ID: &str = "cli";
+
+/// What an invocation does once its arguments are valid.
+#[derive(Debug)]
+pub(super) enum Plan {
+    Skill,
+    Schema(SchemaPart),
+    Endpoint,
+    Bridge,
+    Status,
+    Call(RpcRequest),
+    NeedsTarget,
+}
+
+/// Builds a request and proves its params decode as the method's closed type `P`.
+pub(super) fn typed<P: DeserializeOwned>(
+    method: &str,
+    params: &Value,
+) -> Result<RpcRequest, CliError> {
+    let request = envelope(method, params)?;
+    decode_params::<P>(&request).map_err(CliError::Params)?;
+    Ok(request)
+}
+
+fn envelope(method: &str, params: &Value) -> Result<RpcRequest, CliError> {
+    let envelope =
+        json!({ "jsonrpc": "2.0", "id": REQUEST_ID, "method": method, "params": params });
+    parse_request(&envelope.to_string()).map_err(|_| CliError::UnknownMethod {
+        method: method.to_owned(),
+    })
+}
+
+fn target(args: TargetArgs) -> Option<Value> {
+    let named = [
+        ("terminal_id", args.terminal_id),
+        ("address", args.address),
+        ("name", args.name),
+    ];
+    named
+        .into_iter()
+        .find_map(|(field, value)| value.map(|value| json!({ "target": { field: value } })))
+}
+
+fn call(args: CallArgs) -> Result<RpcRequest, CliError> {
+    let published = all_methods().any(|spec| spec.name == args.method);
+    if !published || args.method == "hello" {
+        return Err(CliError::UnknownMethod {
+            method: args.method,
+        });
+    }
+    let params: Map<String, Value> =
+        serde_json::from_str(&args.params).map_err(CliError::ParamsJson)?;
+    envelope(&args.method, &Value::Object(params))
+}
+
+/// Plans `cli`, or refuses it with nothing sent.
+pub(super) fn plan(cli: Cli) -> Result<Plan, CliError> {
+    let command = match (cli.skill, cli.command) {
+        (true, None) => return Ok(Plan::Skill),
+        (true, Some(_)) => return Err(CliError::SkillWithCommand),
+        (false, None) => return Err(CliError::MissingCommand),
+        (false, Some(command)) => command,
+    };
+    Ok(match command {
+        Command::Connect => Plan::Bridge,
+        Command::Schema { part } => Plan::Schema(part),
+        Command::Endpoint => Plan::Endpoint,
+        Command::Server(ServerCommand::Status) => Plan::Status,
+        Command::Terminal(TerminalCommand::List) => {
+            Plan::Call(typed::<TerminalListParams>("terminal.list", &json!({}))?)
+        }
+        Command::Terminal(TerminalCommand::Get(args)) => match target(args) {
+            Some(params) => Plan::Call(typed::<TerminalGetParams>("terminal.get", &params)?),
+            None => Plan::NeedsTarget,
+        },
+        Command::Op(OpCommand::Get(args)) => Plan::Call(typed::<OpRefParams>(
+            "op.get",
+            &json!({ "op_id": args.op_id }),
+        )?),
+        Command::Op(OpCommand::Cancel(args)) => Plan::Call(typed::<OpRefParams>(
+            "op.cancel",
+            &json!({ "op_id": args.op_id }),
+        )?),
+        Command::Call(args) => Plan::Call(call(args)?),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser as _;
+
+    use super::{Plan, plan};
+    use crate::invocation::args::Cli;
+    use crate::invocation::error::CliError;
+
+    fn planned(args: &[&str]) -> Result<Plan, CliError> {
+        let cli = Cli::try_parse_from(std::iter::once("ovis-terminal").chain(args.iter().copied()))
+            .map_err(|source| CliError::Usage {
+                detail: String::new(),
+                source,
+            })?;
+        plan(cli)
+    }
+
+    #[test]
+    fn an_explicit_target_becomes_the_typed_get_request() {
+        let Ok(Plan::Call(request)) = planned(&["terminal", "get", "--name", "build"]) else {
+            panic!("expected a call plan");
+        };
+        assert_eq!(request.method(), "terminal.get");
+        assert_eq!(
+            request.params(),
+            &serde_json::json!({"target": {"name": "build"}})
+        );
+    }
+
+    #[test]
+    fn a_missing_target_plans_needs_target_and_two_targets_do_not_parse() {
+        assert!(matches!(
+            planned(&["terminal", "get"]),
+            Ok(Plan::NeedsTarget)
+        ));
+        let both = planned(&["terminal", "get", "--name", "a", "--address", "t1"]);
+        assert_eq!(both.map(drop).map_err(|error| error.kind()), Err("usage"));
+    }
+
+    #[test]
+    fn call_refuses_hello_unknown_methods_and_non_object_params() {
+        let kind = |args: &[&str]| planned(args).map(drop).map_err(|error| error.kind());
+        assert_eq!(kind(&["call", "hello"]), Err("unknown_method"));
+        assert_eq!(kind(&["call", "terminal.lst"]), Err("unknown_method"));
+        assert_eq!(
+            kind(&["call", "terminal.list", "--params", "[1]"]),
+            Err("invalid_params")
+        );
+        assert!(kind(&["call", "terminal.list", "--params", "{\"page\":null}"]).is_ok());
+    }
+
+    #[test]
+    fn a_numeric_op_id_is_refused_with_its_field_path() {
+        let typed = super::typed::<ovis_terminal_protocol::schema::methods::server::OpRefParams>(
+            "op.get",
+            &serde_json::json!({"op_id": 7}),
+        );
+        let Err(CliError::Params(error)) = typed else {
+            panic!("expected a params refusal");
+        };
+        assert_eq!(error.field_path(), "params.op_id");
+    }
+}

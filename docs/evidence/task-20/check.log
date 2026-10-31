@@ -1,0 +1,16 @@
+bash scripts/check.sh (lane-t20, Linux x86_64, rustc 1.99.1, after the Darwin socket-path test fix) -> exit 0
+
+==> cargo +nightly fmt --all -- --check
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+        PASS [   0.049s] (347/447) workspace-hygiene::fixtures malformed_source_is_a_syntax_violation
+        PASS [   0.085s] (367/447) workspace-hygiene::fixtures violations_report_file_line_rule_and_count
+     Summary [ 122.546s] 447 tests run: 447 passed (1 slow), 1 skipped
+==> cargo test --doc --workspace --all-features --locked
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 442 file(s) checked
+==> bash scripts/hygiene/manifests.sh
+manifests.sh: 16 member manifest(s) checked
+==> bash scripts/hygiene/json.sh
+json.sh: 42 JSON file(s) checked
+check.sh: all steps passed
