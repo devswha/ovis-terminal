@@ -1,0 +1,33 @@
+{
+  "todo": 53,
+  "scenario": "platform/conpty",
+  "title": "Windows terminals run on ConPTY pseudoconsoles the holder owns: ordered UTF-8 output, win32-input mode passthrough, resize and kill outside the input queue, and the exit only after the final output offset",
+  "closes": ["GAP-048", "GAP-049", "GAP-051", "GAP-062", "GAP-121"],
+  "delivers": ["IDEAL-034", "IDEAL-042", "IDEAL-043", "IDEAL-044", "IDEAL-046", "IDEAL-093"],
+  "excludes": ["EXCL-017", "EXCL-019", "EXCL-026"],
+  "platforms": ["windows"],
+  "declared_cases": [
+    {
+      "case": "happy",
+      "summary": "terminal.run launches a cmd.exe fixture on a ConPTY; the attach stream carries a UTF-8 marker and CSI ? 9001 h, the VT reports win32_input, terminal.resize reaches the program (mode con reports the new grid), a non-reading fixture whose input queue is full is killed through its job, and the exit arrives after output through its final_offset with zero processes left in the job and zero leaked handles.",
+      "native_tests": [
+        "ovis-terminal-holder windows::terminal_tests::utf8_output_and_win32_input_mode_precede_an_exit_carrying_the_final_offset",
+        "ovis-terminal-holder windows::terminal_tests::a_resize_and_a_keypress_reach_the_program_through_separate_paths",
+        "ovis-terminal-holder windows::terminal_tests::kill_ends_a_program_that_never_reads_input_and_the_job_is_left_empty",
+        "ovis-terminal-holder windows::terminal_tests::closing_a_terminal_leaves_no_handle_open"
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "terminal.run with rows 0 is invalid_geometry before any pseudoconsole is allocated; a missing program or directory is spawn_failed with nothing left running.",
+      "planned_injections": [
+        {"request": {"method": "terminal.run", "params": {"rows": 0, "cols": 80}}, "expect": {"/error/data/kind": "invalid_geometry"}}
+      ],
+      "native_tests": [
+        "ovis-terminal-server dispatch::lanes::conpty::tests::a_zero_row_launch_is_invalid_geometry_on_the_wire_before_anything_else",
+        "ovis-terminal-server dispatch::lanes::conpty::tests::a_program_that_cannot_start_is_spawn_failed",
+        "ovis-terminal-holder windows::terminal_tests::a_missing_program_or_directory_is_spawn_failed_with_nothing_left_running"
+      ]
+    }
+  ]
+}

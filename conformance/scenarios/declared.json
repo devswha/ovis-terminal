@@ -122,6 +122,11 @@
       "reason": "Free-form descriptor written by todo 9 before the runner existed; it runs once its steps are rewritten as ovis-conformance/1 over RPC routes wired by todos 23, 25 and 28-31 (real-binary serving lands with todo 31)."
     },
     {
+      "file": "platform/conpty.json",
+      "owner_todo": "53",
+      "reason": "The ConPTY terminal (ovis-terminal-holder windows::ConptyTerminal) and terminal.run admission (lanes::conpty::admit/spawn) exist, but no served binary routes terminal.run to them: todo 54 serves named pipes and the Windows service host that owns ConPTY holders, todo 31 assembles the served terminal.run, and the todo-21 runner's fixture serves only a Unix socket, so a windows-only case would be skipped on every runner it has. Covered meanwhile by the native Windows tests listed in the descriptor, run by ci.yml on windows-2025; todo 60 runs this scenario in Windows smoke CI."
+    },
+    {
       "file": "remote/identity.json",
       "owner_todo": "43",
       "reason": "machine.add/get/rename are served only by dispatchers assembled in the todo-43 lane tests: no served binary registers the lane until todo 31 assembles it, and the scenario needs two private runtimes joined by a stdio transport plus the plan's --inject/--append runner flags, which the todo-21 runner (one fixture per case) does not have; todo 52 composes remote dispatch across two private runtimes over real endpoints."
