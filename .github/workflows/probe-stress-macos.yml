@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart, template-launch, client-ts]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart, template-launch]
 
 permissions:
   contents: read
@@ -912,41 +912,4 @@ jobs:
         with:
           name: template-launch-stress-macos-${{ github.run_id }}
           path: template-launch-stress-macos.log
-          if-no-files-found: error
-  client-ts:
-    if: inputs.probe == 'client-ts'
-    runs-on: macos-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.99.1
-      - uses: Swatinem/rust-cache@v2
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.3
-      - name: generated SDK check, then the Bun suite 25 times
-        shell: bash
-        run: |
-          set -euo pipefail
-          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal -p ovis-terminal-conformance --bin conformance
-          bun install --frozen-lockfile
-          cd packages/client-ts
-          {
-            uname -a
-            bun --version
-            git rev-parse HEAD
-            bun run generate:check
-            bun run typecheck
-            for iteration in $(seq 1 25); do
-              printf '\nITERATION %s/25\n' "$iteration"
-              bun test
-              printf 'PASS %s/25\n' "$iteration"
-            done
-            printf 'RESULT 25/25\n'
-          } 2>&1 | tee ../../client-ts-stress-macos.log
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: client-ts-stress-macos-${{ github.run_id }}
-          path: client-ts-stress-macos.log
           if-no-files-found: error
