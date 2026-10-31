@@ -30,6 +30,7 @@ use serde_json::{Value, json};
 use super::handler::{Dispatch, Event};
 use super::prompts::Gate;
 use super::serve::at;
+use super::tree::TREE_TERMINALS;
 use crate::error::RunnerError;
 
 /// Spawn tokens of the two fixture programs.
@@ -117,8 +118,9 @@ pub(crate) struct EchoProgram {
 
 fn directory(runtime: RuntimeIdentity) -> Result<Directory, RunnerError> {
     let scope = MachineRuntime::new(runtime.machine_id(), runtime.runtime_id());
-    let mut targets = Vec::with_capacity(TERMINALS.len());
-    for (id, name, _) in TERMINALS {
+    let named = TERMINALS.iter().map(|(id, name, _)| (*id, *name));
+    let mut targets = Vec::new();
+    for (id, name) in named.chain(TREE_TERMINALS) {
         targets.push(ResourceTarget::new(
             scope,
             TerminalId::try_from(id).map_err(at("build a terminal id"))?,

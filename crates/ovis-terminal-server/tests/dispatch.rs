@@ -26,6 +26,9 @@ pub mod support;
 /// Explicit and ambiguous registry targets.
 pub mod targeting;
 
+#[path = "../src/dispatch/lanes/agent_tree/qa.rs"]
+/// Children listed by the parent's current program incarnation.
+pub mod agent_tree;
 #[path = "../src/dispatch/lanes/prompts/qa.rs"]
 /// The prompt lane's independent answer authorization over a real socket.
 pub mod prompts;

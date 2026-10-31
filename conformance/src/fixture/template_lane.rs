@@ -57,7 +57,8 @@ fn templates() -> [(&'static str, serde_json::Value); 3] {
     ]
 }
 
-/// Registers the template launch methods over `root/templates` and the recording launcher.
+/// Registers the template launch methods over `root/templates` and the recording launcher,
+/// returning `terminal.run` for the fixture's combined launch route to register.
 pub(crate) fn register(
     dispatch: &mut Dispatch,
     (runtime, root): (RuntimeIdentity, &Path),
@@ -66,7 +67,7 @@ pub(crate) fn register(
         &Coordinator<Event, OperationProducer>,
         AgentParts,
     ),
-) -> Result<(), RunnerError> {
+) -> Result<RunTerminal<RecordingLauncher>, RunnerError> {
     let dir = root.join("templates");
     std::fs::create_dir(&dir).map_err(at("create the template directory"))?;
     for (file, definition) in templates() {
@@ -87,9 +88,6 @@ pub(crate) fn register(
         runtime.machine_id(),
     );
     dispatch
-        .register(RunTerminal::new(&lane))
-        .map_err(at("register terminal.run"))?;
-    dispatch
         .register(GetFirstMessage::new(&lane))
         .map_err(at("register terminal.first_message"))?;
     dispatch
@@ -98,7 +96,7 @@ pub(crate) fn register(
     dispatch
         .register_read(GetTemplate::new(&lane))
         .map_err(at("register template.get"))?;
-    Ok(())
+    Ok(RunTerminal::new(&lane))
 }
 
 /// A wait hub and an empty lease table for launched `terminal`, process 1.
