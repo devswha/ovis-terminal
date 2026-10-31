@@ -1,0 +1,13 @@
+$ openrpc check schema/ovis-terminal.openrpc.json
+{"bytes":506855,"fresh":"schema/ovis-terminal.openrpc.json"}
+exit=0
+$ openrpc compat schema/released.openrpc.json
+{"compatible_with":"schema/released.openrpc.json"}
+exit=0
+$ git show HEAD:schema/released.openrpc.json > /tmp/t22-released-orig.json; openrpc compat /tmp/t22-released-orig.json  (the pre-amendment baseline)
+{"breaks":[{"path":"hello ->.limits.event_replay_events","rule":"output_type_changed"},{"path":"hello ->.limits.event_replay_events","rule":"closed_output_enum_grew"},{"path":"hello ->.limits.history_lines","rule":"output_type_changed"},{"path":"hello ->.limits.history_lines","rule":"closed_output_enum_grew"},{"path":"hello ->.limits.max_in_flight_requests","rule":"output_type_changed"},{"path":"hello ->.limits.max_in_flight_requests","rule":"closed_output_enum_grew"},{"path":"schema.capabilities ->.limits.event_replay_events","rule":"output_type_changed"},{"path":"schema.capabilities ->.limits.event_replay_events","rule":"closed_output_enum_grew"},{"path":"schema.capabilities ->.limits.history_lines","rule":"output_type_changed"},{"path":"schema.capabilities ->.limits.history_lines","rule":"closed_output_enum_grew"},{"path":"schema.capabilities ->.limits.max_in_flight_requests","rule":"output_type_changed"},{"path":"schema.capabilities ->.limits.max_in_flight_requests","rule":"closed_output_enum_grew"}],"hint":"keep released methods and required outputs; add inputs only as optional","kind":"schema_incompatible","message":"12 change(s) break clients of the released schema"}
+exit=1
+$ cargo nextest run -p ovis-terminal-protocol --test limits_counts
+        PASS [   0.008s] (1/2) ovis-terminal-protocol::limits_counts advertised_count_limits_are_decimal_strings_and_numbers_are_refused
+        PASS [   0.016s] (2/2) ovis-terminal-protocol::limits_counts counts_round_trip_every_value_as_a_decimal_string
+     Summary [   0.016s] 2 tests run: 2 passed, 0 skipped

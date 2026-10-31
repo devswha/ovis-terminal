@@ -3,7 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::scalar::{ByteCount, DurationMs, OpenEnum};
+use super::scalar::{ByteCount, Count, DurationMs, OpenEnum};
 
 const KIB: u64 = 1024;
 const MIB: u64 = 1024 * KIB;
@@ -26,7 +26,7 @@ pub struct Limits {
     /// Accepted input queued for one terminal.
     pub input_queue_bytes: ByteCount,
     /// Retained events available for replay.
-    pub event_replay_events: u32,
+    pub event_replay_events: Count,
     /// Retained event bytes available for replay.
     pub event_replay_bytes: ByteCount,
     /// Idle interval after which a heartbeat is sent.
@@ -38,11 +38,11 @@ pub struct Limits {
     /// Largest document value.
     pub doc_max_bytes: ByteCount,
     /// Retained history lines per terminal.
-    pub history_lines: u32,
+    pub history_lines: Count,
     /// Retained raw output per terminal.
     pub output_ring_bytes: ByteCount,
     /// Requests in flight on one connection.
-    pub max_in_flight_requests: u32,
+    pub max_in_flight_requests: Count,
     /// Encoded bytes queued for one connection but not yet written; past it the
     /// connection closes with `$/closing{reason: backpressure}`.
     pub connection_unwritten_bytes: ByteCount,
@@ -71,15 +71,15 @@ impl Limits {
             credit_max_bytes: ByteCount::new(MIB),
             stream_backlog_bytes: ByteCount::new(4 * MIB),
             input_queue_bytes: ByteCount::new(16 * MIB),
-            event_replay_events: 10_000,
+            event_replay_events: Count::new(10_000),
             event_replay_bytes: ByteCount::new(64 * MIB),
             heartbeat_ms: DurationMs::new(15_000),
             rpc_default_deadline_ms: DurationMs::new(10_000),
             op_retention_ms: DurationMs::new(86_400_000),
             doc_max_bytes: ByteCount::new(MIB),
-            history_lines: 100_000,
+            history_lines: Count::new(100_000),
             output_ring_bytes: ByteCount::new(64 * MIB),
-            max_in_flight_requests: 64,
+            max_in_flight_requests: Count::new(64),
             connection_unwritten_bytes: ByteCount::new(64 * MIB),
             session_rss_bytes: ByteCount::new(GIB),
             session_retained_bytes: ByteCount::new(4 * GIB),

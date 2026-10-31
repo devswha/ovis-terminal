@@ -14,6 +14,20 @@ pub(super) struct Replay<D> {
 }
 
 impl<D: EventData + Clone + Serialize + DeserializeOwned, P: SnapshotProducer> Coordinator<D, P> {
+    /// Lowest cursor sequence a resume can still replay from, read from the durable floor.
+    ///
+    /// # Errors
+    ///
+    /// Returns `coordinator_stopped` after poisoning or a typed store read failure.
+    pub fn replay_floor(&self) -> Result<EventSeq, EventError> {
+        let view = self.lock()?.store.snapshot()?;
+        match view.events_after(Revision::ZERO, 1)? {
+            EventPage::Expired { floor } => Ok(EventSeq::new(floor.get().saturating_sub(1))),
+            EventPage::Events(_) => Ok(EventSeq::new(0)),
+            _ => Err(EventError::InvalidRecord),
+        }
+    }
+
     pub(super) fn replay(
         &self,
         snapshot: &Snapshot,

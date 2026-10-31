@@ -1,0 +1,24 @@
+{
+  "scenario": "remote/identity",
+  "todo": "43",
+  "title": "Authenticate stable machines over byte transparent transports",
+  "closes": [
+    "GAP-106",
+    "GAP-107",
+    "GAP-120",
+    "GAP-129",
+    "GAP-134"
+  ],
+  "delivers": [
+    "IDEAL-002",
+    "IDEAL-080",
+    "IDEAL-081",
+    "IDEAL-102",
+    "IDEAL-107"
+  ],
+  "cases": {
+    "happy": "Connect two isolated runtimes over a stdio argv transport, rename the machine while a request bound to it waits, and verify the destination machine_id and the fresh remote_boot_id proven by the boot challenge are unchanged.",
+    "failure": "machine.add with params.expected_machine_id = wrong-machine returns trust_mismatch before any machine is recorded; protocol stdout carries no banner or credential prompt."
+  },
+  "executed_today_by": "cargo test -p ovis-terminal-server --lib machine_identity (two real runtimes joined by a real child relay over FIFOs)"
+}

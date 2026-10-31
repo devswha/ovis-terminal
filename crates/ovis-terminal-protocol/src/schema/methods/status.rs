@@ -5,13 +5,14 @@ use std::collections::BTreeMap;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::agent_status::IngestCounters;
 use crate::errors::OpId;
 use crate::schema::common::Target;
-use crate::schema::ids::{LeaseId, ProcessToken, PromptId, TerminalId};
+use crate::schema::ids::{AgentId, LeaseId, ProcessToken, PromptId, TerminalId};
 use crate::schema::method::{MethodSpec, method};
-use crate::schema::records::{StatusReport, StatusSnapshot};
+use crate::schema::records::{AgentState, SessionRef, StatusReport, StatusSnapshot};
 use crate::schema::scalar::{
-    DurationMs, EventSeq, Incarnation, OpenEnum, RecordVersion, TurnNumber,
+    DurationMs, EventSeq, FinishGeneration, Incarnation, OpenEnum, RecordVersion, TurnNumber,
 };
 
 /// Parameters of `status.get`, `prompt.list` and `turn.get`.
@@ -63,6 +64,8 @@ pub struct StatusResult {
     pub status: StatusSnapshot,
     /// Sequence of the latest status event.
     pub seq: EventSeq,
+    /// OSC records this terminal's ingestion dropped.
+    pub ingest: IngestCounters,
 }
 
 /// Kind of question a prompt asks.
@@ -280,6 +283,8 @@ pub enum TurnOutcome {
     Cancelled,
     /// The wait bound passed; no completion is implied.
     Timeout,
+    /// Ended on an error report.
+    Failed,
 }
 
 /// Turn facts of a terminal.
@@ -296,6 +301,16 @@ pub struct TurnRecord {
     pub ended_seq: Option<EventSeq>,
     /// Send operation the turn answers, when known.
     pub send_op: Option<OpId>,
+    /// Finish generation this turn's end produced.
+    pub finish_generation: Option<FinishGeneration>,
+    /// Root state the turn ended on.
+    pub ended_on: Option<OpenEnum<AgentState>>,
+    /// Program incarnation that ran the turn.
+    pub process_incarnation: Option<Incarnation>,
+    /// Registered agent that ran the turn.
+    pub agent_id: Option<AgentId>,
+    /// Provider session of that agent.
+    pub session: Option<SessionRef>,
 }
 
 /// Parameters of `turn.wait`, bound to a send or a turn.

@@ -79,6 +79,10 @@ decimal_newtype!(
     ByteCount
 );
 decimal_newtype!(
+    /// Number of items such as retained events, history lines or in-flight requests.
+    Count
+);
+decimal_newtype!(
     /// Epoch of an interact or geometry lease; bumps on every ownership change.
     LeaseEpoch
 );
@@ -109,6 +113,18 @@ decimal_newtype!(
 decimal_newtype!(
     /// Duration in milliseconds.
     DurationMs
+);
+decimal_newtype!(
+    /// Producer status sequence of one program incarnation; a report must exceed it.
+    ReportSeq
+);
+decimal_newtype!(
+    /// Number of records an ingestion path dropped.
+    RecordCount
+);
+decimal_newtype!(
+    /// Count of turns that finished on a terminal; deduplicates completion facts.
+    FinishGeneration
 );
 
 /// An output enum value that a client tolerates even when it postdates the client.

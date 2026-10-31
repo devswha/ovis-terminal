@@ -55,6 +55,7 @@ impl Session<'_> {
                     detail: "an include survived planning",
                 }),
                 Step::ExpectFailure(expected) => self.expect_failure(expected).await,
+                Step::Inject(inject) => self.inject(inject).await,
             }
         })
     }
