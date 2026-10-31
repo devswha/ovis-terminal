@@ -147,3 +147,37 @@ fn boundary_hint_replaces_only_the_wire_hint() {
     assert_eq!(error.kind(), "peer_rejected");
     assert_eq!(JsonRpcCode::from(&error).value(), -32000);
 }
+
+proptest::proptest! {
+    /// Boxing the payload keeps the failure envelope byte-for-byte the flat JSON shape.
+    #[test]
+    fn a_failure_keeps_its_flat_wire_shape(
+        id in "[a-z0-9-]{1,12}",
+        kind in proptest::sample::select(vec!["checkout_dirty", "scope_required", "not_found"]),
+        op in "[a-f0-9-]{1,36}",
+        affected in proptest::collection::vec("[a-z]{1,8}:[a-z0-9-]{1,12}", 0..4),
+        retryable in proptest::bool::ANY,
+    ) {
+        let targets = affected.iter().cloned().map(TargetId::new).collect();
+        let error = BoundaryError::domain(ErrorKind::from(kind.to_owned()), retryable)
+            .with_hint("act on the kind")
+            .with_op_id(OpId::new(op.clone()))
+            .with_affected(targets);
+        let reply = RpcReply::Failure(RpcFailure::new(RequestId::new(id.clone()), &error));
+        let mut data = serde_json::json!({
+            "kind": kind, "hint": "act on the kind", "retryable": retryable, "op_id": op,
+        });
+        if !affected.is_empty() {
+            let object = data.as_object_mut().ok_or_else(|| proptest::test_runner::TestCaseError::fail("object"))?;
+            object.insert("affected".to_owned(), serde_json::json!(affected));
+        }
+        let expected = serde_json::json!({
+            "jsonrpc": "2.0", "id": id,
+            "error": {"code": JsonRpcCode::from(&error).value(), "message": "operation failed", "data": data},
+        });
+        let wire = serde_json::to_value(&reply).map_err(|e| proptest::test_runner::TestCaseError::fail(e.to_string()))?;
+        proptest::prop_assert_eq!(&wire, &expected);
+        let back: RpcReply = serde_json::from_value(expected).map_err(|e| proptest::test_runner::TestCaseError::fail(e.to_string()))?;
+        proptest::prop_assert_eq!(back, reply);
+    }
+}

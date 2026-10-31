@@ -1,0 +1,19 @@
+{
+  "scenario": "services/worktrees",
+  "title": "Explicit worktree identities and destructive scope over the real socket",
+  "todo": 45,
+  "closes": ["GAP-114", "GAP-115"],
+  "delivers": ["IDEAL-087", "IDEAL-088"],
+  "platforms": ["linux", "macos"],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "In an isolated Git fixture, worktree.create from the primary checkout's explicit id returns branch, source and seq; worktree.open links one workspace; worktree.remove without group scope is scope_required and names the checkout and workspace; with group scope it closes exactly that workspace and removes the checkout; worktree.list then shows only the primary checkout."
+    },
+    {
+      "case": "failure",
+      "summary": "worktree.remove of a dirty checkout with scope {group:false, force:false} is checkout_dirty, error.data.affected lists the checkout id, and the untracked file and every workspace survive. The plan's flat {checkout_id, force, group} payload without op_id is invalid_params before any effect."
+    }
+  ],
+  "executed_today_by": "cargo test -p ovis-terminal-server --test dispatch worktrees (same socket, dispatcher, SQLite coordinator and Git; see docs/evidence/task-45/)"
+}

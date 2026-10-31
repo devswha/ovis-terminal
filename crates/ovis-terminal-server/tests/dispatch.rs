@@ -26,6 +26,15 @@ pub mod support;
 /// Explicit and ambiguous registry targets.
 pub mod targeting;
 
+#[path = "../src/dispatch/lanes/worktrees/authority.rs"]
+/// The worktree lane's grant for destructive removal.
+pub mod worktree_authority;
+#[path = "../src/dispatch/lanes/worktrees/fixture.rs"]
+pub mod worktree_fixture;
+#[path = "../src/dispatch/lanes/worktrees/qa.rs"]
+/// The worktree lane over real Git repositories.
+pub mod worktrees;
+
 use support::TestResult;
 
 #[tokio::test]

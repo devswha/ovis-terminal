@@ -3,5 +3,7 @@
 pub mod agent_status;
 pub mod machine_identity;
 pub mod plugins;
+
 #[cfg(unix)]
 pub mod unix_service;
+pub mod worktrees;
