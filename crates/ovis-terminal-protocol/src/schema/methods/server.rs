@@ -283,7 +283,7 @@ pub struct SessionSnapshotResult {
 /// Methods of this namespace.
 pub(crate) const METHODS: &[MethodSpec] = &[
     method! {"hello", Query, Untargeted, HelloParams => HelloResult,
-    "Negotiate generation, credential and framing; must be first.", [UnsupportedGeneration, InvalidCredential, CredentialExpired]},
+    "Negotiate generation, credential and framing; must be first.", [UnsupportedGeneration, InvalidCredential, CredentialExpired, CredentialRevoked, PeerRejected, EndpointInsecure]},
     method! {"server.status", Query, Untargeted, NoParams => ServerStatusResult,
     "Report control-server state without starting it.", [StaleEndpoint]},
     method! {"server.start", Mutation, Untargeted, ServerStartParams => ServerStartResult,

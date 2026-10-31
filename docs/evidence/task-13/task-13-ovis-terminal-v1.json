@@ -1,0 +1,99 @@
+{
+  "task": 13,
+  "plan": "ovis-terminal-v1",
+  "os_arch": "Linux x86_64",
+  "toolchain": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "base": "origin/integration 97c8d00 (merged into the lane)",
+  "commands": [
+    {
+      "argv": "cargo test -p ovis-terminal-server --test connection happy -- --exact --nocapture",
+      "exit": 0,
+      "log": "qa-happy.log"
+    },
+    {
+      "argv": "cargo test -p ovis-terminal-server --test connection failure -- --exact --nocapture",
+      "exit": 0,
+      "log": "qa-failure.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-server --locked",
+      "exit": 0,
+      "result": "25 tests run: 25 passed",
+      "log": "nextest.log"
+    },
+    {
+      "argv": "cargo clippy -p ovis-terminal-server --all-targets -- -D warnings",
+      "exit": 0,
+      "log": "clippy.log"
+    },
+    {
+      "argv": "bash scripts/check.sh (merged tree)",
+      "exit": 0,
+      "result": "325 tests run: 325 passed, 1 skipped",
+      "log": "check-merged.log"
+    },
+    {
+      "argv": "openrpc check schema/ovis-terminal.openrpc.json; openrpc compat schema/released.openrpc.json",
+      "exit": 0,
+      "log": "schema-gate.log"
+    },
+    {
+      "argv": "cargo test ... --test connection failure (generation check mutated away)",
+      "exit": 101,
+      "log": "mutation-generation.log"
+    },
+    {
+      "argv": "cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-13 --isolated --case happy --evidence \"$ATTEMPT_DIR/task-13-ovis-terminal-v1.json\"",
+      "exit": 2,
+      "deferred": "DEFERRED VERIFICATION (runner lands in Todo 21)",
+      "log": "conformance-attempt.log"
+    },
+    {
+      "argv": "bash scripts/check.sh (gate round 1)",
+      "exit": 0,
+      "result": "335 tests run: 335 passed, 1 skipped",
+      "log": "check-gate1.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-server --locked (gate round 1)",
+      "exit": 0,
+      "result": "32 tests run: 32 passed",
+      "log": "nextest.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-server --no-fail-fast (peer collection mutated away)",
+      "exit": 100,
+      "result": "only listen::tests::a_peer_whose_account_is_not_the_owner_is_refused_at_hello fails; restored 32/32",
+      "log": "mutation-peercred.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-server --no-fail-fast (byte bound mutated away)",
+      "exit": 100,
+      "result": "bound test and three budget unit tests fail; restored 32/32",
+      "log": "mutation-bound.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-protocol --test schema_error_kinds; openrpc check; openrpc compat schema/released.openrpc.json",
+      "exit": 0,
+      "log": "schema-gate.log"
+    },
+    {
+      "argv": "bash scripts/check.sh (gate round 2)",
+      "exit": 0,
+      "result": "336 tests run: 336 passed, 1 skipped",
+      "log": "check-gate2.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-server --locked (gate round 2)",
+      "exit": 0,
+      "result": "33 tests run: 33 passed",
+      "log": "nextest.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-server --no-fail-fast (blocked write not raced against overflow)",
+      "exit": 100,
+      "result": "bound::a_peer_that_never_reads_is_closed_and_released_without_shutdown fails; restored 33/33",
+      "log": "mutation-overflow-close.log"
+    }
+  ]
+}
