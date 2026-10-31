@@ -18,3 +18,21 @@ The production assignment was restored immediately. The same named test then pas
 test happy ... ok
 test result: ok. 1 passed; 0 failed
 Command exited with code 0.
+
+Round-2 independent mutation evidence from `/home/devswha/workspace/ovis-terminal/.omo/evidence/ovis-terminal-v1-task-9-gate-review.md`, section R2-E1:
+
+Mutation 2 preserved the old server boot during HostReboot while adopting the new host/runtime identity:
+cargo test -p ovis-terminal-core --test registry host_reboot_and_relaunch_identity_domains -- --exact --nocapture
+test host_reboot_and_relaunch_identity_domains panicked at crates/ovis-terminal-core/tests/registry.rs:133:5:
+host reboot must adopt the new server boot ID
+Exit: 101.
+
+Mutation 3 omitted the terminal-generation increment on proven relaunch:
+cargo test -p ovis-terminal-core --test registry failure -- --exact --nocapture
+The test failed at crates/ovis-terminal-core/tests/registry.rs:219:5; left TerminalGeneration(1), right TerminalGeneration(2).
+Exit: 101.
+cargo test -p ovis-terminal-core --test registry host_reboot_and_relaunch_identity_domains -- --exact --nocapture
+The test failed at crates/ovis-terminal-core/tests/registry.rs:142:5; left TerminalGeneration(1), right TerminalGeneration(2).
+Exit: 101.
+
+These two mutation outcomes are transcribed from the independent Round-2 report; no source mutation for them was performed during this docs-only correction.

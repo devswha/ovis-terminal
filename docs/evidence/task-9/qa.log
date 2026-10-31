@@ -18,7 +18,7 @@ Command: cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::i
 test registry::ids::tests::identity_serialization_preserves_u64_max ... ok
 Exit: 0
 
-The happy case asserts stable identity by explicit scoped ID after rename and ambiguity with two machine candidates. The failure case asserts needs_target, cross_lifetime and stale_target on PID/start-token reuse; it returns no replacement resolution.
+`crates/ovis-terminal-core/tests/registry.rs::happy` asserts core-restart and upgrade boot transitions with surviving runtime, terminal and process identities; `host_reboot_and_relaunch_identity_domains` asserts reboot restoration and proven relaunch increments. `crates/ovis-terminal-core/tests/registry.rs::failure` asserts `needs_target` and stale PID/start-token rejection. Candidate identity and rename stability are asserted by `crates/ovis-terminal-core/src/registry/resolution/tests.rs::target_resolution_returns_candidates_and_preserves_scoped_identity`; cross-lifetime rejection is asserted by `caller_binding_rejects_a_different_runtime_lifetime` in that same file. Durable reservation/reopen behavior is asserted by `crates/ovis-terminal-core/src/registry/reservation/tests.rs::reservation_is_durable_before_return_and_survives_store_reopen`.
 
 Command: cargo test --locked -p ovis-terminal-core --lib registry::ids::tests::malformed_identity_inputs_have_typed_kinds -- --exact --nocapture
 Exit: 0; zero, wrong-family and invalid-name cases assert invalid_identity / invalid_name.
@@ -50,6 +50,10 @@ Replacing `next.identity.server_boot = server_boot_id` with a comment made `carg
 
 AdversarialVerify F2:
 `malformed_machine_uuid_preserves_source_and_kind`, `malformed_resource_integer_preserves_source_and_kind`, and `malformed_generation_and_pid_integers_preserve_sources` passed. Each asserts `Error::source().is_some()`; the malformed UUID and overflowing resource ID preserve kind `invalid_identity`.
+
+Round-2 mutation evidence, independently reproduced in `/home/devswha/workspace/ovis-terminal/.omo/evidence/ovis-terminal-v1-task-9-gate-review.md` §R2-E1:
+- Preserving the previous server boot during `HostReboot` failed `host_reboot_and_relaunch_identity_domains` at `tests/registry.rs:133`, assertion `host reboot must adopt the new server boot ID`, exit 101.
+- Omitting the terminal-generation increment failed `failure` at `tests/registry.rs:219` and `host_reboot_and_relaunch_identity_domains` at `tests/registry.rs:142`, each with `TerminalGeneration(1)` instead of `(2)`, exit 101.
 
 Final task-9 scenario steps were run with `--locked`: `registry happy`, `host_reboot_and_relaunch_identity_domains`, `resolution::tests::target_resolution_returns_candidates_and_preserves_scoped_identity`, `reservation::tests::reservation_is_durable_before_return_and_survives_store_reopen`, `registry failure`, the caller-binding rejection, malformed-identity checks, and all parser-source checks. All exited 0 with one assertion-bearing test selected by each filter.
 

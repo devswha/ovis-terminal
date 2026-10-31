@@ -121,7 +121,33 @@
       "mutation": "Temporarily replaced next.identity.server_boot = server_boot_id with a comment",
       "failure": "test happy failed at tests/registry.rs:77 with assertion 'core restart must adopt the new server boot ID', exit 101",
       "restored_result": "test happy ... ok, exit 0",
-      "evidence": "docs/evidence/task-9/mutation-boot-id.log"
+    "evidence": "docs/evidence/task-9/mutation-boot-id.log",
+    "round_2_independent_mutations": [
+      {
+        "change": "Preserve old server boot during HostReboot",
+        "test": "host_reboot_and_relaunch_identity_domains",
+        "line": "tests/registry.rs:133",
+        "assertion": "host reboot must adopt the new server boot ID",
+        "exit": 101,
+        "source": "AdversarialVerify report R2-E1"
+      },
+      {
+        "change": "Omit terminal-generation increment on relaunch",
+        "failures": [
+          {
+            "test": "failure",
+            "line": "tests/registry.rs:219"
+          },
+          {
+            "test": "host_reboot_and_relaunch_identity_domains",
+            "line": "tests/registry.rs:142"
+          }
+        ],
+        "assertion": "TerminalGeneration(1) instead of TerminalGeneration(2)",
+        "exit": 101,
+        "source": "AdversarialVerify report R2-E1"
+      }
+    ]
     },
     "finding_T9_CONTRACT_2": {
       "status": "fixed_and_source_tested",
