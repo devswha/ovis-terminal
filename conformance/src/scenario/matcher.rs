@@ -30,6 +30,8 @@ pub(crate) enum Matcher {
     Excludes(Vec<Value>),
     /// `{"$equals_file": "schema/x.json"}`: equal to that repository JSON file.
     EqualsFile(String),
+    /// `{"$capture": "name"}`: the value exists; later `"$value:name"` strings become it.
+    Capture(String),
 }
 
 /// Operator objects are recognised by their single `$` key; any other `$` key is refused.
@@ -56,9 +58,11 @@ impl TryFrom<Value> for Matcher {
             ("$contains", Value::Array(items)) => Ok(Self::Contains(items.clone())),
             ("$excludes", Value::Array(items)) => Ok(Self::Excludes(items.clone())),
             ("$equals_file", Value::String(path)) => Ok(Self::EqualsFile(path.clone())),
-            ("$present" | "$at_least" | "$contains" | "$excludes" | "$equals_file", _) => {
-                Err(invalid("a different argument type"))
-            }
+            ("$capture", Value::String(name)) => Ok(Self::Capture(name.clone())),
+            (
+                "$present" | "$at_least" | "$contains" | "$excludes" | "$equals_file" | "$capture",
+                _,
+            ) => Err(invalid("a different argument type")),
             _ => Err(format!("unknown matcher {operator}")),
         }
     }
@@ -109,6 +113,17 @@ impl Expect {
             (pointer.clone(), matcher)
         });
         Self(entries.collect())
+    }
+
+    /// The values `$capture` names in `value`, for the labels of later steps.
+    pub(crate) fn captures(&self, value: &Value) -> Vec<(String, Value)> {
+        self.0
+            .iter()
+            .filter_map(|(pointer, matcher)| match matcher {
+                Matcher::Capture(name) => Some((name.clone(), value.pointer(pointer)?.clone())),
+                _ => None,
+            })
+            .collect()
     }
 
     /// Checks every pointer of `subject`; `repo` resolves `$equals_file`.
@@ -171,6 +186,7 @@ impl Matcher {
                     file.is_some() && file.as_ref() == actual,
                 )
             }
+            Self::Capture(name) => (serde_json::json!({ "$capture": name }), actual.is_some()),
         };
         Assertion {
             check,
@@ -209,11 +225,34 @@ mod tests {
     }
 
     #[test]
+    fn capture_requires_the_value_and_yields_it_by_name() -> Result<(), serde_json::Error> {
+        let expect = expect(json!({"/result/id": {"$capture": "id"}}))?;
+        let reply = json!({"result": {"id": "update-1"}});
+        let root = std::path::Path::new(".");
+        let subject = |value| Subject { scope: "r", value };
+        assert!(expect.check(subject(&reply), root).iter().all(|a| a.passed));
+        assert_eq!(
+            expect.captures(&reply),
+            [("id".to_owned(), json!("update-1"))]
+        );
+        let missing = json!({"error": {}});
+        assert!(
+            expect
+                .check(subject(&missing), root)
+                .iter()
+                .all(|a| !a.passed)
+        );
+        assert_eq!(expect.captures(&missing), []);
+        Ok(())
+    }
+
+    #[test]
     fn unknown_or_mixed_operators_are_refused_instead_of_compared_literally() {
         for refused in [
             json!({"/a": {"$presnt": true}}),
             json!({"/a": {"$present": true, "x": 1}}),
             json!({"/a": {"$at_least": 10}}),
+            json!({"/a": {"$capture": 1}}),
         ] {
             assert!(expect(refused.clone()).is_err(), "{refused}");
         }

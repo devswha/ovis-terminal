@@ -23,6 +23,8 @@ pub mod serve;
 pub mod terminals;
 #[cfg(unix)]
 pub mod transcripts;
+#[cfg(unix)]
+pub mod update;
 pub mod wire;
 
 #[cfg(unix)]

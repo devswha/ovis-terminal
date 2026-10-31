@@ -107,6 +107,9 @@ impl Session<'_> {
                 },
                 self.ctx.repo.root(),
             ));
+            for (name, value) in expect.captures(&record) {
+                self.labels.capture(name, value);
+            }
             arrivals.push(Value::String(id));
         }
         let conn = self.conn(&replies.conn)?;

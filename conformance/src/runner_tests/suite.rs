@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use super::support::{TestResult, Tree, conformance, field, scenario, strings};
 
-const EXECUTABLE: [&str; 17] = [
+const EXECUTABLE: [&str; 18] = [
     "_runner/self-test.json",
     "agent/binding.json",
     "agent/bridge.json",
@@ -24,6 +24,7 @@ const EXECUTABLE: [&str; 17] = [
     "protocol/multiplex.json",
     "protocol/pagination.json",
     "protocol/strict-target.json",
+    "services/update.json",
 ];
 
 /// Every executable file runs and passes; every other file is a listed declaration.

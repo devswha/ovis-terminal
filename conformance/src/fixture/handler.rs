@@ -2,7 +2,7 @@
 //!
 //! Those are the read-only protocol methods `rpc.discover` and paged `terminal.output`,
 //! the fixture-only `fixture.transcript` provider write, `fixture.pty` input byte count
-//! and `fixture.bridge` extension driver.
+//! and `fixture.bridge` extension driver, and the `fixture.update` release probe.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -97,6 +97,7 @@ impl RequestHandler for FixtureHandler {
                 super::prompts::pty(probes, &call.request)
             }
             EXTENSION => self.probes.extension.call(&call.request).await,
+            super::update::PROBE => super::update::probe(&self.root),
             _ => self.dispatch.call(call).await,
         }
     }

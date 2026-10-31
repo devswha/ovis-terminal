@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart, update]
 
 permissions:
   contents: read
@@ -879,4 +879,40 @@ jobs:
         with:
           name: restart-stress-macos-${{ github.run_id }}
           path: restart-stress-macos.log
+          if-no-files-found: error
+  update:
+    if: inputs.probe == 'update'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: build the binary and the conformance runner
+        run: |
+          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+          cargo build --locked --manifest-path conformance/Cargo.toml --bin conformance
+      - name: repeat staged update tests and the services/update scenario 25 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              cargo nextest run -p ovis-terminal-services --lib --locked --no-tests=fail -E 'test(update::)'
+              cargo nextest run -p ovis-terminal-server --lib --locked --no-tests=fail -E 'test(lanes::update)'
+              target/debug/conformance --binary target/debug/ovis-terminal --scenario services/update --isolated --case all --evidence "update-$iteration.json"
+              printf 'PASS %s/25\n' "$iteration"
+            done
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee update-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: update-stress-macos-${{ github.run_id }}
+          path: update-stress-macos.log
           if-no-files-found: error

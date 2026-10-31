@@ -4,6 +4,7 @@
 //! runtime behavior arrives with the plan todos named on each module.
 
 pub mod plugins;
+pub mod update;
 pub mod worktrees;
 
 /// Cargo package name of this crate, used by the workspace layering record.
