@@ -22,12 +22,14 @@ use ovis_terminal_authz::{
     UnixUid,
 };
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity, TerminalId};
+use ovis_terminal_core::terminals::process_info::NativeTable;
 use ovis_terminal_core::terminals::{Call, Host, KillRequest, Launch, Program, Terminals};
 use ovis_terminal_holder::protocol::{HolderBuildId, HolderDescriptor, HolderInstanceId};
 use ovis_terminal_holder::unix::{Holder, HolderConfig, HolderLimits};
 use ovis_terminal_protocol::errors::OpId;
 use ovis_terminal_protocol::schema::ids::ProcessToken;
 use ovis_terminal_protocol::schema::scalar::{Incarnation, TimestampMs};
+use ovis_terminal_server::dispatch::lanes::process_info::ProcessInfoRead;
 use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
 
@@ -254,4 +256,34 @@ impl Programs {
         }
         Ok(())
     }
+}
+
+/// Launches `proc` off the async runtime and registers `terminal.process_info` over it.
+pub(crate) async fn register(
+    dispatch: &mut super::handler::Dispatch,
+    (root, runtime): (&Path, RuntimeIdentity),
+    (authority, bearer, service): (
+        &Arc<Authority<RegistryIdentities>>,
+        &str,
+        &Arc<StatusService>,
+    ),
+) -> Result<Arc<Programs>, RunnerError> {
+    let (owned_root, shared, service) = (
+        root.to_path_buf(),
+        Arc::clone(authority),
+        Arc::clone(service),
+    );
+    let bearer = bearer.to_owned();
+    let programs = tokio::task::spawn_blocking(move || {
+        Programs::start(&owned_root, (runtime, shared, bearer), service)
+    })
+    .await
+    .map_err(at("join the program launch"))??;
+    dispatch
+        .register_read(ProcessInfoRead::new(
+            ProcessDirectoryFixture::new(Arc::clone(&programs), runtime)?,
+            Arc::new(NativeTable::default()),
+        ))
+        .map_err(at("register terminal.process_info"))?;
+    Ok(programs)
 }
