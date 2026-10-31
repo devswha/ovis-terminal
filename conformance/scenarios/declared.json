@@ -115,6 +115,11 @@
       "file": "part-a/task-32.json",
       "owner_todo": "32",
       "reason": "Free-form descriptor written by todo 32 before the runner existed; it runs once its steps are rewritten as ovis-conformance/1 over RPC routes wired by todos 23, 25 and 28-31 (real-binary serving lands with todo 31)."
+    },
+    {
+      "file": "services/docs-retention.json",
+      "owner_todo": "50",
+      "reason": "doc.get/doc.set are registered by dispatch::lanes::documents_retention on a Dispatcher whose event type carries doc.changed (DocumentsRetentionEvent). The runner's only fixture (todo 21) serves Dispatcher<OperationEvent, OperationProducer> with file-effect doc.* stubs that protocol/* scenarios depend on, and the runner has no --inject/--append or virtual-clock step. It runs once assembly (todo 52, blocked by this todo) serves the lane on the real binary; until then crates/ovis-terminal-server/tests/documents_retention.rs drives the same requests over a real socket."
     }
   ]
 }

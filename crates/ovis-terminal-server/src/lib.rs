@@ -32,4 +32,5 @@ pub const DEPENDS_ON: &[&str] = &[
     ovis_terminal_agent_adapters::CRATE_NAME,
     ovis_terminal_services::CRATE_NAME,
     ovis_terminal_remote::CRATE_NAME,
+    ovis_terminal_store::CRATE_NAME,
 ];

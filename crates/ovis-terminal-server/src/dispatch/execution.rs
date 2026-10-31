@@ -5,10 +5,15 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use ovis_terminal_authz::{AccessRequest, Action, Authority, Decision, ResolvedTarget};
 use ovis_terminal_core::events::{Coordinator, EventData, SnapshotProducer};
-use ovis_terminal_core::ops::{Context, OperationEvent, OperationSnapshot, Operations};
+use ovis_terminal_core::ops::{
+    Completion, Context, OperationError, OperationEvent, OperationSnapshot, Operations,
+    RunningOperation,
+};
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
 use ovis_terminal_protocol::errors::OpId;
-use ovis_terminal_protocol::schema::scalar::TimestampMs;
+use ovis_terminal_protocol::schema::methods::server::OpState;
+use ovis_terminal_protocol::schema::scalar::{OpenEnum, TimestampMs};
+use ovis_terminal_store::Snapshot;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -114,22 +119,8 @@ where
         R: Serialize + Send + 'static,
     {
         tokio::task::spawn_blocking(move || {
-            let operations = Operations::new(&self.state.core, self.context.at(now()?));
-            if *self.cancellation.borrow() {
-                operations.cancel(&self.op_id)?;
-            }
-            let permission = operations.start(&self.op_id)?;
-            // Starting the durable intent can block behind SQLite; revoke/expiry must
-            // therefore be checked after that wait, at the actual effect boundary.
-            if let Err(error) = self
-                .state
-                .authority
-                .recheck(&self.decision, &self.access.at(now()?))
-            {
-                let error = DispatchError::Authority(error);
-                operations.fail_running(permission, error.boundary().data().clone())?;
-                return Err(error);
-            }
+            let operations = Operations::new(&self.state.core, self.context.clone().at(now()?));
+            let permission = self.permit(&operations)?;
             match effect().and_then(|result| serde_json::to_value(result).map_err(Into::into)) {
                 Ok(result) => {
                     operations.commit(permission, result.clone())?;
@@ -142,6 +133,52 @@ where
             }
         })
         .await?
+    }
+
+    /// Commits the method's state writes, its domain events and the operation receipt in
+    /// one SQLite transaction built from one read snapshot.
+    ///
+    /// A [`Completion::failed`] outcome is retained as the operation's typed failure and
+    /// returned as that error, so a retry with the same operation id answers it again.
+    ///
+    /// # Errors
+    ///
+    /// Returns the retained domain failure, or authority, cancellation and persistence
+    /// failures; a rolled-back unit leaves the operation running, never committed.
+    pub async fn commit_unit<F>(self, build: F) -> Result<Completed, DispatchError>
+    where
+        F: FnOnce(&Snapshot) -> Result<Completion<D>, OperationError> + Send + 'static,
+    {
+        tokio::task::spawn_blocking(move || {
+            let operations = Operations::new(&self.state.core, self.context.clone().at(now()?));
+            let permission = self.permit(&operations)?;
+            let record = operations.commit_unit(permission, build)?;
+            match (&record.state, record.result.clone()) {
+                (OpenEnum::Known(OpState::Committed), Some(result)) => Ok(Completed(result)),
+                _ => Err(OperationError::Settled(Box::new(record)).into()),
+            }
+        })
+        .await?
+    }
+
+    /// Starts the durable intent, then rechecks authority at the effect boundary.
+    fn permit(&self, operations: &Operations<'_, D, P>) -> Result<RunningOperation, DispatchError> {
+        if *self.cancellation.borrow() {
+            operations.cancel(&self.op_id)?;
+        }
+        let permission = operations.start(&self.op_id)?;
+        // Starting the durable intent can block behind SQLite; revoke/expiry must
+        // therefore be checked after that wait, at the actual effect boundary.
+        if let Err(error) = self
+            .state
+            .authority
+            .recheck(&self.decision, &self.access.at(now()?))
+        {
+            let error = DispatchError::Authority(error);
+            operations.fail_running(permission, error.boundary().data().clone())?;
+            return Err(error);
+        }
+        Ok(permission)
     }
 }
 
