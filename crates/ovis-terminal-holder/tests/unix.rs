@@ -159,13 +159,13 @@ fn happy() -> Outcome {
         (exit.code, exit.signal, exit.final_offset),
         (Some(7), None, 4)
     );
-    let (target, from_offset) = (target_of(&spawned), 0);
     second.send(&Message::TailRequest(TailRequest {
-        target,
-        from_offset,
+        target: target_of(&spawned),
+        from_offset: 0,
     }))?;
-    let Message::Tail(tail) = second.recv(WAIT)? else {
-        return Err("no output may follow Exit".into());
+    let next = second.recv(WAIT)?;
+    let Message::Tail(tail) = next else {
+        return Err(format!("no output may follow Exit: got {:?}", next.kind()).into());
     };
     assert_eq!(
         (tail.from_offset, tail.through_offset, tail.gap),
