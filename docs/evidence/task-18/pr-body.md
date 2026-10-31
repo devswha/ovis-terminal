@@ -79,4 +79,4 @@ Holder wire generation stays 2; no holder or protocol change.
 - Layout and terminals currently run on separate coordinators/stores, so the terminal binding is a layout-side record. Single-coordinator assembly (one event enum covering both) is todo 42's. `SessionProducer` is proven over one store at one cursor, with an empty terminal section in the test.
 - Closing a pane or tab releases its terminals (listed in `released_terminals`) but does not stop them. Stopping is an explicit terminal operation.
 - A replayed failed op returns the operation-ledger error `already_started` with the receipt (which carries the original kind), not the original layout error variant.
-- macOS: the `layout` stress dispatch result is linked below once it finishes.
+- macOS stress: `gh workflow run probe-stress-macos.yml --ref lane/t18-workspace-layout -f probe=layout` (100× `cargo nextest run -p ovis-terminal-core --test layout` on macos-latest) completed `success`: https://github.com/devswha/ovis-terminal/actions/runs/41194747763. PR CI on 91395c6 passed every check (ci + platform-probes on ubuntu/macos/windows).
