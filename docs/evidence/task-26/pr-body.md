@@ -106,7 +106,7 @@ Mutation check (run locally, then reverted):
 - Forcing `input_ready()` to `Ok` fails `failure`, `happy`, and two model tests.
 - Disabling supersede fails the storm and unchanged tests.
 
-macOS: `probe-stress-macos.yml` gains the option `geometry` and a job running `--test geometry` 100 times (appended at the end of both lists). Run: https://github.com/devswha/ovis-terminal/actions/runs/41235004014 (dispatched on this branch; result recorded below when finished).
+macOS: `probe-stress-macos.yml` gains the option `geometry` and a job running `--test geometry` 100 times (appended at the end of both lists). Run: https://github.com/devswha/ovis-terminal/actions/runs/41235004014 (dispatched on this branch at bdad649): conclusion `success`, job log `RESULT 100/100` on macos-latest (bash 3.2).
 
 ## Adversarial
 
