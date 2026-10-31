@@ -3,10 +3,7 @@
 //! Scaffold crate: it compiles and records its place in the workspace layering;
 //! runtime behavior arrives with the plan todos named on each module.
 
-/// Domain vocabulary that service and dispatch lanes share beyond the wire schema.
-pub mod domain {
-    pub mod worktrees;
-}
+pub mod domain;
 pub mod errors;
 pub mod rpc;
 pub mod schema;

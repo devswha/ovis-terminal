@@ -5,10 +5,7 @@ mod deadline;
 mod error;
 mod execution;
 mod job;
-/// Domain lanes registered on the dispatcher by assembly.
-pub mod lanes {
-    pub mod worktrees;
-}
+pub mod lanes;
 mod registry;
 mod runtime;
 mod tasks;
