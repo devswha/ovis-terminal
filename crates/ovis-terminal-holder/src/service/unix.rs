@@ -12,6 +12,7 @@ mod error;
 mod launch;
 #[cfg(test)]
 mod lifecycle_tests;
+mod lock;
 mod manager;
 mod notify;
 mod observe;
@@ -19,6 +20,8 @@ mod paths;
 mod record;
 mod registration;
 mod run;
+#[cfg(test)]
+mod start_race_tests;
 #[cfg(test)]
 mod test_root;
 
@@ -29,4 +32,4 @@ pub use notify::notify_ready;
 pub use observe::observe;
 pub use paths::{ServiceEnvironment, ServicePaths, ServiceSession, ServiceVar};
 pub use registration::{install, prerequisites, registered, settle, start, uninstall};
-pub use run::run;
+pub use run::{refuse_live, run};

@@ -71,12 +71,7 @@ fn await_launchd(paths: &ServicePaths) -> Result<(), ServiceError> {
 }
 
 fn start(paths: &ServicePaths, placement: Placement) -> Result<Value, ServiceError> {
-    if matches!(
-        service::observe(paths)?,
-        Observed::Running { .. } | Observed::Unreachable { .. }
-    ) {
-        return Err(ServiceError::AlreadyRunning);
-    }
+    service::refuse_live(paths)?;
     match placement.manager() {
         None => service::launch_detached(paths, &program()?).map(drop)?,
         Some(manager) => {
@@ -87,10 +82,12 @@ fn start(paths: &ServicePaths, placement: Placement) -> Result<Value, ServiceErr
         }
     }
     let started = status(paths)?;
-    if !matches!(started.observed, Observed::Running { .. }) {
-        return Err(ServiceError::NotReady { bound_ms: 0 });
+    match &started.observed {
+        Observed::Running { .. } => encode(&started),
+        Observed::StaleEndpoint { reason, .. } => Err(ServiceError::Stale { reason: *reason }),
+        Observed::Stopped => Err(ServiceError::NotRunning),
+        _ => Err(ServiceError::Unreachable),
     }
-    encode(&started)
 }
 
 fn stop(paths: &ServicePaths) -> Result<Value, ServiceError> {

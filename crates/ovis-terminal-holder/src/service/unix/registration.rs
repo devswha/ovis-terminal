@@ -7,11 +7,11 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use ovis_terminal_protocol::domain::unix_service::{Observed, Prerequisite};
+use ovis_terminal_protocol::domain::unix_service::Prerequisite;
 use ovis_terminal_protocol::schema::methods::service::ServiceManager;
 
 use super::manager::{call, checked};
-use super::{ServiceError, ServicePaths, definition, observe, record};
+use super::{ServiceError, ServicePaths, definition, record};
 
 const QUERY_BOUND: Duration = Duration::from_secs(5);
 const START_BOUND: Duration = Duration::from_secs(20);
@@ -161,12 +161,7 @@ pub fn uninstall(paths: &ServicePaths, manager: ServiceManager) -> Result<PathBu
         Some(false) => return Err(ServiceError::ForeignRegistration { path }),
         Some(true) => {}
     }
-    if matches!(
-        observe(paths)?,
-        Observed::Running { .. } | Observed::Unreachable { .. }
-    ) {
-        return Err(ServiceError::AlreadyRunning);
-    }
+    super::run::refuse_live(paths)?;
     if manager == ServiceManager::Launchd {
         let target = format!("gui/{}/{}", uid(), paths.session().launchd_label());
         call(

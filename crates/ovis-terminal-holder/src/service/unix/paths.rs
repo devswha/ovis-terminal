@@ -192,6 +192,13 @@ impl ServicePaths {
             .join(format!("holder-{}.sock", self.session.as_str()))
     }
 
+    /// The start lock file; it is never removed.
+    #[must_use]
+    pub fn lock(&self) -> PathBuf {
+        self.directory
+            .join(format!("holder-{}.lock", self.session.as_str()))
+    }
+
     /// The discovery record.
     #[must_use]
     pub fn record(&self) -> PathBuf {

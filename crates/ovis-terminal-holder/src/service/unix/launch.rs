@@ -10,7 +10,7 @@ use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::time::Duration;
 
-use ovis_terminal_protocol::domain::unix_service::DiscoveryRecord;
+use ovis_terminal_protocol::domain::unix_service::{BootProof, DiscoveryRecord};
 use serde::Deserialize;
 
 use super::{ServiceError, ServicePaths};
@@ -31,6 +31,29 @@ pub fn ready_line(record: &DiscoveryRecord) -> String {
     format!("{}\n", serde_json::json!({ "ready": record }))
 }
 
+/// The typed refusal `ovis-terminal --json service run` writes on stderr when it exits
+/// without serving; other error fields are ignored here.
+#[derive(Debug, Deserialize)]
+struct Refusal {
+    error: RefusalError,
+}
+
+#[derive(Debug, Deserialize)]
+struct RefusalError {
+    kind: String,
+    holder: Option<BootProof>,
+}
+
+/// The holder process exited before serving: its typed refusal, else its diagnostics.
+fn exited(stderr: &str, code: Option<i32>) -> ServiceError {
+    match serde_json::from_str::<Refusal>(stderr.trim()) {
+        Ok(refusal) if refusal.error.kind == "already_running" => ServiceError::AlreadyRunning {
+            holder: refusal.error.holder.map(Box::new),
+        },
+        _ => failed(stderr, code),
+    }
+}
+
 fn failed(stderr: &str, code: Option<i32>) -> ServiceError {
     ServiceError::ManagerFailed {
         program: "ovis-terminal service run",
@@ -44,8 +67,9 @@ fn failed(stderr: &str, code: Option<i32>) -> ServiceError {
 /// # Errors
 ///
 /// [`ServiceError::NotReady`] after killing the holder it started when no ready line
-/// arrives in time, or [`ServiceError::ManagerFailed`] with the holder's diagnostics when
-/// it exits first.
+/// arrives in time; [`ServiceError::AlreadyRunning`] with the live holder's boot proof
+/// when the started holder lost the start lock to another; otherwise
+/// [`ServiceError::ManagerFailed`] with the holder's diagnostics when it exits first.
 pub fn launch_detached(
     paths: &ServicePaths,
     program: &Path,
@@ -54,6 +78,7 @@ pub fn launch_detached(
     let mut command = Command::new(program);
     command
         .args([
+            "--json",
             "service",
             "run",
             "--session",
@@ -108,5 +133,28 @@ pub fn launch_detached(
         pipe.read_to_string(&mut stderr)
             .map_err(io("read the holder diagnostics"))?;
     }
-    Err(failed(&stderr, status.code()))
+    Err(exited(&stderr, status.code()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ServiceError, exited};
+
+    #[test]
+    fn a_losing_holder_refusal_becomes_typed_already_running_with_the_winner_proof() {
+        let refusal = r#"{"error":{"exit_code":11,"hint":"h","kind":"already_running","message":"m","origin":"cli","holder":{"pid":4242,"start_token":"linux:b:7"}}}"#;
+        let ServiceError::AlreadyRunning {
+            holder: Some(holder),
+        } = exited(refusal, Some(11))
+        else {
+            panic!("not a typed already_running");
+        };
+        assert_eq!(
+            (holder.pid.get(), holder.start_token.as_str()),
+            (4242, "linux:b:7")
+        );
+        let other = exited(r#"{"error":{"kind":"service_io"}}"#, Some(1));
+        assert_eq!(other.kind(), "manager_failed");
+        assert_eq!(exited("not json", None).kind(), "manager_failed");
+    }
 }

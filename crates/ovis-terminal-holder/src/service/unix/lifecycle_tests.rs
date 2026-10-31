@@ -44,11 +44,11 @@ fn a_started_holder_is_running_until_stopped_and_stopping_enumerates_and_withdra
         stop(&paths).map(drop).map_err(|e| e.kind()),
         Err("already_stopped")
     );
-    assert_eq!(
-        std::fs::read_dir(paths.directory()).unwrap().count(),
-        0,
-        "socket or record left behind"
-    );
+    let left: Vec<_> = std::fs::read_dir(paths.directory())
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .collect();
+    assert_eq!(left, vec![paths.lock()], "socket or record left behind");
 }
 
 #[test]
@@ -80,4 +80,55 @@ fn a_stale_endpoint_refuses_stop_and_is_replaced_only_by_an_explicit_start() {
     assert_eq!(observe(&paths).unwrap(), Observed::Running { record });
     stop(&paths).unwrap();
     serving.join().unwrap().unwrap();
+}
+
+#[test]
+fn stop_refuses_a_holder_that_is_not_the_recorded_incarnation_and_leaves_it_serving() {
+    use ovis_terminal_protocol::domain::unix_service::BootProof;
+    use ovis_terminal_protocol::schema::ids::{ProcessPid, StartToken};
+
+    use crate::process::{ProcessId, read_start_token};
+    use crate::protocol::{HolderBuildId, HolderDescriptor, HolderInstanceId};
+    use crate::unix::{Holder, HolderConfig, HolderLimits, HolderService};
+
+    let root = TestRoot::new("impostor");
+    let paths = root.paths("s");
+    super::record::create_directory(paths.directory()).unwrap();
+    let listener = std::os::unix::net::UnixListener::bind(paths.socket()).unwrap();
+    let descriptor = HolderDescriptor::new(
+        HolderBuildId::new("test".to_owned()),
+        HolderInstanceId::new("another-incarnation".to_owned()),
+    );
+    let impostor = HolderService::start(
+        listener,
+        Holder::new(HolderConfig::new(descriptor, HolderLimits::DEFAULT)),
+    )
+    .unwrap();
+    let token = read_start_token(ProcessId::new(std::process::id())).unwrap();
+    let proof = BootProof::new(
+        ProcessPid::new(std::process::id()),
+        StartToken::new(token.as_str().to_owned()),
+    );
+    let recorded = DiscoveryRecord::new(
+        paths.session().label(),
+        paths.socket().display().to_string(),
+        proof,
+    );
+    super::record::write(&paths.record(), &recorded).unwrap();
+    assert_eq!(
+        observe(&paths).unwrap(),
+        Observed::Running {
+            record: recorded.clone()
+        }
+    );
+    assert_eq!(
+        stop(&paths).map(drop).map_err(|e| e.kind()),
+        Err("identity_mismatch")
+    );
+    assert_eq!(
+        observe(&paths).unwrap(),
+        Observed::Running { record: recorded },
+        "the refused stop ended the holder"
+    );
+    impostor.stop().unwrap();
 }

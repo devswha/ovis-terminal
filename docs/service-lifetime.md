@@ -32,6 +32,7 @@ All paths come from explicit variables; there is no `/tmp` fallback.
 |---|---|
 | Holder socket | `$XDG_RUNTIME_DIR` (else `$XDG_STATE_HOME`, else `$HOME/.local/state`) `/ovis-terminal/holder-S.sock` |
 | Discovery record | same directory, `holder-S.json`, mode 0600, directory mode 0700 |
+| Start lock | same directory, `holder-S.lock`, mode 0600; never removed |
 | systemd unit | `$XDG_CONFIG_HOME` (else `$HOME/.config`) `/systemd/user/ovis-terminal-holder-S.service` |
 | launchd agent | `$HOME/Library/LaunchAgents/dev.ovis-terminal.holder.S.plist` |
 
@@ -59,6 +60,8 @@ Status turns the record into a state:
 | recorded PID gone (`process_gone`) or reused (`process_replaced`) | `stale_endpoint` |
 | unrecorded socket refuses (`socket_refused`), or the path is not a socket (`not_a_socket`) | `stale_endpoint` |
 | record of another format or shape | error `descriptor_unsupported` / `descriptor_malformed`, never a default |
+
+Starting is serialized: a holder takes an exclusive `flock` on the session's start lock, then judges the endpoint, clears it only if proven dead, binds and publishes its record before releasing the lock. A concurrent starter waits, then observes that record and exits with `already_running` carrying the live holder's `holder` boot proof (exit 11); a detached launcher relays that typed refusal. The record is withdrawn under the same lock.
 
 Observing sends nothing: one non-blocking connection attempt bounded at 500 ms, then
 close. It never creates a directory, binds, removes, adopts or starts anything, and never

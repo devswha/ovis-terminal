@@ -141,6 +141,11 @@ fn service_detail(
             record.insert("state".to_owned(), json!("stale_endpoint"));
             record.insert("reason".to_owned(), json!(reason));
         }
+        ServiceError::AlreadyRunning {
+            holder: Some(holder),
+        } => {
+            record.insert("holder".to_owned(), json!(holder));
+        }
         ServiceError::ManagerUnavailable { missing } => {
             record.insert("missing_prerequisite".to_owned(), json!(missing));
         }

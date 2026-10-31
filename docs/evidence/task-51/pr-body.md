@@ -67,7 +67,7 @@ New tests and what they assert:
 ## Adversarial
 
 - stale state: stale socket (unrecorded, refused), non-socket file, record naming a reaped pid, record naming a reused pid -> all `stale_endpoint` with a reason, never repaired by status or stop (tests above + manual QA kill -9).
-- repeated interruptions / service reconnect: starter exits, then repeated status invocations re-observe the same pid/start_token (scenario happy + manual QA); a second `run` against a live holder refuses; concurrent bind collision maps to `already_running`.
+- repeated interruptions / service reconnect: starter exits, then repeated status invocations re-observe the same pid/start_token (scenario happy + manual QA); a second `run` against a live holder refuses; concurrent starts are serialized under the session start lock (round 2, below).
 - hung commands: every manager call is bounded (5 s queries, 20 s start) and an expired call kills only its own child (`manager_timeout`, exit 13); the observation's connect is non-blocking with a 500 ms bound.
 - host safety: no test or command signals pid 0/1/-1 or a group; the only kill in manual QA targeted the holder pid this run started (asserted > 1).
 
@@ -96,3 +96,21 @@ New tests and what they assert:
 - launchd uses the `gui/<uid>` domain; over SSH without a GUI login it is reported as missing `launchd_user_domain`. Live launchd behaviour is proven only by the macOS workflow job.
 - If a scenario step fails mid-case, a detached holder started by that case outlives the removed isolated root (the runner only cleans processes it spawned).
 - Readiness waits for launchd start and for record withdrawal after `Goodbye` are bounded polls (20 ms/10 ms) in production code; systemd uses `READY=1` and the detached launch a ready line.
+
+## Round 2 (gate review: B1 start race, B2 untyped loser, N1 identity check)
+
+- **B1 fix:** `run` now takes an exclusive `flock` on `<state dir>/holder-S.lock` (0600, in the 0700 directory, never removed) around claim -> stale cleanup -> bind -> serve -> record publish (`service/unix/lock.rs`, `run::publish`). Record withdrawal takes the same lock. A waiting starter observes the winner's record and refuses.
+- **B2 fix:** `ServiceError::AlreadyRunning { holder: Option<Box<BootProof>> }`. The CLI error record carries `"holder":{"pid","start_token"}`. The detached launcher runs the child with `--json`, parses its stderr refusal and returns the typed `already_running` (exit 11) instead of `manager_failed`. `already_running` was already in the protocol error catalog (`schema/error_kinds.rs` `AlreadyRunning`) and the exit table (conflict, 11), so no catalog change was needed. `service start` post-check no longer returns `NotReady{bound_ms:0}`: it maps the observed state to `stale_endpoint` / `already_stopped` / `unavailable`.
+- **New tests:**
+  - `start_race_tests::concurrent_starts_over_a_stale_endpoint_leave_exactly_one_holder_and_type_the_loser`: 50 iterations. Each one leaves crash leftovers (a stale socket file plus a record naming a reaped pid), releases two `run` calls through a barrier and awaits results over channels (no sleeps). It asserts exactly one ready announcement, a loser `AlreadyRunning{holder: Some(winner proof)}`, status `running` with the winner's record, a stop receipt naming the winner, and then `stopped`.
+  - `launch::tests::a_losing_holder_refusal_becomes_typed_already_running_with_the_winner_proof`.
+  - `lifecycle_tests::stop_refuses_a_holder_that_is_not_the_recorded_incarnation_and_leaves_it_serving` (N1): a live, recorded process answers with a different holder instance, stop returns `identity_mismatch`, and that holder keeps serving.
+- **Mutation check:**
+  - Removing the lock from `publish` makes the race test fail (two holders / untyped loser).
+  - Neutralising the `Welcome.instance` check makes the N1 test fail.
+  - Both were restored afterwards.
+- **Real-binary probe** (`docs/evidence/task-51/race-probe-r2.log`, Linux x86_64): 50 iterations of kill -9 on this run's own detached holder (pid asserted > 1), then two concurrent `ovis-terminal --json service start --manager detached`.
+  - Result: `iterations=50 multi_holder=0 untyped_loser=0 status_mismatch=0 leftover_holders=0`.
+  - Loser sample: `{"error":{"exit_code":11,...,"holder":{"pid":2472151,"start_token":"linux:...:32233960"},"kind":"already_running",...}}`.
+  - Status names the same pid.
+- **Pushed on top of 82dbad5** with no merge of the moved origin/integration (99e5c52), per instructions.

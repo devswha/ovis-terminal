@@ -3,7 +3,9 @@
 use std::io;
 use std::path::PathBuf;
 
-use ovis_terminal_protocol::domain::unix_service::{DiscoveryError, Prerequisite, StaleReason};
+use ovis_terminal_protocol::domain::unix_service::{
+    BootProof, DiscoveryError, Prerequisite, StaleReason,
+};
 use thiserror::Error;
 
 use crate::process::StartTokenError;
@@ -56,7 +58,10 @@ pub enum ServiceError {
     Connection(#[source] CoreConnectionError),
     /// A holder already answers for this service; it is never replaced.
     #[error("a holder already runs for this service")]
-    AlreadyRunning,
+    AlreadyRunning {
+        /// The live holder's boot proof, when its record named one.
+        holder: Option<Box<BootProof>>,
+    },
     /// No holder runs for this service.
     #[error("no holder runs for this service")]
     NotRunning,
@@ -130,7 +135,7 @@ impl ServiceError {
             Self::StartToken(source) => source.kind(),
             Self::Serve(source) => source.kind(),
             Self::Connection(source) => source.kind(),
-            Self::AlreadyRunning => "already_running",
+            Self::AlreadyRunning { .. } => "already_running",
             Self::NotRunning => "already_stopped",
             Self::Stale { .. } => "stale_endpoint",
             Self::Unreachable => "unavailable",
@@ -160,7 +165,7 @@ impl ServiceError {
             Self::StartToken(source) => source.hint(),
             Self::Serve(source) => source.hint(),
             Self::Connection(source) => source.hint(),
-            Self::AlreadyRunning => "use the running holder, or stop it explicitly first",
+            Self::AlreadyRunning { .. } => "use the running holder, or stop it explicitly first",
             Self::NotRunning => "start the service explicitly; status never starts one",
             Self::Stale { .. } => "start the service again; start replaces a proven-dead endpoint",
             Self::Unreachable => "inspect the holder process; it lives but does not accept",
