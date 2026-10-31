@@ -15,6 +15,9 @@ use crate::conn::{ConnectionError, Connections, RequestHandler};
 const DEFAULT_MAX_CONNECTIONS: usize = 64;
 const DEFAULT_SHUTDOWN_GRACE: Duration = Duration::from_secs(5);
 
+#[cfg(test)]
+mod shutdown_race;
+
 /// What a server authenticates against, reports as its identity and how far it scales.
 #[derive(Debug, Clone)]
 pub struct ServerConfig {
@@ -135,6 +138,8 @@ struct Serving<H> {
     progress: watch::Sender<ServeReport>,
     max_connections: usize,
     grace: Duration,
+    #[cfg(test)]
+    gate: Option<Arc<shutdown_race::Gate>>,
 }
 
 /// Serves `endpoint` with `handler` until [`ServerHandle::shutdown`].
@@ -156,6 +161,8 @@ pub fn serve_unix<H: RequestHandler>(
         progress,
         max_connections: config.max_connections,
         grace: config.shutdown_grace,
+        #[cfg(test)]
+        gate: None,
     };
     let task = tokio::spawn(accept_loop(endpoint, serving));
     Ok(ServerHandle {
@@ -190,11 +197,26 @@ async fn accept_loop<H: RequestHandler>(
                     .inspect_err(|error| report.count(error.kind()))
                     .map_err(|_| AuthzError::PeerRejected)
                     .and_then(|evidence| endpoint.policy().admit(&evidence));
-                running.spawn(serving.connections.serve(stream, admission));
+                let connection = serving.connections.serve(stream, admission);
+                #[cfg(test)]
+                let connection = {
+                    let gate = serving.gate.clone();
+                    async move {
+                        match gate {
+                            Some(gate) => gate.run(connection).await,
+                            None => connection.await,
+                        }
+                    }
+                };
+                running.spawn(connection);
             }
         }
     };
     serving.connections.shutdown();
+    #[cfg(test)]
+    if let Some(gate) = &serving.gate {
+        gate.stopping.notify_one();
+    }
     let drained = tokio::time::timeout(serving.grace, async {
         while let Some(ended) = running.join_next().await {
             report.record(ended);

@@ -117,7 +117,18 @@ where
         Some(Err(error)) => Err(ConnectionError::Io(std::io::Error::other(error))),
         None => Ok(()),
     };
-    result.and(written)
+    // The writer can close for overflow before this driver observes it. Shutdown or
+    // a closed writer queue must not replace that already-published failure.
+    let hit = *overflow.borrow();
+    hit.map_or_else(
+        || result.and(written),
+        |hit| {
+            Err(ConnectionError::Backpressure {
+                limit: hit.limit,
+                queued: hit.queued,
+            })
+        },
+    )
 }
 
 impl<H: RequestHandler> Requests<H> {
