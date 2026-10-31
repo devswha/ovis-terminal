@@ -1,3 +1,5 @@
-//! Records owned by part-B domain lanes that the method catalog's types build on.
+//! Typed construction of published records owned by domain services.
 
+pub mod agent_status;
 pub mod documents_retention;
+pub mod plugins;

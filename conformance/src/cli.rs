@@ -28,18 +28,33 @@ pub(crate) struct Cli {
     /// Which declared cases to run.
     #[arg(long, value_enum, default_value_t = CaseSelector::All)]
     pub(crate) case: CaseSelector,
-    /// Where to write the evidence JSON.
-    #[arg(long)]
-    pub(crate) evidence: Option<PathBuf>,
+    /// Where and how the evidence is written.
+    #[command(flatten)]
+    pub(crate) output: Output,
     /// Fail when any case is skipped, for example on an undeclared platform.
     #[arg(long)]
     pub(crate) require_no_skips: bool,
     /// Also print every connection transcript to stderr for manual inspection.
     #[arg(long)]
     pub(crate) manual_transcript: bool,
+    /// One JSON request `{"method", "params"}` a failure case's inject step runs instead of
+    /// all of its planned injections; it must equal one planned request exactly.
+    #[arg(long)]
+    pub(crate) inject: Option<String>,
     /// Read scenarios from this directory instead of `conformance/scenarios`.
     #[arg(long)]
     pub(crate) scenario_root: Option<PathBuf>,
+}
+
+/// The evidence file and whether this run adds to it.
+#[derive(Debug, clap::Args)]
+pub(crate) struct Output {
+    /// Where to write the evidence JSON.
+    #[arg(long)]
+    pub(crate) evidence: Option<PathBuf>,
+    /// Add this run to an existing evidence file instead of replacing it.
+    #[arg(long)]
+    pub(crate) append: bool,
 }
 
 #[derive(Debug, Subcommand)]

@@ -26,6 +26,12 @@ impl OpId {
     pub const fn new(value: String) -> Self {
         Self(value)
     }
+
+    /// Borrows the identity string.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 /// Dotted path to the offending input field.

@@ -1,0 +1,735 @@
+$ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+   Compiling ovis-terminal-agent v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-agent)
+   Compiling ovis-terminal-agent-adapters v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-agent-adapters)
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-server)
+   Compiling ovis-terminal-cli v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.26s
+EXIT=0
+$ cargo test --locked -p ovis-terminal-agent -p ovis-terminal-protocol -p ovis-terminal-server --all-targets
+   Compiling ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-core)
+   Compiling ovis-terminal-agent v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-agent)
+   Compiling ovis-terminal-services v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-services)
+   Compiling ovis-terminal-remote v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-remote)
+   Compiling ovis-terminal-agent-adapters v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-agent-adapters)
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.55s
+     Running unittests src/lib.rs (target/debug/deps/ovis_terminal_agent-eef52574888e8037)
+
+running 14 tests
+test status::qa::machine::turns_count_entries_to_working_and_finishes_count_exits ... ok
+test status::qa::osc::every_split_of_the_output_yields_the_same_status_record ... ok
+test status::qa::osc::a_query_and_other_osc_numbers_are_ignored ... ok
+test status::qa::osc::base64_of_non_utf8_text_is_an_invalid_utf8_error_without_decoded_text ... ok
+test status::qa::rpc::a_shell_is_an_explicit_null_agent_with_unreported_status ... ok
+test status::qa::osc::fake_status_text_on_screen_never_changes_a_reported_status ... ok
+test status::qa::osc::an_osc_report_takes_the_next_sequence_and_keeps_raw_and_decoding_provenance ... ok
+test status::qa::osc::oversized_and_malformed_records_are_counted_and_change_nothing ... ok
+test status::qa::rpc::a_clear_ends_no_turn_and_an_exit_ends_a_working_turn ... ok
+test status::qa::rpc::an_arbitrary_label_registers_and_its_report_tells_one_story_in_snapshot_and_event ... ok
+test status::qa::rpc::only_the_current_program_of_the_target_terminal_may_report ... ok
+test status::qa::rpc::unknown_states_out_of_range_progress_and_bad_labels_are_refused ... ok
+test status::qa::rpc::a_stale_or_equal_sequence_is_a_typed_rejection_that_changes_nothing ... ok
+test status::qa::rpc::turns_finish_only_when_the_root_leaves_working_and_reads_never_change_them ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
+
+     Running unittests src/lib.rs (target/debug/deps/ovis_terminal_protocol-73309b3f695a8bff)
+
+running 8 tests
+test domain::agent_status::tests::a_numeric_report_sequence_is_refused_at_params_seq ... ok
+test domain::agent_status::tests::a_stale_rejection_carries_current_seq_as_an_exact_decimal_string ... ok
+test wire::properties::partial_header_resumes_after_each_byte_position ... ok
+test wire::properties::arbitrary_oversized_lengths_return_frame_too_large ... ok
+test wire::properties::generated_frame_sequences_are_split_invariant ... ok
+test wire::properties::arbitrary_payload_bytes_round_trip ... ok
+test domain::agent_status::tests::provenance_and_counters_round_trip ... ok
+test wire::connection::tests::queued_frames_obey_record_and_byte_limits ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running unittests src/bin/openrpc.rs (target/debug/deps/openrpc-90e14f7a7839d967)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/dispatch_deadline.rs (target/debug/deps/dispatch_deadline-619d535d1f650cfb)
+
+running 3 tests
+test deadline_roundtrips_maximum_without_numeric_coercion ... ok
+test deadline_payload_roundtrips ... ok
+test deadline_catalog_and_payload_are_additive ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+     Running tests/operation_contract.rs (target/debug/deps/operation_contract-3761485272a51244)
+
+running 3 tests
+test later_cancel_outcomes_preserve_the_inspectable_record ... ok
+test numeric_evidence_counters_are_typed_invalid_params ... ok
+test cancel_outcome_preserves_released_record_fields_and_exact_evidence ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+     Running tests/rpc.rs (target/debug/deps/rpc-f4ed68f5113a8469)
+
+running 9 tests
+test failure ... ok
+test rejects_duplicate_in_flight_request_ids ... ok
+test happy ... ok
+test rejects_non_string_target_identity_before_dispatch ... ok
+test rejects_response_with_wrong_json_rpc_version ... ok
+test rejects_error_and_result_in_one_response ... ok
+test rejects_unknown_nested_target_field_before_dispatch ... ok
+test rejects_unknown_request_envelope_fields ... ok
+test rejects_unknown_target_parameter_before_dispatch ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/rpc_counter.rs (target/debug/deps/rpc_counter-92f5dc938dc1f7cd)
+
+running 3 tests
+test decimal_counter_rejects_json_numbers_and_non_canonical_strings ... ok
+test decimal_counter_round_trips_u64_max_exactly ... ok
+test decimal_counter_round_trips_every_value ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/rpc_errors.rs (target/debug/deps/rpc_errors-3fc1f43ddd2f972b)
+
+running 5 tests
+test boundary_hint_replaces_only_the_wire_hint ... ok
+test maps_typed_internal_error_to_json_rpc_internal_code ... ok
+test malformed_json_preserves_source_without_serializing_parser_prose ... ok
+test serializes_structured_boundary_error_fields ... ok
+test unknown_method_error_identifies_the_method_field ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/rpc_settlement.rs (target/debug/deps/rpc_settlement-69d90dc110c95b34)
+
+running 3 tests
+test refuses_a_reply_for_a_different_in_flight_id ... ok
+test settles_interleaved_requests_once_and_keeps_ids_independent ... ok
+test settlement_matches_a_reference_set ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/schema.rs (target/debug/deps/schema-d5b92d466c4733d9)
+
+running 6 tests
+test released_baseline_is_a_valid_document ... ok
+test duplicated_method_name_is_rejected ... ok
+test colliding_definition_name_is_rejected ... ok
+test dangling_reference_is_rejected ... ok
+test failure ... ok
+test happy ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+
+     Running tests/schema_catalog.rs (target/debug/deps/schema_catalog-760a0ea332c0162a)
+
+running 8 tests
+test counters_round_trip_u64_max_as_decimal_strings ... ok
+test hello_advertises_only_registered_methods_in_catalog_order ... ok
+test input_enums_stay_closed ... ok
+test unknown_output_enum_value_decodes_as_unknown ... ok
+test catalog_effects_match_published_effects ... ok
+test stream_layout_matches_the_codec ... ok
+test mutations_require_an_operation_id_and_reads_take_none ... ok
+test every_output_enum_tolerates_additions ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/schema_compat.rs (target/debug/deps/schema_compat-7c365d667001266a)
+
+running 14 tests
+test malformed_document_is_a_typed_failure ... ok
+test additive_changes_are_compatible ... ok
+test newly_required_input_is_breaking ... ok
+test unchanged_document_has_no_breaks ... ok
+test removed_input_variant_is_breaking ... ok
+test removed_method_is_breaking ... ok
+test optional_output_is_breaking_when_it_was_required ... ok
+test removed_required_output_is_breaking ... ok
+test narrowed_input_values_are_breaking ... ok
+test removed_event_is_breaking ... ok
+test narrowed_input_type_is_breaking ... ok
+test closed_output_enum_growth_is_breaking ... ok
+test every_removed_method_is_reported ... ok
+test optional_params_never_break ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.11s
+
+     Running tests/schema_error_kinds.rs (target/debug/deps/schema_error_kinds-29b0f5448c4d7d01)
+
+running 3 tests
+test cli_compat_reports_a_retired_error_kind ... ok
+test the_authz_kinds_are_published_and_additive ... ok
+test removing_any_authz_kind_is_rejected ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.01s
+
+     Running tests/schema_gate.rs (target/debug/deps/schema_gate-c4d4afff793caffb)
+
+running 11 tests
+test p5_missing_submit_reports_its_own_path ... ok
+test p4_every_published_error_kind_decodes_into_error_data_and_round_trips ... ok
+test p6_unnamed_released_method_is_a_typed_malformed_baseline ... ok
+test cli_compat_refuses_a_malformed_baseline_and_reports_a_retired_method ... ok
+test p1_lowered_numeric_maximum_is_a_break ... ok
+test widened_bounds_stay_compatible ... ok
+test p2_tightened_pattern_is_a_break ... ok
+test p2_free_string_becoming_an_enum_is_a_break ... ok
+test p1_raised_minimum_and_lowered_max_items_are_breaks ... ok
+test p7_required_notification_output_removal_is_a_break ... ok
+test p3_required_output_removed_inside_a_union_variant_is_a_break ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s
+
+     Running tests/schema_narrowing.rs (target/debug/deps/schema_narrowing-1237505c14aadfac)
+
+running 8 tests
+test reference_chain_beyond_the_bound_is_a_typed_depth_error ... ok
+test self_referencing_schema_is_a_typed_cycle ... ok
+test cli_refuses_a_cyclic_baseline_and_an_oversized_file_with_typed_errors ... ok
+test intersection_part_that_lowers_a_bound_is_narrowed ... ok
+test nullable_array_items_are_compared ... ok
+test pattern_beneath_a_nullable_reference_is_narrowed ... ok
+test numeric_enum_losing_a_value_is_narrowed ... ok
+test map_value_schemas_are_compared ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s
+
+     Running tests/schema_params.rs (target/debug/deps/schema_params-b958c0f503c214e4)
+
+running 10 tests
+test explicit_target_decodes ... ok
+test missing_nested_field_names_its_full_path ... ok
+test every_missing_required_field_names_itself ... ok
+test missing_required_field_is_rejected_at_its_own_path ... ok
+test numeric_counter_is_rejected_and_u64_max_string_round_trips ... ok
+test target_naming_two_terminals_is_rejected ... ok
+test wrong_type_names_the_field_without_serde_prose ... ok
+test revisions_round_trip_exactly ... ok
+test unknown_top_level_field_is_rejected_at_its_path ... ok
+test unknown_target_field_is_rejected_at_its_path ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/schema_properties.rs (target/debug/deps/schema_properties-d06c4733558ad74c)
+
+running 2 tests
+test any_widening_at_any_depth_is_compatible ... ok
+test any_narrowing_at_any_depth_is_reported ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests/wire.rs (target/debug/deps/wire-6ec16616dbe90e12)
+
+running 2 tests
+test failure ... ok
+test happy ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.25s
+
+     Running unittests src/lib.rs (target/debug/deps/ovis_terminal_server-0e709e70d3a9610b)
+
+running 18 tests
+test conn::budget::tests::reservations_stop_exactly_at_the_bound ... ok
+test conn::budget::tests::accounting_never_wraps_at_u64_max ... ok
+test conn::budget::tests::only_the_first_refusal_is_published ... ok
+test conn::cause::tests::connection_end_remains_first_after_a_later_overflow ... ok
+test conn::cause::tests::overflow_remains_first_after_connection_teardown_starts ... ok
+test conn::core::tests::foreign_peer_is_answered_with_its_refusal_and_closed ... ok
+test conn::core::tests::refused_generation_does_not_upgrade_the_bytes_behind_it ... ok
+test conn::core::tests::generation_is_an_exact_decimal_string ... ok
+test conn::core::tests::partial_hello_establishes_nothing_until_its_line_completes ... ok
+test dispatch::deadline::tests::ready_result_at_or_after_expiry_is_not_success ... ok
+test dispatch::deadline::tests::ready_result_before_expiry_is_success ... ok
+test dispatch::deadline::tests::shared_outcome_keeps_each_callers_own_deadline ... ok
+test listen::tests::a_peer_whose_account_is_not_the_owner_is_refused_at_hello ... ok
+test listen::tests::the_owner_account_read_from_the_socket_is_admitted ... ok
+test conn::core::tests::framed_upgrade_parses_identically_under_every_split ... ok
+test conn::terminal_order::io_before_overflow_keeps_its_terminal_cause ... ok
+test listen::server::shutdown_race::shutdown_joins_and_counts_an_overflow_before_the_driver_can_finish ... ok
+test conn::half_close_order::overflow_while_draining_after_read_eof_is_not_success ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.56s
+
+     Running tests/connection.rs (target/debug/deps/connection-01bf00a4a1b6783f)
+
+running 23 tests
+<- {"error":{"code":-32000,"data":{"hint":"present a credential in hello","kind":"unauthenticated","retryable":false},"message":"operation failed"},"id":"hello","jsonrpc":"2.0"}
+test descriptor::the_override_wins_and_is_reported_as_such ... ok
+test descriptor::unix_defaults_fall_back_from_runtime_to_state_to_home ... ok
+test descriptor::windows_names_a_local_pipe_per_user_and_session ... ok
+<- {"id":"hello","jsonrpc":"2.0","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458254571","version":"0.1.0"}}
+test descriptor::unsafe_values_are_refused_before_anything_is_touched ... ok
+test endpoint::a_bound_socket_and_its_directory_are_private ... ok
+test endpoint::a_directory_other_accounts_can_enter_is_refused ... ok
+test endpoint::every_kind_the_hello_boundary_emits_is_published ... ok
+<- {"error":{"code":-32000,"data":{"hint":"wait for an in-flight request to settle, then retry","kind":"backpressure","retryable":true},"message":"operation failed"},"id":"over","jsonrpc":"2.0"}
+<- {"jsonrpc":"2.0","method":"$/closing","params":{"hint":"reconnect once the server is running again","reason":"server_shutdown"}}
+test adversarial::requests_beyond_the_in_flight_bound_get_backpressure_and_cancel_on_shutdown ... ok
+<- {"error":{"code":-32000,"data":{"hint":"obtain a credential issued by this runtime lifetime","kind":"invalid_credential","retryable":false},"message":"operation failed"},"id":"hello","jsonrpc":"2.0"}
+<- {"id":"hello","jsonrpc":"2.0","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458254595","version":"0.1.0"}}
+<- {"id":"hello","jsonrpc":"2.0","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458254595","version":"0.1.0"}}
+test endpoint::a_server_that_hangs_up_mid_hello_is_unreachable ... ok
+<- {"id":"hello","jsonrpc":"2.0","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458254595","version":"0.1.0"}}
+<- {"jsonrpc":"2.0","method":"$/closing","params":{"hint":"use a frame kind supported by this protocol generation","reason":"unknown_kind"}}
+<- {"error":{"code":-32000,"data":{"hint":"request a new credential from an administrator","kind":"credential_expired","retryable":false},"message":"operation failed"},"id":"hello","jsonrpc":"2.0"}
+test endpoint::a_stale_socket_is_replaced_and_a_plain_file_never_is ... ok
+test endpoint::a_socket_that_never_answers_hello_is_unreachable ... ok
+<- {"error":{"code":-32600,"data":{"field_path":"method","hint":"send a JSON-RPC 2.0 request with a string id","kind":"invalid_request","retryable":false},"message":"request envelope violates JSON-RPC 2.0"},"id":"hello","jsonrpc":"2.0"}
+<- {"id":"hello","jsonrpc":"2.0","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458254595","version":"0.1.0"}}
+<- {"id":"hello","jsonrpc":"2.0","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458254595","version":"0.1.0"}}
+<- {"error":{"code":-32000,"data":{"hint":"present a credential in hello","kind":"unauthenticated","retryable":false},"message":"operation failed"},"id":"hello","jsonrpc":"2.0"}
+<- {"id":"hello","jsonrpc":"2.0","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458254595","version":"0.1.0"}}
+test adversarial::unknown_frame_kind_after_upgrade_closes_with_its_kind ... ok
+<- {"error":{"code":-32600,"data":{"field_path":"method","hint":"send a JSON-RPC 2.0 request with a string id","kind":"invalid_request","retryable":false},"message":"request envelope violates JSON-RPC 2.0"},"id":"x","jsonrpc":"2.0"}
+<- {"error":{"code":-32600,"data":{"field_path":"id","hint":"wait for the existing request with this id to finish","kind":"duplicate_request_id","retryable":false},"message":"request id is already in flight on this connection"},"id":"dup","jsonrpc":"2.0"}
+test adversarial::credentials_are_checked_before_hello_exposes_identity ... ok
+test endpoint::a_rejected_probe_reports_the_typed_refusal ... ok
+<- {"error":{"code":-32000,"data":{"hint":"reconnect with a client built for this runtime's protocol generation","kind":"unsupported_generation","retryable":false},"message":"operation failed"},"id":"hello","jsonrpc":"2.0"}
+<- {"id":"still-open","jsonrpc":"2.0","result":{"name":"b"}}
+<- {"id":"after","jsonrpc":"2.0","result":{"name":"b"}}
+test adversarial::a_second_hello_and_a_duplicate_in_flight_id_are_refused ... ok
+<- {"id":"hello","jsonrpc":"2.0","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458254596","version":"0.1.0"}}
+<- {"error":{"code":-32000,"data":{"hint":"send hello first and wait for its result","kind":"unauthenticated","retryable":false},"message":"operation failed"},"id":"m1","jsonrpc":"2.0"}
+<- {"jsonrpc":"2.0","method":"$/closing","params":{"hint":"send JSON-RPC 2.0 requests with a string id","reason":"parse_error"}}
+<- {"id":"hello","jsonrpc":"2.0","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458254596","version":"0.1.0"}}
+<- {"id":"hello","jsonrpc":"2.0","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458254596","version":"0.1.0"}}
+test adversarial::correlatable_bad_requests_are_answered_and_the_rest_close ... ok
+test descriptor::every_valid_session_names_its_own_socket ... ok
+<- {"id":"s1","jsonrpc":"2.0","result":{"subscription_id":"sub-1"}}
+test endpoint::a_live_socket_is_never_taken_over ... ok
+<- {"jsonrpc":"2.0","method":"event","params":{"seq":"1","subscription_id":"sub-1","type":"doc.changed"}}
+<- {"id":"m","jsonrpc":"2.0","result":{"version":"1"}}
+<- {"id":"b","jsonrpc":"2.0","result":{"name":"b"}}
+<- {"id":"a","jsonrpc":"2.0","result":{"name":"a"}}
+<- {"id":"hello","jsonrpc":"2.0","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458254598","version":"0.1.0"}}
+<- {"id":"hello","jsonrpc":"2.0","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000013","methods":["events.subscribe","doc.get","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:2","server_time_ms":"1793458254599","version":"0.1.0"}}
+test happy ... ok
+test descriptor::session_names_follow_the_published_rule ... ok
+test failure ... ok
+<- {"jsonrpc":"2.0","method":"$/closing","params":{"hint":"read replies and notifications as they arrive, then reconnect","limit_bytes":"67108864","queued_bytes":"0","reason":"backpressure"}}
+test bound::an_overflow_at_a_record_boundary_sends_a_readable_closing ... ok
+<- {"id":"b","jsonrpc":"2.0","result":{"name":"b"}}
+test bound::a_peer_that_never_reads_is_closed_and_released_without_shutdown ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.46s
+
+     Running tests/dispatch.rs (target/debug/deps/dispatch-bdb14765bdb13d0f)
+
+running 14 tests
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258070","version":"0.1.0"}}
+
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258070","version":"0.1.0"}}
+
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258070","version":"0.1.0"}}
+
+-> {"id":"slow-0","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31392ecd09f3","value":"payload","version":"0"}}
+-> {"id":"lost","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-317945932372","value":"payload","version":"0"}}
+-> {"id":"queued","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-317a52849751","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258070","version":"0.1.0"}}
+
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258070","version":"0.1.0"}}
+
+-> {"id":"slow","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-317ba96e0046","value":"payload","version":"0"}}
+-> {"id":"effect","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-317cfeb54e83","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258070","version":"0.1.0"}}
+
+-> {"id":"running","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4097-73bb-8102-6baa584aaeb3","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258093","version":"0.1.0"}}
+
+-> {"id":"denied","jsonrpc":"2.0","method":"doc.set","params":{"name":"other","op_id":"01a19271-40ad-7040-b850-4207e2a850b3","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258093","version":"0.1.0"}}
+
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258093","version":"0.1.0"}}
+
+-> {"id":"bad","jsonrpc":"2.0","method":"pane.split","params":{"op_id":"01800000-0000-7000-8000-000000000001","pane_id":"p2"}}
+<- {"jsonrpc":"2.0","id":"denied","error":{"code":-32000,"message":"operation failed","data":{"kind":"forbidden","hint":"ask an administrator for a grant covering this target","retryable":false}}}
+
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258093","version":"0.1.0"}}
+
+-> {"id":"slow","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ad-7040-b850-42080ae88f05","value":"payload","version":"0"}}
+-> {"id":"allowed","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ad-7040-b850-42090b8ea782","value":"payload","version":"0"}}
+-> {"id":"duplicate-0","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258093","version":"0.1.0"}}
+
+-> {"id":"duplicate-1","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"bad","error":{"code":-32601,"message":"no such JSON-RPC method","data":{"kind":"method_not_found","hint":"consult rpc.discover for supported methods","retryable":false,"field_path":"method"}}}
+
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258093","version":"0.1.0"}}
+
+-> {"id":"held","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ad-7040-b850-420b500cf677","value":"payload","version":"0"}}
+-> {"id":"typo","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ae-735f-a2a9-130b41d17b74","pane_id":"p2","value":"payload","version":"0"}}
+-> {"id":"duplicate-2","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+-> {"id":"counter","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ae-735f-a2a9-130c6fc6f54a","value":"payload","version":0}}
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258093","version":"0.1.0"}}
+
+-> {"id":"duplicate-3","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+-> {"id":"typo","jsonrpc":"2.0","method":"terminal.keep","params":{"keep":true,"op_id":"01a19271-40ae-735f-a2a9-130d1c577926","target":{"pane_id":"terminal:2"}}}
+-> {"id":"duplicate-4","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258093","version":"0.1.0"}}
+
+<- {"jsonrpc":"2.0","id":"typo","error":{"code":-32602,"message":"method parameters violate the closed schema","data":{"kind":"invalid_params","hint":"correct the method parameters","retryable":false,"field_path":"params.pane_id"}}}
+
+-> {"id":"duplicate-5","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+-> {"id":"absent","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-40ae-735f-a2a9-130b41d17b74"}}
+-> {"id":"stale","jsonrpc":"2.0","method":"terminal.kill","params":{"escalation":{"hup_ms":"0","term_ms":"0"},"expect":{"terminal_incarnation":"1"},"op_id":"01a19271-40ae-735f-a2a9-130eecf7f7e0","target":{"terminal_id":"terminal:2"}}}
+-> {"id":"duplicate-6","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"counter","error":{"code":-32602,"message":"method parameters violate the closed schema","data":{"kind":"invalid_params","hint":"correct the method parameters","retryable":false,"field_path":"params.version"}}}
+
+-> {"id":"duplicate-7","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+-> {"id":"counter","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ae-735f-a2a9-130fba1af945","value":"payload","version":"00"}}
+<- {"jsonrpc":"2.0","id":"typo","error":{"code":-32602,"message":"method parameters violate the closed schema","data":{"kind":"invalid_params","hint":"correct the method parameters","retryable":false,"field_path":"params.target.pane_id"}}}
+
+-> {"id":"ambiguous","jsonrpc":"2.0","method":"terminal.keep","params":{"keep":true,"op_id":"01a19271-40ae-735f-a2a9-13105a68aef1","target":{"name":"duplicate"}}}
+<- {"jsonrpc":"2.0","id":"stale","error":{"code":-32000,"message":"operation failed","data":{"kind":"stale_target","hint":"refresh the caller binding; the request was not redirected to a replacement","retryable":false}}}
+
+-> {"id":"stale-op","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-40ae-735f-a2a9-130eecf7f7e0"}}
+<- {"jsonrpc":"2.0","id":"counter","error":{"code":-32602,"message":"method parameters violate the closed schema","data":{"kind":"invalid_params","hint":"correct the method parameters","retryable":false,"field_path":"params.version"}}}
+
+-> {"id":"counter","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ae-735f-a2a9-1311e10f10da","value":"payload","version":"-1"}}
+<- {"jsonrpc":"2.0","id":"ambiguous","error":{"code":-32000,"message":"operation failed","data":{"kind":"ambiguous_target","hint":"select one candidate by its machine and opaque resource IDs","retryable":false,"candidates":[{"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","runtime_lifetime":"runtime:7","terminal_id":"terminal:1"},{"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","runtime_lifetime":"runtime:7","terminal_id":"terminal:2"}]}}}
+
+-> {"id":"missing","jsonrpc":"2.0","method":"terminal.keep","params":{"keep":true,"op_id":"01a19271-40ae-735f-a2a9-131298b3bc1d","target":{"terminal_id":"terminal:99"}}}
+<- {"jsonrpc":"2.0","id":"counter","error":{"code":-32602,"message":"method parameters violate the closed schema","data":{"kind":"invalid_params","hint":"correct the method parameters","retryable":false,"field_path":"params.version"}}}
+
+-> {"id":"counter","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ae-735f-a2a9-1313abeeb948","value":"payload","version":"18446744073709551616"}}
+<- {"jsonrpc":"2.0","id":"missing","error":{"code":-32000,"message":"operation failed","data":{"kind":"not_found","hint":"refresh the resource roster and supply a current target","retryable":false}}}
+
+-> {"id":"target","jsonrpc":"2.0","method":"terminal.keep","params":{"keep":true,"op_id":"01a19271-40af-753f-9017-869445b95e91","target":{"terminal_id":"terminal:2"}}}
+<- {"jsonrpc":"2.0","id":"counter","error":{"code":-32602,"message":"method parameters violate the closed schema","data":{"kind":"invalid_params","hint":"correct the method parameters","retryable":false,"field_path":"params.version"}}}
+
+-> {"id":"uuid","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01800000-0000-4000-8000-000000000001","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"uuid","error":{"code":-32602,"message":"method parameters violate the closed schema","data":{"kind":"invalid_params","hint":"correct the method parameters","retryable":false,"field_path":"params.op_id"}}}
+
+test strict::malformed_counters_and_operation_ids_never_enter_the_handler ... ok
+-> {"id":"slow-1","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-313a2edae615","value":"payload","version":"0"}}
+-> {"id":"status","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-4096-76b1-8811-317ba96e0046"}}
+-> {"id":"cancel","jsonrpc":"2.0","method":"op.cancel","params":{"op_id":"01a19271-40ad-7040-b850-42080ae88f05"}}
+-> {"id":"accepted","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-40ad-7040-b850-420a13867cdd"}}
+<- {"jsonrpc":"2.0","id":"absent","error":{"code":-32000,"message":"operation failed","data":{"kind":"not_found","hint":"query an operation accepted by this principal in this runtime","retryable":false,"op_id":"01a19271-40ae-735f-a2a9-130b41d17b74"}}}
+
+-> {"id":"commit","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-40ae-735f-a2a9-130b41d17b74","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"stale-op","error":{"code":-32000,"message":"operation failed","data":{"kind":"not_found","hint":"query an operation accepted by this principal in this runtime","retryable":false,"op_id":"01a19271-40ae-735f-a2a9-130eecf7f7e0"}}}
+
+-> {"id":"current","jsonrpc":"2.0","method":"terminal.kill","params":{"escalation":{"hup_ms":"0","term_ms":"0"},"expect":{"terminal_incarnation":"2"},"op_id":"01a19271-40c0-709f-b6e5-dd64a64d8ef4","target":{"terminal_id":"terminal:2"}}}
+-> {"id":"slow-2","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-313b837e5dd2","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"status","result":{"error":null,"method":"doc.set","op_id":"01a19271-4096-76b1-8811-317ba96e0046","result":null,"state":"accepted","updated_seq":"1"}}
+
+<- {"jsonrpc":"2.0","id":"accepted","result":{"error":null,"method":"doc.set","op_id":"01a19271-40ad-7040-b850-420a13867cdd","result":null,"state":"accepted","updated_seq":"1"}}
+
+-> {"id":"cancel","jsonrpc":"2.0","method":"op.cancel","params":{"op_id":"01a19271-4096-76b1-8811-317cfeb54e83"}}
+-> {"id":"during-shutdown","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-4097-73bb-8102-6baa584aaeb3"}}
+<- {"jsonrpc":"2.0","id":"during-shutdown","error":{"code":-32000,"message":"operation failed","data":{"kind":"unavailable","hint":"connect to an available runtime","retryable":false}}}
+
+-> {"id":"slow-3","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-313c38d3a68a","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"cancel","result":{"error":null,"method":"doc.set","op_id":"01a19271-40ad-7040-b850-42080ae88f05","outcome":"cancelled_before_commit","result":null,"state":"cancelled","updated_seq":"2"}}
+
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258141","version":"0.1.0"}}
+
+-> {"id":"inspect","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-4096-76b1-8811-317945932372"}}
+<- {"jsonrpc":"2.0","id":"running","result":{"op_id":"01a19271-4097-73bb-8102-6baa584aaeb3","value":"payload","version":"0"}}
+
+<- {"jsonrpc":"2.0","id":"target","result":{"keep":true,"terminal_id":"terminal:2"}}
+
+<- {"jsonrpc":"2.0","id":"allowed","result":{"op_id":"01a19271-40ad-7040-b850-42090b8ea782","value":"payload","version":"0"}}
+
+-> {"id":"inspect","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-40ad-7040-b850-42090b8ea782"}}
+test cancellation::shutdown_join_does_not_hold_the_request_admission_lock ... ok
+test targeting::explicit_identity_mutates_only_that_target_and_ambiguity_lists_candidates ... ok
+<- {"jsonrpc":"2.0","id":"queued","error":{"code":-32000,"message":"operation failed","data":{"kind":"credential_revoked","hint":"re-authenticate with a current credential; queued work was not written","retryable":false,"op_id":"01a19271-4096-76b1-8811-317a52849751"}}}
+
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258145","version":"0.1.0"}}
+
+-> {"id":"inspect","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-4096-76b1-8811-317a52849751"}}
+<- {"jsonrpc":"2.0","id":"held","error":{"code":-32000,"message":"operation failed","data":{"kind":"cancelled","hint":"inspect the retained outcome; never automatically replay uncertain effects","retryable":false,"op_id":"01a19271-40ad-7040-b850-420b500cf677"}}}
+
+-> {"id":"slow-4","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-313d42b56b81","value":"payload","version":"0"}}
+test cancellation::shutdown_cancels_precommit_work_and_joins_it ... ok
+<- {"jsonrpc":"2.0","id":"inspect","result":{"error":null,"method":"doc.set","op_id":"01a19271-4096-76b1-8811-317945932372","result":{"op_id":"01a19271-4096-76b1-8811-317945932372","value":"payload","version":"0"},"state":"committed","updated_seq":"3"}}
+
+<- {"jsonrpc":"2.0","id":"commit","result":{"op_id":"01a19271-40ae-735f-a2a9-130b41d17b74","value":"payload","version":"0"}}
+
+-> {"id":"cancel","jsonrpc":"2.0","method":"op.cancel","params":{"op_id":"01a19271-40ae-735f-a2a9-130b41d17b74"}}
+<- {"jsonrpc":"2.0","id":"cancel","result":{"error":null,"evidence":{"cancellation_requested":true,"exit":null,"incarnations":null,"intent":null,"terminal_id":null,"write":null},"method":"doc.set","op_id":"01a19271-4096-76b1-8811-317cfeb54e83","outcome":"pending","result":null,"state":"running","updated_seq":"3"}}
+
+<- {"jsonrpc":"2.0","id":"current","result":{"incarnation":"2","observed":"unknown"}}
+
+<- {"jsonrpc":"2.0","id":"inspect","result":{"error":null,"method":"doc.set","op_id":"01a19271-40ad-7040-b850-42090b8ea782","result":{"op_id":"01a19271-40ad-7040-b850-42090b8ea782","value":"payload","version":"0"},"state":"committed","updated_seq":"3"}}
+
+-> {"id":"cancel","jsonrpc":"2.0","method":"op.cancel","params":{"op_id":"01a19271-40ad-7040-b850-42090b8ea782"}}
+test cancellation::disconnect_does_not_abandon_an_accepted_operation ... ok
+<- {"jsonrpc":"2.0","id":"inspect","result":{"error":{"hint":"re-authenticate with a current credential; queued work was not written","kind":"credential_revoked","retryable":false},"method":"doc.set","op_id":"01a19271-4096-76b1-8811-317a52849751","result":null,"state":"failed","updated_seq":"3"}}
+
+test incarnation::stale_incarnation_is_rejected_before_admission_or_effect ... ok
+<- {"jsonrpc":"2.0","id":"duplicate-0","result":{"op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-7","result":{"op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-1","result":{"op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-2","result":{"op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-3","result":{"op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-5","result":{"op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-4","result":{"op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+
+<- {"jsonrpc":"2.0","id":"duplicate-6","result":{"op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"}}
+
+-> {"id":"retained","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-40ad-7040-b850-420a13867cdd"}}
+-> {"id":"slow-5","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-313ee8af75e4","value":"payload","version":"0"}}
+test authority::revocation_after_admission_is_rechecked_at_the_effect_boundary ... ok
+<- {"jsonrpc":"2.0","id":"slow","error":{"code":-32000,"message":"operation failed","data":{"kind":"cancelled","hint":"inspect the retained outcome; never automatically replay uncertain effects","retryable":false,"op_id":"01a19271-40ad-7040-b850-42080ae88f05"}}}
+
+test cancellation::cancellation_before_commit_prevents_the_effect ... ok
+<- {"jsonrpc":"2.0","id":"effect","result":{"op_id":"01a19271-4096-76b1-8811-317cfeb54e83","value":"payload","version":"0"}}
+
+-> {"id":"inspect","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-4096-76b1-8811-317cfeb54e83"}}
+<- {"jsonrpc":"2.0","id":"retained","result":{"error":null,"method":"doc.set","op_id":"01a19271-40ad-7040-b850-420a13867cdd","result":{"op_id":"01a19271-40ad-7040-b850-420a13867cdd","value":"payload","version":"0"},"state":"committed","updated_seq":"3"}}
+
+-> {"id":"slow-6","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-313f00795440","value":"payload","version":"0"}}
+test convergence::eight_identical_dispatches_converge_on_one_execution_and_outcome ... ok
+<- {"jsonrpc":"2.0","id":"cancel","result":{"error":null,"method":"doc.set","op_id":"01a19271-40ae-735f-a2a9-130b41d17b74","outcome":"already_committed","result":{"op_id":"01a19271-40ae-735f-a2a9-130b41d17b74","value":"payload","version":"0"},"state":"committed","updated_seq":"3"}}
+
+<- {"jsonrpc":"2.0","id":"cancel","result":{"error":null,"method":"doc.set","op_id":"01a19271-40ad-7040-b850-42090b8ea782","outcome":"already_committed","result":{"op_id":"01a19271-40ad-7040-b850-42090b8ea782","value":"payload","version":"0"},"state":"committed","updated_seq":"3"}}
+
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","terminal.kill","terminal.keep","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793458258163","version":"0.1.0"}}
+
+-> {"id":"foreign","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-40ad-7040-b850-42090b8ea782"}}
+test failure ... ok
+<- {"jsonrpc":"2.0","id":"inspect","result":{"error":null,"evidence":{"cancellation_requested":true,"exit":null,"incarnations":null,"intent":null,"terminal_id":null,"write":null},"method":"doc.set","op_id":"01a19271-4096-76b1-8811-317cfeb54e83","result":{"op_id":"01a19271-4096-76b1-8811-317cfeb54e83","value":"payload","version":"0"},"state":"committed","updated_seq":"4"}}
+
+test cancellation::cancellation_after_effect_start_is_pending_without_rollback ... ok
+<- {"jsonrpc":"2.0","id":"foreign","error":{"code":-32000,"message":"operation failed","data":{"kind":"forbidden","hint":"ask an administrator for a grant covering this target","retryable":false,"op_id":"01a19271-40ad-7040-b850-42090b8ea782"}}}
+
+-> {"id":"foreign","jsonrpc":"2.0","method":"op.cancel","params":{"op_id":"01a19271-40ad-7040-b850-42090b8ea782"}}
+-> {"id":"slow-7","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-314004d9c332","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"foreign","error":{"code":-32000,"message":"operation failed","data":{"kind":"forbidden","hint":"ask an administrator for a grant covering this target","retryable":false,"op_id":"01a19271-40ad-7040-b850-42090b8ea782"}}}
+
+test authority::resource_scope_is_checked_before_handlers_and_receipts_are_principal_bound ... ok
+-> {"id":"slow-8","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3141ec091106","value":"payload","version":"0"}}
+-> {"id":"slow-9","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-314210021a72","value":"payload","version":"0"}}
+-> {"id":"slow-10","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3143e654b869","value":"payload","version":"0"}}
+-> {"id":"slow-11","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31449cec3612","value":"payload","version":"0"}}
+-> {"id":"slow-12","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31457818a3f1","value":"payload","version":"0"}}
+-> {"id":"slow-13","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3146b9f368c9","value":"payload","version":"0"}}
+-> {"id":"slow-14","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31473985689a","value":"payload","version":"0"}}
+-> {"id":"slow-15","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-314861ee1c12","value":"payload","version":"0"}}
+-> {"id":"slow-16","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3149bc111f56","value":"payload","version":"0"}}
+-> {"id":"slow-17","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-314aa2d8d03b","value":"payload","version":"0"}}
+-> {"id":"slow-18","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-314b966b7eec","value":"payload","version":"0"}}
+-> {"id":"slow-19","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-314c4d2b437d","value":"payload","version":"0"}}
+-> {"id":"slow-20","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-314df08b123a","value":"payload","version":"0"}}
+-> {"id":"slow-21","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-314ed0b46e0e","value":"payload","version":"0"}}
+-> {"id":"slow-22","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-314f370e2a58","value":"payload","version":"0"}}
+-> {"id":"slow-23","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-315049da6a6c","value":"payload","version":"0"}}
+-> {"id":"slow-24","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31516c503927","value":"payload","version":"0"}}
+-> {"id":"slow-25","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-315244ac9c5d","value":"payload","version":"0"}}
+-> {"id":"slow-26","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-315307f8a1ca","value":"payload","version":"0"}}
+-> {"id":"slow-27","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31541a372d12","value":"payload","version":"0"}}
+-> {"id":"slow-28","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3155aaffc468","value":"payload","version":"0"}}
+-> {"id":"slow-29","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3156ee8de0d9","value":"payload","version":"0"}}
+-> {"id":"slow-30","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31571b3d61a8","value":"payload","version":"0"}}
+-> {"id":"slow-31","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3158823be85a","value":"payload","version":"0"}}
+-> {"id":"slow-32","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-315909a4d560","value":"payload","version":"0"}}
+-> {"id":"slow-33","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-315a0515dfab","value":"payload","version":"0"}}
+-> {"id":"slow-34","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-315bb4021116","value":"payload","version":"0"}}
+-> {"id":"slow-35","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-315c68e68470","value":"payload","version":"0"}}
+-> {"id":"slow-36","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-315d636ac2cc","value":"payload","version":"0"}}
+-> {"id":"slow-37","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-315ee829b890","value":"payload","version":"0"}}
+-> {"id":"slow-38","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-315f89a5d969","value":"payload","version":"0"}}
+-> {"id":"slow-39","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3160a58dbfc6","value":"payload","version":"0"}}
+-> {"id":"slow-40","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31615f9d23e4","value":"payload","version":"0"}}
+-> {"id":"slow-41","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-316226751562","value":"payload","version":"0"}}
+-> {"id":"slow-42","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-316358296505","value":"payload","version":"0"}}
+-> {"id":"slow-43","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31643a2abe49","value":"payload","version":"0"}}
+-> {"id":"slow-44","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3165b9f898e6","value":"payload","version":"0"}}
+-> {"id":"slow-45","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3166a4ccf609","value":"payload","version":"0"}}
+-> {"id":"slow-46","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3167af5ee8c2","value":"payload","version":"0"}}
+-> {"id":"slow-47","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31681cbe1a4b","value":"payload","version":"0"}}
+-> {"id":"slow-48","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31695d12bc6c","value":"payload","version":"0"}}
+-> {"id":"slow-49","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-316a4bfd51ec","value":"payload","version":"0"}}
+-> {"id":"slow-50","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-316b5eee7604","value":"payload","version":"0"}}
+-> {"id":"slow-51","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-316cd2597743","value":"payload","version":"0"}}
+-> {"id":"slow-52","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-316d7bf25580","value":"payload","version":"0"}}
+-> {"id":"slow-53","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-316ec23036c0","value":"payload","version":"0"}}
+-> {"id":"slow-54","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-316f5629b40b","value":"payload","version":"0"}}
+-> {"id":"slow-55","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3170a4497ca2","value":"payload","version":"0"}}
+-> {"id":"slow-56","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31714eccb3a4","value":"payload","version":"0"}}
+-> {"id":"slow-57","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-317227410741","value":"payload","version":"0"}}
+-> {"id":"slow-58","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3173fba2132a","value":"payload","version":"0"}}
+-> {"id":"slow-59","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-317432909ae3","value":"payload","version":"0"}}
+-> {"id":"slow-60","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-31752e0c38f7","value":"payload","version":"0"}}
+-> {"id":"slow-61","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3176f5415d87","value":"payload","version":"0"}}
+-> {"id":"slow-62","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-3177c1e1c3f4","value":"payload","version":"0"}}
+-> {"id":"slow-63","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-4096-76b1-8811-317868ff71bc","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"slow-0","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31392ecd09f3","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-317ba96e0046","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+-> {"id":"inspect","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-4096-76b1-8811-317ba96e0046"}}
+<- {"jsonrpc":"2.0","id":"inspect","result":{"error":null,"method":"doc.set","op_id":"01a19271-4096-76b1-8811-317ba96e0046","result":{"op_id":"01a19271-4096-76b1-8811-317ba96e0046","value":"payload","version":"0"},"state":"committed","updated_seq":"3"}}
+
+test happy ... ok
+<- {"jsonrpc":"2.0","id":"slow-1","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-313a2edae615","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-2","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-313b837e5dd2","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-3","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-313c38d3a68a","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-4","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-313d42b56b81","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-5","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-313ee8af75e4","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-6","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-313f00795440","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-7","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-314004d9c332","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-8","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3141ec091106","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-9","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-314210021a72","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-10","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3143e654b869","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-11","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31449cec3612","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-12","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31457818a3f1","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-13","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3146b9f368c9","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-14","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31473985689a","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-15","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-314861ee1c12","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-16","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3149bc111f56","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-17","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-314aa2d8d03b","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-18","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-314b966b7eec","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-19","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-314c4d2b437d","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-20","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-314df08b123a","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-21","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-314ed0b46e0e","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-22","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-314f370e2a58","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-23","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-315049da6a6c","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-24","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31516c503927","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-25","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-315244ac9c5d","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-26","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-315307f8a1ca","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-27","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31541a372d12","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-28","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3155aaffc468","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-29","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3156ee8de0d9","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-30","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31571b3d61a8","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-31","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3158823be85a","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-32","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-315909a4d560","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-33","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-315a0515dfab","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-34","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-315bb4021116","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-35","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-315c68e68470","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-36","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-315d636ac2cc","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-37","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-315ee829b890","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-38","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-315f89a5d969","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-39","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3160a58dbfc6","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-40","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31615f9d23e4","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-41","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-316226751562","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-42","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-316358296505","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-43","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31643a2abe49","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-44","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3165b9f898e6","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-45","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3166a4ccf609","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-46","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3167af5ee8c2","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-47","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31681cbe1a4b","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-48","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31695d12bc6c","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-49","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-316a4bfd51ec","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-50","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-316b5eee7604","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-51","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-316cd2597743","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-52","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-316d7bf25580","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-53","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-316ec23036c0","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-54","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-316f5629b40b","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-55","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3170a4497ca2","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-56","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31714eccb3a4","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-57","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-317227410741","deadline_ms":"10000","elapsed_ms":"10000"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-58","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3173fba2132a","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-59","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-317432909ae3","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-60","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-31752e0c38f7","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-61","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3176f5415d87","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-62","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-3177c1e1c3f4","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+<- {"jsonrpc":"2.0","id":"slow-63","error":{"code":-32000,"message":"operation failed","data":{"kind":"deadline_exceeded","hint":"inspect or cancel the operation by op_id","retryable":false,"op_id":"01a19271-4096-76b1-8811-317868ff71bc","deadline_ms":"10000","elapsed_ms":"10001"}}}
+
+-> {"id":"overflow","jsonrpc":"2.0","method":"doc.set","params":{"name":"test","op_id":"01a19271-6a6e-7145-8589-fff8d6d9236d","value":"payload","version":"0"}}
+<- {"jsonrpc":"2.0","id":"overflow","error":{"code":-32000,"message":"operation failed","data":{"kind":"backpressure","hint":"inspect or cancel outstanding operations before retrying","retryable":true}}}
+
+-> {"id":"inspect","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-4096-76b1-8811-31392ecd09f3"}}
+<- {"jsonrpc":"2.0","id":"inspect","result":{"error":null,"method":"doc.set","op_id":"01a19271-4096-76b1-8811-31392ecd09f3","result":null,"state":"accepted","updated_seq":"1"}}
+
+-> {"id":"closed","jsonrpc":"2.0","method":"op.get","params":{"op_id":"01a19271-4096-76b1-8811-31392ecd09f3"}}
+<- {"jsonrpc":"2.0","id":"closed","error":{"code":-32000,"message":"operation failed","data":{"kind":"unavailable","hint":"connect to an available runtime","retryable":false}}}
+
+test bounds::timed_out_work_keeps_its_connection_budget_and_control_remains_available ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.30s
+
+EXIT=0
+$ cargo clippy --locked -p ovis-terminal-agent -p ovis-terminal-protocol -p ovis-terminal-server --all-targets -- -D warnings
+    Checking ovis-terminal-agent v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-agent)
+    Checking ovis-terminal-agent-adapters v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-agent-adapters)
+    Checking ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-server)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.63s
+EXIT=0
+$ cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked
+    Checking ovis-terminal-protocol v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-protocol)
+    Checking ovis-terminal-agent v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-agent)
+    Checking ovis-terminal-agent-adapters v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-agent-adapters)
+    Checking ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-server)
+    Checking ovis-terminal-conformance v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/conformance)
+    Checking ovis-terminal-cli v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t33/crates/ovis-terminal-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.85s
+EXIT=0

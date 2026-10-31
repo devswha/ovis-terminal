@@ -79,6 +79,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     dispatch
         .register(TerminalKeep::new(&effects, runtime)?)
         .map_err(at("register terminal.keep"))?;
+    super::agents::register(&mut dispatch, runtime, Arc::clone(&core))?;
     let handler = Arc::new(FixtureHandler::new(Arc::new(dispatch)));
     let socket = root.join("run").join("s.sock");
     let endpoint = UnixEndpoint::bind(&socket)
