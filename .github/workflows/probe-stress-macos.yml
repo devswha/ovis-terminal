@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, fairness]
 
 permissions:
   contents: read
@@ -626,4 +626,44 @@ jobs:
         with:
           name: conpty-windows-${{ github.run_id }}
           path: conpty-windows.log
+          if-no-files-found: error
+  fairness:
+    if: inputs.probe == 'fairness'
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: pin C toolchain
+        shell: bash
+        run: |
+          sudo xcode-select -s "/Applications/Xcode_26.6.app"
+          version="$(xcodebuild -version)"
+          test "${version%%$'\n'*}" = "Xcode 26.6"
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - name: scheduler profile and failure tests 50 times, then the real-PTY tuning runs
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            sysctl -n hw.ncpu machdep.cpu.brand_string
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 50); do
+              printf '\nITERATION %s/50\n' "$iteration"
+              cargo test --locked -p ovis-terminal-server --lib scheduler:: -- --nocapture
+              cargo test --locked -p ovis-terminal-vt --lib shard
+            done
+            cargo build --release --locked -p ovis-terminal-bench --bin fairness-tuning
+            ./target/release/fairness-tuning parse
+            ./target/release/fairness-tuning load 16 0 1048576 10 16384 4
+            ./target/release/fairness-tuning load 50 8 1048576 10
+            printf 'RESULT pass\n'
+          } 2>&1 | tee fairness-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fairness-stress-macos-${{ github.run_id }}
+          path: fairness-stress-macos.log
           if-no-files-found: error

@@ -1,0 +1,31 @@
+$ cargo test -p ovis-terminal-server --lib scheduler:: -- --nocapture
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running unittests src/lib.rs (target/debug/deps/ovis_terminal_server-592aa160fc0a6400)
+
+running 12 tests
+
+thread 't56-db-panic' (1317582) panicked at crates/ovis-terminal-server/src/streams/scheduler/qa/threads.rs:46:42:
+job fails
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test streams::scheduler::budget::tests::a_refusal_holds_nothing_and_a_drop_returns_the_bytes ... ok
+test streams::scheduler::qa::failure::every_refusal_maps_to_a_typed_retryable_wire_kind ... ok
+test streams::scheduler::qa::threads::a_panicking_db_job_is_reported_at_shutdown ... ok
+test streams::scheduler::qa::failure::the_session_bound_refuses_and_returns_the_terminal_reservation ... ok
+test streams::scheduler::qa::fanout::every_viewer_receives_the_same_shared_chunk ... ok
+test streams::scheduler::qa::threads::the_db_writer_refuses_past_its_queue_and_joins_with_every_accepted_job ... ok
+test streams::scheduler::qa::threads::a_pump_stops_when_its_actor_has_stopped ... ok
+test streams::scheduler::qa::threads::the_blocking_gate_refuses_one_past_its_slots ... ok
+test streams::scheduler::qa::failure::overflow_is_refused_before_admission_and_cancel_stays_serviceable ... ok
+test streams::scheduler::budget::tests::held_bytes_never_pass_the_limit ... ok
+test streams::scheduler::qa::threads::an_owned_pump_carries_output_until_eof_and_is_joined ... ok
+{"profile":"16-pty/8-client/16-inflight/1MiB-s","requests":6560,"commits":4928,"admissions":3280,"controls":3280,"admission_max_ms":2.063,"control_max_ms":1.868,"events":39424,"event_max_ms":3.050,"events_lost":0,"rejected":0,"output_bytes":4216832,"parsed_bytes":4216832,"parse_turns":4118,"max_turn_ms":2.453}
+test streams::scheduler::qa::profile::sixteen_ptys_eight_clients_keep_every_control_within_100_ms ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 39 filtered out; finished in 4.13s
+
+exit=0
+$ cargo test -p ovis-terminal-vt --lib shard
+test shard::tests::an_idle_turn_feeds_nothing ... ok
+test shard::tests::a_chunk_past_the_cap_is_refused_without_queuing ... ok
+test shard::tests::budgeted_turns_equal_one_whole_feed ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.58s
