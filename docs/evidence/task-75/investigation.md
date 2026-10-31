@@ -55,6 +55,22 @@ test both pass, including 50 consecutive combined runs under eight CPU workers.
 The existing accept-loop join/drain invariant is unchanged. There is no wire or
 public API change.
 
+## AdversarialVerify round 2 correction
+
+The set-once cell initially treated every driver-loop exit as a failure cause.
+That included a normal read-side EOF, even though `drain_after_eof` intentionally
+continues serving already-dispatched requests. When a retained notifier overflowed
+during that drain, EOF had already claimed the cell, so the writer never received
+the overflow signal; the peer received an ordinary reply and the driver returned
+success (`round-3-pre-fix.log`, exit 100).
+
+Only `End::Failed` now records a driver failure. `PeerClosed` and `Shutdown` remain
+lifecycle transitions. Writer failures and budget overflow still record at their
+existing boundaries. The permanent half-close test shuts down only the client's
+write side, waits for the real EOF, overflows through a retained notifier while a
+request remains pending, then requires a backpressure closing and Backpressure
+driver result. It passes together with the two previous causal orderings.
+
 ## Verification correction
 
 The first repository gate failed Clippy's `significant_drop_in_scrutinee` and

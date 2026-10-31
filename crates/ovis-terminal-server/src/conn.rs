@@ -17,6 +17,8 @@ mod outbound;
 mod writer;
 
 #[cfg(test)]
+mod half_close_order;
+#[cfg(test)]
 mod terminal_order;
 
 pub use connections::Connections;

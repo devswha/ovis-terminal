@@ -44,9 +44,10 @@ drained report.
 
 `conn/cause.rs` owns one set-once first-terminal-cause cell and final writer/result
 resolution. A budget refusal records overflow before publishing its signal; the
-driver records another terminal path as soon as its select loop ends; and the writer
-records genuine encode, write, or shutdown failures where they occur. Whichever
-record wins stays authoritative.
+driver records only `End::Failed` branches; and the writer records genuine encode,
+write, or shutdown failures where they occur. Normal peer EOF and server shutdown
+are lifecycle transitions, not failure causes. Whichever failure record wins stays
+authoritative.
 The final driver result uses backpressure only when overflow won that ordering,
 so later teardown errors cannot replace peer-visible backpressure and a later
 escaped-notifier overflow cannot replace an earlier connection I/O failure. The
@@ -56,7 +57,7 @@ writer resolution leaves `driver.rs` at 237 pure lines, below the 250-line limit
 Local evidence is Linux x86_64 with the isolated Rust/linker environment from the
 brief, after fast-forwarding to integration base
 `8db5609986d000997b6344d230523c62d290e694`. `source-sha256.log` identifies the
-nine Rust sources used for verification.
+ten Rust sources used for verification.
 
 ```sh
 cargo nextest run -p ovis-terminal-server --locked \
@@ -97,6 +98,41 @@ bash scripts/check.sh
 # Summary [ 119.909s] 368 tests run: 368 passed (1 slow), 1 skipped
 # check.sh: all steps passed
 # ROUND_2_CHECK_EXIT=0
+```
+
+### Round 3: keep failure accounting live during half-close drain
+
+AdversarialVerify round 2 found that a normal read-side EOF claimed the failure
+cell before outstanding requests drained. A real overflow during that drain was
+therefore suppressed: the peer received an ordinary reply and the driver returned
+success. `PeerClosed` now starts request draining without recording a failure.
+Overflow and genuine driver/writer failures remain eligible to claim the cell.
+
+```sh
+cargo nextest run -p ovis-terminal-server --locked \
+  -E 'test(overflow_while_draining_after_read_eof_is_not_success)' --nocapture
+# pre-fix exit 100; round-3-pre-fix.log
+# HALF_CLOSE_WIRE contained only the ordinary reply
+# HALF_CLOSE_OUTCOME=Ok(())
+
+cargo nextest run -p ovis-terminal-server --locked \
+  -E 'test(overflow_while_draining_after_read_eof_is_not_success) |
+      test(io_before_overflow_keeps_its_terminal_cause) |
+      test(shutdown_joins_and_counts_an_overflow_before_the_driver_can_finish)' \
+  --nocapture
+# exit 0; round-3-ordering.log
+# half-close drain -> backpressure closing and Backpressure outcome
+# I/O first -> connection_io; overflow first -> backpressure
+
+# round-3-ordering-stress.log
+# ROUND_3_ORDERING_RESULT=50/50 PASS
+# 50 runs x 3 ordering tests = 150 passing executions under eight CPU workers
+
+bash scripts/check.sh
+# exit 0; round-3-check.log
+# Summary [ 116.252s] 369 tests run: 369 passed (1 slow), 1 skipped
+# check.sh: all steps passed
+# ROUND_3_CHECK_EXIT=0
 ```
 
 ```sh
@@ -141,6 +177,9 @@ claim. The real Unix socket component behavior was exercised as described below.
 - Round-2 `cargo nextest run -p ovis-terminal-server --locked` exited 0 with
   37 passed and zero skipped (`round-2-server.log`). The two real socket bound
   tests passed again with their peer-visible closing record (`round-2-socket-qa.log`).
+- Round-3 full server verification exited 0 with 38 passed and zero skipped
+  (`round-3-server.log`). The two real socket bound tests passed again with their
+  peer-visible closing record (`round-3-socket-qa.log`).
 - The record-boundary peer actually receives `$/closing` with reason
   `backpressure`, decimal-string limit `"67108864"` and queued bytes `"0"`, then
   EOF. Shutdown must report `backpressure: 1` and `aborted: 0`.
@@ -158,6 +197,11 @@ claim. The real Unix socket component behavior was exercised as described below.
   only the read error and writer-shutdown completion barrier. The peer receives
   `connection_io` before overflow is triggered, and the final error remains
   `connection_io`.
+- The half-close test uses a real duplex EOF: the client shuts down only its write
+  side while retaining the read side. A dispatched request remains pending, its
+  retained notifier overflows during `drain_after_eof`, and the peer receives
+  `$/closing{reason:"backpressure"}`. The final outcome is Backpressure, never
+  success.
 
 ## Adversarial
 
@@ -170,6 +214,8 @@ claim. The real Unix socket component behavior was exercised as described below.
   approximately one CPU each. The final stress loop uses no retries.
 - **Round-2 ordering stress:** both inverse orderings passed together 50/50 under
   eight independently observed CPU workers, with no retries or sleeps.
+- **Round-3 ordering stress:** half-close drain, I/O-first and overflow-first run
+  together 50/50 under eight CPU workers, with no retries or sleeps.
 - No fixed sleeps, wire changes, fake connection outcomes, or loosened assertions.
   The only original-test changes add the full report to mismatch diagnostics.
 

@@ -75,7 +75,9 @@ where
     };
     let mut buffer = vec![0_u8; READ_CHUNK];
     let terminal = |end| {
-        budget.record_connection_end();
+        if matches!(&end, End::Failed(_)) {
+            budget.record_connection_end();
+        }
         end
     };
     let end = loop {

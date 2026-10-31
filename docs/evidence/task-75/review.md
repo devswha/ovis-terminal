@@ -77,6 +77,12 @@ cannot be rewritten by a retained notifier during teardown. The existing
 five-second shutdown grace and classification of forcibly aborted tasks are
 unchanged.
 
+Normal EOF is deliberately excluded from this failure arbitration. It starts
+`drain_after_eof`, where outstanding requests may still produce replies,
+notifications or overflow. The half-close regression uses a real duplex EOF and
+real retained notifier to prove overflow remains visible during that drain. No
+sleep, fake error, mocked budget result or source-text assertion is involved.
+
 The task's supplied GAP-026 / IDEAL-053 regression labels are retained for
 traceability; this change proves shutdown failure accounting, not the unrelated
 output-wait semantics described by the full IDEAL-053 ledger entry.
