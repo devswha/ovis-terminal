@@ -59,23 +59,29 @@ fn is_hangup(error: &io::Error) -> bool {
 }
 
 /// Reads the next chunk, waiting while the master is empty.
+///
+/// POLLHUP is reported together with POLLIN while the final bytes are still
+/// queued (the slave may close before they reach the master), so a hang-up seen
+/// by `poll` only ends output once a following read finds nothing left.
 pub(super) fn read_chunk(
-    file: &mut File,
+    file: &mut (impl Read + AsFd),
     buffer: &mut [u8],
     wake: &PumpWake,
 ) -> Result<ReadOutcome, TerminalIoError> {
+    let mut hung_up = false;
     loop {
         match file.read(buffer) {
             Ok(0) => return Ok(ReadOutcome::Hangup),
             Ok(read) => return Ok(ReadOutcome::Data(read)),
             Err(error) if error.kind() == ErrorKind::Interrupted => {}
+            Err(error) if error.kind() == ErrorKind::WouldBlock && hung_up => {
+                return Ok(ReadOutcome::Hangup);
+            }
             Err(error) if error.kind() == ErrorKind::WouldBlock => {
-                // After a hang-up the next read drains what remains, then reports EIO.
                 match wait_for_read(file.as_fd(), wake.0.as_fd())? {
                     PumpReadiness::Pty(Readiness::Ready) => {}
-                    PumpReadiness::Pty(Readiness::Hangup) | PumpReadiness::Stopped => {
-                        return Ok(ReadOutcome::Hangup);
-                    }
+                    PumpReadiness::Pty(Readiness::Hangup) => hung_up = true,
+                    PumpReadiness::Stopped => return Ok(ReadOutcome::Hangup),
                 }
             }
             Err(error) if is_hangup(&error) => return Ok(ReadOutcome::Hangup),
@@ -204,97 +210,4 @@ const fn classify(revents: libc::c_short) -> Result<Readiness, TerminalIoError> 
 }
 
 #[cfg(test)]
-mod tests {
-    use std::fs::File;
-
-    use super::{Readiness, classify, poll_raw, pump_stop_pair, read_chunk, write_prefix};
-    use crate::protocol::{PtyIoFailure, PtyOperation};
-
-    #[test]
-    fn unexpected_read_failure_is_typed_not_a_hangup() {
-        // Given: a descriptor whose reads fail with EISDIR, not a PTY hang-up.
-        let mut directory = File::open(std::env::temp_dir()).expect("open directory");
-        let (_stop, wake) = pump_stop_pair().expect("pump stop pair");
-
-        // When: the pump reads from it.
-        let Err(failure) = read_chunk(&mut directory, &mut [0; 16], &wake) else {
-            panic!("a failed read must not look like data or EOF");
-        };
-
-        // Then: the failure keeps its kind, source and OS error.
-        assert_eq!(failure.kind(), "pty_read_failed");
-        assert!(std::error::Error::source(&failure).is_some());
-        let wire = PtyIoFailure {
-            operation: PtyOperation::Read,
-            os_error: Some(libc::EISDIR),
-            poll_revents: None,
-        };
-        assert_eq!(failure.io_failure(), Some(wire));
-        assert_eq!(failure.exit_unknown(), None);
-    }
-
-    #[test]
-    fn unexpected_write_failure_is_returned_with_the_written_prefix() {
-        // Given: a read-only descriptor, so writes fail with EBADF.
-        let path = std::env::temp_dir().join(format!("ovis-t6-ro-{}", std::process::id()));
-        std::fs::write(&path, b"").expect("create file");
-        let mut read_only = File::open(&path).expect("open read-only");
-
-        // When: the writer writes an entry to it.
-        let outcome = write_prefix(&mut read_only, b"input");
-
-        // Then: nothing was written and the failure is typed with its OS error.
-        assert_eq!(outcome.written, 0);
-        let failure = outcome.failure.expect("write failure is reported");
-        assert_eq!(failure.kind(), "pty_write_failed");
-        let wire = failure.io_failure().expect("output-side failure");
-        assert_eq!(
-            (wire.operation, wire.os_error),
-            (PtyOperation::Write, Some(libc::EBADF))
-        );
-        std::fs::remove_file(&path).expect("remove file");
-    }
-
-    #[test]
-    fn poll_flags_classify_hangup_readiness_and_typed_failures() {
-        // Given / When / Then: POLLHUP (with or without POLLERR) is a hang-up,
-        // POLLERR without POLLHUP and POLLNVAL are typed failures.
-        assert_eq!(classify(libc::POLLHUP).ok(), Some(Readiness::Hangup));
-        assert_eq!(
-            classify(libc::POLLHUP | libc::POLLERR).ok(),
-            Some(Readiness::Hangup)
-        );
-        assert_eq!(classify(libc::POLLOUT).ok(), Some(Readiness::Ready));
-        for flags in [libc::POLLOUT | libc::POLLERR, libc::POLLNVAL] {
-            let failure = classify(flags).expect_err("error flags are a failure");
-            assert_eq!(failure.kind(), "pty_poll_flagged");
-            let wire = failure.io_failure().expect("output-side failure");
-            let expected = u16::from_ne_bytes(flags.to_ne_bytes());
-            assert_eq!(
-                (wire.operation, wire.poll_revents),
-                (PtyOperation::Poll, Some(expected))
-            );
-        }
-    }
-
-    #[test]
-    fn kernel_poll_error_flags_are_a_typed_failure_not_a_hangup() {
-        // Given: a descriptor number that is never open; Linux and macOS both
-        // report POLLNVAL for it.
-        let never_open = libc::c_int::MAX / 2;
-
-        // When: the holder waits on it.
-        let Err(failure) = poll_raw(never_open, libc::POLLOUT) else {
-            panic!("POLLNVAL must not be erased into readiness or a hang-up");
-        };
-
-        // Then: the kernel's flags arrive as the typed poll failure.
-        let pollnval = u16::from_ne_bytes(libc::POLLNVAL.to_ne_bytes());
-        let wire = failure.io_failure().expect("output-side failure");
-        assert_eq!(wire.operation, PtyOperation::Poll);
-        assert_eq!(
-            wire.poll_revents.map(|flags| flags & pollnval),
-            Some(pollnval)
-        );
-    }
-}
+mod tests;

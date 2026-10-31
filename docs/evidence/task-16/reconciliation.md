@@ -47,6 +47,30 @@ be unreaped at EOF:
 No wire record changed: `Hangup` keeps its fields and envelope placement. Only
 its doc text drops the "pre-reap" wording.
 
+## Final bytes after an early reap (CI on 10888e3)
+
+CI's `each_launch_gets_its_own_cwd_and_environment_over_the_socket` received
+Exit with no output at all. The hole was in `pty_io::read_chunk`. Its comment
+said the next read drains what remains after a hang-up, but a `poll` that
+reported POLLHUP returned `Hangup` at once, even with POLLIN set. Now the waiter
+reaps immediately, and `FIONREAD` on the probe can read 0 while the child's
+bytes are still in the tty flip buffer. The slave can therefore close before
+those bytes reach the master. The pump then woke with POLLIN|POLLHUP and dropped
+them, and `final_offset` (from the tail head) faithfully excluded them.
+
+Fix: hang-up readiness from `poll` only marks the PTY as hung up. The pump
+keeps reading. Output ends only when a read itself reports EOF/EIO, or when a
+read after the hang-up finds nothing (`WouldBlock`). On Linux a master read
+after the slave closed flushes the pending tty buffer work first. A PumpStop
+wake (shutdown) still ends output immediately, as todo 76 requires.
+
+Regression: `pty_io::tests::hangup_readiness_with_queued_final_bytes_returns_them_before_hangup`.
+It uses a real pipe holding `final` with its writer closed, so the kernel's
+`poll` reports POLLIN|POLLHUP, behind a reader whose first read finds nothing.
+This reproduces the CI interleaving deterministically. With the old decision
+line restored, the test fails ("queued final bytes were dropped as a hang-up").
+With the fix it returns `Data("final")` and then `Hangup`.
+
 ## Which test guards which invariant
 
 | Test | Invariant |

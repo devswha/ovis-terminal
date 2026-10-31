@@ -213,6 +213,8 @@ Resolution (full reasoning in `docs/evidence/task-16/reconciliation.md`): the ba
 - `record_hangup` publishes Hangup from the PID and start token retained in `HeldTerminal` at spawn. These survive the reap, so a post-reap EOF is still correctly attributed. The pump still publishes Hangup before it consumes the waiter report and records Exit, and Exit stays last.
 - `Holder::hangup` now uses todo 76's reap-serialized, incarnation-checked delivery (`signalling::signal_with` + `process::send_hangup`). A reaped leader's group is still addressed, a replaced PID never is, and the PID 0/1 refusal covers SIGHUP. No wire record changed.
 
+Follow-up after CI on 10888e3. `each_launch_gets_its_own_cwd_and_environment_over_the_socket` received Exit with no output on ubuntu. `pty_io::read_chunk` returned `Hangup` as soon as `poll` reported POLLHUP, even with POLLIN set. With the reap no longer delayed, the slave can close while the child's last bytes are still in the tty flip buffer (FIONREAD reads 0), so those bytes were dropped. Hang-up readiness now only marks the PTY hung up. The pump keeps reading until a read reports EOF/EIO or finds nothing, and PumpStop still ends output at once. The deterministic regression `pty_io::tests::hangup_readiness_with_queued_final_bytes_returns_them_before_hangup` runs a real pipe with POLLIN|POLLHUP behind a first read that finds nothing. It fails with the old decision line and passes with the fix.
+
 Tests guarding the invariants:
 
 - I-76: `shutdown_tests::{shutdown_reports_already_exited_when_waiter_reaped_before_output_completion, shutdown_kills_same_group_descendant_after_leader_is_reaped, shutdown_stops_pump_when_reaped_leader_group_is_gone, shutdown_reports_zombie_without_signalling_before_waiter_reaps}`.
@@ -224,8 +226,9 @@ Reconciliation verification (Linux x86_64):
 | Command | Exit | Result |
 | --- | --- | --- |
 | `cargo nextest run -p ovis-terminal-holder -p ovis-terminal-core --all-targets --locked` | 0 | 149 passed (run before the final lint-only edits: `send_hangup` visibility, `matches!` assertion form) |
-| `bash scripts/check.sh` (final code) | 0 | fmt, workspace clippy `-D warnings`, workspace nextest 433 passed / 1 skipped, doctests, 0 hygiene violations in 428 files, manifest + JSON gates; `reconcile-check.log` |
-| `cargo nextest run -p ovis-terminal-holder --locked` x50 under 8 busy-loop CPU hogs (final code) | 0 | `STRESS_DONE pass=50 fail=0`, 56/56 each; `reconcile-stress.log` |
+| `bash scripts/check.sh` (final code, after the read_chunk fix) | 0 | fmt, workspace clippy `-D warnings`, workspace nextest 434 passed / 1 skipped, doctests, 0 hygiene violations in 429 files, manifest + JSON gates; `reconcile-check.log` |
+| `cargo nextest run -p ovis-terminal-holder --locked -E 'test(hangup_readiness_with_queued_final_bytes)'` with the old `poll`-hangup decision line restored | 101 | the regression fails ("queued final bytes were dropped as a hang-up"); restored fix: 57/57 holder tests pass |
+| `cargo nextest run -p ovis-terminal-holder --locked` x50 under 8 busy-loop CPU hogs (final code) | 0 | `STRESS_DONE pass=50 fail=0`, 57/57 each (rerun after the read_chunk fix); `reconcile-stress.log` |
 
 ## QA
 
@@ -275,6 +278,7 @@ The two orchestrator decisions are applied without exposing the raw store or add
 - crates/ovis-terminal-holder/src/protocol/messages/io.rs:25, :35 and protocol/payload.rs:10: Output gains optional typed Hangup evidence carried outside the unchanged nested payload. Message tags and HOLDER_PROTOCOL_GENERATION remain 2. Legacy adjacent-tagged generation-two readers ignore the optional envelope field while retaining identical target/offset/bytes; today's fixtures replay in the compatibility test.
 - crates/ovis-terminal-holder/src/protocol/process_pid.rs:7: move the existing PID newtype and add canonical string serde; src/process.rs preserves its old public re-export.
 - crates/ovis-terminal-holder/src/unix/holder/threads.rs:51, :130 and holder/state.rs:83: the waiter reaps under the state mutex as soon as the leader exits (todo 76), then drains pending bytes before dropping the slave. The pump publishes Hangup at EOF from the retained `HeldTerminal` pid and start token, then consumes the waiter report and records Exit. Existing input-ack-before-Exit and final-output invariants remain covered.
+- crates/ovis-terminal-holder/src/unix/pty_io.rs (`read_chunk`): POLLHUP readiness only marks the master hung up, and output ends at a read that reports EOF/EIO or finds nothing, so bytes queued behind the slave close still precede Exit. PumpStop ends output immediately. Tests moved to unix/pty_io/tests.rs for the 250-LOC rule.
 - crates/ovis-terminal-holder/src/unix/holder/hangup.rs:20, holder/signalling.rs:34 and process/signal.rs:94: the local holder SIGHUP method requires the exact process incarnation and goes through the reap-serialized, start-token-checked `signal_with` and the reserved-PID-refusing `send_hangup`, without changing the frozen Signal wire enum. The Unix-only rustix process dependency is recorded in Cargo.lock.
 
 Todo-5/6 scenarios, property examples, counter tests, and the task-16 scenario are updated. No todo-10/15 test was weakened; additive rollback and crash-replay tests run beside them.
