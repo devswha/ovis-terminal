@@ -167,7 +167,7 @@ impl Served {
 pub struct Outer {
     /// The PTY master: what the test types and reads.
     pub master: File,
-    slave: File,
+    slave_path: PathBuf,
     output: mpsc::Receiver<Vec<u8>>,
     seen: Vec<u8>,
     original: String,
@@ -177,6 +177,19 @@ pub struct Outer {
 
 fn settings(file: &File) -> TestResult<String> {
     Ok(format!("{:?}", termios::tcgetattr(file)?))
+}
+
+/// The tty's settings through a fresh descriptor: Darwin revokes the descriptors of a
+/// controlling terminal when its session leader exits, but the settings belong to the
+/// tty, which lives on while the master is open.
+fn settings_of(path: &std::path::Path) -> TestResult<String> {
+    use rustix::fs::{Mode, OFlags};
+    let fresh = File::from(rustix::fs::open(
+        path,
+        OFlags::RDWR | OFlags::NOCTTY,
+        Mode::empty(),
+    )?);
+    settings(&fresh)
 }
 
 impl Outer {
@@ -192,10 +205,11 @@ impl Outer {
         rustix::pty::grantpt(&master)?;
         rustix::pty::unlockpt(&master)?;
         let name = rustix::pty::ptsname(&master, Vec::new())?;
+        let slave_path = PathBuf::from(name.to_str()?);
         let slave = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
-            .open(name.to_str()?)?;
+            .open(&slave_path)?;
         termios::tcsetwinsize(
             &master,
             Winsize {
@@ -237,7 +251,7 @@ impl Outer {
         });
         Ok(Self {
             master,
-            slave,
+            slave_path,
             output,
             seen: Vec::new(),
             original,
@@ -286,7 +300,8 @@ impl Outer {
     /// Panics when the binary's behaviour differs from the expectation.
     pub fn exited(self) -> TestResult<(Option<i32>, Value, bool)> {
         let Self {
-            slave,
+            master,
+            slave_path,
             original,
             mut client,
             ..
@@ -310,7 +325,8 @@ impl Outer {
         };
         let record =
             serde_json::from_str(stderr.lines().last().unwrap_or("null")).unwrap_or(Value::Null);
-        let restored = settings(&slave)? == original;
+        let restored = settings_of(&slave_path)? == original;
+        drop(master);
         Ok((status?, record, restored))
     }
 }

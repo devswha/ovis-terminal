@@ -79,7 +79,7 @@ Gate (`docs/evidence/task-31/check-summary.log`): `bash scripts/check.sh` exits 
 - `conformance` runner:
   - `FixtureKind::Assembled` (`"fixture": "assembled"`) starts `<binary> serve --stdin-lifetime --root <root>/srv` through the same ready/report protocol; `fixture::launch::start` now takes `(program, args)`.
   - Five PTY steps (`pty_open`, `pty_type`, `pty_expect`, `pty_resize`, `pty_exit`) in `scenario/pty.rs` and `engine/pty.rs` and `engine/pty/outer.rs`. Each step records its plan as a descriptor on every platform, and runs only on Unix (module-level cfg).
-  - `runner_tests/suite.rs` lists `part-a/task-31.json` (16 to 17 entries).
+  - `runner_tests/suite.rs` registers `part-a/task-31.json` in its own `ASSEMBLED` constant, merged sorted into the inventory check. The shared `EXECUTABLE` array is untouched, so a union with integration's own additions compiles.
 - CLI exit table: new kinds `not_a_tty` (2), `connection_lost` (4), `lease_held` (11), `attach_refused` (12). `src/lib.rs` gains `pub mod assembly` and `pub mod attach`, which hold only crate-visible items. The shipped manual (`skill.md`) documents the new verbs.
 - Manifests: the CLI gains Unix deps on authz, core, store, vt, base64, uuid and rustix (termios/stdio/process; the version the holder resolves) plus a rustix `pty` dev-dep. The conformance runner gains a Unix rustix dep.
 - Holder wire generation stays 2.
@@ -123,6 +123,16 @@ Every item ran for real; the transcripts are in the evidence above.
 
 DEFERRED VERIFICATION (runner lands in Todo 21): none. The runner landed, and `part-a/task-31` ran and passed (exit 0, outputs above).
 
+## macOS fix (round 2)
+
+CI on `a978c77` failed `test (macos-latest)` only, with `ENOTTY` in `a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_terminal` and `connection_loss_restores_the_outer_terminal_and_reports_it`.
+
+Cause: the tests already allocate their own PTY. Its slave is the CLI's stdin/stdout and controlling terminal (`setsid` + `TIOCSCTTY`), and no inherited stdio is used. Both failing tests read the terminal settings with `tcgetattr` on the test's slave fd after the attach client (that PTY's session leader) exited. Darwin revokes a controlling terminal's open descriptors when its session leader exits; Linux does not.
+
+Fix: the post-exit settings are read through a freshly opened slave (`O_NOCTTY`) while the master stays open. Termios belongs to the tty, not the descriptor. The test no longer keeps its own slave descriptor at all. The runner's PTY driver (`conformance/src/engine/pty/outer.rs`) had the same pattern and got the same fix. There is no platform skip.
+
+Proof on Linux (`docs/evidence/task-31/darwin-revoke-fix.log`): the attach suite passes 5/5 under `script -q -e -c ... /dev/null` (stdio is a pty) and 5/5 with stdin `</dev/null`. Conformance `part-a/task-31 --case all --require-no-skips` passes with 49 assertions and exit 0. The runner suite passes 25/25. A scratch merge with integration (not merged into the lane) passes workspace clippy and 53/53 CLI and conformance tests. The macOS outcome itself is verified only by this PR's CI run.
+
 ## Risks and not delivered
 
 - `serve` owns an in-process holder, so programs end with the server. `hold` runs a standalone holder that `serve` does not adopt; out-of-process adoption is todo 48.
@@ -131,4 +141,4 @@ DEFERRED VERIFICATION (runner lands in Todo 21): none. The runner landed, and `p
 - Not wired in this PR, so not advertised: `terminal.kill` and other mutations, `events.*`, waits, prompts (`PromptService::recover` is not run), layout, worktrees, plugins, documents, the WebSocket listener, and geometry.* events or `stale_geometry` in the protocol catalogs. Declared scenarios (task-22/23/26/27/28, services/*, platform/*) stay declared.
 - `--observe` never forwarding input is asserted in `tests/attach.rs`, not in the conformance scenario: the runner's `run` step cannot stop a long-running observer.
 - No macOS stress job was added to `.github/workflows/probe-stress-macos.yml`. That file is a shared union-merge target, and this PR does not touch it.
-- `origin/integration` moved to `a74fba7` during the lane. Per the brief it was not merged; the orchestrator union-merges.
+- `origin/integration` moved (to `7521817` at round 2) during the lane. Per the brief it was not merged; the orchestrator union-merges.

@@ -1,0 +1,16 @@
+# tests/attach on Linux after the Darwin revoke fix, under both stdio paths
+$ script -q -e -c /tmp/t31-attach-tests.sh /dev/null   # stdio is a pty
+        PASS [   0.130s] (1/5) ovis-terminal-cli::attach connection_loss_restores_the_outer_terminal_and_reports_it
+        PASS [   0.162s] (2/5) ovis-terminal-cli::attach a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_terminal
+        PASS [   0.174s] (3/5) ovis-terminal-cli::attach ctrl_c_goes_to_the_program_and_sigint_to_the_client_detaches_cleanly
+        PASS [   0.190s] (4/5) ovis-terminal-cli::attach typed_input_reaches_the_program_resize_follows_and_ctrl_backslash_restores_the_terminal
+        PASS [   0.461s] (5/5) ovis-terminal-cli::attach observing_needs_no_tty_and_never_forwards_input
+     Summary [   0.461s] 5 tests run: 5 passed, 0 skipped
+
+$ /tmp/t31-attach-tests.sh < /dev/null                  # stdin is not a tty
+        PASS [   0.123s] (1/5) ovis-terminal-cli::attach connection_loss_restores_the_outer_terminal_and_reports_it
+        PASS [   0.150s] (2/5) ovis-terminal-cli::attach a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_terminal
+        PASS [   0.152s] (3/5) ovis-terminal-cli::attach ctrl_c_goes_to_the_program_and_sigint_to_the_client_detaches_cleanly
+        PASS [   0.472s] (4/5) ovis-terminal-cli::attach observing_needs_no_tty_and_never_forwards_input
+        PASS [   1.178s] (5/5) ovis-terminal-cli::attach typed_input_reaches_the_program_resize_follows_and_ctrl_backslash_restores_the_terminal
+     Summary [   1.178s] 5 tests run: 5 passed, 0 skipped

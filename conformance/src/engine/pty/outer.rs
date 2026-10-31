@@ -36,12 +36,22 @@ fn errno(operation: &'static str) -> impl FnOnce(rustix::io::Errno) -> RunnerErr
 #[derive(Debug)]
 pub(crate) struct OuterPty {
     master: File,
-    slave: File,
+    slave_path: std::path::PathBuf,
     original: String,
     child: tokio::process::Child,
     argv: Vec<String>,
     output: mpsc::UnboundedReceiver<Vec<u8>>,
     seen: Vec<u8>,
+}
+
+/// The tty's settings through a fresh descriptor: Darwin revokes the descriptors of a
+/// controlling terminal when its session leader exits, but the settings belong to the
+/// tty, which lives on while the master is open.
+fn settings_of(path: &std::path::Path) -> Result<String, RunnerError> {
+    use rustix::fs::{Mode, OFlags};
+    let fresh = rustix::fs::open(path, OFlags::RDWR | OFlags::NOCTTY, Mode::empty())
+        .map_err(errno("reopen the PTY slave"))?;
+    settings(&File::from(fresh))
 }
 
 fn settings(slave: &File) -> Result<String, RunnerError> {
@@ -74,10 +84,13 @@ impl OuterPty {
         grantpt(&master).map_err(errno("grant the PTY"))?;
         unlockpt(&master).map_err(errno("unlock the PTY"))?;
         let name = ptsname(&master, Vec::new()).map_err(errno("name the PTY"))?;
+        let slave_path = std::path::PathBuf::from(
+            <std::ffi::OsStr as std::os::unix::ffi::OsStrExt>::from_bytes(name.as_bytes()),
+        );
         let slave = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
-            .open(<std::ffi::OsStr as std::os::unix::ffi::OsStrExt>::from_bytes(name.as_bytes()))
+            .open(&slave_path)
             .map_err(io("open the PTY slave"))?;
         termios::tcsetwinsize(&master, winsize(cols, rows)).map_err(errno("size the PTY"))?;
         let original = settings(&slave)?;
@@ -120,7 +133,7 @@ impl OuterPty {
         command_line.extend(args.iter().cloned());
         Ok(Self {
             master,
-            slave,
+            slave_path,
             original,
             child,
             argv: command_line,
@@ -174,7 +187,7 @@ impl OuterPty {
         while let Ok(chunk) = self.output.try_recv() {
             self.seen.extend(chunk);
         }
-        let restored = settings(&self.slave)? == self.original;
+        let restored = settings_of(&self.slave_path)? == self.original;
         let report = ProcessReport {
             role: "attach",
             argv: self.argv,
