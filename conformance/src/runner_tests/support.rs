@@ -72,10 +72,12 @@ pub fn field<'a>(value: &'a Value, pointer: &str) -> &'a Value {
 ///
 /// Fails when the binary is missing or the runner cannot be spawned.
 pub fn conformance(scenario: &str, case: &str, extra: &[&str]) -> TestResult<Ran> {
+    // Unique per call: two tests may run the same scenario and case concurrently.
     let dir = std::env::temp_dir().join(format!(
-        "ovc-test-{}-{}-{case}",
+        "ovc-test-{}-{}-{case}-{}",
         std::process::id(),
-        scenario.replace('/', "-")
+        scenario.replace('/', "-"),
+        uuid::Uuid::now_v7()
     ));
     std::fs::create_dir_all(&dir)?;
     let evidence = dir.join(format!("{case}.json"));

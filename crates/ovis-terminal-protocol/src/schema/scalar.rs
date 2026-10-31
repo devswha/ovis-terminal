@@ -114,6 +114,18 @@ decimal_newtype!(
     /// Duration in milliseconds.
     DurationMs
 );
+decimal_newtype!(
+    /// Producer status sequence of one program incarnation; a report must exceed it.
+    ReportSeq
+);
+decimal_newtype!(
+    /// Number of records an ingestion path dropped.
+    RecordCount
+);
+decimal_newtype!(
+    /// Count of turns that finished on a terminal; deduplicates completion facts.
+    FinishGeneration
+);
 
 /// An output enum value that a client tolerates even when it postdates the client.
 ///

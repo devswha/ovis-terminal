@@ -1,0 +1,739 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "agent/status",
+  "title": "Registered agents keep authoritative OSC 7501 and owning-process status",
+  "todo": 33,
+  "closes": [
+    "GAP-037",
+    "GAP-087",
+    "GAP-088",
+    "GAP-089",
+    "GAP-090",
+    "GAP-091",
+    "GAP-092",
+    "GAP-093",
+    "GAP-132",
+    "GAP-146",
+    "GAP-147"
+  ],
+  "delivers": [
+    "IDEAL-025",
+    "IDEAL-064",
+    "IDEAL-065",
+    "IDEAL-066",
+    "IDEAL-067",
+    "IDEAL-068",
+    "IDEAL-069",
+    "IDEAL-105"
+  ],
+  "excludes": [
+    "EXCL-008",
+    "EXCL-009",
+    "EXCL-010",
+    "EXCL-011",
+    "EXCL-012"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the bridge: an unbranded label registers, reports working at sequence 4, the echoing program prints fake idle text, and the snapshot still holds sequence 4 at the committed event's sequence; a shell has agent null.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "register",
+                "method": "agent.register",
+                "params": {
+                  "op_id": "$op:register",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "label": "custom-agent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "register": {
+                "/result/agent/label": "custom-agent",
+                "/result/agent/process_incarnation": "1",
+                "/result/agent/agent_id": {
+                  "$present": true
+                },
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "working",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:working",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "seq": "4",
+                  "record": {
+                    "state": "working"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "working": {
+                "/result/status/root/report/state": "working",
+                "/result/status/root/report_seq": "4",
+                "/result/status/root/origin": "rpc",
+                "/result/status/turn": "1",
+                "/result/status/report_seq": "4",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "fake-idle",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:echo-1",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "text": "idle\r\nstate=done\r\n✓ Done. Waiting for input >\r\n7501;state=idle\r\n",
+                  "submit": "none"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "fake-idle": {
+                "/result/osc_records": []
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "snapshot",
+                "method": "status.get",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "snapshot": {
+                "/result/status/reported": true,
+                "/result/status/root/report/state": "working",
+                "/result/status/root/report_seq": "4",
+                "/result/status/root/seq": "8",
+                "/result/seq": "8",
+                "/result/status/turn": "1",
+                "/result/status/finish_generation": "0",
+                "/result/status/last_turn": null,
+                "/result/status/agent_id": {
+                  "$present": true
+                },
+                "/result/ingest": {
+                  "oversize": "0",
+                  "malformed": "0",
+                  "stale": "0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "agent",
+                "method": "agent.get",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "shell",
+                "method": "agent.get",
+                "params": {
+                  "target": {
+                    "name": "shell"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "shell-status",
+                "method": "status.get",
+                "params": {
+                  "target": {
+                    "name": "shell"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "agent": {
+                "/result/agent/label": "custom-agent"
+              },
+              "shell": {
+                "/result/agent": null,
+                "/error": {
+                  "$present": false
+                }
+              },
+              "shell-status": {
+                "/result/status/reported": false,
+                "/result/status/root": null,
+                "/result/status/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "A stale string sequence is stale_seq with current_seq 4 and a numeric one is invalid_params at params.seq, both with zero status or turn change; foreign tokens, unknown targets and states are typed refusals; fake text, oversized and malformed OSC change nothing and are counted; malformed base64 keeps its raw field without decoded text.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "working",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:working",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "seq": "4",
+                  "record": {
+                    "state": "working"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "working": {
+                "/result/status/root/report_seq": "4",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "bridge",
+            "base": {
+              "op_id": "$op:inject",
+              "target": {
+                "name": "agent"
+              },
+              "process_token": "fixture-process-token-agent"
+            },
+            "planned": [
+              {
+                "request": {
+                  "method": "status.report",
+                  "params": {
+                    "seq": "3",
+                    "record": {
+                      "state": "done"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "stale_seq",
+                  "/error/data/current_seq": "4",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "status.report",
+                  "params": {
+                    "seq": 3,
+                    "record": {
+                      "state": "done"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/error/data/field_path": "params.seq",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "after-inject",
+                "method": "status.get",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "after-inject": {
+                "/result/status/root/report/state": "working",
+                "/result/status/root/report_seq": "4",
+                "/result/status/root/seq": "4",
+                "/result/seq": "4",
+                "/result/status/report_seq": "4",
+                "/result/status/turn": "1",
+                "/result/status/finish_generation": "0",
+                "/result/status/last_turn": null
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cross",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:cross",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-shell",
+                  "seq": "9",
+                  "record": {
+                    "state": "done"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "forged",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:forged",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "forged-token",
+                  "seq": "9",
+                  "record": {
+                    "state": "done"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "ghost",
+                "method": "status.get",
+                "params": {
+                  "target": {
+                    "name": "ghost"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "unknown-state",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:unknown",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "process_token": "fixture-process-token-agent",
+                  "seq": "9",
+                  "record": {
+                    "state": "thinking"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "cross": {
+                "/error/data/kind": "not_owner",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "forged": {
+                "/error/data/kind": "not_owner",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "ghost": {
+                "/error/data/kind": "not_found",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "unknown-state": {
+                "/error/data/kind": "invalid_record",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "fake-text",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:echo-2",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "text": "state=idle\r\n[agent] turn complete: done\r\n",
+                  "submit": "none"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "oversize",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:echo-3",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "text": "\u001b]7501;state=idle:msg=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\u001b\\",
+                  "submit": "none"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "malformed",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:echo-4",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "text": "\u001b]7501;state=idle:colour=red\u001b\\",
+                  "submit": "none"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "fake-text": {
+                "/result/osc_records": []
+              },
+              "oversize": {
+                "/result/osc_records": [
+                  "dropped"
+                ]
+              },
+              "malformed": {
+                "/result/osc_records": [
+                  "dropped"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "after-drops",
+                "method": "status.get",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "after-drops": {
+                "/result/status/root/report/state": "working",
+                "/result/status/root/report_seq": "4",
+                "/result/status/root/seq": "4",
+                "/result/seq": "4",
+                "/result/status/report_seq": "4",
+                "/result/status/turn": "1",
+                "/result/status/finish_generation": "0",
+                "/result/status/last_turn": null,
+                "/result/ingest": {
+                  "oversize": "1",
+                  "malformed": "1",
+                  "stale": "0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "bad-base64",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:echo-5",
+                  "target": {
+                    "name": "agent"
+                  },
+                  "text": "\u001b]7501;state=idle:title=aGVsbG8=:msg=%%not-base64%%\u001b\\",
+                  "submit": "none"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "bad-base64": {
+                "/result/osc_records": [
+                  "applied"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "decoded",
+                "method": "status.get",
+                "params": {
+                  "target": {
+                    "name": "agent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "decoded": {
+                "/result/status/root/origin": "osc",
+                "/result/status/root/report_seq": "5",
+                "/result/status/root/report/state": "idle",
+                "/result/status/root/raw": "state=idle:title=aGVsbG8=:msg=%%not-base64%%",
+                "/result/status/root/report/title": "hello",
+                "/result/status/root/report/msg": null,
+                "/result/status/root/decode_errors": [
+                  "msg"
+                ],
+                "/result/status/root/osc/fields/msg_b64": "%%not-base64%%",
+                "/result/status/root/osc/decoded/msg": null,
+                "/result/status/root/osc/decode_errors": [
+                  {
+                    "field": "msg",
+                    "error": "invalid_base64"
+                  }
+                ],
+                "/result/status/finish_generation": "1",
+                "/result/status/last_turn/outcome": "completed",
+                "/result/status/last_turn/ended_on": "idle",
+                "/result/status/last_turn/turn": "1"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

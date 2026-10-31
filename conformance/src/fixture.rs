@@ -5,6 +5,8 @@
 //! fixture mode reports a typed failure to bind a listener.
 
 #[cfg(unix)]
+pub mod agents;
+#[cfg(unix)]
 pub mod documents;
 #[cfg(unix)]
 pub mod handler;

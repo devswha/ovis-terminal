@@ -5,9 +5,12 @@ use std::io::Write as _;
 use crate::error::RunnerError;
 use crate::evidence::{CaseReport, Evidence};
 
+/// Writes `evidence`; with `append`, an existing evidence file becomes or grows an array
+/// of runs in invocation order.
 pub(crate) fn write_evidence(
     path: &std::path::Path,
     evidence: &Evidence,
+    append: bool,
 ) -> Result<(), RunnerError> {
     let io = |source| RunnerError::Io {
         operation: "write the evidence file",
@@ -19,7 +22,19 @@ pub(crate) fn write_evidence(
     {
         std::fs::create_dir_all(parent).map_err(io)?;
     }
-    let bytes = serde_json::to_vec_pretty(evidence)?;
+    let run = serde_json::to_value(evidence)?;
+    let document = match std::fs::read(path) {
+        Ok(existing) if append => match serde_json::from_slice(&existing)? {
+            serde_json::Value::Array(mut runs) => {
+                runs.push(run);
+                serde_json::Value::Array(runs)
+            }
+            earlier => serde_json::Value::Array(vec![earlier, run]),
+        },
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => return Err(io(error)),
+        Ok(_) | Err(_) => run,
+    };
+    let bytes = serde_json::to_vec_pretty(&document)?;
     std::fs::write(path, bytes).map_err(io)
 }
 

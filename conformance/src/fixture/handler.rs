@@ -3,7 +3,8 @@
 
 use std::sync::Arc;
 
-use ovis_terminal_core::ops::{OperationEvent, OperationProducer};
+use ovis_terminal_agent::status::AgentStatusEvent;
+use ovis_terminal_core::ops::OperationProducer;
 use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind};
 use ovis_terminal_protocol::rpc::RpcRequest;
 use ovis_terminal_protocol::schema::common::NoParams;
@@ -16,7 +17,9 @@ use super::output;
 use super::serve::at;
 use crate::error::RunnerError;
 
-pub(crate) type Dispatch = Dispatcher<OperationEvent, OperationProducer>;
+/// Operation outcomes and agent status facts share the fixture's sequence domain.
+pub(crate) type Event = AgentStatusEvent;
+pub(crate) type Dispatch = Dispatcher<Event, OperationProducer>;
 
 const DIRECT: [&str; 2] = ["rpc.discover", "terminal.output"];
 
