@@ -1,8 +1,9 @@
 //! The fixture's request handler: the real dispatcher plus methods served directly.
 //!
 //! Those are the read-only protocol methods `rpc.discover` and paged `terminal.output`,
-//! the fixture-only `fixture.transcript` provider write, `fixture.pty` input byte count, and
-//! the `fixture.exit` and `fixture.program` program lifecycle stand-ins.
+//! the fixture-only `fixture.transcript` provider write, `fixture.pty` input byte count,
+//! `fixture.bridge` extension driver, and the `fixture.exit` and `fixture.program` program
+//! lifecycle stand-ins.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -18,6 +19,7 @@ use ovis_terminal_server::dispatch::Dispatcher;
 use serde_json::Value;
 
 use super::agents::Directory;
+use super::bridge::Extension;
 use super::output;
 use super::prompts::Gate;
 use super::serve::at;
@@ -36,28 +38,37 @@ const PROVIDER_WRITE: &str = "fixture.transcript";
 /// The PTY stand-in's byte count; served but never advertised.
 const PTY_READ: &str = "fixture.pty";
 
+/// The in-process extension stand-in's driver; served but never advertised.
+const EXTENSION: &str = "fixture.bridge";
+
 /// A fixture program's exit, or the replay of an older one; served but never advertised.
 const PROGRAM_EXIT: &str = "fixture.exit";
 
 /// What a fixture terminal's programs received; served but never advertised.
 const PROGRAM_READ: &str = "fixture.program";
 
-/// The prompt gate, the terminal directory and the tree the direct methods serve.
-pub(crate) type Parts = (Arc<Gate>, Arc<Directory>, Arc<Tree>);
+/// Fixture-only stand-ins answered beside the dispatcher.
+#[derive(Debug)]
+pub(crate) struct Probes {
+    pub(crate) gate: Arc<Gate>,
+    pub(crate) directory: Arc<Directory>,
+    pub(crate) extension: Arc<Extension>,
+    pub(crate) tree: Arc<Tree>,
+}
 
 #[derive(Debug)]
 pub(crate) struct FixtureHandler {
     dispatch: Arc<Dispatch>,
     root: PathBuf,
-    parts: Parts,
+    probes: Probes,
 }
 
 impl FixtureHandler {
-    pub(crate) const fn new(dispatch: Arc<Dispatch>, root: PathBuf, parts: Parts) -> Self {
+    pub(crate) const fn new(dispatch: Arc<Dispatch>, root: PathBuf, probes: Probes) -> Self {
         Self {
             dispatch,
             root,
-            parts,
+            probes,
         }
     }
 
@@ -81,7 +92,6 @@ fn discover(request: &RpcRequest) -> Result<Value, BoundaryError> {
 impl RequestHandler for FixtureHandler {
     fn methods(&self) -> Vec<&'static str> {
         let mut methods = self.dispatch.methods();
-        methods.retain(|method| *method != tree::LAUNCH_STAND_IN);
         methods.extend(DIRECT);
         methods
     }
@@ -91,9 +101,13 @@ impl RequestHandler for FixtureHandler {
             "rpc.discover" => discover(&call.request),
             "terminal.output" => output::page(&call.request),
             PROVIDER_WRITE => super::transcripts::write(&self.root, &call.request),
-            PTY_READ => super::prompts::pty((&self.parts.0, &self.parts.1), &call.request),
-            PROGRAM_EXIT => tree::exit(&self.parts.2, &call.request).await,
-            PROGRAM_READ => tree::program(&self.parts.2, &call.request),
+            PTY_READ => {
+                let probes = (&*self.probes.gate, &*self.probes.directory);
+                super::prompts::pty(probes, &call.request)
+            }
+            EXTENSION => self.probes.extension.call(&call.request).await,
+            PROGRAM_EXIT => tree::exit(&self.probes.tree, &call.request).await,
+            PROGRAM_READ => tree::program(&self.probes.tree, &call.request),
             _ => self.dispatch.call(call).await,
         }
     }

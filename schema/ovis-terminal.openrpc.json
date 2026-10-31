@@ -2821,8 +2821,15 @@
         "description": "First message queued under the launch and released only on declared readiness.",
         "properties": {
           "deadline_ms": {
-            "$ref": "#/components/schemas/DurationMs",
-            "description": "Expire the message if readiness is not declared in time."
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DurationMs"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Expire the message if readiness is not declared in time; absent means 30 s."
           },
           "text": {
             "description": "Literal text; submitted after the agent declares readiness.",
@@ -2830,10 +2837,141 @@
           }
         },
         "required": [
-          "text",
+          "text"
+        ],
+        "type": "object"
+      },
+      "FirstMessageReason": {
+        "description": "Why a first message reached a final state other than `sent`.",
+        "oneOf": [
+          {
+            "const": "deadline_passed",
+            "description": "The deadline passed before the program declared readiness.",
+            "type": "string"
+          },
+          {
+            "const": "process_exited",
+            "description": "The program exited before declaring readiness.",
+            "type": "string"
+          },
+          {
+            "const": "link_lost",
+            "description": "The holder link ended before readiness.",
+            "type": "string"
+          },
+          {
+            "const": "process_replaced",
+            "description": "Another program incarnation runs in the terminal now.",
+            "type": "string"
+          },
+          {
+            "const": "authority_lapsed",
+            "description": "The requesting principal's credential lapsed before the write.",
+            "type": "string"
+          },
+          {
+            "const": "lease_held",
+            "description": "An interact lease is held, so an unleased write is refused.",
+            "type": "string"
+          },
+          {
+            "const": "encoding_refused",
+            "description": "The text cannot be encoded for the terminal's current modes.",
+            "type": "string"
+          },
+          {
+            "const": "delivery_failed",
+            "description": "The terminal's writer refused or failed the write.",
+            "type": "string"
+          },
+          {
+            "const": "runtime_stopped",
+            "description": "The runtime stopped waiting before readiness.",
+            "type": "string"
+          }
+        ]
+      },
+      "FirstMessageRecord": {
+        "description": "The first message queued under one launch, readable by its requesting principal.",
+        "properties": {
+          "deadline_ms": {
+            "$ref": "#/components/schemas/TimestampMs",
+            "description": "Instant after which an unreleased message expires."
+          },
+          "launch_op": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that launched the terminal; the message's identity."
+          },
+          "process_incarnation": {
+            "$ref": "#/components/schemas/Incarnation",
+            "description": "Program incarnation the message is bound to."
+          },
+          "queued_seq": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventSeq"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Input sequence of the single submission, once sent."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FirstMessageReason",
+                "x-ovis-open-enum": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the message was not sent, once cancelled or expired."
+          },
+          "state": {
+            "$ref": "#/components/schemas/FirstMessageState",
+            "description": "Current state.",
+            "x-ovis-open-enum": true
+          },
+          "terminal_id": {
+            "$ref": "#/components/schemas/TerminalId",
+            "description": "Terminal the message is bound to."
+          }
+        },
+        "required": [
+          "launch_op",
+          "terminal_id",
+          "process_incarnation",
+          "state",
           "deadline_ms"
         ],
         "type": "object"
+      },
+      "FirstMessageState": {
+        "description": "Where a first message is in its life; `sent`, `cancelled` and `expired` are final.",
+        "oneOf": [
+          {
+            "const": "accepted",
+            "description": "Queued under the launch; the program has not declared readiness.",
+            "type": "string"
+          },
+          {
+            "const": "sent",
+            "description": "Handed to the terminal's writer exactly once after declared readiness.",
+            "type": "string"
+          },
+          {
+            "const": "cancelled",
+            "description": "Never written: the program ended, or a write-boundary recheck refused it.",
+            "type": "string"
+          },
+          {
+            "const": "expired",
+            "description": "Never written: readiness was not declared before the deadline.",
+            "type": "string"
+          }
+        ]
       },
       "ForegroundData": {
         "description": "Data of `terminal.foreground`.",
@@ -6291,6 +6429,34 @@
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "ReadinessContract": {
+        "description": "How a launched program proves it can take its first message.\n\nOnly a declaration by the program counts; output silence is never readiness.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "The program declares one of `states` through OSC 7501 or `status.report`.",
+            "properties": {
+              "by": {
+                "const": "declared",
+                "type": "string"
+              },
+              "states": {
+                "description": "Declared states that release the first message.",
+                "items": {
+                  "$ref": "#/components/schemas/AgentState",
+                  "x-ovis-open-enum": true
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "by",
+              "states"
+            ],
+            "type": "object"
+          }
+        ]
+      },
       "RecordCount": {
         "description": "RecordCount carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
@@ -8082,13 +8248,35 @@
             },
             "type": "array"
           },
+          "body": {
+            "description": "Text placed before the task in the first message.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "description": {
             "description": "Description.",
             "type": "string"
           },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Environment the program starts with, before launch additions.",
+            "type": "object"
+          },
           "name": {
             "$ref": "#/components/schemas/TemplateName",
             "description": "Template name."
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/ReadinessContract",
+            "description": "How the program declares it can take its first message."
+          },
+          "ready_deadline_ms": {
+            "$ref": "#/components/schemas/DurationMs",
+            "description": "Readiness deadline of a first message whose launch names none."
           },
           "version": {
             "description": "Template version.",
@@ -8099,13 +8287,69 @@
           "name",
           "version",
           "description",
-          "argv"
+          "argv",
+          "env",
+          "readiness",
+          "ready_deadline_ms"
+        ],
+        "type": "object"
+      },
+      "TemplateSelector": {
+        "additionalProperties": false,
+        "description": "Versioned template selected by stable name; the same launch contract as an argv.",
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/TemplateName",
+            "description": "Template name."
+          },
+          "task": {
+            "description": "Task text passed as data, never interpolated into a command line.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "description": "Template version; absent selects the latest.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "name"
         ],
         "type": "object"
       },
       "TerminalAddress": {
         "description": "Opaque identity string.",
         "type": "string"
+      },
+      "TerminalFirstMessageParams": {
+        "additionalProperties": false,
+        "description": "Parameters of `terminal.first_message`.",
+        "properties": {
+          "launch_op": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that launched the terminal."
+          },
+          "settled_within_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DurationMs"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Wait up to this long for a final state before answering the current one."
+          }
+        },
+        "required": [
+          "launch_op"
+        ],
+        "type": "object"
       },
       "TerminalGeometry": {
         "description": "Committed geometry and its owner.",
@@ -8917,13 +9161,30 @@
             "description": "Parent binding by incarnation."
           },
           "program": {
-            "$ref": "#/components/schemas/LaunchProgram",
-            "description": "Program to launch."
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LaunchProgram"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Program to launch; exactly one of `program` and `template` is required."
+          },
+          "template": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TemplateSelector"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Template to launch; exactly one of `program` and `template` is required."
           }
         },
         "required": [
           "op_id",
-          "program",
           "geometry"
         ],
         "type": "object"
@@ -8934,6 +9195,17 @@
           "created_seq": {
             "$ref": "#/components/schemas/EventSeq",
             "description": "Sequence of the creation event."
+          },
+          "first_message": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FirstMessageRecord"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "First message queued under this launch, when one was given."
           },
           "spawn": {
             "$ref": "#/components/schemas/SpawnState",
@@ -10842,10 +11114,32 @@
         },
         {
           "name": "program",
-          "required": true,
+          "required": false,
           "schema": {
-            "$ref": "#/components/schemas/LaunchProgram",
-            "description": "Program to launch."
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LaunchProgram"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Program to launch; exactly one of `program` and `template` is required."
+          }
+        },
+        {
+          "name": "template",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TemplateSelector"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Template to launch; exactly one of `program` and `template` is required."
           }
         }
       ],
@@ -10859,6 +11153,81 @@
       "x-effect": "mutation",
       "x-params": {
         "$ref": "#/components/schemas/TerminalRunParams"
+      },
+      "x-targeting": "untargeted"
+    },
+    {
+      "errors": [
+        {
+          "code": -32602,
+          "message": "invalid_params"
+        },
+        {
+          "code": -32000,
+          "message": "unavailable"
+        },
+        {
+          "code": -32603,
+          "message": "internal"
+        },
+        {
+          "code": -32000,
+          "message": "unauthenticated"
+        },
+        {
+          "code": -32000,
+          "message": "forbidden"
+        },
+        {
+          "code": -32000,
+          "message": "deadline_exceeded"
+        },
+        {
+          "code": -32000,
+          "message": "cancelled"
+        },
+        {
+          "code": -32000,
+          "message": "backpressure"
+        }
+      ],
+      "name": "terminal.first_message",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "launch_op",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that launched the terminal."
+          }
+        },
+        {
+          "name": "settled_within_ms",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DurationMs"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Wait up to this long for a final state before answering the current one."
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/FirstMessageRecord"
+        }
+      },
+      "summary": "Read the first message queued under a launch by its requesting principal.",
+      "x-effect": "query",
+      "x-params": {
+        "$ref": "#/components/schemas/TerminalFirstMessageParams"
       },
       "x-targeting": "untargeted"
     },

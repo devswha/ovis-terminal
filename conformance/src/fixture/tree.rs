@@ -1,7 +1,8 @@
 //! The agent tree over four fixture terminals whose programs start, exit and are ended
 //! only through this module.
 //!
-//! `terminal.run` stands in for the launcher until todo 31 assembles it: it refuses a
+//! For the tree fixture terminals, `terminal.run` stands in for the launcher until todo 31
+//! assembles it (other launches go to the template lane): it refuses a
 //! finished or replaced parent before anything starts, starts the next program
 //! incarnation of the named fixture terminal and links it in the same unit.
 //! `fixture.exit` delivers a program's exit (or replays an old one) and carries out the
@@ -27,19 +28,17 @@ use ovis_terminal_protocol::schema::methods::terminal::{ChildPolicy, TerminalRun
 use ovis_terminal_protocol::schema::scalar::Incarnation;
 use ovis_terminal_server::dispatch::lanes::agent_status::TerminalDirectory;
 use ovis_terminal_server::dispatch::lanes::agent_tree::{AgentTreeLane, ListChildren};
+use ovis_terminal_server::dispatch::lanes::template_launch::RunTerminal;
 use ovis_terminal_server::dispatch::{Access, Completed, DispatchError, Execution, Method};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::agents::{AgentParts, Directory};
 use super::handler::{Dispatch, Event};
+use super::launches::RecordingLauncher;
 use super::prompts::Gate;
 use super::serve::at;
 use crate::error::RunnerError;
-
-/// The launcher stand-in is served but never advertised: the real `terminal.run` is not
-/// assembled until todo 31.
-pub(crate) const LAUNCH_STAND_IN: &str = "terminal.run";
 
 /// Fixture terminals the tree scenarios launch programs in.
 pub(crate) const TREE_TERMINALS: [(u64, &str); 4] = [
@@ -157,11 +156,12 @@ impl Tree {
     }
 }
 
-/// Registers `terminal.run` and `agent.children` over the tree fixture terminals.
+/// Registers `agent.children` and the combined `terminal.run` route: the tree fixture
+/// terminals through the tree stand-in, every other launch through `template`.
 pub(crate) fn register(
     dispatch: &mut Dispatch,
     ((status, directory), gate): (&AgentParts, &Gate),
-    (runtime, core): (RuntimeIdentity, Arc<Core>),
+    (runtime, core, template): (RuntimeIdentity, Arc<Core>, RunTerminal<RecordingLauncher>),
 ) -> Result<Arc<Tree>, RunnerError> {
     let services = (Arc::clone(status), Arc::clone(&gate.prompts));
     let tree = Arc::new(TreeService::new(runtime, services));
@@ -177,22 +177,41 @@ pub(crate) fn register(
         programs: Mutex::new(BTreeMap::new()),
         machine: runtime.machine_id(),
     });
+    let launch = Launch {
+        tree: Arc::clone(&fixture),
+        template,
+    };
     dispatch
-        .register(Run(Arc::clone(&fixture)))
+        .register(launch)
         .map_err(at("register terminal.run"))?;
     Ok(fixture)
 }
 
-/// `terminal.run` over the tree fixture terminals.
+/// `terminal.run`: the tree fixture terminals launch through the tree stand-in, every
+/// other launch through the template lane.
 #[derive(Debug)]
-struct Run(Arc<Tree>);
+struct Launch {
+    tree: Arc<Tree>,
+    template: RunTerminal<RecordingLauncher>,
+}
 
-impl Method<Event, OperationProducer> for Run {
-    const NAME: &'static str = LAUNCH_STAND_IN;
+/// Whether `params` names one of the tree fixture terminals.
+fn names_tree_terminal(params: &TerminalRunParams) -> bool {
+    params
+        .name
+        .as_ref()
+        .is_some_and(|name| TREE_TERMINALS.iter().any(|(_, tree)| *tree == name.as_str()))
+}
+
+impl Method<Event, OperationProducer> for Launch {
+    const NAME: &'static str = "terminal.run";
     type Params = TerminalRunParams;
 
-    fn resolve(&self, _: &Self::Params, _: &Session) -> Result<Access, DispatchError> {
-        let machine = ResolvedTarget::new(self.0.machine, TargetResource::Machine);
+    fn resolve(&self, params: &Self::Params, session: &Session) -> Result<Access, DispatchError> {
+        if !names_tree_terminal(params) {
+            return Method::<Event, OperationProducer>::resolve(&self.template, params, session);
+        }
+        let machine = ResolvedTarget::new(self.tree.machine, TargetResource::Machine);
         Ok(Access::new(Action::Launch, machine))
     }
 
@@ -201,11 +220,15 @@ impl Method<Event, OperationProducer> for Run {
         params: Self::Params,
         execution: Execution<Event, OperationProducer>,
     ) -> Result<Completed, DispatchError> {
+        if !names_tree_terminal(&params) {
+            return Method::<Event, OperationProducer>::run(&self.template, params, execution)
+                .await;
+        }
         let unnamed = TargetResolutionError::NeedsTarget;
         let name = params.name.clone().ok_or(unnamed)?;
         let target = Target::Name(name.clone());
-        let terminal = self.0.directory.resolve(&target)?.terminal;
-        let fixture = Arc::clone(&self.0);
+        let terminal = self.tree.directory.resolve(&target)?.terminal;
+        let fixture = Arc::clone(&self.tree);
         execution
             .commit_unit(move |snapshot| {
                 TreeError::settle((|| {
