@@ -1,0 +1,15 @@
+GitHub Actions job 124351154181 (initial PR head af30f0102c93ef166d733bdcf03b7f8d9e765b)
+Log excerpt lines 2713-2735:
+
+test (windows-latest)  nextest (fails on zero tests)
+    running 1 test
+    test happy ... FAILED
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.10s
+
+  stderr:
+    Error: Os { code: 32, kind: Uncategorized, message: "The process cannot access the file because it is being used by another process." }
+
+Inspection found the registry happy test retained a Store::snapshot() SQLite reader connection while closing and reopening the same store. The test now explicitly drops the snapshot immediately after asserting its reservation and before Store::close(). No store implementation change, cfg-skip, or retry was added.
+
+After this test-only ordering fix, the Linux happy case passed and bash scripts/check.sh exited 0. The updated Windows job result is pending on the repair commit.
