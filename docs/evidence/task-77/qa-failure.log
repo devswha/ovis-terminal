@@ -1,0 +1,35 @@
+$ cargo test -p ovis-terminal-server --test ops_cancel failure -- --exact --nocapture
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running tests/ops_cancel.rs (target/debug/deps/ops_cancel-cd8525bd7df4654c)
+
+running 1 test
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793457618722","version":"0.1.0"}}
+
+<- {"jsonrpc":"2.0","id":"hello","result":{"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":10000,"heartbeat_ms":"15000","history_lines":100000,"input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":64,"op_retention_ms":"86400000","output_ring_bytes":"67108864","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["op.get","op.cancel","doc.set"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793457618722","version":"0.1.0"}}
+
+-> {"id":"done","jsonrpc":"2.0","method":"doc.set","params":{"name":"done","op_id":"01a19267-7f23-71c1-b5f5-dbab0650b3e8","value":"kept","version":"0"}}
+<- {"jsonrpc":"2.0","id":"done","result":{"name":"done","value":"kept"}}
+
+-> {"id":"unknown","jsonrpc":"2.0","method":"op.cancel","params":{"op_id":"01a19267-7f2e-73a6-847a-18ffc3762645"}}
+<- {"jsonrpc":"2.0","id":"unknown","error":{"code":-32000,"message":"operation failed","data":{"kind":"not_found","hint":"query an operation accepted by this principal in this runtime","retryable":false,"op_id":"01a19267-7f2e-73a6-847a-18ffc3762645"}}}
+
+-> {"id":"late","jsonrpc":"2.0","method":"op.cancel","params":{"op_id":"01a19267-7f23-71c1-b5f5-dbab0650b3e8"}}
+<- {"jsonrpc":"2.0","id":"late","result":{"error":null,"method":"doc.set","op_id":"01a19267-7f23-71c1-b5f5-dbab0650b3e8","outcome":"already_committed","result":{"name":"done","value":"kept"},"state":"committed","updated_seq":"3"}}
+
+-> {"id":"held","jsonrpc":"2.0","method":"doc.set","params":{"name":"held","op_id":"01a19267-7f37-7789-b3b7-699d77524477","value":"v","version":"0"}}
+-> {"id":"probe","jsonrpc":"2.0","method":"doc.set","params":{"name":"held","op_id":"01a19267-7f37-7789-b3b7-699d77524477","value":"other","version":"0"}}
+<- {"jsonrpc":"2.0","id":"probe","error":{"code":-32000,"message":"operation failed","data":{"kind":"op_reused","hint":"inspect the original operation; use a new identity only for new work","retryable":false,"op_id":"01a19267-7f37-7789-b3b7-699d77524477"}}}
+
+-> {"id":"foreign","jsonrpc":"2.0","method":"op.cancel","params":{"op_id":"01a19267-7f23-71c1-b5f5-dbab0650b3e8"}}
+<- {"jsonrpc":"2.0","id":"foreign","error":{"code":-32000,"message":"operation failed","data":{"kind":"forbidden","hint":"ask an administrator for a grant covering this target","retryable":false,"op_id":"01a19267-7f23-71c1-b5f5-dbab0650b3e8"}}}
+
+-> {"id":"foreign","jsonrpc":"2.0","method":"op.cancel","params":{"op_id":"01a19267-7f37-7789-b3b7-699d77524477"}}
+<- {"jsonrpc":"2.0","id":"foreign","error":{"code":-32000,"message":"operation failed","data":{"kind":"forbidden","hint":"ask an administrator for a grant covering this target","retryable":false,"op_id":"01a19267-7f37-7789-b3b7-699d77524477"}}}
+
+<- {"jsonrpc":"2.0","id":"held","result":{"name":"held","value":"v"}}
+
+test failure ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.05s
+
+EXIT 0

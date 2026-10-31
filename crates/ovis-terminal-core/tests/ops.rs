@@ -36,6 +36,8 @@ pub mod holder;
 mod inspection;
 #[path = "../src/ops/qa/ownership.rs"]
 mod ownership;
+#[path = "../src/ops/qa/pending.rs"]
+mod pending;
 
 struct Fixture(PathBuf);
 

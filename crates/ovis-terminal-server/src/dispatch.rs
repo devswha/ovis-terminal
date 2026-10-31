@@ -6,6 +6,7 @@ mod error;
 mod execution;
 mod job;
 mod registry;
+mod reservation;
 mod runtime;
 mod tasks;
 
