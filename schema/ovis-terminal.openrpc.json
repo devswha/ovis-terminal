@@ -562,6 +562,63 @@
         ],
         "type": "object"
       },
+      "AttachControl": {
+        "description": "Params of the `attach.control` notification.",
+        "properties": {
+          "checkpoint": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Checkpoint"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Checkpoint, for `checkpoint`."
+          },
+          "close": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StreamClose"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Close details, for `close`."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ControlKind",
+            "description": "Record kind.",
+            "x-ovis-open-enum": true
+          },
+          "skipped": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkippedOutput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Skipped raw output, for `gap`."
+          },
+          "stream_id": {
+            "$ref": "#/components/schemas/StreamId",
+            "description": "Stream."
+          },
+          "stream_offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "Filtered stream offset the record applies at."
+          }
+        },
+        "required": [
+          "stream_id",
+          "kind",
+          "stream_offset"
+        ],
+        "type": "object"
+      },
       "AttachCreditParams": {
         "additionalProperties": false,
         "description": "Parameters of `attach.credit` for plain-mode streams.",
@@ -578,6 +635,29 @@
         "required": [
           "stream_id",
           "acknowledged"
+        ],
+        "type": "object"
+      },
+      "AttachData": {
+        "description": "Params of the `attach.data` notification: terminal bytes only.",
+        "properties": {
+          "data_b64": {
+            "description": "Base64 terminal bytes, at most one stream chunk decoded.",
+            "type": "string"
+          },
+          "offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "Filtered stream offset of the first byte."
+          },
+          "stream_id": {
+            "$ref": "#/components/schemas/StreamId",
+            "description": "Stream."
+          }
+        },
+        "required": [
+          "stream_id",
+          "offset",
+          "data_b64"
         ],
         "type": "object"
       },
@@ -764,6 +844,17 @@
             ],
             "description": "Lease displaced by an explicit takeover."
           },
+          "final_output_offset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ByteOffset"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Raw output offset of the final byte of an ended terminal."
+          },
           "first_paint": {
             "anyOf": [
               {
@@ -802,6 +893,24 @@
             "description": "Typed outcome.",
             "x-ovis-open-enum": true
           },
+          "reason": {
+            "description": "Stable reason token of a refused or ended outcome.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "retry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetryBoundary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What to wait for before retrying a held or recovering attach."
+          },
           "stream_id": {
             "anyOf": [
               {
@@ -812,6 +921,17 @@
               }
             ],
             "description": "Stream identity, never reused."
+          },
+          "terminal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttachedTerminal"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Terminal and program incarnations the stream is bound to."
           }
         },
         "required": [
@@ -998,6 +1118,35 @@
         ],
         "type": "object"
       },
+      "AttachedTerminal": {
+        "description": "The terminal and program incarnations a stream is bound to; never inherited.",
+        "properties": {
+          "process_incarnation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Incarnation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Program incarnation, when a program is running."
+          },
+          "terminal_id": {
+            "$ref": "#/components/schemas/TerminalId",
+            "description": "Terminal identity."
+          },
+          "terminal_incarnation": {
+            "$ref": "#/components/schemas/Incarnation",
+            "description": "Terminal incarnation."
+          }
+        },
+        "required": [
+          "terminal_id",
+          "terminal_incarnation"
+        ],
+        "type": "object"
+      },
       "BootChallenge": {
         "description": "Fresh random challenge, 32 bytes as lowercase hexadecimal.",
         "pattern": "^[0-9a-f]{64}$",
@@ -1156,6 +1305,10 @@
             "$ref": "#/components/schemas/Geometry",
             "description": "Grid size."
           },
+          "history_lines": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Primary-screen history lines readable behind the paint: the history cursor."
+          },
           "modes": {
             "$ref": "#/components/schemas/Modes",
             "description": "Terminal modes."
@@ -1179,7 +1332,8 @@
           "revision",
           "geometry",
           "modes",
-          "cursor"
+          "cursor",
+          "history_lines"
         ],
         "type": "object"
       },
@@ -1314,6 +1468,36 @@
           "resynced_events"
         ],
         "type": "object"
+      },
+      "ControlKind": {
+        "description": "Kind of an `attach.control` record; control never travels as terminal bytes.",
+        "oneOf": [
+          {
+            "const": "checkpoint",
+            "description": "A checkpoint paint begins at `stream_offset`.",
+            "type": "string"
+          },
+          {
+            "const": "gap",
+            "description": "Bytes were skipped; a checkpoint follows.",
+            "type": "string"
+          },
+          {
+            "const": "input_ready",
+            "description": "The interact stream is ready for input.",
+            "type": "string"
+          },
+          {
+            "const": "input_revoked",
+            "description": "Input readiness was revoked.",
+            "type": "string"
+          },
+          {
+            "const": "close",
+            "description": "The stream closed; no record or byte follows.",
+            "type": "string"
+          }
+        ]
       },
       "ConversationCursor": {
         "additionalProperties": false,
@@ -6027,6 +6211,51 @@
         ],
         "type": "object"
       },
+      "RetryBoundary": {
+        "description": "An actionable retry boundary: which event to wait for, never a blind poll.",
+        "properties": {
+          "event": {
+            "description": "Event type that announces it.",
+            "type": "string"
+          },
+          "lease": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeaseRecord"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lease whose release ends the hold."
+          },
+          "on": {
+            "$ref": "#/components/schemas/RetryOn",
+            "description": "The state change to wait for.",
+            "x-ovis-open-enum": true
+          }
+        },
+        "required": [
+          "on",
+          "event"
+        ],
+        "type": "object"
+      },
+      "RetryOn": {
+        "description": "The state change that lets a held or recovering attach succeed on retry.",
+        "oneOf": [
+          {
+            "const": "lease_released",
+            "description": "The named interact lease is released or revoked (`lease.revoked`).",
+            "type": "string"
+          },
+          {
+            "const": "recovered",
+            "description": "The terminal finishes recovery (`server.recovery`).",
+            "type": "string"
+          }
+        ]
+      },
       "Revision": {
         "description": "Revision carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
@@ -6789,6 +7018,24 @@
         ],
         "type": "object"
       },
+      "SkippedOutput": {
+        "description": "Raw output the stream skipped when it was resynchronized.",
+        "properties": {
+          "from_output_offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "First raw output offset not delivered."
+          },
+          "to_output_offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "Raw output offset the following checkpoint represents."
+          }
+        },
+        "required": [
+          "from_output_offset",
+          "to_output_offset"
+        ],
+        "type": "object"
+      },
       "SpawnState": {
         "description": "Spawn outcome reported separately from creation.",
         "oneOf": [
@@ -7252,6 +7499,63 @@
             "type": "string"
           }
         ]
+      },
+      "StreamClose": {
+        "description": "Why and where a stream closed.",
+        "properties": {
+          "by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeaseRecord"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lease that displaced this stream's lease."
+          },
+          "exit_code": {
+            "description": "Exit code, when the program exited with one.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "final_offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "Final filtered stream offset; every byte before it was delivered."
+          },
+          "final_output_offset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ByteOffset"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Raw output offset of the final byte, when the program exited."
+          },
+          "reason": {
+            "$ref": "#/components/schemas/StreamCloseReason",
+            "description": "Reason.",
+            "x-ovis-open-enum": true
+          },
+          "signal": {
+            "description": "Signal number, when a signal ended the program.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "reason",
+          "final_offset"
+        ],
+        "type": "object"
       },
       "StreamCloseReason": {
         "description": "Why a stream closed.",
@@ -20507,6 +20811,18 @@
       "name": "missed",
       "schema": {
         "$ref": "#/components/schemas/MissedNotice"
+      }
+    },
+    {
+      "name": "attach.data",
+      "schema": {
+        "$ref": "#/components/schemas/AttachData"
+      }
+    },
+    {
+      "name": "attach.control",
+      "schema": {
+        "$ref": "#/components/schemas/AttachControl"
       }
     }
   ],

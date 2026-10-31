@@ -142,6 +142,14 @@ pub struct Geometry {
     pub rows: u16,
 }
 
+impl Geometry {
+    /// A grid of `cols` columns and `rows` rows.
+    #[must_use]
+    pub const fn new(cols: u16, rows: u16) -> Self {
+        Self { cols, rows }
+    }
+}
+
 /// Cursor into the runtime-lifetime event sequence.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]

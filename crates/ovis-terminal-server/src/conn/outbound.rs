@@ -166,6 +166,12 @@ impl Notifier {
         };
         self.outlet.record(&record).await
     }
+
+    /// Resolves once the connection's writer has gone, so its owners can revoke
+    /// what the connection held even while they have nothing to send.
+    pub async fn closed(&self) {
+        self.outlet.queue.closed().await;
+    }
 }
 
 /// The budgeted size of one encoded record. A length beyond `u64` exceeds every bound,

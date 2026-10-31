@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use ovis_terminal_vt::{ContentRevision, LineSpan};
+use ovis_terminal_vt::{ContentRevision, FirstPaint, LineSpan};
 
 use super::error::ScreenError;
 use super::frozen::Frozen;
@@ -170,5 +170,15 @@ impl Screen {
         let inner = self.lock()?;
         let mark = inner.checkpoint.as_ref().map(|(mark, _)| mark);
         inner.ring.read(request, mark)
+    }
+
+    /// The late-attach paint at the live output offset, taken under the ingestion
+    /// lock so no byte lands between the paint and its offset.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ScreenError::Poisoned`] when the state lock is poisoned.
+    pub fn first_paint(&self) -> Result<FirstPaint, ScreenError> {
+        Ok(self.lock()?.vt.first_paint())
     }
 }
