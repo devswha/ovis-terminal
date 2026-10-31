@@ -1,0 +1,32 @@
+## mutant: write-boundary recheck skipped
+error: test run failed
+        FAIL [   0.020s] ( 8/26) ovis-terminal-core::input failure
+        FAIL [   0.023s] (10/26) ovis-terminal-core::input fencing::bytes_encoded_at_an_older_mode_revision_are_fenced
+        FAIL [   0.024s] (19/26) ovis-terminal-core::input leases::the_same_owner_reacquiring_cannot_write_through_its_released_lease
+        FAIL [   0.025s] (22/26) ovis-terminal-core::input fencing::revoked_credentials_and_replaced_processes_fence_queued_entries
+     Summary [   0.294s] 26 tests run: 22 passed, 4 failed, 0 skipped
+
+## mutant: fence handshake never sent
+error: test run failed
+        FAIL [   0.030s] (10/26) ovis-terminal-core::input fencing::takeover_fences_unsent_entries_and_the_unwritten_holder_entry
+        FAIL [   0.032s] (20/26) ovis-terminal-core::input fencing::a_fence_never_claims_to_retract_bytes_the_holder_already_wrote
+     Summary [   0.337s] 26 tests run: 24 passed, 2 failed, 0 skipped
+
+## mutant: holder loss requeues the sent entry
+error: test run failed
+        FAIL [   0.010s] (13/26) ovis-terminal-core::input recovery::holder_loss_never_resends_and_late_evidence_still_resolves
+        FAIL [   0.033s] (18/26) ovis-terminal-core::input recovery::interruption_at_each_barrier_leaves_one_truthful_outcome
+        FAIL [   0.033s] (26/26) ovis-terminal-core::input model::writes_follow_admission_order_once
+     Summary [   0.057s] 26 tests run: 23 passed, 3 failed, 0 skipped
+
+## mutant: process replacement keeps old entries
+error: test run failed
+        FAIL [   0.031s] (14/26) ovis-terminal-core::input fencing::revoked_credentials_and_replaced_processes_fence_queued_entries
+     Summary [   0.333s] 26 tests run: 25 passed, 1 failed, 0 skipped
+
+## mutant: partial write reported as written
+error: test run failed
+        FAIL [   0.024s] (17/26) ovis-terminal-core::input recovery::holder_loss_never_resends_and_late_evidence_still_resolves
+        FAIL [   0.026s] (20/26) ovis-terminal-core::input recovery::barriers_follow_queue_write_and_acknowledgement
+        FAIL [   0.068s] (25/26) ovis-terminal-core::input blocked::a_reader_that_never_reads_blocks_only_its_own_entry
+     Summary [   0.329s] 26 tests run: 23 passed, 3 failed, 0 skipped

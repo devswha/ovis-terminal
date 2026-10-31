@@ -1,0 +1,616 @@
+{
+  "scenario": "part-a/task-25",
+  "todo": 25,
+  "title": "Fence ordered input at admission and actual writes",
+  "closes": [
+    "GAP-070",
+    "GAP-071",
+    "GAP-073",
+    "GAP-074",
+    "GAP-075",
+    "GAP-078"
+  ],
+  "delivers": [
+    "IDEAL-044",
+    "IDEAL-048",
+    "IDEAL-049",
+    "IDEAL-050",
+    "IDEAL-051",
+    "IDEAL-052",
+    "IDEAL-055"
+  ],
+  "excludes": [
+    "EXCL-017",
+    "EXCL-023",
+    "EXCL-024"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "verification": {
+    "status": "deferred_by_plan",
+    "runner_todo": 21,
+    "requires_actual_cli_socket_transcript": true
+  },
+  "credentials": {
+    "operator": [
+      "observe",
+      "interact",
+      "raw_input"
+    ],
+    "agent": [
+      "observe",
+      "interact"
+    ],
+    "bridge": [
+      "observe",
+      "interact",
+      "takeover"
+    ],
+    "admin": [
+      "admin"
+    ]
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "as": "operator",
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.launch",
+            "program": {
+              "argv": [
+                "/bin/sh",
+                "-c",
+                "printf 'ARMED\\n'; stty raw -echo; exec cat"
+              ]
+            },
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin"
+            },
+            "geometry": {
+              "rows": 24,
+              "cols": 80
+            },
+            "keep": true
+          },
+          "capture": [
+            "terminal_id",
+            "process_incarnation"
+          ]
+        },
+        {
+          "inject": {
+            "fixture": "hold_pty_writer",
+            "target": {
+              "terminal_id": "$terminal_id"
+            }
+          },
+          "assert": {
+            "held": true
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.op1",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "alpha-1",
+            "submit": "enter"
+          },
+          "assert": {
+            "receipt.delivery.state": "queued",
+            "receipt.queued_seq": "1",
+            "receipt.admitted_bytes": "8",
+            "elapsed_ms_max": "100"
+          },
+          "capture": [
+            "receipt.queued_seq"
+          ]
+        },
+        {
+          "as": "agent",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.ag1",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "beta-1",
+            "submit": "enter"
+          },
+          "assert": {
+            "receipt.delivery.state": "queued",
+            "receipt.queued_seq": "2",
+            "receipt.agent_accepted.state": "unknown"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.op2",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "alpha-2",
+            "submit": "enter"
+          },
+          "assert": {
+            "receipt.delivery.state": "queued",
+            "receipt.queued_seq": "3"
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "input.barrier",
+          "params": {
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "queued_seq": "2"
+          },
+          "assert": {
+            "state": "pending",
+            "pty_bytes_since_hold": "0"
+          }
+        },
+        {
+          "inject": {
+            "fixture": "release_pty_writer",
+            "target": {
+              "terminal_id": "$terminal_id"
+            }
+          },
+          "assert": {
+            "released_after_admission_replies": true
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "input.barrier",
+          "params": {
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "queued_seq": "3"
+          },
+          "await": "reached",
+          "assert": {
+            "state": "reached"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "op.get",
+          "params": {
+            "op_id": "$uuidv7.op1"
+          },
+          "assert": {
+            "receipt.delivery.state": "pty_written",
+            "receipt.delivery.written_bytes": "8"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "terminal.output",
+          "params": {
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "cursor": {
+              "offset": "$operator.receipt.output_cursor"
+            }
+          },
+          "assert": {
+            "bytes_hex": "616c7068612d310d626574612d310d616c7068612d320d"
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "as": "operator",
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.launch",
+            "program": {
+              "argv": [
+                "/bin/sh",
+                "-c",
+                "printf 'ARMED\\n'; stty raw -echo; exec cat"
+              ]
+            },
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin"
+            },
+            "geometry": {
+              "rows": 24,
+              "cols": 80
+            },
+            "keep": true
+          },
+          "capture": [
+            "terminal_id",
+            "process_incarnation"
+          ]
+        },
+        {
+          "as": "operator",
+          "rpc": "attach.open",
+          "params": {
+            "op_id": "$uuidv7.attach",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "role": "interact",
+            "client_id": "operator",
+            "stream_mode": "channel"
+          },
+          "capture": [
+            "lease.lease_id",
+            "lease.epoch",
+            "stream_id"
+          ]
+        },
+        {
+          "inject": {
+            "fixture": "hold_pty_writer",
+            "target": {
+              "terminal_id": "$terminal_id"
+            }
+          },
+          "assert": {
+            "held": true
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.q1",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "one",
+            "submit": "none",
+            "lease_id": "$operator.lease.lease_id"
+          },
+          "assert": {
+            "receipt.delivery.state": "queued"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.q2",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "two",
+            "submit": "none",
+            "lease_id": "$operator.lease.lease_id"
+          },
+          "assert": {
+            "receipt.delivery.state": "queued"
+          }
+        },
+        {
+          "as": "bridge",
+          "rpc": "attach.open",
+          "params": {
+            "op_id": "$uuidv7.bridge_watch",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "role": "observe",
+            "client_id": "bridge",
+            "stream_mode": "channel"
+          },
+          "capture": [
+            "stream_id"
+          ]
+        },
+        {
+          "as": "bridge",
+          "rpc": "attach.takeover",
+          "params": {
+            "op_id": "$uuidv7.takeover",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "stream_id": "$bridge.stream_id",
+            "takeover": {
+              "lease_epoch": "$operator.lease.epoch",
+              "reason": "bridge reconnect"
+            }
+          },
+          "capture": [
+            "acquired.lease_id"
+          ]
+        },
+        {
+          "inject": {
+            "fixture": "release_pty_writer",
+            "target": {
+              "terminal_id": "$terminal_id"
+            }
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "op.get",
+          "params": {
+            "op_id": "$uuidv7.q2"
+          },
+          "assert": {
+            "receipt.delivery.state": "fenced",
+            "receipt.delivery.reason": "lease_revoked",
+            "written_bytes": "0"
+          }
+        },
+        {
+          "as": "bridge",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.b1",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "three",
+            "submit": "none",
+            "lease_id": "$bridge.acquired.lease_id"
+          },
+          "capture": [
+            "receipt.queued_seq"
+          ]
+        },
+        {
+          "as": "admin",
+          "rpc": "credential.revoke",
+          "params": {
+            "op_id": "$uuidv7.revoke",
+            "credential": "$bridge.credential_id"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "op.get",
+          "params": {
+            "op_id": "$uuidv7.b1"
+          },
+          "assert": {
+            "receipt.delivery.state": "fenced",
+            "receipt.delivery.reason": "credential_revoked",
+            "written_bytes": "0"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.blocked",
+            "program": {
+              "argv": [
+                "/bin/sh",
+                "-c",
+                "printf 'ARMED\\n'; stty raw -echo; exec sleep 600"
+              ]
+            },
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin"
+            },
+            "geometry": {
+              "rows": 24,
+              "cols": 80
+            },
+            "keep": true
+          },
+          "capture": [
+            "terminal_id",
+            "process_incarnation"
+          ]
+        },
+        {
+          "as": "agent",
+          "rpc": "input.paste",
+          "params": {
+            "op_id": "$uuidv7.large",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "$repeat.a.1048576",
+            "bracketed": "never"
+          },
+          "assert": {
+            "receipt.delivery.state": "queued",
+            "elapsed_ms_max": "100"
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.behind",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "queued behind",
+            "submit": "none"
+          },
+          "assert": {
+            "receipt.delivery.state": "queued"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "terminal.resize",
+          "params": {
+            "op_id": "$uuidv7.resize",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "geometry": {
+              "rows": 30,
+              "cols": 100
+            }
+          },
+          "assert": {
+            "elapsed_ms_max": "100"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "terminal.kill",
+          "params": {
+            "op_id": "$uuidv7.kill",
+            "target": {
+              "terminal_id": "$terminal_id"
+            }
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "op.get",
+          "params": {
+            "op_id": "$uuidv7.large"
+          },
+          "assert": {
+            "receipt.delivery.state": "partial",
+            "receipt.delivery.written_bytes_lt": "1048576",
+            "receipt.delivery.written_bytes_gt": "0"
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "op.get",
+          "params": {
+            "op_id": "$uuidv7.behind"
+          },
+          "assert": {
+            "receipt.delivery.state": "fenced",
+            "receipt.delivery.reason": "finished",
+            "written_bytes": "0"
+          }
+        },
+        {
+          "as": "operator",
+          "rpc": "terminal.run",
+          "params": {
+            "op_id": "$uuidv7.replaced",
+            "program": {
+              "argv": [
+                "/bin/sh",
+                "-c",
+                "printf 'ARMED\\n'; stty raw -echo; exec cat"
+              ]
+            },
+            "cwd": "$isolated_root",
+            "env": {
+              "PATH": "/usr/bin:/bin"
+            },
+            "geometry": {
+              "rows": 24,
+              "cols": 80
+            },
+            "keep": true
+          },
+          "capture": [
+            "terminal_id",
+            "process_incarnation"
+          ]
+        },
+        {
+          "as": "agent",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.stale",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "stale",
+            "submit": "none"
+          },
+          "assert": {
+            "receipt.delivery.state": "queued"
+          }
+        },
+        {
+          "inject": {
+            "fixture": "replace_process_while_queued",
+            "target": {
+              "terminal_id": "$terminal_id"
+            }
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "op.get",
+          "params": {
+            "op_id": "$uuidv7.stale"
+          },
+          "assert": {
+            "receipt.delivery.state": "fenced",
+            "receipt.delivery.reason": "stale_target",
+            "written_bytes": "0"
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "input.send",
+          "params": {
+            "op_id": "$uuidv7.uncertain",
+            "target": {
+              "terminal_id": "$terminal_id"
+            },
+            "text": "uncertain",
+            "submit": "none"
+          }
+        },
+        {
+          "inject": {
+            "fixture": "drop_holder_link_after_dispatch",
+            "target": {
+              "terminal_id": "$terminal_id"
+            }
+          }
+        },
+        {
+          "as": "agent",
+          "rpc": "op.get",
+          "params": {
+            "op_id": "$uuidv7.uncertain"
+          },
+          "assert": {
+            "receipt.delivery.state": "outcome_unknown",
+            "resent": false
+          }
+        },
+        {
+          "inject": {
+            "fixture": "readopt_holder",
+            "target": {
+              "terminal_id": "$terminal_id"
+            }
+          },
+          "assert": {
+            "additional_writes_of": "$uuidv7.uncertain",
+            "count": "0"
+          }
+        }
+      ]
+    }
+  ]
+}
