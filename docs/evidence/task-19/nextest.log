@@ -1,0 +1,52 @@
+$ cargo nextest run -p ovis-terminal-authz
+Linux 7.0.0-38-generic x86_64
+   Compiling ovis-terminal-authz v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t19/crates/ovis-terminal-authz)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.54s
+────────────
+ Nextest run ID f6954111-9b07-4b04-9c22-1f4071c29423 with nextest profile: default
+    Starting 42 tests across 3 binaries
+        PASS [   0.007s] ( 1/42) ovis-terminal-authz identity::tests::epoch_is_a_decimal_string_and_saturates_at_the_top
+        PASS [   0.007s] ( 2/42) ovis-terminal-authz authority::secret::tests::bearer_text_round_trips_the_credential_and_secret
+        PASS [   0.008s] ( 3/42) ovis-terminal-authz identity::tests::principal_rejects_empty_oversized_and_control_names
+        PASS [   0.008s] ( 4/42) ovis-terminal-authz identity::tests::credential_id_text_round_trips_and_rejects_non_canonical_forms
+        PASS [   0.008s] ( 5/42) ovis-terminal-authz::authority failure
+        PASS [   0.024s] ( 6/42) ovis-terminal-authz::authority issuance::forged_bearer_tokens_are_rejected
+        PASS [   0.024s] ( 7/42) ovis-terminal-authz::authority reclamation::expired_decision_reports_expiry_after_its_record_is_purged
+        PASS [   0.024s] ( 8/42) ovis-terminal-authz permission::tests::permission_tokens_match_their_wire_encoding
+        PASS [   0.024s] ( 9/42) ovis-terminal-authz::authority reclamation::credential_table_is_bounded_and_reclaims_revoked_entries
+        PASS [   0.024s] (10/42) ovis-terminal-authz::authority issuance::forged_scope_documents_are_rejected_with_field_paths
+        PASS [   0.025s] (11/42) ovis-terminal-authz::authority issuance::numeric_counter_is_rejected_with_its_field_path
+        PASS [   0.025s] (12/42) ovis-terminal-authz permission::tests::only_the_owner_role_bundles_takeover_prompt_answer_and_raw_input
+        PASS [   0.025s] (13/42) ovis-terminal-authz::authority issuance::expiry_preserves_u64_max_exactly
+        PASS [   0.026s] (14/42) ovis-terminal-authz::authority issuance::issued_credential_reports_counters_as_decimal_strings
+        PASS [   0.026s] (15/42) ovis-terminal-authz::authority issuance::issuer_cannot_grant_beyond_its_own_authority
+        PASS [   0.042s] (16/42) ovis-terminal-authz::authority issuance::expiry_round_trips_every_u64_as_a_decimal_string
+        PASS [   0.026s] (17/42) ovis-terminal-authz::endpoint pipe_requires_owner_only_dacl_remote_rejection_and_owner_client
+        PASS [   0.043s] (18/42) ovis-terminal-authz::authority happy
+        PASS [   0.026s] (19/42) ovis-terminal-authz::authority reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed
+        PASS [   0.043s] (20/42) ovis-terminal-authz::endpoint private_socket_admits_only_the_owner_peer
+        PASS [   0.027s] (21/42) ovis-terminal-authz::authority revocation::commit_must_match_the_decided_action_target_and_incarnation
+        PASS [   0.027s] (22/42) ovis-terminal-authz::endpoint pipe_namespace_claims_the_name_again_after_every_full_close
+        PASS [   0.027s] (23/42) ovis-terminal-authz::authority revocation::expiry_between_decision_and_commit_rejects_the_write
+        PASS [   0.027s] (24/42) ovis-terminal-authz::authority reclamation::purged_revoked_credential_cannot_queue_new_work
+        PASS [   0.044s] (25/42) ovis-terminal-authz::authority issuance::payload_from_an_unprivileged_principal_grants_nothing
+        PASS [   0.028s] (26/42) ovis-terminal-authz::authority revocation::decision_from_another_authority_is_rejected
+        PASS [   0.028s] (27/42) ovis-terminal-authz::authority scoping::takeover_and_prompt_answer_need_independent_grants
+        PASS [   0.028s] (28/42) ovis-terminal-authz::authority revocation::machine_wide_grant_does_not_cover_another_machine
+        PASS [   0.028s] (29/42) ovis-terminal-authz::authority revocation::denied_revocation_leaves_the_target_credential_usable
+        PASS [   0.028s] (30/42) ovis-terminal-authz::authority reclamation::tombstone_bound_holds_unexpired_revocations_until_one_expires
+        PASS [   0.028s] (31/42) ovis-terminal-authz::endpoint malformed_sid_is_invalid_params
+        PASS [   0.028s] (32/42) ovis-terminal-authz::endpoint socket_reachable_by_group_or_others_is_refused
+        PASS [   0.028s] (33/42) ovis-terminal-authz::authority reclamation::revoked_then_expired_decision_stays_revoked_after_tombstone_purge
+        PASS [   0.028s] (34/42) ovis-terminal-authz::authority scoping::plugin_and_admin_scopes_are_separate
+        PASS [   0.028s] (35/42) ovis-terminal-authz::authority revocation::credential_is_scoped_to_its_runtime_lifetime
+        PASS [   0.028s] (36/42) ovis-terminal-authz::authority scoping::endpoint_possession_without_credential_material_grants_nothing
+        PASS [   0.028s] (37/42) ovis-terminal-authz::authority revocation::revocation_reaches_a_recheck_on_another_thread
+        PASS [   0.028s] (38/42) ovis-terminal-authz::authority scoping::raw_frames_need_an_explicit_raw_input_grant
+        PASS [   0.028s] (39/42) ovis-terminal-authz::authority revocation::revoked_credential_cannot_authenticate_or_authorize_again
+        PASS [   0.028s] (40/42) ovis-terminal-authz::authority scoping::workspace_scope_covers_only_terminals_placed_in_that_workspace
+        PASS [   0.029s] (41/42) ovis-terminal-authz::authority scoping::credential_without_grants_is_denied_every_action
+        PASS [   0.029s] (42/42) ovis-terminal-authz::authority reclamation::revoked_then_expired_decision_stays_revoked_after_table_overflow
+────────────
+     Summary [   0.047s] 42 tests run: 42 passed, 0 skipped
+EXIT=0

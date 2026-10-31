@@ -1,0 +1,558 @@
+{
+  "scenario": "part-a/task-19",
+  "todo": 19,
+  "title": "Enforce principals roles and resource scoped authority",
+  "closes": [
+    "GAP-129",
+    "GAP-130",
+    "GAP-131",
+    "GAP-136"
+  ],
+  "delivers": [
+    "IDEAL-102",
+    "IDEAL-103",
+    "IDEAL-104",
+    "IDEAL-106",
+    "IDEAL-109"
+  ],
+  "runner": "shell",
+  "note": "Component tests run now. The real-binary socket transcript is deferred until conformance runner and binary assembly land in todo 21; this scenario does not claim that deferred run.",
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "happy",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test happy ... ok",
+              "test result: ok. 1 passed; 0 failed"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "scoping::workspace_scope_covers_only_terminals_placed_in_that_workspace",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test scoping::workspace_scope_covers_only_terminals_placed_in_that_workspace ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "scoping::endpoint_possession_without_credential_material_grants_nothing",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test scoping::endpoint_possession_without_credential_material_grants_nothing ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "issuance::issued_credential_reports_counters_as_decimal_strings",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test issuance::issued_credential_reports_counters_as_decimal_strings ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "endpoint",
+            "private_socket_admits_only_the_owner_peer",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test private_socket_admits_only_the_owner_peer ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-core",
+            "--test",
+            "authority_scope",
+            "registry_identities_resolve_into_scopes_and_back",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test registry_identities_resolve_into_scopes_and_back ... ok"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "failure",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test failure ... ok",
+              "test result: ok. 1 passed; 0 failed"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "revocation::expiry_between_decision_and_commit_rejects_the_write",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test revocation::expiry_between_decision_and_commit_rejects_the_write ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "revocation::commit_must_match_the_decided_action_target_and_incarnation",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test revocation::commit_must_match_the_decided_action_target_and_incarnation ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "scoping::takeover_and_prompt_answer_need_independent_grants",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test scoping::takeover_and_prompt_answer_need_independent_grants ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "scoping::raw_frames_need_an_explicit_raw_input_grant",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test scoping::raw_frames_need_an_explicit_raw_input_grant ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "scoping::plugin_and_admin_scopes_are_separate",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test scoping::plugin_and_admin_scopes_are_separate ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "endpoint",
+            "pipe_requires_owner_only_dacl_remote_rejection_and_owner_client",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test pipe_requires_owner_only_dacl_remote_rejection_and_owner_client ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "endpoint",
+            "pipe_namespace_claims_the_name_again_after_every_full_close",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test pipe_namespace_claims_the_name_again_after_every_full_close ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "revocation::denied_revocation_leaves_the_target_credential_usable",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test revocation::denied_revocation_leaves_the_target_credential_usable ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-core",
+            "--test",
+            "authority_scope",
+            "issuance_document_rejects_an_identity_of_another_family",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test issuance_document_rejects_an_identity_of_another_family ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "reclamation::revoked_then_expired_decision_stays_revoked_after_table_overflow",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test reclamation::revoked_then_expired_decision_stays_revoked_after_table_overflow ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "reclamation::revoked_then_expired_decision_stays_revoked_after_tombstone_purge",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test reclamation::revoked_then_expired_decision_stays_revoked_after_tombstone_purge ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "reclamation::expired_decision_reports_expiry_after_its_record_is_purged",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test reclamation::expired_decision_reports_expiry_after_its_record_is_purged ... ok"
+            ]
+          }
+        },
+        {
+          "argv": [
+            "cargo",
+            "test",
+            "--locked",
+            "-p",
+            "ovis-terminal-authz",
+            "--test",
+            "authority",
+            "reclamation::purged_revoked_credential_cannot_queue_new_work",
+            "--",
+            "--exact",
+            "--nocapture"
+          ],
+          "expect": {
+            "exit": 0,
+            "stdout_contains": [
+              "test reclamation::purged_revoked_credential_cannot_queue_new_work ... ok"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "adversarial_cases": [
+    {
+      "class": "stale state",
+      "name": "revocation epoch advances while a decided write is queued on another thread",
+      "test": "revocation::revocation_reaches_a_recheck_on_another_thread",
+      "expected": {
+        "kind": "credential_revoked",
+        "written": false
+      }
+    },
+    {
+      "class": "stale state",
+      "name": "decision from a previous authority instance or for a replaced incarnation",
+      "test": "revocation::decision_from_another_authority_is_rejected + revocation::commit_must_match_the_decided_action_target_and_incarnation",
+      "expected": {
+        "kind": "decision_mismatch",
+        "written": false
+      }
+    },
+    {
+      "class": "malformed input",
+      "name": "forged scope document: unknown permission, unknown scope kind, smuggled field",
+      "test": "issuance::forged_scope_documents_are_rejected_with_field_paths",
+      "expected": {
+        "kind": "invalid_params",
+        "field_path": true
+      }
+    },
+    {
+      "class": "malformed input",
+      "name": "forged bearer token: flipped, unknown id, truncated, uppercase secret",
+      "test": "issuance::forged_bearer_tokens_are_rejected",
+      "expected": {
+        "kind": "invalid_credential",
+        "authenticated": false
+      }
+    },
+    {
+      "class": "malformed input",
+      "name": "numeric u64 counter instead of a decimal string",
+      "test": "issuance::numeric_counter_is_rejected_with_its_field_path",
+      "expected": {
+        "kind": "invalid_params",
+        "field_path": "expires_at_ms"
+      }
+    },
+    {
+      "class": "prompt injection",
+      "name": "a well-formed grant document carried by an unprivileged principal",
+      "test": "issuance::payload_from_an_unprivileged_principal_grants_nothing",
+      "expected": {
+        "kind": "forbidden",
+        "granted": false
+      }
+    },
+    {
+      "class": "stale state",
+      "name": "revoked credential's record reclaimed at capacity while its decision is queued",
+      "test": "reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed + reclamation::tombstone_bound_holds_unexpired_revocations_until_one_expires",
+      "expected": {
+        "kind": "credential_revoked",
+        "written": false
+      }
+    },
+    {
+      "class": "malformed input",
+      "name": "registry identity of another family in a scope document",
+      "test": "authority_scope::issuance_document_rejects_an_identity_of_another_family",
+      "expected": {
+        "kind": "invalid_params",
+        "field_path": "grants[0].scope.resource"
+      }
+    },
+    {
+      "class": "stale state",
+      "name": "decision queued while valid, then revoked, then expired, then its record or tombstone purged",
+      "test": "reclamation::revoked_then_expired_decision_stays_revoked_after_table_overflow + reclamation::revoked_then_expired_decision_stays_revoked_after_tombstone_purge",
+      "expected": {
+        "kind": "credential_revoked",
+        "written": false
+      }
+    }
+  ]
+}

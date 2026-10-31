@@ -1,0 +1,12 @@
+# Each mutation was applied to the source, the named QA test was run, and the source was restored.
+# Command per mutation: cargo test -p ovis-terminal-authz --test authority <test> -- --exact
+
+M1 src/authority.rs recheck returns Ok(()) without checking the credential claim
+   -> test failure ... FAILED | test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 23 filtered out
+M2 src/scope.rs Grant::allows ignores the resource scope (permission match only)
+   -> test happy ... FAILED | test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 23 filtered out
+M3 src/permission.rs Action::Input requires only Permission::Observe
+   -> test failure ... FAILED | test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 23 filtered out
+
+After restoring all three: cargo test -p ovis-terminal-authz --test authority
+   -> test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out

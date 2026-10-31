@@ -1,0 +1,108 @@
+{
+  "task": 19,
+  "written_by": "executor summary of the logs in this directory; the conformance runner wrote nothing (exit 2)",
+  "branch": "lane/t19-principals-authority",
+  "base": "origin/integration@c1dd6cf",
+  "before": {
+    "observation": "absent",
+    "note": "GAP-129, GAP-130, GAP-131, GAP-136: no comparable new-runtime capability existed; no legacy execution is claimed"
+  },
+  "environment": {
+    "os": "Linux 7.0.0-38-generic",
+    "architecture": "x86_64",
+    "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+    "cargo": "cargo 1.99.1 (5f94df478 2026-08-27)",
+    "nextest": "cargo-nextest 0.9.150"
+  },
+  "checks": [
+    {
+      "command": "cargo nextest run -p ovis-terminal-authz",
+      "exit": 0,
+      "result": "42 tests run: 42 passed, 0 skipped",
+      "log": "nextest.log"
+    },
+    {
+      "command": "cargo nextest run -p ovis-terminal-core --test authority_scope",
+      "exit": 0,
+      "result": "2 tests run: 2 passed, 0 skipped",
+      "log": "nextest-core-seam.log"
+    },
+    {
+      "command": "cargo clippy -p ovis-terminal-authz --all-targets -- -D warnings",
+      "exit": 0,
+      "log": "clippy.log"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-authz --test authority happy -- --exact --nocapture",
+      "exit": 0,
+      "stdout": "observer read+subscribe t1,t2 ok; observer input -> forbidden; operator input+resize t1 ok; operator outside t1 -> forbidden",
+      "log": "qa-happy.log"
+    },
+    {
+      "command": "cargo test -p ovis-terminal-authz --test authority failure -- --exact --nocapture",
+      "exit": 0,
+      "stdout": [
+        "queued input after revocation -> credential_revoked",
+        "observer input -> forbidden",
+        "observer resize -> forbidden",
+        "observer launch -> forbidden",
+        "observer document_write -> forbidden",
+        "observer layout_change -> forbidden",
+        "observer takeover -> forbidden",
+        "observer prompt_answer -> forbidden"
+      ],
+      "log": "qa-failure.log"
+    },
+    {
+      "command": "every step of conformance/scenarios/part-a/task-19.json executed with its expected exit and stdout lines",
+      "exit": 0,
+      "result": "21 of 21 steps PASS",
+      "log": "scenario-steps.log"
+    },
+    {
+      "command": "bash scripts/check.sh",
+      "exit": 0,
+      "log": "check.log"
+    }
+  ],
+  "conformance": {
+    "command": "cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-19 --isolated --case happy --evidence \"$ATTEMPT_DIR/task-19-ovis-terminal-v1.json\"",
+    "exit": 2,
+    "stderr": "conformance: no scenarios are registered in this build (protocol crate ovis-terminal-protocol)",
+    "status": "DEFERRED VERIFICATION (runner lands in Todo 21)",
+    "log": "conformance-attempt.log"
+  },
+  "adversarial": {
+    "stale_state": [
+      "revocation::revocation_reaches_a_recheck_on_another_thread",
+      "revocation::expiry_between_decision_and_commit_rejects_the_write",
+      "revocation::decision_from_another_authority_is_rejected",
+      "revocation::commit_must_match_the_decided_action_target_and_incarnation",
+      "reclamation::queued_decision_stays_revoked_after_its_record_is_reclaimed",
+      "reclamation::tombstone_bound_holds_unexpired_revocations_until_one_expires",
+      "revocation::denied_revocation_leaves_the_target_credential_usable",
+      "reclamation::revoked_then_expired_decision_stays_revoked_after_table_overflow",
+      "reclamation::revoked_then_expired_decision_stays_revoked_after_tombstone_purge",
+      "reclamation::expired_decision_reports_expiry_after_its_record_is_purged",
+      "reclamation::purged_revoked_credential_cannot_queue_new_work"
+    ],
+    "malformed_input": [
+      "issuance::forged_scope_documents_are_rejected_with_field_paths",
+      "issuance::forged_bearer_tokens_are_rejected",
+      "issuance::numeric_counter_is_rejected_with_its_field_path",
+      "forge-probe.log (compile-time)",
+      "authority_scope::issuance_document_rejects_an_identity_of_another_family",
+      "identity-probe.log (compile-time E0308 for cross-family registry ids)"
+    ],
+    "prompt_injection": [
+      "issuance::payload_from_an_unprivileged_principal_grants_nothing"
+    ],
+    "mutation": [
+      "mutation.log",
+      "mutation-revoke.log",
+      "mutation-reclaim.log",
+      "mutation-revoked-expiry.log"
+    ]
+  },
+  "round": "gate review round 2 fix (B3-R2: revocation cause bound to outstanding decisions across expiry and reclamation)"
+}
