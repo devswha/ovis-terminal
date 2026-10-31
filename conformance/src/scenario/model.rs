@@ -110,6 +110,8 @@ pub(crate) enum Step {
     Include(Include),
     /// Require the inner step to fail with this kind.
     ExpectFailure(ExpectFailure),
+    /// Send planned requests, or only the one `--inject` names, and check each reply.
+    Inject(Inject),
 }
 
 /// Fixture servers the runner can start.
@@ -261,6 +263,25 @@ pub(crate) struct Stop {
 pub(crate) struct Include {
     pub(crate) scenario: ScenarioId,
     pub(crate) case: CaseName,
+}
+
+/// Requests a failure case can inject: each merges its params over `base`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Inject {
+    pub(crate) conn: ConnName,
+    /// Params every injection starts from; `$op:` labels are fresh per injection.
+    pub(crate) base: Value,
+    pub(crate) planned: Vec<Injection>,
+}
+
+/// One injectable request and the reply it must get.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Injection {
+    /// `{"method", "params"}`, compared exactly with `--inject`.
+    pub(crate) request: Value,
+    pub(crate) expect: Expect,
 }
 
 #[derive(Debug, Clone, Deserialize)]

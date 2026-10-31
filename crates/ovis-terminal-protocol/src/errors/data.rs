@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::identity::{FieldPath, OpId, TargetId};
 use super::kinds::ErrorKind;
-use crate::schema::scalar::DurationMs;
+use crate::schema::scalar::{DurationMs, ReportSeq};
 
 /// Machine-readable context attached to a boundary failure.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -32,6 +32,9 @@ pub struct ErrorData {
     /// Monotonic elapsed time when the deadline failure was produced.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub elapsed_ms: Option<DurationMs>,
+    /// Current producer status sequence, present on a `stale_seq` rejection.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_seq: Option<ReportSeq>,
     /// Fully qualified alternatives for an ambiguous target.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub candidates: Vec<super::TargetCandidate>,
@@ -51,6 +54,7 @@ impl ErrorData {
             op_id: None,
             deadline_ms: None,
             elapsed_ms: None,
+            current_seq: None,
             candidates: Vec::new(),
             affected: Box::default(),
         }

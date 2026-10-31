@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions]
 
 permissions:
   contents: read
@@ -352,4 +352,67 @@ jobs:
         with:
           name: plugins-stress-macos-${{ github.run_id }}
           path: plugins-stress-macos.log
+          if-no-files-found: error
+  agent-status:
+    if: inputs.probe == 'agent-status'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - name: repeat agent status tests and the agent/status scenario 50 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+            cargo build --locked --manifest-path conformance/Cargo.toml --bin conformance
+            for iteration in $(seq 1 50); do
+              printf '\nITERATION %s/50\n' "$iteration"
+              cargo test --locked -q -p ovis-terminal-agent
+              target/debug/conformance --binary target/debug/ovis-terminal --scenario agent/status \
+                --isolated --case all --evidence "agent-status-$iteration.json"
+              printf 'PASS %s/50\n' "$iteration"
+            done
+            printf 'RESULT 50/50\n'
+          } 2>&1 | tee agent-status-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-status-stress-macos-${{ github.run_id }}
+          path: agent-status-stress-macos.log
+          if-no-files-found: error
+  subscriptions:
+    if: inputs.probe == 'subscriptions'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat subscription tests 100 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 100); do
+              printf '\nITERATION %s/100\n' "$iteration"
+              cargo nextest run -p ovis-terminal-core --test subscriptions --locked --no-tests=fail
+              printf 'PASS %s/100\n' "$iteration"
+            done
+            printf 'RESULT 100/100\n'
+          } 2>&1 | tee subscriptions-stress.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: subscriptions-stress-${{ github.run_id }}
+          path: subscriptions-stress.log
           if-no-files-found: error

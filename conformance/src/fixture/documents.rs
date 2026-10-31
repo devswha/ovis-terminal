@@ -4,12 +4,14 @@
 use std::path::{Path, PathBuf};
 
 use ovis_terminal_authz::{Action, ResolvedTarget, Session, TargetResource};
-use ovis_terminal_core::ops::{OperationEvent, OperationProducer};
+use ovis_terminal_core::ops::OperationProducer;
 use ovis_terminal_core::registry::{MachineId, RuntimeIdentity, TargetResolutionError};
 use ovis_terminal_protocol::schema::ids::DocName;
 use ovis_terminal_protocol::schema::methods::doc::{DocGetParams, DocSetParams};
 use ovis_terminal_server::dispatch::{Access, Completed, DispatchError, Execution, Method};
 use serde_json::{Value, json};
+
+use super::handler::Event;
 
 /// The document whose write waits for cancellation, to hold an operation open.
 pub(crate) const HELD: &str = "held";
@@ -53,7 +55,7 @@ impl DocSet {
     }
 }
 
-impl Method<OperationEvent, OperationProducer> for DocSet {
+impl Method<Event, OperationProducer> for DocSet {
     const NAME: &'static str = "doc.set";
     type Params = DocSetParams;
 
@@ -65,7 +67,7 @@ impl Method<OperationEvent, OperationProducer> for DocSet {
     async fn run(
         &self,
         params: Self::Params,
-        execution: Execution<OperationEvent, OperationProducer>,
+        execution: Execution<Event, OperationProducer>,
     ) -> Result<Completed, DispatchError> {
         if params.name.as_str() == HELD {
             let op_id = execution.op_id().clone();
@@ -104,7 +106,7 @@ impl DocGet {
     }
 }
 
-impl Method<OperationEvent, OperationProducer> for DocGet {
+impl Method<Event, OperationProducer> for DocGet {
     const NAME: &'static str = "doc.get";
     type Params = DocGetParams;
 
@@ -116,7 +118,7 @@ impl Method<OperationEvent, OperationProducer> for DocGet {
     async fn run(
         &self,
         params: Self::Params,
-        execution: Execution<OperationEvent, OperationProducer>,
+        execution: Execution<Event, OperationProducer>,
     ) -> Result<Completed, DispatchError> {
         let path = effect(&self.effects, &params.name)?;
         let name = params.name;

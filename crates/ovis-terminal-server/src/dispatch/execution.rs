@@ -5,10 +5,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use ovis_terminal_authz::{AccessRequest, Action, Authority, Decision, ResolvedTarget};
 use ovis_terminal_core::events::{Coordinator, EventData, SnapshotProducer};
-use ovis_terminal_core::ops::{Context, OperationEvent, OperationSnapshot, Operations};
+use ovis_terminal_core::ops::{
+    Completion, Context, OperationError, OperationEvent, OperationSnapshot, Operations,
+};
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
 use ovis_terminal_protocol::errors::OpId;
-use ovis_terminal_protocol::schema::scalar::TimestampMs;
+use ovis_terminal_protocol::schema::methods::server::OpState;
+use ovis_terminal_protocol::schema::scalar::{OpenEnum, TimestampMs};
+use ovis_terminal_store::Snapshot;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -146,6 +150,53 @@ where
                     operations.outcome_unknown(permission)?;
                     Err(error)
                 }
+            }
+        })
+        .await?
+    }
+}
+
+impl<D, P> Execution<D, P>
+where
+    D: EventData + From<OperationEvent> + Clone + Serialize + DeserializeOwned + Send + 'static,
+    P: SnapshotProducer + Send + Sync + 'static,
+    P::Sections: AsRef<OperationSnapshot> + DeserializeOwned,
+{
+    /// Commits domain writes, events and the operation outcome as one transaction.
+    ///
+    /// `build` reads the committed state through the unit's snapshot and returns either
+    /// a result with its writes and events, or a typed refusal, which settles the
+    /// operation as failed with nothing else written.
+    ///
+    /// # Errors
+    ///
+    /// Returns authority, cancellation and persistence failures, and a refusal as the
+    /// settled operation carrying its typed error.
+    pub async fn commit_unit<F>(self, build: F) -> Result<Completed, DispatchError>
+    where
+        F: FnOnce(&Snapshot) -> Result<Completion<D>, OperationError> + Send + 'static,
+    {
+        tokio::task::spawn_blocking(move || {
+            let operations = Operations::new(&self.state.core, self.context.at(now()?));
+            if *self.cancellation.borrow() {
+                operations.cancel(&self.op_id)?;
+            }
+            let permission = operations.start(&self.op_id)?;
+            if let Err(error) = self
+                .state
+                .authority
+                .recheck(&self.decision, &self.access.at(now()?))
+            {
+                let error = DispatchError::Authority(error);
+                operations.fail_running(permission, error.boundary().data().clone())?;
+                return Err(error);
+            }
+            let record = operations.commit_unit(permission, build)?;
+            match (&record.state, &record.result) {
+                (OpenEnum::Known(OpState::Committed), Some(result)) => {
+                    Ok(Completed(result.clone()))
+                }
+                _ => Err(OperationError::Settled(Box::new(record)).into()),
             }
         })
         .await?

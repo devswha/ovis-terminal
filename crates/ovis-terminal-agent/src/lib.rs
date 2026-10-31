@@ -3,6 +3,8 @@
 //! Scaffold crate: it compiles and records its place in the workspace layering;
 //! runtime behavior arrives with the plan todos named on each module.
 
+pub mod status;
+
 /// Cargo package name of this crate, used by the workspace layering record.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 
@@ -11,4 +13,5 @@ pub const DEPENDS_ON: &[&str] = &[
     ovis_terminal_protocol::CRATE_NAME,
     ovis_terminal_store::CRATE_NAME,
     ovis_terminal_core::CRATE_NAME,
+    ovis_terminal_vt::CRATE_NAME,
 ];
