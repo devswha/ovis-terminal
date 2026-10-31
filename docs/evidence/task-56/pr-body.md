@@ -27,7 +27,7 @@ Measured "before" for the parse budget (`docs/evidence/task-56/tuning/parse-budg
   - `BlockingGate`: bounded `spawn_blocking` admission (semaphore `try_acquire`), one past the limit is `BlockingSaturated`, never queued.
 - `bench/tuning/` (`fairness-tuning` binary; library module via `#[path]` like `bench/harness`): `parse`, `load <terminals> <viewers> <bytes/s> <seconds> [parse-budget [workers]]` over real portable-pty terminals, and `emit`.
 - `conformance/scenarios/performance/fairness.json` + `declared.json` entry (owner 56).
-- `.github/workflows/probe-stress-macos.yml`: option `fairness` and job `fairness` appended at the end.
+- macOS stress job `fairness` (option + job appended at the end of `.github/workflows/probe-stress-macos.yml`) was committed in ba9f3e4 and dispatched on this branch: https://github.com/devswha/ovis-terminal/actions/runs/41236348670. The file was then restored to base in the follow-up commit, because the shared options line conflicts with integration 436506e; the orchestrator union-merges the job block from ba9f3e4.
 
 ## Seams
 
@@ -106,7 +106,7 @@ So there is no materialized `ovis-terminal` CLI/socket invocation for this todo 
 
 ## Risks
 
-- `origin/integration` moved after dispatch (81cb6bf → 436506e); per lane rules this branch does not merge it. A scratch `git merge-tree` against 436506e reports the result in the DoneClaim.
+- `origin/integration` moved after dispatch (81cb6bf → 436506e); per lane rules this branch does not merge it. `git merge-tree` against 436506e conflicted only in the shared stress workflow, which is now restored to base; the re-check is clean.
 - The scheduler is not yet wired into served routes or into `TerminalStreams` (todo 31 assembles). The in-crate tests prove the component, not the served binary.
 - Disk-backed history is not part of this PR: retention here is bounded memory with explicit loss counts (`Lagged`, `unsent`, `cut_off`). Disk spill of history remains with the checkpoint/history owners (todo 49).
 - The debug-build profile test asserts a hard 100 ms max on shared CI runners. Locally on 2 pinned cores it stayed ≤ 77 ms in 12 of 13 runs. One closed-loop variant hit 113 ms before lanes were paced, and one 1-core run hit 161 ms. The macOS `fairness` stress job repeats it 50 times.
