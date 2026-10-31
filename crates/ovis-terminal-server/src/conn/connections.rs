@@ -20,6 +20,7 @@ pub struct Connections<H> {
     shared: Arc<Shared>,
     handler: Arc<H>,
     max_in_flight: usize,
+    unwritten_bytes: u64,
     signal: watch::Sender<bool>,
 }
 
@@ -42,6 +43,7 @@ impl<H: RequestHandler> Connections<H> {
                     limit: "max_in_flight_requests",
                 }
             })?;
+        let unwritten_bytes = identity.limits().connection_unwritten_bytes.get();
         let (signal, _) = watch::channel(false);
         Ok(Self {
             shared: Arc::new(Shared {
@@ -50,6 +52,7 @@ impl<H: RequestHandler> Connections<H> {
             }),
             handler,
             max_in_flight,
+            unwritten_bytes,
             signal,
         })
     }
@@ -71,6 +74,7 @@ impl<H: RequestHandler> Connections<H> {
             handler: Arc::clone(&self.handler),
             shutdown: self.signal.subscribe(),
             max_in_flight: self.max_in_flight,
+            unwritten_bytes: self.unwritten_bytes,
         };
         drive(stream, core, context)
     }

@@ -4,6 +4,7 @@
 //! method runs, may upgrade to framed mode at the hello boundary, and then serves
 //! concurrent correlated requests until the peer closes or the server shuts down.
 
+mod budget;
 mod connections;
 mod core;
 mod driver;
@@ -17,4 +18,4 @@ pub use connections::Connections;
 pub use error::{ConnectionError, HelloError};
 pub use handler::{Call, RequestHandler};
 pub use identity::ServerIdentity;
-pub use outbound::{ConnectionClosed, Notifier};
+pub use outbound::{Notifier, NotifyError};

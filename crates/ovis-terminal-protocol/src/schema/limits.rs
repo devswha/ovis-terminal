@@ -43,6 +43,9 @@ pub struct Limits {
     pub output_ring_bytes: ByteCount,
     /// Requests in flight on one connection.
     pub max_in_flight_requests: u32,
+    /// Encoded bytes queued for one connection but not yet written; past it the
+    /// connection closes with `$/closing{reason: backpressure}`.
+    pub connection_unwritten_bytes: ByteCount,
     /// Session budget for runtime plus holder resident memory.
     pub session_rss_bytes: ByteCount,
     /// Session budget for retained data, evidence excluded.
@@ -77,6 +80,7 @@ impl Limits {
             history_lines: 100_000,
             output_ring_bytes: ByteCount::new(64 * MIB),
             max_in_flight_requests: 64,
+            connection_unwritten_bytes: ByteCount::new(64 * MIB),
             session_rss_bytes: ByteCount::new(GIB),
             session_retained_bytes: ByteCount::new(4 * GIB),
             session_input_bytes: ByteCount::new(64 * MIB),

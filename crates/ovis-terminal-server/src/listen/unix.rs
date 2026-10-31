@@ -31,6 +31,15 @@ pub(super) fn occupant(path: &Path) -> Result<PathOccupant, EndpointError> {
     }
 }
 
+/// Reads the account of a connected peer.
+type PeerUid = fn(&UnixStream) -> io::Result<UnixUid>;
+
+/// The operating system's account for the peer: `SO_PEERCRED` on Linux, `getpeereid` on
+/// macOS and the BSDs.
+fn os_peer_uid(stream: &UnixStream) -> io::Result<UnixUid> {
+    stream.peer_cred().map(|peer| UnixUid::new(peer.uid()))
+}
+
 /// A bound socket whose directory and file are private to the account that bound it.
 #[derive(Debug)]
 pub struct UnixEndpoint {
@@ -39,6 +48,7 @@ pub struct UnixEndpoint {
     directory: PathBuf,
     inode: (u64, u64),
     policy: EndpointPolicy,
+    peer_uid: PeerUid,
 }
 
 impl UnixEndpoint {
@@ -81,6 +91,7 @@ impl UnixEndpoint {
             directory,
             inode: (socket.dev(), socket.ino()),
             policy: EndpointPolicy::new(LocalAccount::Unix(owner)),
+            peer_uid: os_peer_uid,
         };
         let own = PeerEvidence::UnixSocket(endpoint.evidence(owner)?);
         if let Err(source) = endpoint.policy.admit(&own) {
@@ -144,11 +155,18 @@ impl UnixEndpoint {
 
     fn peer_evidence(&self, stream: &UnixStream) -> Result<PeerEvidence, EndpointError> {
         without_sigpipe(stream).map_err(|source| EndpointError::PeerClosed { source })?;
-        let peer = stream
-            .peer_cred()
-            .map_err(|source| EndpointError::PeerClosed { source })?;
-        let evidence = self.evidence(UnixUid::new(peer.uid()))?;
+        let peer =
+            (self.peer_uid)(stream).map_err(|source| EndpointError::PeerClosed { source })?;
+        let evidence = self.evidence(peer)?;
         Ok(PeerEvidence::UnixSocket(evidence))
+    }
+
+    /// Replaces where peer accounts come from; compiled only into this crate's unit tests,
+    /// so a production endpoint always reads them from the operating system.
+    #[cfg(test)]
+    pub(super) fn with_peer_uid(mut self, peer_uid: PeerUid) -> Self {
+        self.peer_uid = peer_uid;
+        self
     }
 
     fn evidence(&self, peer: UnixUid) -> Result<UnixSocketEvidence, EndpointError> {

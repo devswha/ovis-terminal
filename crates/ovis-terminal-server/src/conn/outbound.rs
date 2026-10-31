@@ -1,6 +1,8 @@
 //! The single writer of a connection: replies, notifications, the upgrade and `$/closing`.
 
-use ovis_terminal_protocol::rpc::RpcReply;
+use std::sync::Arc;
+
+use ovis_terminal_protocol::rpc::{DecimalU64, RpcReply};
 use ovis_terminal_protocol::wire::{Channel, Frame, FrameKind};
 use serde::Serialize;
 use serde_json::Value;
@@ -9,6 +11,7 @@ use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::sync::mpsc;
 
 use super::ConnectionError;
+use super::budget::Budget;
 
 /// Outbound records queued per connection before the reader stops reading.
 pub(super) const OUTBOUND_CAPACITY: usize = 256;
@@ -18,26 +21,43 @@ pub(super) const OUTBOUND_CAPACITY: usize = 256;
 pub(super) struct Closing {
     reason: &'static str,
     hint: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    limit_bytes: Option<DecimalU64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    queued_bytes: Option<DecimalU64>,
 }
 
 impl Closing {
     pub(super) const SERVER_SHUTDOWN: Self = Self {
         reason: "server_shutdown",
         hint: "reconnect once the server is running again",
+        limit_bytes: None,
+        queued_bytes: None,
     };
 
     pub(super) fn of(error: &ConnectionError) -> Self {
+        let (limit_bytes, queued_bytes) =
+            if let ConnectionError::Backpressure { limit, queued } = error {
+                (
+                    Some(DecimalU64::new(*limit)),
+                    Some(DecimalU64::new(*queued)),
+                )
+            } else {
+                (None, None)
+            };
         Self {
             reason: error.kind(),
             hint: error.hint(),
+            limit_bytes,
+            queued_bytes,
         }
     }
 }
 
 #[derive(Debug)]
 pub(super) enum Outbound {
-    Reply(RpcReply),
-    Notification { method: String, params: Value },
+    /// One encoded JSON-RPC message whose size is reserved in the budget.
+    Record(Vec<u8>),
     Upgrade,
     Closing(Closing),
     End,
@@ -50,71 +70,131 @@ struct NotificationRecord<'a, P> {
     params: &'a P,
 }
 
-/// The connection was closed before a notification could be queued.
+/// Why a notification was not queued.
 #[derive(Debug, Error)]
-#[error("the connection is closed")]
 #[non_exhaustive]
-pub struct ConnectionClosed;
+pub enum NotifyError {
+    /// The connection is closed.
+    #[error("the connection is closed")]
+    Closed,
+    /// Queuing it would exceed the connection's unwritten-byte bound; the connection closes.
+    #[error("{queued} unwritten bytes are queued; the bound is {limit}")]
+    Backpressure {
+        /// The connection's unwritten-byte bound.
+        limit: u64,
+        /// Bytes queued and not yet written when the notification was refused.
+        queued: u64,
+    },
+    /// The notification could not be encoded.
+    #[error("the notification could not be encoded")]
+    Encode(#[source] serde_json::Error),
+}
 
-impl ConnectionClosed {
+impl NotifyError {
     /// The stable machine-readable kind.
     #[must_use]
     pub const fn kind(&self) -> &'static str {
-        "connection_closed"
+        match self {
+            Self::Closed => "connection_closed",
+            Self::Backpressure { .. } => "backpressure",
+            Self::Encode(_) => "internal",
+        }
     }
 
     /// Recovery guidance for the kind.
     #[must_use]
     pub const fn hint(&self) -> &'static str {
-        "stop producing for this connection; the client reconnects"
+        match self {
+            Self::Closed | Self::Backpressure { .. } => {
+                "stop producing for this connection; the client reconnects"
+            }
+            Self::Encode(_) => "report the notification type; its params do not encode",
+        }
+    }
+}
+
+/// The queue into one connection's writer, guarded by its unwritten-byte budget.
+#[derive(Debug, Clone)]
+pub(super) struct Outlet {
+    pub(super) queue: mpsc::Sender<Outbound>,
+    pub(super) budget: Arc<Budget>,
+}
+
+impl Outlet {
+    /// Encodes and queues one message, reserving its size first.
+    pub(super) async fn record<M: Serialize + Sync>(&self, message: &M) -> Result<(), NotifyError> {
+        let json = serde_json::to_vec(message).map_err(NotifyError::Encode)?;
+        let size = encoded_size(&json);
+        self.budget
+            .reserve(size)
+            .map_err(|overflow| NotifyError::Backpressure {
+                limit: overflow.limit,
+                queued: overflow.queued,
+            })?;
+        if self.queue.send(Outbound::Record(json)).await.is_err() {
+            self.budget.release(size);
+            return Err(NotifyError::Closed);
+        }
+        Ok(())
+    }
+
+    pub(super) async fn reply(&self, reply: &RpcReply) -> Result<(), NotifyError> {
+        self.record(reply).await
     }
 }
 
 /// Queues server notifications on the connection that carried a request.
 #[derive(Debug, Clone)]
 pub struct Notifier {
-    outbound: mpsc::Sender<Outbound>,
+    outlet: Outlet,
 }
 
 impl Notifier {
-    pub(super) const fn new(outbound: mpsc::Sender<Outbound>) -> Self {
-        Self { outbound }
+    pub(super) const fn new(outlet: Outlet) -> Self {
+        Self { outlet }
     }
 
     /// Queues `method` with `params`, waiting while the outbound queue is full.
     ///
     /// # Errors
     ///
-    /// [`ConnectionClosed`] once the connection has closed.
-    pub async fn notify(&self, method: &str, params: Value) -> Result<(), ConnectionClosed> {
-        let notification = Outbound::Notification {
-            method: method.to_owned(),
-            params,
+    /// [`NotifyError::Closed`] once the connection has closed and
+    /// [`NotifyError::Backpressure`] when the peer is not reading fast enough.
+    pub async fn notify(&self, method: &str, params: Value) -> Result<(), NotifyError> {
+        let record = NotificationRecord {
+            jsonrpc: "2.0",
+            method,
+            params: &params,
         };
-        self.outbound
-            .send(notification)
-            .await
-            .map_err(|_| ConnectionClosed)
+        self.outlet.record(&record).await
     }
 }
 
 /// Writes queued records in order until the queue closes or `$/closing` is written.
+///
+/// After the budget overflowed, records still queued are discarded unwritten so the
+/// `$/closing` behind them goes out as soon as the record in progress finishes.
 pub(super) async fn write_loop<W: AsyncWrite + Unpin>(
     mut writer: W,
     mut queue: mpsc::Receiver<Outbound>,
+    budget: Arc<Budget>,
 ) -> Result<(), ConnectionError> {
     let mut framed = false;
     while let Some(item) = queue.recv().await {
-        let (json, last) = match &item {
+        let (json, last) = match item {
             Outbound::Upgrade => {
                 framed = true;
                 continue;
             }
             Outbound::End => break,
-            Outbound::Reply(reply) => (serde_json::to_vec(reply)?, false),
-            Outbound::Notification { method, params } => (record(method, params)?, false),
-            Outbound::Closing(closing) => (record("$/closing", closing)?, true),
+            Outbound::Record(json) => (json, false),
+            Outbound::Closing(closing) => (record("$/closing", &closing)?, true),
         };
+        let reserved = if last { 0 } else { encoded_size(&json) };
+        if !last && budget.overflowed().is_some() {
+            budget.release(reserved);
+            continue;
+        }
         let bytes = if framed {
             Frame::new(Channel::CONTROL, FrameKind::Data, json)?.encode()?
         } else {
@@ -122,13 +202,21 @@ pub(super) async fn write_loop<W: AsyncWrite + Unpin>(
             line.push(b'\n');
             line
         };
-        writer.write_all(&bytes).await?;
+        let written = writer.write_all(&bytes).await;
+        budget.release(reserved);
+        written?;
         if last {
             break;
         }
     }
     writer.shutdown().await?;
     Ok(())
+}
+
+/// The budgeted size of one encoded record. A length beyond `u64` exceeds every bound,
+/// so it saturates and the reservation is refused rather than wrapping.
+fn encoded_size(json: &[u8]) -> u64 {
+    u64::try_from(json.len()).unwrap_or(u64::MAX)
 }
 
 fn record<P: Serialize>(method: &str, params: &P) -> Result<Vec<u8>, serde_json::Error> {

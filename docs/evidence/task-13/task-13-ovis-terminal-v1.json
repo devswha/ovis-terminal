@@ -47,6 +47,35 @@
       "exit": 2,
       "deferred": "DEFERRED VERIFICATION (runner lands in Todo 21)",
       "log": "conformance-attempt.log"
+    },
+    {
+      "argv": "bash scripts/check.sh (gate round 1)",
+      "exit": 0,
+      "result": "335 tests run: 335 passed, 1 skipped",
+      "log": "check-gate1.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-server --locked (gate round 1)",
+      "exit": 0,
+      "result": "32 tests run: 32 passed",
+      "log": "nextest.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-server --no-fail-fast (peer collection mutated away)",
+      "exit": 100,
+      "result": "only listen::tests::a_peer_whose_account_is_not_the_owner_is_refused_at_hello fails; restored 32/32",
+      "log": "mutation-peercred.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-server --no-fail-fast (byte bound mutated away)",
+      "exit": 100,
+      "result": "bound test and three budget unit tests fail; restored 32/32",
+      "log": "mutation-bound.log"
+    },
+    {
+      "argv": "cargo nextest run -p ovis-terminal-protocol --test schema_error_kinds; openrpc check; openrpc compat schema/released.openrpc.json",
+      "exit": 0,
+      "log": "schema-gate.log"
     }
   ]
 }

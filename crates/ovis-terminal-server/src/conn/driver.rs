@@ -12,8 +12,9 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite};
 use tokio::sync::{Semaphore, mpsc, watch};
 use tokio::task::{self, JoinError, JoinSet};
 
+use super::budget::Budget;
 use super::core::{ConnectionCore, Step};
-use super::outbound::{Closing, OUTBOUND_CAPACITY, Outbound, write_loop};
+use super::outbound::{Closing, NotifyError, OUTBOUND_CAPACITY, Outbound, Outlet, write_loop};
 use super::{Call, ConnectionError, Notifier, RequestHandler};
 use crate::peer_gone;
 
@@ -25,6 +26,7 @@ pub(super) struct DriverContext<H> {
     pub(super) handler: Arc<H>,
     pub(super) shutdown: watch::Receiver<bool>,
     pub(super) max_in_flight: usize,
+    pub(super) unwritten_bytes: u64,
 }
 
 enum End {
@@ -35,7 +37,7 @@ enum End {
 
 struct Requests<H> {
     handler: Arc<H>,
-    outbound: mpsc::Sender<Outbound>,
+    outlet: Outlet,
     tasks: JoinSet<RpcReply>,
     ids: HashMap<task::Id, RequestId>,
     in_flight: InFlightRequests,
@@ -53,12 +55,14 @@ where
     H: RequestHandler,
 {
     let (mut reader, writer) = tokio::io::split(stream);
-    let (outbound, queue) = mpsc::channel(OUTBOUND_CAPACITY);
+    let (queue, receiver) = mpsc::channel(OUTBOUND_CAPACITY);
+    let budget = Arc::new(Budget::new(context.unwritten_bytes));
+    let mut overflow = budget.subscribe();
     let mut writers = JoinSet::new();
-    writers.spawn(write_loop(writer, queue));
+    writers.spawn(write_loop(writer, receiver, Arc::clone(&budget)));
     let mut requests = Requests {
         handler: Arc::clone(&context.handler),
-        outbound: outbound.clone(),
+        outlet: Outlet { queue, budget },
         tasks: JoinSet::new(),
         ids: HashMap::new(),
         in_flight: InFlightRequests::default(),
@@ -69,6 +73,13 @@ where
         tokio::select! {
             biased;
             _ = context.shutdown.changed() => break End::Shutdown,
+            Ok(()) = overflow.changed() => {
+                let hit = *overflow.borrow_and_update();
+                if let Some(hit) = hit {
+                    let (limit, queued) = (hit.limit, hit.queued);
+                    break End::Failed(ConnectionError::Backpressure { limit, queued });
+                }
+            }
             Some(joined) = requests.tasks.join_next_with_id(), if !requests.tasks.is_empty() => {
                 if let Err(error) = requests.settle(joined).await {
                     break End::Failed(error);
@@ -99,7 +110,6 @@ where
         Ok(()) | Err(_) => {}
     }
     drop(requests);
-    drop(outbound);
     let written = match writers.join_next().await {
         Some(Ok(Err(ConnectionError::Io(error)))) if peer_gone(&error) => Ok(()),
         Some(Ok(written)) => written,
@@ -113,10 +123,10 @@ impl<H: RequestHandler> Requests<H> {
     async fn apply(&mut self, steps: Vec<Step>) -> Option<End> {
         for step in steps {
             let queued = match step {
-                Step::Reply(reply) => self.send(Outbound::Reply(reply)).await,
+                Step::Reply(reply) => self.reply(&reply).await,
                 Step::Upgrade => self.send(Outbound::Upgrade).await,
                 Step::Dispatch { request, session } => {
-                    let notifier = Notifier::new(self.outbound.clone());
+                    let notifier = Notifier::new(self.outlet.clone());
                     self.dispatch(Call {
                         request,
                         session,
@@ -136,24 +146,23 @@ impl<H: RequestHandler> Requests<H> {
     async fn dispatch(&mut self, call: Call) -> Result<(), ConnectionError> {
         let id = call.request.id().clone();
         if let Err(error) = self.in_flight.begin(id.clone()) {
-            return self.send(failure(id, &error)).await;
+            return self.reply(&failure(id, &error)).await;
         }
         let Ok(permit) = Arc::clone(&self.permits).try_acquire_owned() else {
             let busy = BoundaryError::domain(ErrorKind::from("backpressure".to_owned()), true)
                 .with_hint("wait for an in-flight request to settle, then retry");
-            let reply = RpcReply::Failure(RpcFailure::new(id.clone(), &busy));
             let settled = self
                 .in_flight
-                .complete(&id, reply)
+                .complete(&id, failure(id.clone(), &busy))
                 .map_err(ConnectionError::Correlation)?;
-            return self.send(Outbound::Reply(settled)).await;
+            return self.reply(&settled).await;
         };
         let handler = Arc::clone(&self.handler);
         let task = self.tasks.spawn(async move {
             let id = call.request.id().clone();
             let reply = match handler.call(call).await {
                 Ok(result) => RpcReply::Success(RpcSuccess::new(id, result)),
-                Err(error) => RpcReply::Failure(RpcFailure::new(id, &error)),
+                Err(error) => failure(id, &error),
             };
             drop(permit);
             reply
@@ -174,14 +183,16 @@ impl<H: RequestHandler> Requests<H> {
             ConnectionError::Correlation(BoundaryError::unknown_or_settled_request_id())
         })?;
         let reply = reply.unwrap_or_else(|| {
-            let panicked = BoundaryError::domain(ErrorKind::Internal, false);
-            RpcReply::Failure(RpcFailure::new(id.clone(), &panicked))
+            failure(
+                id.clone(),
+                &BoundaryError::domain(ErrorKind::Internal, false),
+            )
         });
         let settled = self
             .in_flight
             .complete(&id, reply)
             .map_err(ConnectionError::Correlation)?;
-        self.send(Outbound::Reply(settled)).await
+        self.reply(&settled).await
     }
 
     async fn finish(
@@ -189,21 +200,24 @@ impl<H: RequestHandler> Requests<H> {
         end: End,
         shutdown: &mut watch::Receiver<bool>,
     ) -> Result<(), ConnectionError> {
-        let closing = match end {
-            End::PeerClosed => return self.drain_after_eof(shutdown).await,
-            End::Shutdown => Closing::SERVER_SHUTDOWN,
-            End::Failed(error) => {
+        let failed = match end {
+            End::PeerClosed => match self.drain_after_eof(shutdown).await {
+                Ok(()) => return Ok(()),
+                Err(error) => error,
+            },
+            End::Shutdown => {
                 self.tasks.shutdown().await;
-                let closing = Outbound::Closing(Closing::of(&error));
-                // A peer that is already gone cannot read `$/closing`; the original failure
-                // is the one reported either way.
-                return match self.send(closing).await {
-                    Ok(()) | Err(_) => Err(error),
-                };
+                return self.send(Outbound::Closing(Closing::SERVER_SHUTDOWN)).await;
             }
+            End::Failed(error) => error,
         };
         self.tasks.shutdown().await;
-        self.send(Outbound::Closing(closing)).await
+        let closing = Outbound::Closing(Closing::of(&failed));
+        // A peer that is already gone cannot read `$/closing`; the original failure
+        // is the one reported either way.
+        match self.send(closing).await {
+            Ok(()) | Err(_) => Err(failed),
+        }
     }
 
     /// The peer stopped sending but may still read: settle what it already asked for.
@@ -224,14 +238,27 @@ impl<H: RequestHandler> Requests<H> {
         Ok(())
     }
 
+    /// Queues a reply under the connection's unwritten-byte budget.
+    async fn reply(&self, reply: &RpcReply) -> Result<(), ConnectionError> {
+        self.outlet.reply(reply).await.map_err(|error| match error {
+            NotifyError::Backpressure { limit, queued } => {
+                ConnectionError::Backpressure { limit, queued }
+            }
+            NotifyError::Encode(source) => ConnectionError::Encode(source),
+            NotifyError::Closed => closed(),
+        })
+    }
+
+    /// Queues a control record; control records are not budgeted.
     async fn send(&self, item: Outbound) -> Result<(), ConnectionError> {
-        self.outbound
-            .send(item)
-            .await
-            .map_err(|_| ConnectionError::Io(std::io::Error::from(std::io::ErrorKind::BrokenPipe)))
+        self.outlet.queue.send(item).await.map_err(|_| closed())
     }
 }
 
-fn failure(id: RequestId, error: &BoundaryError) -> Outbound {
-    Outbound::Reply(RpcReply::Failure(RpcFailure::new(id, error)))
+fn closed() -> ConnectionError {
+    ConnectionError::Io(std::io::Error::from(std::io::ErrorKind::BrokenPipe))
+}
+
+fn failure(id: RequestId, error: &BoundaryError) -> RpcReply {
+    RpcReply::Failure(RpcFailure::new(id, error))
 }

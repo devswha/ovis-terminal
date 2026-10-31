@@ -37,6 +37,14 @@ pub enum ConnectionError {
     /// Request settlement lost track of a request id.
     #[error("request correlation failed")]
     Correlation(#[source] BoundaryError),
+    /// The peer let more encoded bytes queue up than the connection's bound allows.
+    #[error("{queued} unwritten bytes were queued against a bound of {limit}")]
+    Backpressure {
+        /// The connection's unwritten-byte bound.
+        limit: u64,
+        /// Bytes queued and not yet written when the bound was hit.
+        queued: u64,
+    },
     /// Reading or writing the transport failed.
     #[error("the transport failed")]
     Io(#[from] io::Error),
@@ -60,6 +68,7 @@ impl ConnectionError {
             },
             Self::Refused(error) => error.kind(),
             Self::Correlation(_) | Self::Encode(_) => "internal",
+            Self::Backpressure { .. } => "backpressure",
             Self::Io(_) => "connection_io",
         }
     }
@@ -75,6 +84,9 @@ impl ConnectionError {
             Self::Uncorrelatable(_) => "send JSON-RPC 2.0 requests with a string id",
             Self::Refused(error) => error.hint(),
             Self::Correlation(_) | Self::Encode(_) => "reconnect and report the runtime log",
+            Self::Backpressure { .. } => {
+                "read replies and notifications as they arrive, then reconnect"
+            }
             Self::Io(_) => "reconnect",
         }
     }

@@ -11,6 +11,8 @@ mod error;
 mod probe;
 #[cfg(unix)]
 mod server;
+#[cfg(test)]
+mod tests;
 #[cfg(unix)]
 mod unix;
 

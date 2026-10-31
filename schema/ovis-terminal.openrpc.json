@@ -3480,6 +3480,10 @@
       "Limits": {
         "description": "Per-object and session-wide bounds; admission budgets, not preallocations.",
         "properties": {
+          "connection_unwritten_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Encoded bytes queued for one connection but not yet written; past it the\nconnection closes with `$/closing{reason: backpressure}`."
+          },
           "credit_initial_bytes": {
             "$ref": "#/components/schemas/ByteCount",
             "description": "Output credit granted when a stream opens."
@@ -3587,6 +3591,7 @@
           "history_lines",
           "output_ring_bytes",
           "max_in_flight_requests",
+          "connection_unwritten_bytes",
           "session_rss_bytes",
           "session_retained_bytes",
           "session_input_bytes",
@@ -19239,6 +19244,7 @@
   ],
   "x-limits": {
     "defaults": {
+      "connection_unwritten_bytes": "67108864",
       "credit_initial_bytes": "262144",
       "credit_max_bytes": "1048576",
       "doc_max_bytes": "1048576",

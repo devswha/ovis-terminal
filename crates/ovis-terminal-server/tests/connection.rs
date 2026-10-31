@@ -6,6 +6,8 @@
 
 #[path = "connection/adversarial.rs"]
 mod adversarial;
+#[path = "connection/bound.rs"]
+mod bound;
 #[path = "connection/descriptor.rs"]
 mod descriptor;
 #[path = "connection/endpoint.rs"]
