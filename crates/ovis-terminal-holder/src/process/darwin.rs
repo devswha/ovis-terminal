@@ -13,6 +13,8 @@ use crate::protocol::ProcessStartToken;
 const ZOMBIE: u32 = 5;
 /// `NODEV`: the process has no controlling terminal.
 const NO_DEVICE: u32 = u32::MAX;
+/// `PROC_TTY_ONLY` from `<sys/proc_info.h>`: list processes by controlling terminal.
+const TTY_ONLY: u32 = 3;
 
 fn raw_pid(pid: ProcessId) -> Result<c_int, ProbeError> {
     c_int::try_from(pid.get()).map_err(|_| ProbeError::Gone { pid: pid.get() })
@@ -76,22 +78,30 @@ pub(super) fn entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
     })
 }
 
-pub(super) fn pids() -> Result<Vec<ProcessId>, ProbeError> {
-    // SAFETY: a null buffer of size zero asks only for the current process count.
-    let count = unsafe { libc::proc_listallpids(std::ptr::null_mut(), 0) };
-    let capacity = usize::try_from(count)
-        .map_err(|_| ProbeError::Unreadable {
-            source: io::Error::last_os_error(),
-        })?
+/// PIDs whose controlling terminal is `tty`, from the kernel's own per-tty index, so
+/// processes of other users and terminals are never read.
+pub(super) fn terminal_pids(tty: u64) -> Result<Vec<ProcessId>, ProbeError> {
+    let device = u32::try_from(tty).map_err(|_| ProbeError::Malformed)?;
+    let unreadable = || ProbeError::Unreadable {
+        source: io::Error::last_os_error(),
+    };
+    // SAFETY: a null buffer of size zero asks only for the byte size of the list.
+    let needed = unsafe { libc::proc_listpids(TTY_ONLY, device, std::ptr::null_mut(), 0) };
+    let slots = usize::try_from(needed)
+        .map_err(|_| unreadable())?
+        .checked_div(size_of::<c_int>())
+        .ok_or(ProbeError::Malformed)?
         .saturating_add(64);
-    let mut buffer: Vec<c_int> = vec![0; capacity];
-    let bytes = c_int::try_from(capacity.saturating_mul(size_of::<c_int>()))
+    let mut buffer: Vec<c_int> = vec![0; slots];
+    let bytes = c_int::try_from(slots.saturating_mul(size_of::<c_int>()))
         .map_err(|_| ProbeError::Malformed)?;
     // SAFETY: the buffer holds `bytes` writable bytes of `c_int` slots.
-    let listed = unsafe { libc::proc_listallpids(buffer.as_mut_ptr().cast(), bytes) };
-    let listed = usize::try_from(listed).map_err(|_| ProbeError::Unreadable {
-        source: io::Error::last_os_error(),
-    })?;
+    let written =
+        unsafe { libc::proc_listpids(TTY_ONLY, device, buffer.as_mut_ptr().cast(), bytes) };
+    let listed = usize::try_from(written)
+        .map_err(|_| unreadable())?
+        .checked_div(size_of::<c_int>())
+        .ok_or(ProbeError::Malformed)?;
     buffer.truncate(listed);
     Ok(buffer
         .into_iter()

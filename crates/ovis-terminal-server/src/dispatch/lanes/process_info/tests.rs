@@ -31,7 +31,7 @@ impl ProcessTable for Table {
             .ok_or(Unavailable::ProcessUnavailable)
     }
 
-    fn pids(&self) -> Result<Vec<ProcessPid>, Unavailable> {
+    fn candidates(&self, _: u64) -> Result<Vec<ProcessPid>, Unavailable> {
         let records = self.0.lock().map_err(|_| Unavailable::Raced)?;
         Ok(records
             .keys()

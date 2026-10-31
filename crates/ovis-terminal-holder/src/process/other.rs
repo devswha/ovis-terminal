@@ -28,7 +28,7 @@ pub(super) const fn entry(_: ProcessId) -> Result<ProcessEntry, ProbeError> {
     Err(ProbeError::Unsupported)
 }
 
-pub(super) const fn pids() -> Result<Vec<ProcessId>, ProbeError> {
+pub(super) const fn terminal_pids(_: u64) -> Result<Vec<ProcessId>, ProbeError> {
     Err(ProbeError::Unsupported)
 }
 

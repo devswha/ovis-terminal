@@ -50,7 +50,7 @@ fn member(
 }
 
 fn groups(table: &dyn ProcessTable, root: Session) -> Result<Groups, Unavailable> {
-    let pids = table.pids()?;
+    let pids = table.candidates(root.tty)?;
     if pids.len() > TABLE_LIMIT {
         return Err(Unavailable::Limit);
     }

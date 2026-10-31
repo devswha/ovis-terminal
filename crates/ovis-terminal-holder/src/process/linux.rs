@@ -74,7 +74,8 @@ pub(super) fn entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
     })
 }
 
-pub(super) fn pids() -> Result<Vec<ProcessId>, ProbeError> {
+/// Every PID: `/proc` has no per-terminal index, so callers re-check membership.
+pub(super) fn terminal_pids(_: u64) -> Result<Vec<ProcessId>, ProbeError> {
     let mut pids = Vec::new();
     for entry in std::fs::read_dir("/proc").map_err(|source| ProbeError::Unreadable { source })? {
         let entry = entry.map_err(|source| ProbeError::Unreadable { source })?;

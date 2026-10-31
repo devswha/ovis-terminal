@@ -76,12 +76,13 @@ pub trait ProcessTable {
     /// Returns the reason the record could not be read.
     fn read(&self, pid: ProcessPid) -> Result<NativeProcess, Unavailable>;
 
-    /// Lists every PID in the table.
+    /// Lists the PIDs that may have `tty` as their controlling terminal; each one's
+    /// membership is re-checked by reading its record.
     ///
     /// # Errors
     ///
     /// Returns the reason the table could not be enumerated.
-    fn pids(&self) -> Result<Vec<ProcessPid>, Unavailable>;
+    fn candidates(&self, tty: u64) -> Result<Vec<ProcessPid>, Unavailable>;
 
     /// Reads the current argument vector.
     fn argv(&self, pid: ProcessPid) -> Field<Vec<String>>;
@@ -136,8 +137,8 @@ impl ProcessTable for NativeTable {
         ))
     }
 
-    fn pids(&self) -> Result<Vec<ProcessPid>, Unavailable> {
-        let listed = native::list_pids().map_err(|error| reason(&error))?;
+    fn candidates(&self, tty: u64) -> Result<Vec<ProcessPid>, Unavailable> {
+        let listed = native::list_terminal_pids(tty).map_err(|error| reason(&error))?;
         Ok(listed
             .into_iter()
             .filter_map(|pid| ProcessPid::try_from(u64::from(pid.get())).ok())

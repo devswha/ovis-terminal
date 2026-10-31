@@ -16,12 +16,10 @@ fn a_live_record_carries_the_same_start_token_as_the_token_reader() {
 
 #[cfg(unix)]
 #[test]
-fn table_listing_argv_and_cwd_describe_this_process() {
-    let pids = super::list_pids().expect("process table");
+fn argv_and_cwd_describe_this_process() {
     let argv = super::read_argv(own()).expect("own argv");
     let cwd = super::read_cwd(own()).expect("own cwd");
 
-    assert!(pids.contains(&own()));
     assert_eq!(argv, std::env::args().collect::<Vec<_>>());
     assert_eq!(
         cwd.canonicalize().ok(),
@@ -93,7 +91,7 @@ fn windows_reports_membership_and_listing_as_unsupported() {
 
     assert_eq!(entry.terminal, Membership::Unsupported);
     assert_eq!(
-        super::list_pids().err().map(|error| error.kind()),
+        super::list_terminal_pids(0).err().map(|error| error.kind()),
         Some("unsupported_platform")
     );
 }
@@ -104,4 +102,38 @@ fn unix_membership_is_never_reported_as_unsupported() {
     let entry = read_entry(own()).expect("own record");
 
     assert_ne!(entry.terminal, Membership::Unsupported);
+}
+
+#[cfg(unix)]
+#[test]
+fn a_pty_session_leader_is_listed_on_its_own_controlling_terminal() {
+    use std::io::Write as _;
+
+    use portable_pty::{CommandBuilder, PtySize, native_pty_system};
+
+    let pair = native_pty_system()
+        .openpty(PtySize::default())
+        .expect("open a pty");
+    let mut command = CommandBuilder::new("/bin/sh");
+    command.args(["-c", "read gate; exit 0"]);
+    let mut child = pair.slave.spawn_command(command).expect("spawn on the pty");
+    let pid = ProcessId::new(child.process_id().expect("child pid"));
+
+    let entry = read_entry(pid).expect("child record");
+    let listed = match entry.terminal {
+        Membership::Controlling(member) => Some((
+            member,
+            super::list_terminal_pids(member.tty).expect("tty listing"),
+        )),
+        Membership::Detached | Membership::Unsupported => None,
+    };
+    let mut writer = pair.master.take_writer().expect("pty writer");
+    writer.write_all(b"\n").expect("release the child");
+    let status = child.wait().expect("child exit");
+
+    let (member, listed) = listed.expect("a pty child has a controlling terminal");
+    assert_eq!(member.group, pid.get());
+    assert_eq!(member.foreground_group, pid.get());
+    assert!(listed.contains(&pid));
+    assert!(status.success());
 }

@@ -133,13 +133,16 @@ pub fn read_entry(pid: ProcessId) -> Result<ProcessEntry, ProbeError> {
     os::entry(pid)
 }
 
-/// Lists every PID in the process table.
+/// Lists the PIDs that may have `tty` as their controlling terminal.
+///
+/// macOS answers from the kernel's per-terminal index; Linux lists every PID, since
+/// `/proc` has none. Callers re-check each record's membership.
 ///
 /// # Errors
 ///
 /// Returns [`ProbeError::Unsupported`] where the table cannot be enumerated.
-pub fn list_pids() -> Result<Vec<ProcessId>, ProbeError> {
-    os::pids()
+pub fn list_terminal_pids(tty: u64) -> Result<Vec<ProcessId>, ProbeError> {
+    os::terminal_pids(tty)
 }
 
 /// Reads the current argument vector of `pid`.

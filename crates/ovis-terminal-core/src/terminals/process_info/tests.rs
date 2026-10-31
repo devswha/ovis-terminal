@@ -37,7 +37,7 @@ impl ProcessTable for Scripted {
             .unwrap_or(Err(Unavailable::ProcessUnavailable))
     }
 
-    fn pids(&self) -> Result<Vec<ProcessPid>, Unavailable> {
+    fn candidates(&self, _: u64) -> Result<Vec<ProcessPid>, Unavailable> {
         Ok(self
             .records
             .borrow()

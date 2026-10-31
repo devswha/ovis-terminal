@@ -26,8 +26,8 @@ use other as os;
 pub use signal::{SignalError, SignalScope, send_hangup, send_signal};
 pub use start_token::{StartTokenError, read_start_token};
 pub use table::{
-    Membership, ProbeError, ProcessEntry, TerminalMembership, list_pids, read_argv, read_cwd,
-    read_entry,
+    Membership, ProbeError, ProcessEntry, TerminalMembership, list_terminal_pids, read_argv,
+    read_cwd, read_entry,
 };
 #[cfg(windows)]
 use windows as os;
