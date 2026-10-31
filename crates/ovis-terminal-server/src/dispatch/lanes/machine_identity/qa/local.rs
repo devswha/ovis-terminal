@@ -41,7 +41,7 @@ pub(super) struct Local {
 
 impl Local {
     pub(super) async fn start(bound: Duration) -> TestResult<Self> {
-        let root = private_root("local")?;
+        let root = private_root()?;
         let runtime = identity(MACHINE, 1)?;
         let (authority, bearer) = bootstrap(runtime)?;
         let authority = Arc::new(authority);

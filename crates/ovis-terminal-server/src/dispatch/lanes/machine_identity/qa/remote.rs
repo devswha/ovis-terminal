@@ -5,6 +5,7 @@ use std::fs::{File, OpenOptions};
 use std::os::unix::fs::DirBuilderExt as _;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ovis_terminal_authz::{
     Authority, AuthorityConfig, EndpointPolicy, LocalAccount, OwnerSpec, PeerEvidence, PrincipalId,
@@ -60,8 +61,12 @@ pub(super) fn bootstrap(
     Ok((authority, issued.bearer().to_owned()))
 }
 
-pub(super) fn private_root(label: &str) -> TestResult<PathBuf> {
-    let root = std::env::temp_dir().join(format!("ovt43-{label}-{}", uuid::Uuid::now_v7()));
+/// A private root short enough for a socket path on every platform (Darwin allows 104
+/// bytes): `/tmp/ovt43-<pid>-<n>`, unique per process and call.
+pub(super) fn private_root() -> TestResult<PathBuf> {
+    static NEXT: AtomicUsize = AtomicUsize::new(0);
+    let index = NEXT.fetch_add(1, Ordering::Relaxed);
+    let root = PathBuf::from(format!("/tmp/ovt43-{}-{index}", std::process::id()));
     std::fs::DirBuilder::new().mode(0o700).create(&root)?;
     Ok(root)
 }
@@ -80,7 +85,7 @@ impl Remote {
         let (authority, bearer) = bootstrap(runtime)?;
         let connections = Connections::new(Arc::new(authority), runtime, Arc::new(NoMethods))?;
         Ok(Self {
-            root: private_root("remote")?,
+            root: private_root()?,
             connections: Arc::new(connections),
             serving: Vec::new(),
             bearer,
