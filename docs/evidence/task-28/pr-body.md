@@ -58,7 +58,7 @@ exit=0
 - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` → exit 0 (`windows-check.log`); the ws module has no platform cfg, `tests/ws.rs` is `#![cfg(unix)]` like `tests/streams.rs` (the parity fixture needs a Unix socket).
 - Unit: 17 `ws::` tests (`ws-unit.log`) including proptests — frames decode identically under every split, the upgrade head is found under every split with pipelined frame bytes handed on, inbound payloads read back as one stream under every read size, an origin round-trips through its text; RFC 6455 vectors (sample key → `s3pPLMBiTxaQ9kYGzzhZRbK+xOo=`, masked "Hello" sample, 16/64-bit length encodings, close payload bytes).
 - Stress: the 3 integration tests 60/60 sequential runs and 30/30 pinned to 2 CPUs (`taskset -c 0-1`). One earlier run exposed a test race (repaint checkpoint `stream_offset` depends on delivery progress); the test now waits until every viewer received the last chunk before replaying.
-- macOS: workflow option `websocket` added at the end of `probe-stress-macos.yml` (25 iterations of `--test ws` + `ws::` unit tests); run link below.
+- macOS: workflow option `websocket` (25 iterations of `--test ws` + `ws::` unit tests) was committed in `048d73d` and dispatched on this branch: https://github.com/devswha/ovis-terminal/actions/runs/41236233859 (result recorded below once finished). The file was then restored to base in the next commit so the PR stays MERGEABLE against integration (which appended `ops-digest, ops-admission`); the orchestrator unions the `websocket` option and job block from `048d73d`.
 
 ## Adversarial
 
@@ -81,7 +81,7 @@ exit=0
 - New public API: `ovis_terminal_server::ws::{serve_websocket, WsConfig, WsBinding, WsEndpoint, WsServerHandle, WsReport, AllowedOrigins, Origin, WsError, FrameDefect, UpgradeDefect}`. No landed crate's public API changed.
 - Dependencies (workspace `Cargo.toml` + server manifest): `httparse 1.10` (no dependencies) and `sha1 0.10` (shares `digest 0.10` / `cpufeatures 0.2` with `sha2`). tokio-tungstenite was tried and rejected: 0.30 pulls `sha1 0.11`/`digest 0.11`, and even without its handshake feature `rand 0.10`→`chacha20`→`cpufeatures 0.3`; 0.29 duplicates `rand`/`getrandom` — each fails `clippy::multiple_crate_versions`.
 - `conformance/scenarios/declared.json`: one entry for `part-a/task-28.json` in sorted position.
-- `.github/workflows/probe-stress-macos.yml`: option `websocket` appended at the end of the list and one job appended at the end.
+- `.github/workflows/probe-stress-macos.yml`: not changed in the final diff; the `websocket` option and job block to union are in commit `048d73d`.
 
 ## Risks
 

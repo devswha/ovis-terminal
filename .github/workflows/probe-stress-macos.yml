@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, websocket]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty]
 
 permissions:
   contents: read
@@ -626,35 +626,4 @@ jobs:
         with:
           name: conpty-windows-${{ github.run_id }}
           path: conpty-windows.log
-          if-no-files-found: error
-  websocket:
-    if: inputs.probe == 'websocket'
-    runs-on: macos-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.99.1
-      - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@nextest
-      - name: repeat WebSocket transport tests 25 times
-        shell: bash
-        run: |
-          set -euo pipefail
-          {
-            uname -a
-            rustc --version
-            git rev-parse HEAD
-            for iteration in $(seq 1 25); do
-              printf '\nITERATION %s/25\n' "$iteration"
-              cargo nextest run -p ovis-terminal-server --locked --no-tests=fail --test ws
-              cargo nextest run -p ovis-terminal-server --locked --no-tests=fail --lib -E 'test(ws::)'
-              printf 'PASS %s/25\n' "$iteration"
-            done
-            printf 'RESULT 25/25\n'
-          } 2>&1 | tee websocket-stress-macos.log
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: websocket-stress-macos-${{ github.run_id }}
-          path: websocket-stress-macos.log
           if-no-files-found: error
