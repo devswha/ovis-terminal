@@ -66,7 +66,15 @@ The happy and failure observables run as unit tests in `crates/ovis-terminal-ser
 - CI round 2: `test (macos-latest)` failed binding the lane fixture's socket under the Darwin `$TMPDIR` (`/var/folders/...`), which exceeds the 104-byte `sun_path` limit. The fixture root is now `/tmp/ovt43-<pid>-<n>` (mode 0700, removed after each test) on every platform. The lane binds no socket in product code; only the test fixture calls `UnixEndpoint::bind`.
 - `cargo nextest run -p ovis-terminal-conformance --all-targets --locked`: 24 passed, including `every_scenario_file_is_executed_or_a_listed_declaration` with the new declaration.
 - `openrpc write schema/ovis-terminal.openrpc.json` regenerated; `openrpc compat schema/released.openrpc.json` reports `compatible_with`.
-- macOS stress: new `machine-identity` option and job in `probe-stress-macos.yml` (100 iterations of the remote and lane tests): https://github.com/devswha/ovis-terminal/actions/runs/41211223775 (dispatched on the first head).
+- macOS stress: new `machine-identity` option and job in `probe-stress-macos.yml` (100 iterations of the remote tests and the two-runtime lane tests with `--no-capture`). Run https://github.com/devswha/ovis-terminal/actions/runs/41213699464 on 43994c5: `RESULT 100/100`.
+
+### CI history
+1. `a9c761a`: `rustdoc -D warnings` failed. A public doc linked the private `Link::received`. Fixed in `8268e6d`.
+2. `8268e6d`: `test (macos-latest)` failed. The lane fixture's socket under Darwin `$TMPDIR` exceeded the 104-byte `sun_path` limit. The fixture root is now `/tmp/ovt43-<pid>-<n>` (`8e8a86a`). The lane binds no socket in product code.
+3. `8e8a86a`: `test (macos-latest)` failed with `Elapsed` after 15 s in fixture teardown, after every assertion had passed.
+   - Diagnostics (`12def31`, stress run 41213460834) reported `relay 0 still served after 15s; live: []`: every relay process had exited, but the remote fixture's `tokio::net::unix::pipe` reader never reported FIFO end-of-file on Darwin.
+   - `43994c5` reads and writes the fixture FIFOs through `tokio::fs::File` (blocking `read(2)` returns 0 at EOF on every platform). This is a fixture-only change; the product serves remotes over `ovis-terminal connect` stdio, never FIFOs.
+   - Verified by stress run 41213699464 (`RESULT 100/100`), `scripts/check.sh` exit 0 (589 passed / 1 skipped) and the Windows pre-check exit 0.
 
 ## Adversarial
 
