@@ -266,3 +266,19 @@ Todo-5/6 scenarios, property examples, counter tests, and the task-16 scenario a
 ## Cleanup
 
 All real-process fixtures join their owned holder/control workers and remove their isolated temporary roots. No merge, force-push, unrelated worktree edit or external person-message is part of this change. Resume decisions are recorded per file in resume-assessment.md.
+
+## CI refresh
+
+Head `c501322b804193b9feaf12a23c3f199bbc50debb` records canonical cwd evidence
+before operation admission and passed the local `bash scripts/check.sh` gate:
+workspace Clippy, 392 nextest tests, doctests, hygiene, manifest and JSON checks
+all exited 0. In PR run `41178324576`, the macOS terminal `happy` case also
+passed; the sole required-check failure was
+`program_stop_names_every_reaped_incarnation_and_leaves_control_available`,
+where the landed holder returned `EPERM` after a process-group leader was
+reaped.
+
+Integration `a9a4ed4d75c33147ab1503c53e7cf2ee3828e3f2` lands Todo 76's holder fix for
+that macOS `killpg` race. This evidence-only commit does not merge integration
+or change terminal/holder behavior; its push refreshes PR #23's merge ref so
+the unchanged task-16 implementation is verified against the landed fix.
