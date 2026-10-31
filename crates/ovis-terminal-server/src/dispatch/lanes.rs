@@ -1,6 +1,7 @@
 //! Typed domain routes registered on the dispatcher by assembly.
 
 pub mod agent_status;
+pub mod agent_tree;
 
 pub mod conpty;
 pub mod documents_retention;
@@ -12,6 +13,7 @@ pub mod prompts;
 pub mod restart;
 
 pub mod session_binding;
+pub mod template_launch;
 #[cfg(unix)]
 pub mod unix_service;
 pub mod update;

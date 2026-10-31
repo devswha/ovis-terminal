@@ -1,0 +1,15 @@
+## host: Linux 7.0.0-38-generic x86_64
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/launch --isolated --case happy --evidence "$ATTEMPT_DIR/task-35-ovis-terminal-v1.json"
+{"case":"happy","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t35/.omo/evidence/ovis-terminal-v1/task-35/task-35-ovis-terminal-v1.json","evidence_written":null,"result":"passed","scenario":"agent/launch","totals":{"assertions":"60","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+exit=0
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/launch --isolated --case failure --inject '{"method":"terminal.run","params":{"template":{"name":"build","version":"missing"},"first_message":{"text":"x"}}}' --evidence "$ATTEMPT_DIR/task-35-ovis-terminal-v1.json" --append
+{"case":"failure","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t35/.omo/evidence/ovis-terminal-v1/task-35/task-35-ovis-terminal-v1.json","evidence_written":null,"result":"passed","scenario":"agent/launch","totals":{"assertions":"40","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+exit=0
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/launch --isolated --case all --evidence "$ATTEMPT_DIR/task-35-all.json"
+{"case":"all","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t35/.omo/evidence/ovis-terminal-v1/task-35/task-35-all.json","evidence_written":null,"result":"passed","scenario":"agent/launch","totals":{"assertions":"103","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
+exit=0
+$ (probe) unplanned inject must fail
+{"case":"failure","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t35/.omo/evidence/ovis-terminal-v1/task-35/probe-unplanned.json","evidence_written":null,"result":"failed","scenario":"agent/launch","totals":{"assertions":"3","cases":"1","declared_only":"0","failed":"1","passed":"0","skipped":"0"}}
+exit=1
+
+[exit 0]

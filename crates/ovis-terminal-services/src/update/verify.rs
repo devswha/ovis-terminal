@@ -44,18 +44,12 @@ fn manifest(dir: &Path) -> Result<BuildManifest, Check> {
     serde_json::from_slice(&bytes).map_err(|_| Check::Reject(RejectReason::ManifestMismatch))
 }
 
+/// Sets the mode bits a unix executable needs; Windows runs any `.exe` file.
 #[cfg(unix)]
 fn mark_executable(binary: &Path) -> Result<(), UpdateError> {
     use std::os::unix::fs::PermissionsExt as _;
     std::fs::set_permissions(binary, std::fs::Permissions::from_mode(0o755))
         .map_err(io("mark the executable"))
-}
-
-/// Windows runs any `.exe` file; there is no mode bit to set.
-#[cfg(not(unix))]
-fn mark_executable(binary: &Path) -> Result<(), UpdateError> {
-    let _: &Path = binary;
-    Ok(())
 }
 
 impl Updates {
@@ -85,6 +79,7 @@ impl Updates {
         if !binary.is_file() {
             return Err(Check::Reject(RejectReason::MissingEntry));
         }
+        #[cfg(unix)]
         mark_executable(&binary)?;
         Ok(VerifiedBuild::new(manifest, hash_file(&binary, limit)?))
     }

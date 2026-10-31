@@ -4,6 +4,7 @@
 //! runtime behavior arrives with the plan todos named on each module.
 
 pub mod plugins;
+pub mod templates;
 pub mod update;
 pub mod worktrees;
 

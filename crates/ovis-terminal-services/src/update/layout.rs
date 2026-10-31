@@ -130,18 +130,14 @@ pub(super) fn remove_tree(path: &Path) -> Result<(), UpdateError> {
     }
 }
 
-/// Makes a rename inside `path`'s directory durable.
-#[cfg(unix)]
+/// Makes a rename inside `path`'s directory durable. Windows commits a rename with the
+/// file's own metadata and cannot open a directory, so there it has nothing to sync.
 fn sync_parent(path: &Path) -> Result<(), UpdateError> {
+    if !cfg!(unix) {
+        return Ok(());
+    }
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
     File::open(parent)
         .and_then(|dir| dir.sync_all())
         .map_err(io("sync the install root"))
-}
-
-/// Windows commits a rename with the file's own metadata; directories cannot be opened.
-#[cfg(not(unix))]
-fn sync_parent(path: &Path) -> Result<(), UpdateError> {
-    let _: &Path = path;
-    Ok(())
 }

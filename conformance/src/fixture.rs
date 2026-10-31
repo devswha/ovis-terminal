@@ -14,15 +14,21 @@ pub mod documents;
 pub mod handler;
 pub mod launch;
 #[cfg(unix)]
+pub mod launches;
+#[cfg(unix)]
 pub mod output;
 #[cfg(unix)]
 pub mod prompts;
 #[cfg(unix)]
 pub mod serve;
 #[cfg(unix)]
+pub mod template_lane;
+#[cfg(unix)]
 pub mod terminals;
 #[cfg(unix)]
 pub mod transcripts;
+#[cfg(unix)]
+pub mod tree;
 #[cfg(unix)]
 pub mod update;
 pub mod wire;

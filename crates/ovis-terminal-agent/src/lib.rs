@@ -7,6 +7,7 @@ pub mod bridge;
 pub mod conversation;
 pub mod prompts;
 pub mod status;
+pub mod tree;
 
 /// Cargo package name of this crate, used by the workspace layering record.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");

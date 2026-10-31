@@ -150,7 +150,7 @@ Holder wire generation stays 2.
   - `crates/ovis-terminal-services/src/lib.rs`: union the `pub mod` lines.
   - `schema/ovis-terminal.openrpc.json`: regenerate with `openrpc write` after the union.
 
-  Also append the baseline ledger entry described above.
+  Also append the baseline ledger entry described above. (Resolved in the merge round below.)
 
 ## Risks
 
@@ -159,3 +159,24 @@ Holder wire generation stays 2.
 - `update.progress` events are not published. Progress is durable in the install-root records and the ledger, and is read through `update.query` and `op.get`.
 - The served binary does not register this lane yet; that is todo 31's assembly. The conformance fixture registers it.
 - The service holds its state lock for a whole step, so `update.query` waits while a stage copy or a readiness probe (10 s deadline) is running.
+
+## Merge round (origin/integration f835935)
+
+I merged `origin/integration` (`f835935`) into the lane on explicit request. Both sides are kept everywhere:
+
+- `conformance/src/fixture.rs`: `tree` and `update` modules.
+- `fixture/handler.rs`: the `fixture.exit`/`fixture.program` routes plus `fixture.update`; the docs are combined.
+- `runner_tests/suite.rs`: `EXECUTABLE` is sorted with `N = 20`.
+- services `lib.rs`: `templates` and `update`.
+- The workflow is integration's file, with the `update` option and job last; it parses with `yaml.safe_load`.
+- `schema/ovis-terminal.openrpc.json` is regenerated.
+
+The todo-47 entry is appended to `schema/BASELINE-AMENDMENTS.md`. It chains from the unchanged head `sha256:362980ac…` to `sha256:53782aab…`.
+
+The Windows clippy pass found two no-op Windows stubs in `services/update`. I restructured them: `sync_parent` is one function behind `cfg!(unix)`, and `mark_executable` is unix-only with a `cfg`-gated call. No `#[allow]` was added.
+
+After the merge:
+- `openrpc check` and `openrpc compat schema/released.openrpc.json` exit 0, including the ledger check.
+- `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exits 0, and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` exits 0 (`merge-windows.log`).
+- `bash scripts/check.sh` exits 0: nextest `1069 tests run: 1069 passed (1 slow), 1 skipped`, hygiene `0 violation(s) in 1065 file(s)`, and `json.sh: 113 JSON file(s)` (`merge-check-script.log`).
+- `services/update`: happy has 81 assertions, failure with the plan's `--inject --append` has 48, and `--case all` has 137 (2/2). All exit 0 with failed 0 and skipped 0 (`merge-qa.log`, `merge-case-all.json`).

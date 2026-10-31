@@ -56,6 +56,15 @@ pub fn narrow(node: &Node) -> Node {
         },
         Node::Nullable(child) => Node::Nullable(Box::new(narrow_values(&child))),
         Node::Ref(child) => Node::Ref(Box::new(narrow(&child))),
+        Node::Within(child) => Node::Within(Box::new(narrow(&child))),
+        Node::Guarded { child, .. } if matches!(*child, Node::Str { .. }) => Node::Guarded {
+            child,
+            pattern: Some("^b".to_owned()),
+        },
+        Node::Guarded { child, pattern } => Node::Guarded {
+            child: Box::new(narrow_values(&child)),
+            pattern,
+        },
     }
 }
 
@@ -127,6 +136,21 @@ pub fn widen(node: &Node) -> Node {
         },
         Node::Nullable(child) => Node::Nullable(Box::new(widen(&child))),
         Node::Ref(child) => Node::Ref(Box::new(widen(&child))),
+        Node::Within(child) => Node::Within(Box::new(widen(&child))),
+        Node::Guarded {
+            child,
+            pattern: Some(_),
+        } => Node::Guarded {
+            child,
+            pattern: None,
+        },
+        Node::Guarded {
+            child,
+            pattern: None,
+        } => Node::Guarded {
+            child: Box::new(widen(&child)),
+            pattern: None,
+        },
         other => Node::Nullable(Box::new(other)),
     }
 }
@@ -196,7 +220,11 @@ pub fn count(node: &Node) -> usize {
     1_usize.saturating_add(match node {
         Node::Str { .. } | Node::Int { .. } => 0,
         Node::Obj { props, .. } => props.iter().map(|(child, _)| count(child)).sum(),
-        Node::Arr { items: child, .. } | Node::Nullable(child) | Node::Ref(child) => count(child),
+        Node::Arr { items: child, .. }
+        | Node::Nullable(child)
+        | Node::Ref(child)
+        | Node::Within(child)
+        | Node::Guarded { child, .. } => count(child),
     })
 }
 
@@ -223,5 +251,10 @@ pub fn edit_at(node: &Node, target: &mut Option<usize>, change: fn(&Node) -> Nod
         },
         Node::Nullable(child) => Node::Nullable(Box::new(edit_at(child, target, change))),
         Node::Ref(child) => Node::Ref(Box::new(edit_at(child, target, change))),
+        Node::Within(child) => Node::Within(Box::new(edit_at(child, target, change))),
+        Node::Guarded { child, pattern } => Node::Guarded {
+            child: Box::new(edit_at(child, target, change)),
+            pattern: pattern.clone(),
+        },
     }
 }
