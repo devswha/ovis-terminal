@@ -82,7 +82,7 @@ Each subscription has its own `SubscriptionId`, a replaceable `Selector` (types,
 - **Assigned landed-code defect, hello count limits (todos 13/4).** `Limits.event_replay_events`, `history_lines` and `max_in_flight_requests` were JSON numbers. They are now the new decimal-string scalar `ovis_terminal_protocol::schema::scalar::Count`.
   - Server: `conn/connections.rs` and `dispatch/tasks.rs` read `.get()`, and two server tests parse the string form.
   - `schema/ovis-terminal.openrpc.json` is regenerated.
-  - **Todo 4 compat note:** `schema/released.openrpc.json` is amended in place: the three properties now `$ref` `Count`, the `x-limits` defaults are strings, and the `Count` component is added. The pre-amendment baseline reports `output_type_changed` for exactly these three fields on `hello` and `schema.capabilities` (recorded in `schema-gate.log`, exit 1). This is the first change to the released baseline. Generation 1 has not been released, so the baseline was corrected instead of carrying a numeric counter forever.
+  - **Todo 4 compat note:** `schema/released.openrpc.json` is amended in place: the three properties now `$ref` `Count`, the `x-limits` defaults are strings, and the `Count` component is added. Against the pre-amendment baseline, `openrpc compat` reports exactly 12 breaks: `output_type_changed` and `closed_output_enum_grew` for each of the three `Count` fields, on both `hello` and `schema.capabilities` (6 + 6; recorded in `schema-gate.log`, exit 1). This is the first change to the released baseline. Generation 1 has not been released, so the baseline was corrected instead of carrying a numeric counter forever.
 - **Holder wire generation stays 2.**
 - **`.github/workflows/probe-stress-macos.yml`**: the option `subscriptions` and a matching job are appended at the end, following the existing pattern.
 
@@ -90,9 +90,9 @@ Each subscription has its own `SubscriptionId`, a replaceable `Selector` (types,
 
 All commands ran in this worktree on Linux x86_64.
 
-- **`bash scripts/check.sh`: exit 0** (`check.log`). fmt, workspace clippy `-D warnings`, `nextest --workspace` (576 passed, 1 skipped), doctests, hygiene (250 LOC / 3 params) and manifest/json checks all pass.
+- **`bash scripts/check.sh`: exit 0** (`check.log`). fmt, workspace clippy `-D warnings`, `nextest --workspace` (578 passed, 1 skipped), doctests, hygiene (250 LOC / 3 params) and manifest/json checks all pass.
 - **Windows:** `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exits 0 with no warnings (`windows-check.log`).
-- **Core suite:** `cargo nextest run -p ovis-terminal-core --test subscriptions` passes 19/19 (`core-subscriptions.log`). The full `-p ovis-terminal-core` run passed 195/195.
+- **Core suite:** `cargo nextest run -p ovis-terminal-core --test subscriptions` passes 21/21 (`core-subscriptions.log`). The full `-p ovis-terminal-core` run passed 195/195.
 - **Schema gate:** `openrpc check` and `openrpc compat schema/released.openrpc.json` both exit 0. `ovis-terminal-protocol --test limits_counts` passes 2/2 (`schema-gate.log`).
 
 What each test asserts:
@@ -120,12 +120,16 @@ What each test asserts:
   - A cursor ahead of the head consumes no subscription slot.
 - **`loss`**
   - A withheld consumer recovers with the durable marker and a snapshot, never a partial queue, then gets only later events.
-  - `close_forced` returns and commits a `forced_close` marker from the first undelivered event, and the reconnect replays both events and the marker.
+  - `a_forced_close_marker_names_the_first_undelivered_event_and_reconnect_replays_it`: `close_forced` returns a `forced_close` marker from the first undelivered event, and the reconnect replays both events and the marker.
   - A dropped consumer's marker is committed with no further commit.
   - Under a 1,500-byte session budget the withheld queue is evicted (`session_budget`) while the draining consumer receives every commit.
 - **`stall`**
   - The worker is held inside one fan-out (a test-only gate inside the fixture event's serializer, active only on the `ovis-subscriptions` thread) while three commits overflow a two-event coordinator delivery.
   - Both subscriptions recover with `fanout_overflow` and a snapshot containing the overflowed value, then each gets only the next commit.
+- **`durability`** (round 2, gate review B1). The fan-out worker is held with `PUMP_GATE`, so its idle tick cannot commit markers; the durable log is read straight from the coordinator while it is held.
+  - `close_forced_returns_only_after_its_marker_is_durable`: the marker `close_forced` returns is already in the durable log when it returns.
+  - `missed_is_returned_only_after_its_marker_is_durable`: a resume whose replay exceeds the queue marks the loss on the subscribing thread; when `next()` returns `Missed`, its marker is already in the durable log.
+  - Mutants M4 (drop the synchronous persist in `close_forced`) and M11 (deliver `Missed` before the marker is durable) both fail these tests; see `mutations.log`.
 - **`wire`**
   - `LossRecord.from_seq` round-trips every u64 as a decimal string (proptest), and exact `u64::MAX` decodes.
   - The numeric form and unknown fields are rejected.
@@ -160,4 +164,5 @@ What each test asserts:
 - **Unsupported filter selectors.** `labels`, `children_of` and machine names are rejected with `filter_invalid` instead of being evaluated. They need registry lookups (agent registry, parent tracking, machine names) that this layer does not own.
 - **Replay vs. queue bound.** Replay on resume is bounded by the per-subscription queue. A replay larger than the queue bound becomes an immediate `queue_overflow` loss with a snapshot. With the v1 defaults (10,000 events equals retention) this only happens with custom small bounds.
 - **Stall closing.** The 30 s stall-close timer for an unwritable connection belongs to the transport. The core provides `close_forced`, which commits the loss marker before returning.
+- **Subscription ids are not yet bound to a principal.** Any holder of a `SubscriptionId` can `update` or `unsubscribe` it through the core API. Todo 31 binds subscriptions to the caller's todo-19 authority scope when it routes `events.*`.
 - **Baseline amendment.** `schema/released.openrpc.json` was edited. If the orchestrator prefers keeping the baseline immutable, that part must be reverted and the three limits stay numeric.

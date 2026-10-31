@@ -55,7 +55,8 @@ fn a_withheld_consumer_recovers_from_its_durable_marker_and_continues() -> TestR
 }
 
 #[test]
-fn a_forced_close_commits_its_marker_before_the_consumer_reconnects() -> TestResult {
+fn a_forced_close_marker_names_the_first_undelivered_event_and_reconnect_replays_it() -> TestResult
+{
     // Given a consumer with two fanned-out but undelivered events.
     let world = World::open(Bounds::v1()?)?;
     let witness = world.subscribe(Start::Head, Selector::all())?;

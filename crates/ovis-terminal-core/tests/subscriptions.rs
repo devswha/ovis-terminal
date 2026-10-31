@@ -1,5 +1,7 @@
 //! Independent subscriptions, replay and recoverable loss against the real SQLite writer.
 
+#[path = "../src/subscriptions/qa/durability.rs"]
+mod durability;
 #[path = "../src/subscriptions/qa/fixture.rs"]
 pub mod fixture;
 #[path = "../src/subscriptions/qa/independence.rs"]
