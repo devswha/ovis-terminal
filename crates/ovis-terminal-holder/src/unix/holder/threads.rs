@@ -2,8 +2,9 @@
 //!
 //! Output order is fixed by construction: the pump records every chunk, reaches
 //! the PTY hang-up, and only then records the exit the waiter observed, so
-//! `final_offset` always covers the final bytes. Unexpected failures are kept
-//! typed with their sources and reach the core in the exit record.
+//! `final_offset` always covers the final bytes. Exit also waits for the input
+//! writer to acknowledge every entry remaining in the closed queue. Unexpected
+//! failures are kept typed with their sources and reach the core in the exit record.
 
 use std::fs::File;
 use std::os::fd::OwnedFd;
@@ -170,4 +171,5 @@ pub(super) fn write_input(shared: &Shared, sink: InputSink) {
             },
         );
     }
+    shared.lock().finish_input(&terminal_id);
 }
