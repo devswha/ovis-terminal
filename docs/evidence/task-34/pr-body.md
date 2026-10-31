@@ -132,4 +132,12 @@ Observable outcomes the scenario asserts (raw request/response transcripts are i
 - The prompt → terminal route used for authorization is in memory and reloaded by `PromptService::recover(snapshot)`. Assembly must call it at startup. A stale route can only produce `not_found`, because the stored row stays authoritative.
 - The fixture's blocked-send check reads a snapshot before echoing (fixture stand-in). The product contract is `PromptService::admission` inside the input actor step (todos 28-31).
 - Prompts opened by OSC 7501 `kind=question|permission` and synthetic `blocked`-root prompts are not created here: the blocked root refuses sends with empty `prompt_ids`. Process-exit expiry is lazy (on answer). Todos 40/41 extend both.
-- `origin/integration` moved to b1c68ef (todo 78) after dispatch. Per the lane rule I did not merge. A read-only `git merge-tree` shows the only conflict is `.github/workflows/probe-stress-macos.yml` (option list and job tail union); all code merges cleanly.
+- `origin/integration` moved to b1c68ef (todo 78) after dispatch. Per the lane rule, I did not merge into the lane, so **this PR conflicts** in five files: the workflow option list and job tail, `suite.rs` `EXECUTABLE`, the `errors/{boundary,data}.rs` imports, and the regenerated `schema/ovis-terminal.openrpc.json`.
+
+  A scratch merge in a throwaway worktree (not the lane) resolved them as pure unions:
+  - the workflow keeps both sides, with `prompts` appended last;
+  - `EXECUTABLE` becomes N=16;
+  - imports become `{QueuePosition, RecordVersion, ReportSeq}` + `PromptId`;
+  - OpenRPC is regenerated.
+
+  On that merged tree: clippy exit 0, `check.sh` exit 0 (`859 tests run: 859 passed, 1 skipped`), the Windows check exit 0, and `agent/prompts --case all` 162 assertions, failed 0 (`merge-probe-check.log`). The exact union is in `docs/evidence/task-34/merge-resolution.patch` (`git diff origin/integration` of those five files on the merged tree).
