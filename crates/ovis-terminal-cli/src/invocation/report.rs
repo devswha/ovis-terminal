@@ -123,8 +123,29 @@ fn cli_record(error: &CliError) -> Map<String, Value> {
         | CliError::UnsupportedTransport
         | CliError::Schema(_)
         | CliError::Encode(_) => {}
+        #[cfg(unix)]
+        CliError::Service(error) => service_detail(error, &mut record),
     }
     record
+}
+
+/// The typed facts a service failure carries beyond its kind.
+#[cfg(unix)]
+fn service_detail(
+    error: &ovis_terminal_holder::service::unix::ServiceError,
+    record: &mut Map<String, Value>,
+) {
+    use ovis_terminal_holder::service::unix::ServiceError;
+    match error {
+        ServiceError::Stale { reason } => {
+            record.insert("state".to_owned(), json!("stale_endpoint"));
+            record.insert("reason".to_owned(), json!(reason));
+        }
+        ServiceError::ManagerUnavailable { missing } => {
+            record.insert("missing_prerequisite".to_owned(), json!(missing));
+        }
+        _ => {}
+    }
 }
 
 /// The bytes an invocation writes and the status it exits with.

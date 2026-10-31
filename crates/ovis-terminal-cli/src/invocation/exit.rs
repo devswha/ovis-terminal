@@ -106,12 +106,14 @@ impl ExitStatus {
                 "no_runtime_directory",
                 "invalid_user",
                 "socket_path_too_long",
+                "unsupported_path",
             ],
             Self::NotFound => &[
                 "not_found",
                 "template_not_found",
                 "parent_not_found",
                 "stream_not_found",
+                "not_registered",
             ],
             Self::Unavailable => &[
                 "unavailable",
@@ -123,6 +125,8 @@ impl ExitStatus {
                 "backpressure",
                 "recovering",
                 "not_ready",
+                "service_manager_unavailable",
+                "service_unsupported",
             ],
             Self::NeedsTarget => &["needs_target", "ambiguous_target"],
             Self::Blocked => &["blocked"],
@@ -137,6 +141,8 @@ impl ExitStatus {
                 "already_stopped",
                 "duplicate_name",
                 "stale_target",
+                "foreign_registration",
+                "identity_mismatch",
             ],
             Self::Forbidden => &[
                 "forbidden",
@@ -150,7 +156,12 @@ impl ExitStatus {
                 "raw_not_authorized",
                 "takeover_not_authorized",
             ],
-            Self::OutcomeUnknown => &["outcome_unknown", "deadline_exceeded"],
+            Self::OutcomeUnknown => &[
+                "outcome_unknown",
+                "deadline_exceeded",
+                "manager_timeout",
+                "holder_not_ready",
+            ],
         }
     }
 }
