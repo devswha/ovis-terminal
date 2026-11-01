@@ -2,7 +2,7 @@
 // protocol fixture and a schema-checked scripted peer. These tests never import ../src.
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join, sep } from "node:path";
 
 import { CONFORMANCE_BIN, Consumer, packed } from "./support/consumer";
@@ -28,8 +28,9 @@ afterAll(() => consumer?.remove());
 
 describe("happy", () => {
   test("every entry point resolves to the installed tarball's dist, outside the repository", async () => {
-    const resolved = (await installed().run("resolution")) as Record<string, string>;
-    const root = join(installed().dir, "node_modules", "@ovis-terminal", "client") + sep;
+    const reported = (await installed().run("resolution")) as Record<string, string>;
+    const resolved = Object.fromEntries(Object.entries(reported).map(([key, path]) => [key, realpathSync(path)]));
+    const root = realpathSync(join(installed().dir, "node_modules", "@ovis-terminal", "client")) + sep;
     expect(Object.entries(resolved).filter(([key, path]) => key !== "consumer" && !path.startsWith(root))).toEqual([]);
     expect([resolved.root, resolved.protocol, resolved.openrpc]).toEqual([`${root}dist${sep}index.js`, `${root}dist${sep}protocol.js`, `${root}dist${sep}openrpc.json`]);
     expect(existsSync(join(root, "src"))).toBe(false);
