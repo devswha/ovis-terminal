@@ -86,12 +86,38 @@ macOS stress: lane `graphics-replay` (`probes/platform-qa/stress/graphics-replay
 
 Unrelated known flake: round 2 check.sh attempt 1 failed only in `recovery/e2e` happy, step 36 (`reply[child-on-peer]/error`: `internal`, "operation failed"). In that same run `graphics/replay` passed both cases, and 83 of 84 cases passed (`r2-check-attempt1-recovery-flake.log`). Step 36 is the runner fixture's `fixture.remote_child`, the two-clock-read race that F2a root-caused and fixed in PR #80 (`conformance/src/fixture/machines/remote.rs` `stamped()`, merge pending). It is not a task-84 defect.
 
+## Round 2 addendum: wire-contract test and integration 60076f7
+
+This adds tests and changes no behaviour. The binding contract requires a u64::MAX decimal round-trip test for every u64 offset on the wire. The new `GraphicsReplayedData.replayed` and `GraphicsReleased.output_offset` had none.
+- New file `crates/ovis-terminal-protocol/src/domain/graphics/replay/tests.rs`:
+  - `offsets_round_trip_u64_max_as_decimal_strings`: both fields serialize as `"18446744073709551615"` and decode back equal.
+  - `numeric_offsets_and_extra_fields_are_refused`: a numeric `replayed` or `output_offset`, or an extra field on either object, fails to decode.
+  - `a_release_reason_added_later_decodes_as_unknown`: the open enum keeps `"evicted_by_policy"` as `Unknown`.
+- `mutant-replayed-data-open-object.log`: with `#[serde(deny_unknown_fields)]` removed from `GraphicsReplayedData`, 14 run, 13 passed, 1 failed (`numeric_offsets_and_extra_fields_are_refused`).
+- Merge `ba5e396` of integration `60076f7` (the F2a remote-fixture clock-race fix): no conflicts. `cargo metadata --locked` is OK. The schema is unchanged: `openrpc check` reports it fresh, and quality-matrix verify passes. SDK `generate:check` reports 31 files fresh, and typecheck is OK.
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo nextest run -p ovis-terminal-protocol --locked --no-fail-fast graphics` | 0 | 12 run, 12 passed, including the 3 new tests (`r2-addendum-protocol.log`) |
+| `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` (merged tree) | 0 | 1529 run, 1529 passed, 2 skipped; hygiene 0 violations in 1527 files (`r2-addendum-check.log`) |
+| `RUSTFLAGS=-Dwarnings cargo check ... x86_64-pc-windows-gnu` / `cargo clippy ... -- -D warnings` | 0 / 0 | `r2-addendum-windows-check.log` |
+
+macOS stress (lane `graphics-replay`):
+- Run https://github.com/devswha/ovis-terminal/actions/runs/41357513948 at `fe06883` (the pre-fix head): iterations 1-21 passed, and iteration 22 failed 1 of 2 `graphics/replay` cases (78 of 80 assertions recorded). The artifact uploads only the lane log, so the failing step cannot be read from it. It is consistent with the round-2 coalesced-read race, but that is not proven.
+- Re-dispatched once on the fixed head: https://github.com/devswha/ovis-terminal/actions/runs/41361113759 at `2c5e277`, `RESULT 25/25`.
+
+Independent review: the orchestrator ran the terra (gpt-6.1) adversarial review on `2c5e277`. Its two findings in the VT anchor model are with the gate for a ruling, and both were already disclosed under Risks:
+1. Writes inside an image's footprint but outside its anchor cell do not expire it.
+2. An image is dropped when its anchor row scrolls off, even if a lower row is still visible.
+
+Deviation: the block says to expire an entry "when its rows scroll out of the scrollback window". This PR expires it when its anchor row leaves the visible screen. The attach paint re-sends visible rows only, so an image whose anchor is in scrollback has no position a paint can place it at. This is stricter than the block and is the same question as finding 2.
+
 ## Seams
 
 Files outside the write scope, and why:
 - `crates/ovis-terminal-vt/src/engine.rs`: `mod images;`, the `images` field, applying image cuts in `feed` and following after `feed`/`resize`, and re-exports. `crates/ovis-terminal-vt/src/lib.rs`: re-exports. `engine/tracker.rs`: the scanner sees every raw byte and adds a cut where a graphics sequence completes; the loop body moved into `consume` without changing its behaviour. `engine/paint.rs`: the `FirstPaint.images` splice points, `#[serde(skip)]`.
 - `crates/ovis-terminal-core/src/terminals.rs`: `pub mod images;`. `crates/ovis-terminal-core/src/screen/reads.rs`: `Screen::images()`, an unrecorded read under the screen lock.
-- `crates/ovis-terminal-protocol/src/domain/graphics.rs` (+ new child `graphics/replay.rs`) and `schema/records/stream.rs`: the wire slots for the two records. `schema/ovis-terminal.openrpc.json`, `packages/client-ts/src/generated/*` and `conformance/ideal-map.json` were regenerated (`openrpc write`, `bun run generate`, `quality-matrix --mode contract`), not edited by hand.
+- `crates/ovis-terminal-protocol/src/domain/graphics.rs` (+ new child `graphics/replay.rs` and its `replay/tests.rs`) and `schema/records/stream.rs`: the wire slots for the two records. `schema/ovis-terminal.openrpc.json`, `packages/client-ts/src/generated/*` and `conformance/ideal-map.json` were regenerated (`openrpc write`, `bun run generate`, `quality-matrix --mode contract`), not edited by hand.
 - `crates/ovis-terminal-server/src/streams/{graphics.rs, graphics/{held,unit,backlog}.rs}`: the released-unit report and the carried Kitty series (seam a); the replay bytes are not charged to the backlog. `streams/{hub,log,viewer,open,resync,ops}.rs`:
   - The store lives in `HubState`.
   - Log notices are dropped or evicted, and trim is `unwatched` (seam b).
@@ -112,6 +138,6 @@ Files outside the write scope, and why:
 - **The store is in memory only.** A planned control restart or a recovery from checkpoint starts with an empty store and replays nothing; a restored engine has no placements. Persisting would need its own store entries, and is left out.
 - **No `graphics.evicted` / `graphics.dropped` event is committed to the event log.** Both are reported only as in-stream records, as T83 left them.
 - **Flag bit 15 is undefined in alacritty 0.26** (`the_mark_is_a_flag_bit_alacritty_never_defines` guards it). An alacritty upgrade that defines it would fail that test.
-- The adversarial pass was executor-run. No separate reviewer model ran in this lane.
+- This lane's own adversarial pass was executor-run (`adversarial.log`, 9 mutants). The orchestrator ran the independent terra review (see Round 2 addendum).
 
 DEFERRED VERIFICATION: none. The runner executes `graphics/replay` against the real binary, both cases, exit 0, failed 0, skipped 0.

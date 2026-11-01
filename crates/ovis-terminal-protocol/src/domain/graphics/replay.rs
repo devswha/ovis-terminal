@@ -7,6 +7,9 @@
 //! `graphics_replayed` record that follows names them, and names the most recently
 //! released ones with the reason each left.
 
+#[cfg(test)]
+mod tests;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
