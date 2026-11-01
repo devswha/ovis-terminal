@@ -95,7 +95,7 @@ All 1920 written event samples are kept (raw minimum 150710 µs), and the budget
 
 **Gates:** `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` exits 0. The Windows pre-check (`RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` and the matching clippy) exits 0.
 
-**macOS native:** stress lane `terminal50` (`probes/platform-qa/stress/terminal50.{json,sh}`) runs the crate tests and both profiles plus the failure three times on macos-latest; run URL below.
+**macOS native:** stress lane `terminal50` (`probes/platform-qa/stress/terminal50.{json,sh}`) runs the crate tests and both profiles plus the failure three times on macos-latest, dispatched once at ccb32a7: https://github.com/devswha/ovis-terminal/actions/runs/41327470005 (result pending when this PR was opened; it is reported in the PR conversation).
 
 ## DEFERRED VERIFICATION
 
