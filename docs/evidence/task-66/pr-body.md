@@ -26,7 +26,7 @@ Piped `hc ls` prints JSON without `--json` while `run`/`read` print text: the ou
 
 ## After
 
-Linux x86_64, binary sha256 `623ca8409d1905f35f975872aa099d50e4588bfe1c223f1f3eee7b05eb72397c` (`$CARGO_TARGET_DIR/debug/ovis-terminal`; the lane target lives on RAM, never `<worktree>/target`).
+Linux x86_64, binary sha256 `ae64e07dcd4e8b9789d062192fee73e64965413c3d9b938b90488acb01e8c1a2` (`$CARGO_TARGET_DIR/debug/ovis-terminal`; the lane target lives on RAM, never `<worktree>/target`).
 
 ```
 $ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal                      # exit 0
@@ -59,7 +59,7 @@ $ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance --
 EXIT=0
 ```
 
-Materialized CLI runs from the evidence (`binary-runs.log`):
+Materialized CLI runs from the evidence (`binary-runs.log`; the raw runner evidence with every request, reply and process record is `docs/evidence/task-66/task-66-ovis-terminal-v1.json`, which the evidence audit checks):
 
 | argv | exit | channel |
 |---|---|---|
@@ -84,11 +84,13 @@ Gates (`docs/evidence/task-66/gates.log`):
 
 ```
 $ bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh
-     Summary [ 114.127s] 1504 tests run: 1504 passed (3 slow), 2 skipped
+     Summary [ 113.932s] 1505 tests run: 1505 passed (3 slow), 2 skipped
 check.sh: all steps passed                                                     # exit 0
 $ RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked      # exit 0
 $ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings          # exit 0
 ```
+
+**Round 2 (PR CI, windows-latest):** `the_shipped_contract_reference_is_the_one_this_build_renders` failed because the reference rendered this build's command table, and the Windows grammar differs (no `serve`, `hold` or `terminal attach`; other `service` verbs). It was fixed portably, with no cfg: the contract no longer carries per-platform commands (the manual and `schema cli` list them), and the new `the_contract_reference_does_not_depend_on_the_platform_grammar` renders the reference with and without the command list and requires identical bytes. The rest is platform-neutral by construction: the OpenRPC document (`crates/ovis-terminal-protocol/tests/schema.rs` pins it on every platform), the role and action constants, the exit-code table and the fixed environment names. Gate after the fix: `check.sh` exit 0 (1505 passed, 2 skipped), the Windows check and clippy exit 0. Then `origin/integration` 60076f7 was merged as instructed (conformance fixture only, `Cargo.lock` unchanged, `cargo metadata --locked` ok), and on the merged tree conformance clippy exits 0 and the three literal `cli/manual` runs exit 0 (116 / 71 / 29 assertions).
 
 The first check.sh run failed on three findings of this branch, all fixed structurally before the passing run: `docs/evidence/task-66/binary-runs.json` did not match the evidence manifest schema (it is now `binary-runs.log`), and `src/agent.rs` had 254 pure LOC (the verb table moved to `src/agent/table.rs`). The `quality/gates` scenario inside `all/all` reported the same LOC finding. No schema change, so no SDK regeneration.
 
@@ -106,7 +108,7 @@ Every file outside the write scope (`docs/skill/`, `src/skill/`, `src/agent/`, `
 - `conformance/src/{invocation.rs,invocation/tests.rs,scenario/model.rs,engine.rs,engine/steps.rs,engine/commands.rs}`: the plan's literal failure inject is a command line, not JSON, so the runner accepts it and selects a planned command run. Binary runs gained label resolution and captures, so `--skill` and `schema` versions are compared without pinning a version string.
 - `conformance/src/runner_tests/suite.rs`: `cli/manual.json` added to `EXECUTABLE` in sorted position. It was never in `declared.json`.
 - `probes/platform-qa/stress/cli-manual.{json,sh}`: the macOS stress lane for this todo (25 iterations of the CLI lib, producer and cli process tests plus `cli/manual` all and the literal failure inject); the workflow resolves lanes from these files, so it needs no edit.
-- `docs/evidence/task-66/`: logs and this body.
+- `docs/evidence/task-66/`: logs, the raw runner evidence and this body.
 
 Seams owed by todo 66 according to landed PRs: #57 already routes `machine.add` through `MachineAddAttached` and calls through `RemoteDispatch` in the served binary. `ServiceLanes`, `MachineAdd::restricted`, reconnect and the second fixture dispatcher for `worktree.*` are untouched here; see Risks.
 
