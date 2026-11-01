@@ -10,6 +10,8 @@ pub mod support;
 #[path = "interactive_attach/helpers.rs"]
 pub mod helpers;
 
+use std::time::Duration;
+
 use helpers::{attached, incarnation};
 use rustix::termios::{self, Winsize};
 use serde_json::{Value, json};
@@ -21,7 +23,8 @@ fn two_attach_processes_with_the_default_label_compete_and_the_second_is_refused
     let before = incarnation(&served)?;
     let mut first = attached(&served, &["terminal", "attach", "--target", "t1"], "own")?;
     let owner = json!(format!("cli-{}", first.client.id()));
-    let second = Outer::attach(&served, &["--json", "terminal", "attach", "--target", "t1"])?;
+    let mut second = Outer::attach(&served, &["--json", "terminal", "attach", "--target", "t1"])?;
+    second.type_bytes(b"echo intruder-$((3+4))\r")?;
     let (code, record, restored) = second.exited()?;
     assert_eq!(
         code,
@@ -39,6 +42,17 @@ fn two_attach_processes_with_the_default_label_compete_and_the_second_is_refused
     );
     assert!(restored);
     assert_eq!(served.leases()?.pointer("/interact/holder"), Some(&owner));
+    // The refused process has exited before the fence is typed, and the program reads its
+    // input in order, so typing that reached it would be drawn before the fence's answer.
+    first.type_bytes(b"echo fence-$((5+5))\r")?;
+    assert!(
+        first.shows("fence-10", WAIT),
+        "the holder lost its terminal"
+    );
+    assert!(
+        !first.shows("intruder-7", Duration::ZERO),
+        "the refused attach's typing reached the program"
+    );
     first.type_bytes(b"\x1c")?;
     let (code, record, restored) = first.exited()?;
     assert_eq!(code, Some(0), "{record}");
