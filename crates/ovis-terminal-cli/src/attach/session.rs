@@ -14,6 +14,9 @@ use super::signals::{Interrupt, Signals};
 use super::tty::{self, Typed, keyboard, typed_or_never};
 use super::{AttachError, AttachPlan};
 
+#[cfg(test)]
+mod tests;
+
 /// Bound on waiting for the stream's CLOSE after asking to detach.
 const CLOSE_BOUND: std::time::Duration = std::time::Duration::from_secs(5);
 /// Bytes typed before the stream is input-ready that are held for it; more is refused.
@@ -42,6 +45,8 @@ struct Attached {
     input_ready: bool,
     held: Vec<u8>,
     screen: Screen,
+    /// The server's `$/closing` record; once it arrives input is no longer ready.
+    closing: Option<Value>,
 }
 
 impl Attached {
@@ -104,8 +109,14 @@ impl Attached {
         Ok(())
     }
 
-    /// Applies one notification; `Some` once the server closed the stream.
+    /// Applies one notification; `Some` once the server closed the stream. The server's
+    /// `$/closing` revokes input readiness: nothing typed afterwards is forwarded.
     async fn notice(&mut self, (method, params): Notice) -> Result<Option<Value>, AttachError> {
+        if method == "$/closing" {
+            self.input_ready = false;
+            self.closing = Some(params);
+            return Ok(None);
+        }
         if params.get("stream_id").and_then(Value::as_str) != Some(self.stream.as_str()) {
             return Ok(None);
         }
@@ -126,7 +137,8 @@ impl Attached {
                     OpenEnum::Known(ControlKind::InputRevoked) => self.input_ready = false,
                     OpenEnum::Known(ControlKind::Close) => {
                         self.input_ready = false;
-                        let close = serde_json::to_value(&control.close).unwrap_or(Value::Null);
+                        let close = serde_json::to_value(&control.close)
+                            .map_err(unreadable("attach.control close"))?;
                         return Ok(Some(
                             json!({"closed": {"stream_id": self.stream, "close": close}}),
                         ));
@@ -189,7 +201,9 @@ impl Attached {
         loop {
             tokio::select! {
                 notice = notices.recv() => match notice {
-                    None => return Err(AttachError::ConnectionLost),
+                    None => return Err(AttachError::ConnectionLost {
+                        closing: self.closing.take(),
+                    }),
                     Some(notice) => match self.notice(notice).await {
                         Ok(None) => {}
                         Ok(Some(end)) => return Ok(end),
@@ -258,6 +272,7 @@ pub(super) async fn run(
         input_ready: false,
         held: Vec::new(),
         screen: Screen::open(!plan.observe)?,
+        closing: None,
     };
     let outcome = attached.follow(&mut notices, signals).await;
     drop(attached);

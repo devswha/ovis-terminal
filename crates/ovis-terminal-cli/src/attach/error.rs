@@ -60,7 +60,10 @@ pub(crate) enum AttachError {
     InputNotReady,
     /// The connection ended while attached.
     #[error("the connection to the server was lost")]
-    ConnectionLost,
+    ConnectionLost {
+        /// The server's `$/closing` record, when it announced the end first.
+        closing: Option<Value>,
+    },
     /// The server answered a request with a typed error.
     #[error("the server refused a request")]
     Server(Box<RpcErrorObject>),
@@ -98,7 +101,7 @@ impl AttachError {
             Self::Interrupted { .. } => "interrupted",
             Self::TerminalGone => "terminal_hung_up",
             Self::InputNotReady => "not_ready",
-            Self::ConnectionLost => "connection_lost",
+            Self::ConnectionLost { .. } => "connection_lost",
             Self::Server(_) => "server_refused",
             Self::Io { .. } => "transport_failed",
             Self::Protocol { .. } => "invalid_response",
@@ -122,7 +125,9 @@ impl AttachError {
             Self::Interrupted { .. } => "attach again; nothing was left attached",
             Self::TerminalGone => "attach again from a terminal that stays open",
             Self::InputNotReady => "attach again and type once the screen appears",
-            Self::ConnectionLost => "check that the server is still running, then attach again",
+            Self::ConnectionLost { .. } => {
+                "check that the server is still running, then attach again"
+            }
             Self::Server(_) => "see the server's error kind and hint",
             Self::Io { .. } => "check the endpoint and the terminal device",
             Self::Protocol { .. } => "check that the endpoint belongs to this generation",
@@ -147,11 +152,14 @@ impl AttachError {
             Self::Refused { reason } | Self::Ended { reason } => {
                 vec![("reason", Value::from(reason.as_str()))]
             }
+            Self::ConnectionLost {
+                closing: Some(closing),
+            } => vec![("closing", closing.clone())],
             Self::NotATty
             | Self::Recovering
             | Self::TerminalGone
             | Self::InputNotReady
-            | Self::ConnectionLost
+            | Self::ConnectionLost { closing: None }
             | Self::Server(_)
             | Self::Io { .. }
             | Self::Protocol { .. }

@@ -9,7 +9,6 @@ use serde_json::{Value, json};
 
 use super::actor::Runtime;
 use super::error::refusal;
-use super::terminal::terminal_refusal;
 
 fn sample(sample: &ProcessSample, (incarnation, started): (String, String)) -> Value {
     let argv = match &sample.argv {
@@ -30,19 +29,13 @@ fn sample(sample: &ProcessSample, (incarnation, started): (String, String)) -> V
 
 impl Runtime {
     pub(super) fn process_info(
-        &mut self,
+        &self,
         session: &Session,
         target: &Target,
     ) -> Result<Value, BoundaryError> {
         let id = self.resolve_id(target)?;
-        let record = self
-            .terminals
-            .get(session, id)
-            .map_err(|error| terminal_refusal(&error))?;
-        let info = self
-            .terminals
-            .process_info(session, id)
-            .map_err(|error| terminal_refusal(&error))?;
+        let record = self.lifecycle(|terminals| terminals.get(session, id))?;
+        let info = self.lifecycle(|terminals| terminals.process_info(session, id))?;
         let incarnation = record.lifecycle.last_process().map_or_else(
             || "0".to_owned(),
             |process| process.generation().get().to_string(),

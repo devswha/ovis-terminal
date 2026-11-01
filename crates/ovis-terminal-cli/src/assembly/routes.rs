@@ -75,14 +75,18 @@ impl Served {
             }
             _ => {
                 let params: TerminalWaitOutputParams = decode(&call)?;
-                let (ticket, deadline) = self
+                let (ticket, deadline, armed) = self
                     .actor
                     .call(move |runtime| runtime.arm_output_wait(&params))
                     .await?;
-                let outcome = tokio::task::spawn_blocking(move || ticket.wait(deadline))
-                    .await
-                    .map_err(|_| worker_gone())?
-                    .map_err(|error| internal("await an output wait")(error))?;
+                let outcome = tokio::task::spawn_blocking(move || {
+                    let outcome = ticket.wait(deadline);
+                    drop(armed);
+                    outcome
+                })
+                .await
+                .map_err(|_| worker_gone())?
+                .map_err(|error| internal("await an output wait")(error))?;
                 waited(&outcome)
             }
         }

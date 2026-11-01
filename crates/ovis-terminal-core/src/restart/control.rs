@@ -173,6 +173,9 @@ impl Control {
     ) -> Result<R, RestartError> {
         self.ensure_ready()?;
         let mut inner = self.lock()?;
+        // A restart may have taken the lock after the check above and released the old
+        // lifecycle meanwhile: that is `restarting`, not a stopped control.
+        self.ensure_ready()?;
         let Inner {
             terminals, plan, ..
         } = &mut *inner;
@@ -191,6 +194,7 @@ impl Control {
     pub fn stop(&self, op_id: OpId, scope: StopScope) -> Result<StopReceipt, RestartError> {
         self.ensure_ready()?;
         let mut inner = self.lock()?;
+        self.ensure_ready()?;
         let from = inner.identity.server_boot_id();
         let Inner {
             terminals, plan, ..

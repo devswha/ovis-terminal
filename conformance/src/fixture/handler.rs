@@ -15,7 +15,7 @@ use ovis_terminal_agent::status::AgentStatusEvent;
 use ovis_terminal_authz::Authority;
 use ovis_terminal_core::ops::OperationProducer;
 use ovis_terminal_core::registry::RegistryIdentities;
-use ovis_terminal_protocol::domain::machine_actor::ORPHANED_ACK;
+use ovis_terminal_protocol::domain::machine_actor::{ORPHANED, ORPHANED_ACK};
 use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind};
 use ovis_terminal_protocol::rpc::RpcRequest;
 use ovis_terminal_protocol::schema::common::NoParams;
@@ -82,6 +82,8 @@ pub(crate) struct Probes {
     pub(crate) tree: Arc<Tree>,
     pub(crate) health: Arc<super::health::Probe>,
     pub(crate) machines: Arc<Machines>,
+    pub(crate) peer: Option<Arc<super::peer::PeerSide>>,
+    pub(crate) worktrees: Arc<super::worktrees::WorktreeSide>,
     pub(crate) programs: Arc<Programs>,
     pub(crate) audit: (Arc<AuditTrail>, Arc<Authority<RegistryIdentities>>),
 }
@@ -108,6 +110,7 @@ impl FixtureHandler {
             .shutdown()
             .await
             .map_err(at("shut the dispatcher down"))?;
+        self.probes.worktrees.shutdown().await?;
         let programs = Arc::clone(&self.probes.programs);
         tokio::task::spawn_blocking(move || programs.stop())
             .await
@@ -141,6 +144,8 @@ fn discover(request: &RpcRequest) -> Result<Value, BoundaryError> {
 impl RequestHandler for FixtureHandler {
     fn methods(&self) -> Vec<&'static str> {
         let mut methods = self.dispatch.methods();
+        let worktrees = self.probes.worktrees.dispatch.methods().into_iter();
+        methods.extend(worktrees.filter(|method| method.starts_with("worktree.")));
         methods.extend(DIRECT);
         methods
     }
@@ -150,6 +155,9 @@ impl RequestHandler for FixtureHandler {
             "rpc.discover" => discover(&call.request),
             "terminal.output" => output::page(&call.request),
             PROVIDER_WRITE => super::transcripts::write(&self.root, &call.request),
+            super::commit_barrier::METHOD => {
+                super::commit_barrier::call(&self.root, &call.request).await
+            }
             REPLACE_PROCESS => self.replace().await,
             PTY_READ => {
                 let probes = (&*self.probes.gate, &*self.probes.directory);
@@ -174,6 +182,18 @@ impl RequestHandler for FixtureHandler {
                 super::boundary::audit((trail, authority), (&call.session, &call.request))
             }
             ORPHANED_ACK => machines::acknowledge(&self.probes.machines, &call.request).await,
+            ORPHANED => super::peer::orphans::orphaned(&self.probes.machines, &call.request).await,
+            super::holders::HOLDERS => super::holders::call(&self.root, &call.request).await,
+            super::worktrees::DIRTY => self.probes.worktrees.dirty(&call.request),
+            method if method.starts_with("worktree.") => {
+                self.probes.worktrees.dispatch.call(call).await
+            }
+            super::peer::CONTROL => {
+                super::peer::control(self.probes.peer.as_deref(), &call.request).await
+            }
+            super::peer::LOST_MACHINE => {
+                super::peer::lost_machine(&self.probes.machines, &call.request).await
+            }
             _ => self.dispatch.call(call).await,
         }
     }

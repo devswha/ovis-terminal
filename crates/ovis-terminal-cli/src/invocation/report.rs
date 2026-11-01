@@ -125,12 +125,15 @@ fn cli_record(error: &CliError) -> Map<String, Value> {
         | CliError::Endpoint(_)
         | CliError::Io { .. }
         | CliError::Closed
+        | CliError::Restarted
         | CliError::Reply(_)
         | CliError::Result(_)
         | CliError::Timeout { .. }
         | CliError::UnsupportedTransport
         | CliError::Schema(_)
         | CliError::Encode(_) => {}
+        #[cfg(windows)]
+        CliError::PipeBusy { .. } => {}
         #[cfg(any(unix, windows))]
         CliError::Service(error) => service_detail(error, &mut record),
     }

@@ -181,12 +181,15 @@ impl Outer {
         let (sender, exited) = mpsc::channel();
         std::thread::spawn(move || {
             let mut stderr = String::new();
-            if let Some(mut pipe) = client.stderr.take() {
-                pipe.read_to_string(&mut stderr).ok();
+            let read = client
+                .stderr
+                .take()
+                .map_or(Ok(0), |mut pipe| pipe.read_to_string(&mut stderr));
+            let exited_with = read.and_then(|_| client.wait()).map(|status| status.code());
+            // The receiver is gone only when the wait below already failed on its bound.
+            match sender.send((exited_with, stderr)) {
+                Ok(()) | Err(_) => {}
             }
-            sender
-                .send((client.wait().map(|status| status.code()), stderr))
-                .ok();
         });
         let Ok((status, stderr)) = exited.recv_timeout(WAIT) else {
             let pid = rustix::process::Pid::from_raw(i32::try_from(pid)?).ok_or("pid")?;

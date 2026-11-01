@@ -7,10 +7,18 @@ use std::io::{BufRead as _, BufReader};
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 pub use outer::Outer;
 use serde_json::{Value, json};
+
+#[path = "drawn.rs"]
+mod drawn;
+#[path = "ids.rs"]
+mod ids;
+
+pub use drawn::Drawn;
+use ids::op_id;
 
 /// Result of a test step; any failure fails the test.
 pub type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
@@ -20,26 +28,6 @@ pub const BIN: &str = env!("CARGO_BIN_EXE_ovis-terminal");
 /// Bound on every awaited outcome.
 pub const WAIT: Duration = Duration::from_secs(15);
 static NEXT: AtomicU32 = AtomicU32::new(0);
-
-fn op_id() -> TestResult<String> {
-    let millis = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
-    let unique = u128::from(NEXT.fetch_add(1, Ordering::Relaxed));
-    let id = (millis << 80)
-        | (0x7 << 76)
-        | (0b10 << 62)
-        | (u128::from(std::process::id()) << 16)
-        | unique;
-    let hex = format!("{id:032x}");
-    let part = |from: usize, to: usize| hex.get(from..to).unwrap_or_default().to_owned();
-    Ok(format!(
-        "{}-{}-{}-{}-{}",
-        part(0, 8),
-        part(8, 12),
-        part(12, 16),
-        part(16, 20),
-        part(20, 32)
-    ))
-}
 
 /// A running `serve` with one `/bin/sh` launched as `t1`.
 #[derive(Debug)]
@@ -63,7 +51,7 @@ impl Served {
     /// Fails when a process, socket or file step fails.
     pub fn start() -> TestResult<Self> {
         let unique = NEXT.fetch_add(1, Ordering::Relaxed);
-        let root = PathBuf::from("/tmp").join(format!("ovt31b-{}-{unique}", std::process::id()));
+        let root = fixture_root().join(format!("ovt31b-{}-{unique}", std::process::id()));
         std::fs::create_dir_all(&root)?;
         let mut child = Command::new(BIN)
             .args(["serve", "--stdin-lifetime", "--root"])
@@ -179,4 +167,10 @@ impl Served {
         std::fs::remove_dir_all(&self.root)?;
         Ok(())
     }
+}
+
+/// Where test state lives: `OVIS_FIXTURE_ROOT` when the host sets it, else `/tmp`, which
+/// stays inside every platform's socket path limit.
+fn fixture_root() -> PathBuf {
+    std::env::var_os("OVIS_FIXTURE_ROOT").map_or_else(|| PathBuf::from("/tmp"), PathBuf::from)
 }

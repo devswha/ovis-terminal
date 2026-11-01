@@ -48,16 +48,26 @@ pub(crate) struct FixtureProcess {
     pub(crate) ready: Ready,
 }
 
-/// Starts `program <args>` (the runner's fixture mode or the binary's `serve`) and waits,
-/// bounded, for its ready line.
+/// The fixture's executable search path: its own `bin` directory, where the SSH loopback
+/// shim lives, before the system directories.
+fn search_path(root: &Path) -> String {
+    format!("{}:/usr/bin:/bin", root.join("bin").display())
+}
+
+/// Starts `program <args>` (the runner's fixture mode or the binary's `serve`) in `root`,
+/// so a program it launches without a working directory stays inside the isolated root,
+/// and waits, bounded, for its ready line.
 pub(crate) async fn start(
     program: &Path,
     args: &[std::ffi::OsString],
+    root: &Path,
 ) -> Result<FixtureProcess, RunnerError> {
     let mut command = tokio::process::Command::new(program);
     command
         .args(args)
         .env_clear()
+        .env("PATH", search_path(root))
+        .current_dir(root)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -94,6 +104,18 @@ pub(crate) async fn start(
 }
 
 impl FixtureProcess {
+    /// The next line the fixture announced on stdout, awaited within the ready bound.
+    pub(crate) async fn announcement(&mut self) -> Result<Value, RunnerError> {
+        let line = tokio::time::timeout(READY_BOUND, self.stdout.next_line()).await;
+        let missing = RunnerError::FixtureReport {
+            expected: "an announcement line",
+        };
+        let Ok(Ok(Some(line))) = line else {
+            return Err(missing);
+        };
+        serde_json::from_str(&line).map_err(|_| missing)
+    }
+
     /// Closes stdin, reads the serve report and reaps the process.
     pub(crate) async fn stop(mut self) -> (Result<Value, RunnerError>, ProcessReport) {
         drop(self.stdin.take());

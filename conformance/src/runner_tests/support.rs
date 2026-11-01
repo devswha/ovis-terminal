@@ -37,6 +37,20 @@ pub struct Ran {
     pub output: Output,
     /// The parsed evidence file, or null when none was written.
     pub evidence: Value,
+    /// The run's evidence directory: removed on drop unless the test is failing, so a
+    /// failed assertion leaves the evidence `explain` names for reading and CI artifacts.
+    dir: std::path::PathBuf,
+}
+
+impl Drop for Ran {
+    fn drop(&mut self) {
+        if !std::thread::panicking() {
+            // A directory that cannot be removed only costs space below the fixture root.
+            match std::fs::remove_dir_all(&self.dir) {
+                Ok(()) | Err(_) => {}
+            }
+        }
+    }
 }
 
 impl Ran {
@@ -73,7 +87,11 @@ pub fn field<'a>(value: &'a Value, pointer: &str) -> &'a Value {
 /// Fails when the binary is missing or the runner cannot be spawned.
 pub fn conformance(scenario: &str, case: &str, extra: &[&str]) -> TestResult<Ran> {
     // Unique per call: two tests may run the same scenario and case concurrently.
-    let dir = std::env::temp_dir().join(format!(
+    // Below OVIS_FIXTURE_ROOT when set; kept when the runner fails, so its evidence
+    // survives a failing test (see `Ran`'s drop) for reading and for a CI artifact.
+    let base = std::env::var_os("OVIS_FIXTURE_ROOT")
+        .map_or_else(std::env::temp_dir, std::path::PathBuf::from);
+    let dir = base.join(format!(
         "ovc-test-{}-{}-{case}-{}",
         std::process::id(),
         scenario.replace('/', "-"),
@@ -98,8 +116,11 @@ pub fn conformance(scenario: &str, case: &str, extra: &[&str]) -> TestResult<Ran
     let evidence = std::fs::read(&evidence).map_or(Value::Null, |bytes| {
         serde_json::from_slice(&bytes).unwrap_or(Value::Null)
     });
-    std::fs::remove_dir_all(&dir)?;
-    Ok(Ran { output, evidence })
+    Ok(Ran {
+        output,
+        evidence,
+        dir,
+    })
 }
 
 /// The first evidence assertion with this check name, in any case.

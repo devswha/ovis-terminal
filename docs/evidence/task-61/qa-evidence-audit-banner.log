@@ -1,0 +1,36 @@
+$ cargo run --locked --manifest-path probes/Cargo.toml --bin evidence-audit -- --fixture missing-receipt-and-pass-banner
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running `/dev/shm/ovt-target-lane-t61/debug/evidence-audit --fixture missing-receipt-and-pass-banner`
+{
+  "argv": [
+    "evidence-audit",
+    "--fixture",
+    "missing-receipt-and-pass-banner"
+  ],
+  "exempted": [],
+  "exit": 1,
+  "finding_count": "2",
+  "findings": [
+    {
+      "detail": "the run claims a pass but names no binary path with a sha256 digest",
+      "location": "seed/missing-receipt-and-pass-banner#0",
+      "rule": "binary-hash"
+    },
+    {
+      "detail": "quality/gates/happy passed without a single assertion",
+      "location": "seed/missing-receipt-and-pass-banner#0",
+      "rule": "receipt-missing"
+    }
+  ],
+  "gate": "evidence-audit",
+  "hint": "rerun the conformance runner; a pass needs parsed exits, recomputable assertions and a binary hash",
+  "host": {
+    "arch": "x86_64",
+    "os": "linux"
+  },
+  "inputs": "1",
+  "kind": "evidence_invalid",
+  "runs": "1",
+  "verdict": "fail"
+}
+exit=1

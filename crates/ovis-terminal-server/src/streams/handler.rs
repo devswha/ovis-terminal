@@ -13,6 +13,7 @@ use ovis_terminal_protocol::schema::ids::StreamId;
 use ovis_terminal_protocol::schema::limits::StreamMode;
 use ovis_terminal_protocol::schema::methods::attach::{
     AttachCreditParams, AttachOpenParams, AttachStreamParams, AttachStreamResult,
+    AttachTakeoverParams,
 };
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_store::OpId as StoreOpId;
@@ -23,14 +24,16 @@ use super::lane::AttachLane;
 use super::offset::StreamOffset;
 use super::open::OpenRequest;
 use super::pump::Pump;
+use super::takeover::TakeoverCall;
 use crate::conn::{Call, RequestHandler};
 use crate::dispatch::lanes::agent_status::TerminalDirectory;
 
-const METHODS: [&str; 4] = [
+const METHODS: [&str; 5] = [
     "attach.open",
     "attach.credit",
     "attach.close",
     "attach.repaint",
+    "attach.takeover",
 ];
 
 /// Serves attach methods and delegates the rest to `inner`.
@@ -67,6 +70,48 @@ impl<T: TerminalDirectory> AttachLane<T> {
         self.open_stream(call, params)
             .await
             .map_err(|error| error.boundary().with_op_id(op_id))
+    }
+
+    async fn takeover(self: &Arc<Self>, call: Call) -> Result<Value, BoundaryError> {
+        let params: AttachTakeoverParams = decode(&call)?;
+        let op_id = params.op_id.clone();
+        self.take_over_stream(&call, params)
+            .await
+            .map_err(|error| error.boundary().with_op_id(op_id))
+    }
+
+    /// Takes the interact lease over onto the caller's own stream of `params.target`.
+    async fn take_over_stream(
+        self: &Arc<Self>,
+        call: &Call,
+        params: AttachTakeoverParams,
+    ) -> Result<Value, StreamError> {
+        let principal = call.session.principal().clone();
+        let hub = self.owned(&principal, &params.stream_id)?;
+        let named = self.hub(&self.terminals.resolve(&params.target)?)?;
+        if !Arc::ptr_eq(&hub, &named) {
+            return Err(StreamError::StreamNotFound);
+        }
+        let key = (principal, params.op_id.clone());
+        let canonical = serde_json::to_value(&params)?;
+        if let Some(prior) = self.prior(&key, &canonical)? {
+            return Ok(prior);
+        }
+        let (fresh, at, session) = (self.fresh_lease(), now()?, Arc::clone(&call.session));
+        let taken = tokio::task::spawn_blocking(move || {
+            let request = TakeoverCall {
+                session: &session,
+                stream: &params.stream_id,
+                takeover: &params.takeover,
+                fresh,
+                at,
+            };
+            hub.take_over(request, StoreOpId::new(params.op_id.as_str()))
+        })
+        .await??;
+        let result = serde_json::to_value(taken)?;
+        self.remember(key, (canonical, result.clone()))?;
+        Ok(result)
     }
 
     async fn open_stream(
@@ -169,6 +214,7 @@ impl<H: RequestHandler, T: TerminalDirectory> RequestHandler for AttachHandler<H
             "attach.open" => self.lane.open(call).await,
             "attach.credit" => self.lane.credit(&call),
             "attach.close" | "attach.repaint" => self.lane.stream_call(&call),
+            "attach.takeover" => self.lane.takeover(call).await,
             _ => self.inner.call(call).await,
         }
     }

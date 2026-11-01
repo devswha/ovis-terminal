@@ -14,6 +14,7 @@ fn record(session: &mut Session<'_>, step: &Step) -> bool {
         Step::PtyOpen(open) => ("pty_open", open.planned()),
         Step::PtyType(typed) => ("pty_type", typed.planned()),
         Step::PtyExpect(expect) => ("pty_expect", expect.planned()),
+        Step::PtyAbsent(absent) => ("pty_absent", absent.planned()),
         Step::PtyResize(resize) => ("pty_resize", resize.planned()),
         Step::PtyExit(exit) => ("pty_exit", exit.planned()),
         _ => return false,
@@ -54,14 +55,10 @@ mod steps {
     use crate::error::RunnerError;
     use crate::scenario::matcher::{Assertion, Subject};
     use crate::scenario::model::Step;
-    use crate::scenario::pty::{PtyExit, PtyExpect, PtyOpen, PtyResize, PtyType};
+    use crate::scenario::pty::{PtyAbsent, PtyExit, PtyExpect, PtyOpen, PtyResize, PtyType};
 
     /// Bound on one expected output appearing.
     const SHOW_BOUND: Duration = Duration::from_secs(15);
-    /// Bound on one retried command's output appearing before it is typed again.
-    const RETRY_BOUND: Duration = Duration::from_secs(1);
-    /// Times a `retry_type` command is typed at most.
-    const RETRIES: usize = 20;
 
     impl Session<'_> {
         /// Records `step`'s plan, then runs it on its outer PTY.
@@ -71,6 +68,7 @@ mod steps {
                 Step::PtyOpen(open) => self.pty_open(open),
                 Step::PtyType(typed) => self.pty_type(typed),
                 Step::PtyExpect(expect) => self.pty_expect(expect).await,
+                Step::PtyAbsent(absent) => self.pty_absent(absent),
                 Step::PtyResize(resize) => self.pty_resize(resize),
                 Step::PtyExit(exit) => self.pty_exit(exit).await,
                 _ => Err(RunnerError::FixtureState),
@@ -106,26 +104,19 @@ mod steps {
 
         async fn pty_expect(&mut self, expect: &PtyExpect) -> Result<(), RunnerError> {
             let outer = self.outer(&expect.pty)?;
-            let shown = match &expect.retry_type {
-                None => outer.shows(&expect.output, SHOW_BOUND).await,
-                Some(command) => {
-                    let mut shown = false;
-                    for _ in 0..RETRIES {
-                        outer.type_bytes(command.as_bytes())?;
-                        if outer.shows(&expect.output, RETRY_BOUND).await {
-                            shown = true;
-                            break;
-                        }
-                    }
-                    shown
-                }
-            };
+            let shown = outer.shows(&expect.output, SHOW_BOUND).await;
             let check = format!("pty[{}]/shows", expect.pty);
             self.assert(vec![Assertion::equal(
                 check,
                 json!(expect.output),
                 json!(shown.then_some(&expect.output)),
             )])
+        }
+
+        fn pty_absent(&mut self, absent: &PtyAbsent) -> Result<(), RunnerError> {
+            let shown = self.outer(&absent.pty)?.delivered_contains(&absent.output);
+            let check = format!("pty[{}]/absent", absent.pty);
+            self.assert(vec![Assertion::equal(check, json!(false), json!(shown))])
         }
 
         async fn pty_exit(&mut self, exit: &PtyExit) -> Result<(), RunnerError> {

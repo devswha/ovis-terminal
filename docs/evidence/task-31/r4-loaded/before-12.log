@@ -1,0 +1,50 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+────────────
+ Nextest run ID 2e11b1b8-8cba-4e80-9719-c18067e9a20f with nextest profile: default
+    Starting 1 test across 1 binary (21 tests skipped)
+        FAIL [  13.654s] (1/1) ovis-terminal-cli::assembly update::an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program
+  stdout ───
+
+    running 1 test
+    test update::an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program ... FAILED
+
+    failures:
+
+    failures:
+        update::an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 21 filtered out; finished in 13.56s
+
+  stderr ───
+
+    thread 'update::an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program' (3538006) panicked at crates/ovis-terminal-cli/tests/assembly/support.rs:229:9:
+    assertion `left == right` failed: ["call", "update.query", "--params", "{}"]: Output { status: ExitStatus(unix_wait_status(3328)), stdout: "", stderr: "{\"error\":{\"exit_code\":13,\"hint\":\"inspect the operation; it may still be running\",\"kind\":\"deadline_exceeded\",\"message\":\"the server did not answer within 10000 ms\",\"origin\":\"cli\"}}\n" }
+      left: Some(13)
+     right: Some(0)
+    stack backtrace:
+       0: __rustc::rust_begin_unwind
+                 at /rustc/58cf8f9c35b355199727627d07ae34a4e2846d67/library/std/src/panicking.rs:679:5
+       1: core::panicking::panic_fmt
+                 at /rustc/58cf8f9c35b355199727627d07ae34a4e2846d67/library/core/src/panicking.rs:80:14
+       2: core::panicking::assert_failed_inner
+                 at /rustc/58cf8f9c35b355199727627d07ae34a4e2846d67/library/core/src/panicking.rs:447:23
+       3: core::panicking::assert_failed::<core::option::Option<i32>, core::option::Option<i32>>
+                 at /home/devswha/.ovis-toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panicking.rs:407:5
+       4: <assembly::support::Served>::ok
+                 at ./tests/assembly/support.rs:229:9
+       5: assembly::update::call
+                 at ./tests/assembly/update.rs:17:12
+       6: an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program
+                 at ./tests/assembly/update.rs:62:17
+       7: assembly::update::an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program::{closure#0}
+                 at ./tests/assembly/update.rs:58:90
+       8: <assembly::update::an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program::{closure#0} as core::ops::function::FnOnce<()>>::call_once
+                 at /home/devswha/.ovis-toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+       9: <fn() -> core::result::Result<(), alloc::string::String> as core::ops::function::FnOnce<()>>::call_once
+                 at /rustc/58cf8f9c35b355199727627d07ae34a4e2846d67/library/core/src/ops/function.rs:250:5
+    note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
+
+────────────
+     Summary [  13.656s] 1 test run: 0 passed, 1 failed, 21 skipped
+        FAIL [  13.654s] (1/1) ovis-terminal-cli::assembly update::an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program
+error: test run failed

@@ -5,7 +5,7 @@
 
 use ovis_terminal_authz::Session;
 use ovis_terminal_core::registry::{ResourceName, TerminalId};
-use ovis_terminal_core::terminals::{Call, KillRequest, LabelRequest, Record, TerminalError};
+use ovis_terminal_core::terminals::{Call, KillRequest, LabelRequest, Record};
 use ovis_terminal_holder::protocol::{Output, TailRequest};
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::schema::common::Target;
@@ -17,11 +17,6 @@ use serde_json::{Value, json};
 
 use super::actor::Runtime;
 use super::error::{internal, refusal};
-use super::terminal::terminal_refusal;
-
-fn refused(error: &TerminalError) -> BoundaryError {
-    terminal_refusal(error)
-}
 
 impl Runtime {
     fn target_id(&self, target: &Target) -> Result<TerminalId, BoundaryError> {
@@ -40,10 +35,7 @@ impl Runtime {
         session: &Session,
         id: TerminalId,
     ) -> Result<(), BoundaryError> {
-        let record = self
-            .terminals
-            .get(session, id)
-            .map_err(|error| refused(&error))?;
+        let record = self.lifecycle(|terminals| terminals.get(session, id))?;
         let (Some(exit), Some(target)) = (&record.exit, &record.holder_target) else {
             return Ok(());
         };
@@ -94,10 +86,7 @@ impl Runtime {
         params: &TerminalKillParams,
     ) -> Result<Value, BoundaryError> {
         let id = self.target_id(&params.target)?;
-        let record = self
-            .terminals
-            .get(session, id)
-            .map_err(|error| refused(&error))?;
+        let record = self.lifecycle(|terminals| terminals.get(session, id))?;
         let expected = record
             .lifecycle
             .process()
@@ -116,10 +105,9 @@ impl Runtime {
         let mut request = KillRequest::immediate(id, expected);
         request.hup_ms = params.escalation.hup_ms;
         request.term_ms = params.escalation.term_ms;
-        let receipt = self
-            .terminals
-            .kill(Call::new(session, params.op_id.clone()), &request)
-            .map_err(|error| refused(&error))?;
+        let receipt = self.lifecycle(|terminals| {
+            terminals.kill(Call::new(session, params.op_id.clone()), &request)
+        })?;
         self.reconcile(session, id)?;
         let observed = if receipt.exit.is_some() {
             "exited"
@@ -133,18 +121,13 @@ impl Runtime {
     }
 
     pub(super) fn remove(
-        &mut self,
+        &self,
         session: &Session,
         params: &TerminalMutateParams,
     ) -> Result<Value, BoundaryError> {
         let id = self.target_id(&params.target)?;
-        let before = self
-            .terminals
-            .get(session, id)
-            .map_err(|error| refused(&error))?;
-        self.terminals
-            .rm(Call::new(session, params.op_id.clone()), id)
-            .map_err(|error| refused(&error))?;
+        let before = self.lifecycle(|terminals| terminals.get(session, id))?;
+        self.lifecycle(|terminals| terminals.rm(Call::new(session, params.op_id.clone()), id))?;
         let terminal = self.record_value(&before)?;
         Ok(json!({"terminal": terminal, "revision": before.revision, "seq": before.revision}))
     }
@@ -156,10 +139,7 @@ impl Runtime {
     ) -> Result<Value, BoundaryError> {
         let id = self.target_id(&params.target)?;
         let call = Call::new(session, params.op_id.clone());
-        let record = self
-            .terminals
-            .keep(call, (id, params.keep))
-            .map_err(|error| refused(&error))?;
+        let record = self.lifecycle(|terminals| terminals.keep(call, (id, params.keep)))?;
         self.mutated(session, &record)
     }
 
@@ -176,10 +156,7 @@ impl Runtime {
             .transpose()
             .map_err(|_| refusal("invalid_params", "name a valid terminal name"))?;
         let call = Call::new(session, params.op_id.clone());
-        let record = self
-            .terminals
-            .rename(call, (id, name))
-            .map_err(|error| refused(&error))?;
+        let record = self.lifecycle(|terminals| terminals.rename(call, (id, name)))?;
         if let Some(live) = self.live.get(&id) {
             let generation = live.generation;
             self.directory.spawned(
@@ -206,10 +183,7 @@ impl Runtime {
             params.remove.clone().unwrap_or_default(),
         );
         let call = Call::new(session, params.op_id.clone());
-        let record = self
-            .terminals
-            .label(call, request)
-            .map_err(|error| refused(&error))?;
+        let record = self.lifecycle(|terminals| terminals.label(call, request))?;
         self.mutated(session, &record)
     }
 
@@ -220,10 +194,7 @@ impl Runtime {
     ) -> Result<Value, BoundaryError> {
         let id = self.target_id(&params.target)?;
         let call = Call::new(session, params.op_id.clone());
-        let record = self
-            .terminals
-            .recover(call, id)
-            .map_err(|error| refused(&error))?;
+        let record = self.lifecycle(|terminals| terminals.recover(call, id))?;
         self.mutated(session, &record)
     }
 }

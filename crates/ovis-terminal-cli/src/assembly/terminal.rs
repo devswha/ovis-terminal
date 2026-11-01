@@ -5,27 +5,37 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use ovis_terminal_agent::status::ProcessOwner;
 use ovis_terminal_authz::Session;
 use ovis_terminal_core::registry::{ResourceName, TerminalId};
 use ovis_terminal_core::terminals::{Call, Launch, LaunchState, Program, TerminalError};
+use ovis_terminal_protocol::domain::boundary_policy::{LaunchArgv, LaunchEnvironment};
 use ovis_terminal_protocol::errors::{BoundaryError, OpId};
 use ovis_terminal_protocol::schema::common::Target;
+use ovis_terminal_protocol::schema::ids::ProcessToken;
 use ovis_terminal_protocol::schema::methods::terminal::{LaunchProgram, TerminalRunParams};
+use ovis_terminal_protocol::schema::scalar::Incarnation;
 use ovis_terminal_server::dispatch::lanes::agent_status::TerminalDirectory as _;
 use serde_json::{Value, json};
 
-use super::actor::Runtime;
+use super::actor::{Link, Runtime};
 use super::error::refusal;
 
 /// Bound on waiting for the holder's spawn evidence before answering `pending`.
 const SPAWN_BOUND: Duration = Duration::from_secs(10);
+
+/// How long the spawn wait pauses, with the control released, between receives.
+const SPAWN_POLL: Duration = Duration::from_millis(5);
 
 /// The typed refusal of a lifecycle failure.
 pub(super) fn terminal_refusal(error: &TerminalError) -> BoundaryError {
     refusal(error.kind(), error.hint())
 }
 
-fn launch(params: TerminalRunParams) -> Result<Launch, TerminalError> {
+/// The environment variable a spawned program finds its process token in.
+const PROCESS_TOKEN_VAR: &str = "OVIS_TERMINAL_PROCESS_TOKEN";
+
+pub(super) fn launch(params: TerminalRunParams) -> Result<(Launch, ProcessToken), TerminalError> {
     let unsupported = params.parent.is_some()
         || params.child_policy.is_some()
         || params.first_message.is_some()
@@ -44,7 +54,9 @@ fn launch(params: TerminalRunParams) -> Result<Launch, TerminalError> {
         Some(cwd) => PathBuf::from(cwd),
         None => std::env::current_dir().map_err(TerminalError::Cwd)?,
     };
-    let env: BTreeMap<String, String> = params.env.unwrap_or_default();
+    let mut env: BTreeMap<String, String> = params.env.unwrap_or_default();
+    let token = ProcessToken::new(uuid::Uuid::new_v4().simple().to_string());
+    env.insert(PROCESS_TOKEN_VAR.to_owned(), token.as_str().to_owned());
     let mut launch = Launch::new(Program::new(argv, cwd, env)?, params.geometry)?;
     launch.name = params
         .name
@@ -52,7 +64,19 @@ fn launch(params: TerminalRunParams) -> Result<Launch, TerminalError> {
         .transpose()?;
     launch.labels = params.labels.unwrap_or_default();
     launch.keep = params.keep.unwrap_or(false);
-    Ok(launch)
+    Ok((launch, token))
+}
+
+/// Refuses an oversized or unsafe launch before anything is admitted (plan todo 58): the
+/// argv and environment bounds, NUL bytes and runtime-reserved variables.
+pub(super) fn bounded(params: &TerminalRunParams) -> Result<(), BoundaryError> {
+    if let Some(LaunchProgram::Argv(argv)) = &params.program {
+        LaunchArgv::parse(argv).map_err(|violation| violation.to_boundary())?;
+    }
+    if let Some(env) = &params.env {
+        LaunchEnvironment::parse(env).map_err(|violation| violation.to_boundary())?;
+    }
+    Ok(())
 }
 
 impl Runtime {
@@ -76,14 +100,14 @@ impl Runtime {
         session: &Session,
         params: TerminalRunParams,
     ) -> Result<Value, BoundaryError> {
+        bounded(&params)?;
+        self.qa_hold()?;
         let op_id: OpId = params.op_id.clone();
         let grid = params.geometry;
-        let launch = launch(params).map_err(|error| terminal_refusal(&error))?;
+        let (launch, token) = launch(params).map_err(|error| terminal_refusal(&error))?;
         let name = launch.name.as_ref().map(|name| name.as_str().to_owned());
-        let record = self
-            .terminals
-            .run(Call::new(session, op_id), launch)
-            .map_err(|error| terminal_refusal(&error))?;
+        let record =
+            self.lifecycle(|terminals| terminals.run(Call::new(session, op_id), launch))?;
         let id = record.id();
         self.created.entry(id).or_insert(record.revision);
         if !self.live.contains_key(&id) {
@@ -94,13 +118,20 @@ impl Runtime {
         while matches!(record.spawn, LaunchState::Admitted | LaunchState::Pending)
             && deadline.is_some_and(|deadline| Instant::now() < deadline)
         {
-            if !self.receive(Duration::from_millis(50)) {
-                break;
+            match self.receive() {
+                Link::Linked => {}
+                // The holder has not reported yet; wait with the control released.
+                Link::Idle | Link::Restarting => std::thread::sleep(SPAWN_POLL),
+                Link::Gone => break,
             }
-            record = self
-                .terminals
-                .get(session, id)
-                .map_err(|error| terminal_refusal(&error))?;
+            record = self.lifecycle(|terminals| terminals.get(session, id))?;
+        }
+        if let Some(process) = record.lifecycle.process() {
+            let owner = ProcessOwner::new(id, Incarnation::new(process.generation().get()));
+            self.status
+                .tokens()
+                .bind(&token, owner)
+                .map_err(|error| refusal(error.kind(), error.hint()))?;
         }
         let spawn = match record.spawn {
             LaunchState::Spawned => "spawned",
@@ -113,10 +144,7 @@ impl Runtime {
     }
 
     pub(super) fn list_terminals(&self, session: &Session) -> Result<Value, BoundaryError> {
-        let records = self
-            .terminals
-            .list(session)
-            .map_err(|error| terminal_refusal(&error))?;
+        let records = self.lifecycle(|terminals| terminals.list(session))?;
         let terminals = records
             .iter()
             .map(|record| self.record_value(record))
@@ -135,10 +163,7 @@ impl Runtime {
         target: &Target,
     ) -> Result<Value, BoundaryError> {
         let id = self.resolve_id(target)?;
-        let record = self
-            .terminals
-            .get(session, id)
-            .map_err(|error| terminal_refusal(&error))?;
+        let record = self.lifecycle(|terminals| terminals.get(session, id))?;
         self.record_value(&record)
     }
 
@@ -147,28 +172,29 @@ impl Runtime {
         session: &Session,
         op_id: &OpId,
     ) -> Result<Value, BoundaryError> {
-        let record = self
-            .terminals
-            .operation(session, op_id)
-            .map_err(|error| terminal_refusal(&error))?;
+        let record = self.lifecycle(|terminals| terminals.operation(session, op_id))?;
         serde_json::to_value(record).map_err(|_| refusal("internal", "report the build"))
     }
+}
 
-    pub(super) fn status(&self) -> Value {
-        let live = self
-            .live
-            .values()
-            .filter(|live| live.hub.streams().is_ok())
-            .count();
-        let uptime = u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX);
-        json!({
-            "state": "running",
-            "runtime_lifetime": self.identity.runtime_id().to_string(),
-            "server_boot_id": self.identity.server_boot_id().to_string(),
-            "uptime_ms": uptime.to_string(),
-            "census": "reported",
-            "holder_count": "1",
-            "live_terminals": live.to_string(),
-        })
+impl Runtime {
+    /// QA seam: holds the control on the FIFO, once. It first writes `held` to the FIFO,
+    /// which completes the test's read exactly when the hold is engaged, then opens it for
+    /// reading, which returns when the test releases the hold by opening it for writing.
+    fn qa_hold(&mut self) -> Result<(), BoundaryError> {
+        let Some(fifo) = self.qa_hold.take() else {
+            return Ok(());
+        };
+        self.control
+            .with_terminals(|_, _| {
+                let held = std::fs::OpenOptions::new()
+                    .write(true)
+                    .open(&fifo)
+                    .and_then(|mut writer| std::io::Write::write_all(&mut writer, b"held\n"))
+                    .and_then(|()| std::fs::File::open(&fifo).map(drop));
+                Ok(held)
+            })
+            .map_err(|error| refusal(error.kind(), error.hint()))?
+            .map_err(|_| refusal("internal", "the QA hold FIFO could not be used"))
     }
 }

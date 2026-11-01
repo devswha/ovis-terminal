@@ -26,6 +26,7 @@ thiserror = { workspace = true }
 tokio = { workspace = true }
 ovis-terminal-holder = { workspace = true }
 ovis-terminal-protocol = { workspace = true }
+ovis-terminal-remote = { workspace = true }
 ovis-terminal-server = { workspace = true }
 
 # The assembled server (`serve`) and the attach client are Unix-only in this build.
@@ -41,6 +42,11 @@ ovis-terminal-vt = { workspace = true }
 rustix = { version = "1.1.6", features = ["process", "stdio", "termios"] }
 uuid = { workspace = true }
 
+# The named-pipe client waits out a busy instance with WaitNamedPipeW, as the Windows
+# pipe contract requires; the version Cargo.lock already resolves.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Pipes"] }
+
 # The Windows service fixture test (plan todo 54) logs on as its account and owns a
 # launch job; the version Cargo.lock already resolves.
 [target.'cfg(windows)'.dev-dependencies]
@@ -48,7 +54,7 @@ windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Securit
 
 # The attach tests drive the client on a real outer PTY; the version the holder resolves.
 [target.'cfg(unix)'.dev-dependencies]
-rustix = { version = "1.1.6", features = ["fs", "process", "pty", "stdio", "termios"] }
+rustix = { version = "1.1.6", features = ["event", "fs", "process", "pty", "stdio", "termios"] }
 
 [dev-dependencies]
 proptest = { workspace = true }

@@ -29,3 +29,11 @@ pub(super) fn worker_gone() -> BoundaryError {
         "the server is stopping; retry against a running server",
     )
 }
+
+/// `value` decoded as the method's closed result type before it leaves the server.
+pub(super) fn checked<T: serde::de::DeserializeOwned + serde::Serialize>(
+    value: serde_json::Value,
+) -> Result<serde_json::Value, BoundaryError> {
+    let typed: T = serde_json::from_value(value).map_err(internal("encode a read result"))?;
+    serde_json::to_value(typed).map_err(internal("encode a read result"))
+}

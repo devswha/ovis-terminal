@@ -7,6 +7,9 @@ use ovis_terminal_protocol::errors::TargetCandidate;
 use ovis_terminal_protocol::rpc::RpcRequest;
 use ovis_terminal_protocol::schema::common::NoParams;
 use ovis_terminal_protocol::schema::ids::{MachineId, TerminalId};
+use ovis_terminal_protocol::schema::limits::Limits;
+use ovis_terminal_protocol::schema::method::Effect;
+use ovis_terminal_protocol::schema::methods::all_methods;
 use ovis_terminal_protocol::schema::methods::server::ServerStatusResult;
 use ovis_terminal_protocol::schema::methods::terminal::TerminalListParams;
 use ovis_terminal_server::listen::{EndpointAddress, EndpointDescriptor, Platform};
@@ -19,8 +22,9 @@ use super::plan::typed;
 use super::report::Failure;
 use super::transport::{Session, bridge};
 
-/// Bound on one exchange in milliseconds, the protocol's ordinary deadline.
-const DEADLINE_MS: u64 = 10_000;
+/// Bound on one exchange in milliseconds: the server's deadline plus the allowance for its
+/// own answer at that deadline to arrive (see [`Limits::client_bound_ms`]).
+const DEADLINE_MS: u64 = Limits::v1().client_bound_ms().get();
 const DEADLINE: Duration = Duration::from_millis(DEADLINE_MS);
 
 fn address(context: &Context) -> Result<EndpointAddress, CliError> {
@@ -37,12 +41,65 @@ async fn bounded<T>(work: impl Future<Output = Result<T, Failure>>) -> Result<T,
     })?
 }
 
-/// Sends one planned request and returns its result untouched.
+/// Pause between attempts to reach the successor boot after a planned restart.
+const RECONNECT_PAUSE: Duration = Duration::from_millis(20);
+
+/// Whether `method` only reads state, so it may be sent again.
+fn is_read(method: &str) -> bool {
+    all_methods().any(|spec| spec.name == method && spec.effect == Effect::Query)
+}
+
+/// Whether a read met a planned restart: it lost its connection (announced by
+/// `$/closing{server_restart}` or not: a connection caught mid-exchange can be reset before
+/// that record), or control refused it `restarting` because it was between boots.
+fn met_restart(answer: &Result<Value, Failure>) -> bool {
+    match answer {
+        Err(Failure::Cli(
+            CliError::Restarted
+            | CliError::Closed
+            | CliError::Io {
+                operation: "send" | "receive",
+                ..
+            },
+        )) => true,
+        Err(Failure::Server(error)) => error.data.kind.token() == "restarting",
+        _ => false,
+    }
+}
+
+/// One exchange on a new connection.
+async fn exchange(
+    context: &Context,
+    address: &EndpointAddress,
+    request: &RpcRequest,
+) -> Result<Value, Failure> {
+    Session::open(address, context.credential())
+        .await?
+        .call(request)
+        .await
+}
+
+/// Sends one planned request and returns its result untouched. A read that meets a planned
+/// restart, or otherwise loses its connection, is sent again on a new connection until a
+/// server answers it, within the same deadline; reads are idempotent. Once a restart was
+/// met, a missing endpoint is the successor not listening yet. A mutation reports the loss,
+/// and `op.get` tells whether it committed.
 pub(super) async fn call(context: &Context, request: &RpcRequest) -> Result<Value, Failure> {
     let address = address(context)?;
+    let read = is_read(request.method());
     bounded(async {
-        let mut session = Session::open(&address, context.credential()).await?;
-        session.call(request).await
+        let mut answer = exchange(context, &address, request).await;
+        let mut restarting = false;
+        loop {
+            restarting |= met_restart(&answer);
+            let between_boots =
+                restarting && matches!(answer, Err(Failure::Cli(CliError::NotRunning { .. })));
+            if !(read && (met_restart(&answer) || between_boots)) {
+                return answer;
+            }
+            tokio::time::sleep(RECONNECT_PAUSE).await;
+            answer = exchange(context, &address, request).await;
+        }
     })
     .await
 }

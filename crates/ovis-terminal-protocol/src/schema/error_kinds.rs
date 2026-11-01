@@ -84,6 +84,8 @@ pub enum DomainErrorKind {
     LeaseConflict,
     /// The lease epoch does not match the current one.
     LeaseEpochMismatch,
+    /// A geometry request names an epoch a newer transition superseded.
+    StaleGeometry,
     /// The program is blocked on a prompt; answer it instead.
     Blocked,
     /// The program has not declared readiness.

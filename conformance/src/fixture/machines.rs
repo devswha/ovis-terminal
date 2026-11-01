@@ -10,7 +10,7 @@
 //! remote launch would. `machine.list` is the real lane route; `$/orphanedAck` is answered
 //! by the real lane.
 
-mod remote;
+pub mod remote;
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -28,6 +28,7 @@ use ovis_terminal_protocol::schema::records::ParentRef;
 use ovis_terminal_protocol::schema::scalar::{DurationMs, OpenEnum};
 use ovis_terminal_remote::actors::{Actors, Inbound, Limits, Request};
 use ovis_terminal_remote::orphans::{OrphanError, Replayed};
+use ovis_terminal_remote::transport::Link;
 use ovis_terminal_server::dispatch::lanes::machine_actor::{
     MachineActorLane, MachineList, TreeOutbox, actor_refusal, orphan_refusal,
 };
@@ -35,14 +36,17 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::sync::{Mutex, mpsc};
 
-use self::remote::{PipeLine, Remote, internal};
+pub(crate) use self::remote::internal;
+use self::remote::{PipeLine, Remote};
 use super::agents::AgentParts;
 use super::handler::{Dispatch, Event};
 use super::prompts::Gate;
 use super::serve::at;
 use crate::error::RunnerError;
 
-type Lane = MachineActorLane<PipeLine, Event, OperationProducer>;
+/// A fixture machine's line: an in-process stand-in or a spawned transport to a runtime.
+pub(crate) type FixtureLine = ovis_terminal_remote::EitherLine<PipeLine, Link>;
+pub(crate) type Lane = MachineActorLane<FixtureLine, Event, OperationProducer>;
 type Core = ovis_terminal_core::events::Coordinator<Event, OperationProducer>;
 
 /// The fixture machines by name.
@@ -98,7 +102,7 @@ pub(crate) async fn register(
     for (name, id) in MACHINES {
         let remote = Remote::new(MachineId::new(id.to_owned()));
         let first_end = remote.connect();
-        lane.attach(remote.id(), first_end)
+        lane.attach(remote.id(), FixtureLine::First(first_end))
             .await
             .map_err(at("attach a fixture machine"))?;
         remotes.insert(name, remote);
@@ -114,6 +118,24 @@ pub(crate) async fn register(
 }
 
 impl Machines {
+    /// The machine actor lane every fixture machine, the peer included, is served by.
+    pub(crate) const fn lane(&self) -> &Arc<Lane> {
+        &self.lane
+    }
+
+    /// A stand-in machine, or any machine the actors serve under `name`.
+    fn named(&self, name: &str) -> Result<MachineId, BoundaryError> {
+        if let Ok(remote) = self.remote(name) {
+            return Ok(remote.id().clone());
+        }
+        let served = self.lane.actors().list().into_iter();
+        let mut named = served.filter(|record| record.name.as_str() == name);
+        named
+            .next()
+            .map(|record| record.machine_id)
+            .ok_or_else(|| BoundaryError::invalid_params(Some("params.machine")))
+    }
+
     fn remote(&self, name: &str) -> Result<&Arc<Remote>, BoundaryError> {
         self.remotes
             .get(name)
@@ -216,7 +238,7 @@ pub(crate) async fn control(
             Some(
                 machines
                     .lane
-                    .attach(remote.id(), fresh_end)
+                    .attach(remote.id(), FixtureLine::First(fresh_end))
                     .await
                     .map_err(refused)?,
             )
@@ -245,7 +267,7 @@ pub(crate) async fn remote_child(
     request: &RpcRequest,
 ) -> Result<Value, BoundaryError> {
     let params: RemoteChild = decode_params(request).map_err(BoundaryError::from)?;
-    let machine = machines.remote(&params.machine)?.id().clone();
+    let machine = machines.named(&params.machine)?;
     let fixture = Arc::clone(machines);
     tokio::task::spawn_blocking(move || {
         remote::link(

@@ -15,6 +15,36 @@ pub mod transport;
 #[cfg(test)]
 pub mod qa_support;
 
+use actors::Line;
+use transport::TransportError;
+
+/// One actor table over two kinds of line, such as spawned transports beside in-process
+/// or socket lines: each machine keeps whichever line reached it.
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum EitherLine<A, B> {
+    /// A line of the first kind.
+    First(A),
+    /// A line of the second kind.
+    Second(B),
+}
+
+impl<A: Line, B: Line> Line for EitherLine<A, B> {
+    async fn send(&mut self, bytes: &[u8]) -> Result<(), TransportError> {
+        match self {
+            Self::First(line) => line.send(bytes).await,
+            Self::Second(line) => line.send(bytes).await,
+        }
+    }
+
+    async fn receive(&mut self) -> Result<Vec<u8>, TransportError> {
+        match self {
+            Self::First(line) => line.receive().await,
+            Self::Second(line) => line.receive().await,
+        }
+    }
+}
+
 /// Cargo package name of this crate, used by the workspace layering record.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 

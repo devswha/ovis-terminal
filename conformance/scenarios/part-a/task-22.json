@@ -1,7 +1,8 @@
 {
+  "format": "ovis-conformance/1",
   "scenario": "part-a/task-22",
-  "todo": 22,
   "title": "Independent subscriptions, replay and recoverable loss",
+  "todo": 22,
   "closes": [
     "GAP-021",
     "GAP-022",
@@ -29,134 +30,472 @@
     "linux",
     "macos"
   ],
-  "verification": {
-    "status": "declared_until_routed",
-    "core_tests": "cargo nextest run -p ovis-terminal-core --test subscriptions",
-    "blocking_todo": 31,
-    "requires_actual_cli_socket_transcript": true
-  },
   "cases": [
     {
       "case": "happy",
+      "summary": "A subscription filtered to doc.changed receives the committed doc.set as an event notification on its own connection; update replaces the filter and unsubscribe reports where delivery stopped.",
       "steps": [
         {
-          "rpc": "events.subscribe",
-          "params": {
-            "filter": {},
-            "snapshot": true
-          },
-          "capture": [
-            "subscription_id",
-            "snapshot_seq"
-          ],
-          "as": "all"
-        },
-        {
-          "rpc": "events.subscribe",
-          "params": {
-            "filter": {
-              "terminals": [
-                "$terminal_1"
-              ]
-            },
-            "snapshot": true
-          },
-          "capture": [
-            "subscription_id"
-          ],
-          "as": "filtered"
-        },
-        {
-          "commit": [
-            "terminal_2 changes",
-            "terminal_1 changes"
-          ]
-        },
-        {
-          "as": "filtered",
-          "rpc": "events.update",
-          "params": {
-            "subscription_id": "$filtered.subscription_id",
-            "filter": {
-              "terminals": [
-                "$terminal_2"
-              ]
-            }
-          },
-          "assert": {
-            "effective_seq": "$filtered.scan_seq+1",
-            "all_stream_still_delivers": true
+          "serve": {
+            "fixture": "assembled"
           }
         },
         {
-          "as": "all",
-          "rpc": "events.subscribe",
-          "params": {
-            "filter": {},
-            "cursor": {
-              "runtime_lifetime": "$runtime_lifetime",
-              "seq": "$all.snapshot_seq"
-            },
-            "snapshot": false
-          },
-          "assert": {
-            "missed": null,
-            "replay_equals_live_events": true,
-            "snapshot_plus_events_equals_fresh_snapshot": true,
-            "filtered_scan_seq_covers_nonmatching_gap": true
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "events.subscribe",
+                  "events.update",
+                  "events.unsubscribe"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "sub",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "sub",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "sub",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "subscribe",
+                "method": "events.subscribe",
+                "params": {
+                  "filter": {
+                    "terminals": null,
+                    "children_of": null,
+                    "labels": null,
+                    "types": [
+                      "doc.changed"
+                    ],
+                    "machines": null
+                  },
+                  "cursor": null,
+                  "snapshot": false
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "sub",
+            "expect": {
+              "subscribe": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/subscription_id": {
+                  "$capture": "sub"
+                },
+                "/result/heartbeat_ms": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "set",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:doc",
+                  "name": "watched",
+                  "value": "one",
+                  "version": "0",
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "set": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "sub",
+            "method": "event",
+            "expect": {
+              "/params/type": "doc.changed",
+              "/params/subscription_id": "$value:sub"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "sub",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "update",
+                "method": "events.update",
+                "params": {
+                  "subscription_id": "$value:sub",
+                  "filter": {
+                    "terminals": null,
+                    "children_of": null,
+                    "labels": null,
+                    "types": [
+                      "status.changed"
+                    ],
+                    "machines": null
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "sub",
+            "expect": {
+              "update": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/subscription_id": "$value:sub",
+                "/result/effective_seq": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "sub",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "unsubscribe",
+                "method": "events.unsubscribe",
+                "params": {
+                  "subscription_id": "$value:sub"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "sub",
+            "expect": {
+              "unsubscribe": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/seq": {
+                  "$present": true
+                },
+                "/result/scan_seq": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
           }
         }
       ]
     },
     {
       "case": "failure",
+      "summary": "Another principal cannot close the subscription (not_found), a selector needing a registry lookup is filter_invalid, an unknown or already closed subscription is not_found.",
       "steps": [
         {
-          "inject": {
-            "fixture": "withhold_reads",
-            "subscription": "$withheld.subscription_id",
-            "past": "queue_events"
-          },
-          "assert": {
-            "healthy_subscription_delivers_every_event": true,
-            "loss_marker.cause": "queue_overflow"
+          "serve": {
+            "fixture": "assembled"
           }
         },
         {
-          "inject": {
-            "fixture": "drop_connection_before_final_error"
+          "connect": {
+            "conn": "control",
+            "via": "socket"
           }
         },
         {
-          "as": "withheld",
-          "rpc": "events.subscribe",
-          "params": {
-            "filter": {},
-            "cursor": {
-              "runtime_lifetime": "$runtime_lifetime",
-              "seq": "$withheld.snapshot_seq"
-            },
-            "snapshot": false
-          },
-          "assert": {
-            "missed": "cursor_expired",
-            "snapshot_present": true,
-            "durable_loss_marker_committed": true
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "events.subscribe",
+                  "events.update",
+                  "events.unsubscribe"
+                ]
+              }
+            }
           }
         },
         {
-          "rpc": "events.subscribe",
-          "params": {
-            "filter": {},
-            "cursor": {
-              "runtime_lifetime": "$foreign_runtime_lifetime",
-              "seq": "1"
-            },
-            "snapshot": false
-          },
-          "assert": {
-            "missed": "lifetime_mismatch",
-            "snapshot_present": true
+          "connect": {
+            "conn": "sub",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "sub",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "sub",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "subscribe",
+                "method": "events.subscribe",
+                "params": {
+                  "filter": {
+                    "terminals": null,
+                    "children_of": null,
+                    "labels": null,
+                    "types": [
+                      "doc.changed"
+                    ],
+                    "machines": null
+                  },
+                  "cursor": null,
+                  "snapshot": false
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "sub",
+            "expect": {
+              "subscribe": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/subscription_id": {
+                  "$capture": "sub"
+                }
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "observer",
+            "via": "socket",
+            "principal": "observe"
+          }
+        },
+        {
+          "hello": {
+            "conn": "observer",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "foreign",
+                "method": "events.unsubscribe",
+                "params": {
+                  "subscription_id": "$value:sub"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "foreign": {
+                "/error/data/kind": "not_found"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "sub",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "unresolved",
+                "method": "events.subscribe",
+                "params": {
+                  "filter": {
+                    "terminals": null,
+                    "children_of": [
+                      "terminal:1"
+                    ],
+                    "labels": null,
+                    "types": null,
+                    "machines": null
+                  },
+                  "cursor": null,
+                  "snapshot": false
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "sub",
+            "expect": {
+              "unresolved": {
+                "/error/data/kind": "filter_invalid"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "sub",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "unknown",
+                "method": "events.update",
+                "params": {
+                  "subscription_id": "0191f1a2-0000-7000-8000-00000000dead",
+                  "filter": {
+                    "terminals": null,
+                    "children_of": null,
+                    "labels": null,
+                    "types": [
+                      "doc.changed"
+                    ],
+                    "machines": null
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "sub",
+            "expect": {
+              "unknown": {
+                "/error/data/kind": "not_found"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "sub",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "closed",
+                "method": "events.unsubscribe",
+                "params": {
+                  "subscription_id": "$value:sub"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "sub",
+            "expect": {
+              "closed": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "sub",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "again",
+                "method": "events.unsubscribe",
+                "params": {
+                  "subscription_id": "$value:sub"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "sub",
+            "expect": {
+              "again": {
+                "/error/data/kind": "not_found"
+              }
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
           }
         }
       ]

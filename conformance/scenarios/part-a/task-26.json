@@ -1,7 +1,8 @@
 {
+  "format": "ovis-conformance/1",
   "scenario": "part-a/task-26",
-  "todo": 26,
   "title": "Order geometry transitions and unchanged grid repaint",
+  "todo": 26,
   "closes": [
     "GAP-050",
     "GAP-058",
@@ -21,254 +22,648 @@
     "linux",
     "macos"
   ],
-  "verification": {
-    "status": "deferred_by_plan",
-    "runner_todo": 21,
-    "requires_actual_cli_socket_transcript": true,
-    "blocked_on": "attach.resize, attach.release_geometry, attach.focus and attach.repaint are not routed to ovis_terminal_core::geometry by any served binary until todo 31 assembles the attach routes, holder link and geometry events"
-  },
-  "core_tests": {
-    "happy": "cargo nextest run -p ovis-terminal-core --test geometry happy",
-    "failure": "cargo nextest run -p ovis-terminal-core --test geometry failure"
-  },
-  "credentials": {
-    "operator": [
-      "observe",
-      "interact"
-    ],
-    "phone": [
-      "observe"
-    ]
-  },
   "cases": [
     {
       "case": "happy",
+      "summary": "The geometry owner resizes the live terminal, focuses under its geometry lease and releases it; the terminal then has no geometry owner while the interact lease stays held.",
       "steps": [
         {
-          "as": "operator",
-          "rpc": "terminal.run",
-          "params": {
-            "op_id": "$uuidv7.launch",
-            "program": {
-              "argv": [
-                "bash",
-                "--norc",
-                "--noprofile",
-                "-i"
-              ]
-            },
-            "cwd": "$isolated_root",
-            "env": {
-              "PATH": "/usr/bin:/bin",
-              "TERM": "xterm-256color"
-            },
-            "geometry": {
-              "rows": 30,
-              "cols": 100
-            },
-            "keep": true
-          },
-          "capture": [
-            "terminal_id"
-          ]
+          "serve": {
+            "fixture": "assembled"
+          }
         },
         {
-          "as": "operator",
-          "rpc": "attach.open",
-          "params": {
-            "op_id": "$uuidv7.attach",
-            "target": {
-              "terminal_id": "$terminal_id"
-            },
-            "role": "interact",
-            "client_id": "operator",
-            "geometry": {
-              "rows": 30,
-              "cols": 100
-            },
-            "stream_mode": "channel"
-          },
-          "capture": [
-            "lease.lease_id",
-            "stream_id"
-          ]
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
         },
         {
-          "as": "operator",
-          "rpc": "events.subscribe",
-          "params": {
-            "types": [
-              "geometry.changed",
-              "geometry.checkpoint",
-              "geometry.input_ready"
-            ]
-          },
-          "capture": [
-            "subscription_id"
-          ]
-        },
-        {
-          "as": "operator",
-          "rpc": "attach.resize",
-          "params": {
-            "op_id": "$uuidv7.resize",
-            "target": {
-              "terminal_id": "$terminal_id"
-            },
-            "lease_id": "$operator.lease.lease_id",
-            "geometry": {
-              "rows": 40,
-              "cols": 120
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.resize",
+                  "attach.focus",
+                  "attach.release_geometry",
+                  "attach.leases"
+                ]
+              }
             }
-          },
-          "assert": {
-            "outcome": "applied",
-            "geometry": {
-              "rows": 40,
-              "cols": 120
-            },
-            "events_in_order": [
-              "geometry.changed",
-              "geometry.checkpoint",
-              "geometry.input_ready"
-            ],
-            "changed_before_new_grid_bytes": true,
-            "producer_readiness_reports": "0"
           }
         },
         {
-          "as": "operator",
-          "rpc": "input.send",
-          "params": {
-            "op_id": "$uuidv7.marker",
-            "target": {
-              "terminal_id": "$terminal_id"
-            },
-            "lease_id": "$operator.lease.lease_id",
-            "text": "printf 'MARK_RESIZE_OK\\n'",
-            "submit": "enter"
-          },
-          "await": "pty_written",
-          "assert": {
-            "receipt.delivery.state": "pty_written",
-            "screen_contains": "MARK_RESIZE_OK",
-            "screen_grid": {
-              "rows": 40,
-              "cols": 120
-            },
-            "deadline_ms": "10000"
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "shell",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
           }
         },
         {
-          "as": "operator",
-          "rpc": "attach.repaint",
-          "params": {
-            "stream_id": "$operator.stream_id"
-          },
-          "assert": {
-            "checkpoint.geometry": {
-              "rows": 40,
-              "cols": 120
-            },
-            "child_winch_signals_added": "0",
-            "holder_resize_messages_added": "0"
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "operator",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "operator",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "pane",
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/lease_id": {
+                  "$capture": "interact"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "held",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "held": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/geometry_owner/holder": "pane",
+                "/result/geometry_owner/lease_id": {
+                  "$capture": "geometry"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "resize",
+                "method": "attach.resize",
+                "params": {
+                  "op_id": "$op:resize",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "lease_id": "$value:geometry",
+                  "geometry": {
+                    "cols": 100,
+                    "rows": 30
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "resize": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/geometry/cols": 100,
+                "/result/geometry/rows": 30
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "focus",
+                "method": "attach.focus",
+                "params": {
+                  "op_id": "$op:focus",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "lease_id": "$value:geometry"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "focus": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/geometry_owner/lease_id": "$value:geometry",
+                "/result/seq": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "release",
+                "method": "attach.release_geometry",
+                "params": {
+                  "op_id": "$op:release",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "lease_id": "$value:geometry"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "release": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/geometry_owner": null,
+                "/result/seq": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "after",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "after": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/geometry_owner": null,
+                "/result/interact/lease_id": "$value:interact"
+              }
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
           }
         }
       ]
     },
     {
       "case": "failure",
+      "summary": "An observer's lease cannot resize (forbidden), the interact lease is not the geometry lease (no_lease), focus under another principal's lease is no_lease, and the geometry owner is unchanged.",
       "steps": [
         {
-          "as": "phone",
-          "rpc": "attach.open",
-          "params": {
-            "op_id": "$uuidv7.phone",
-            "target": {
-              "terminal_id": "$terminal_id"
-            },
-            "role": "observe",
-            "client_id": "phone",
-            "stream_mode": "channel"
-          },
-          "capture": [
-            "lease.lease_id"
-          ]
+          "serve": {
+            "fixture": "assembled"
+          }
         },
         {
-          "as": "phone",
-          "rpc": "attach.resize",
-          "params": {
-            "op_id": "$uuidv7.phone_resize",
-            "target": {
-              "terminal_id": "$terminal_id"
-            },
-            "lease_id": "$phone.lease.lease_id",
-            "geometry": {
-              "rows": 10,
-              "cols": 40
-            }
-          },
-          "assert": {
-            "kind": "forbidden",
-            "grid": {
-              "rows": 30,
-              "cols": 100
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.resize",
+                  "attach.focus",
+                  "attach.release_geometry",
+                  "attach.leases"
+                ]
+              }
             }
           }
         },
         {
-          "inject": {
-            "fixture": "hold_holder_resize_ack",
-            "target": {
-              "terminal_id": "$terminal_id"
-            }
-          },
-          "as": "operator",
-          "rpc": "input.send",
-          "params": {
-            "op_id": "$uuidv7.early",
-            "target": {
-              "terminal_id": "$terminal_id"
-            },
-            "lease_id": "$operator.lease.lease_id",
-            "text": "early",
-            "submit": "none"
-          },
-          "assert": {
-            "kind": "not_ready",
-            "pending_epoch_present": true,
-            "written_bytes": "0"
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "shell",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
           }
         },
         {
-          "inject": {
-            "fixture": "replay_geometry_ack",
-            "epoch": "1",
-            "target": {
-              "terminal_id": "$terminal_id"
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
             }
-          },
-          "assert": {
-            "kind": "stale_geometry"
           }
         },
         {
-          "as": "operator",
-          "rpc": "attach.resize",
-          "params": {
-            "op_id": "$uuidv7.zero",
-            "target": {
-              "terminal_id": "$terminal_id"
-            },
-            "lease_id": "$operator.lease.lease_id",
-            "geometry": {
-              "rows": 0,
-              "cols": 120
+          "connect": {
+            "conn": "operator",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "operator",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
             }
-          },
-          "assert": {
-            "kind": "invalid_geometry"
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "pane",
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/lease_id": {
+                  "$capture": "interact"
+                }
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "observer",
+            "via": "socket",
+            "principal": "observe"
+          }
+        },
+        {
+          "hello": {
+            "conn": "observer",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "watch",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:watch",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "observe",
+                  "client_id": "watcher",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "watch": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/lease/lease_id": {
+                  "$capture": "watching"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "resize",
+                "method": "attach.resize",
+                "params": {
+                  "op_id": "$op:oresize",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "lease_id": "$value:watching",
+                  "geometry": {
+                    "cols": 120,
+                    "rows": 40
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "resize": {
+                "/error/data/kind": "forbidden"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "not-geometry",
+                "method": "attach.release_geometry",
+                "params": {
+                  "op_id": "$op:wrong",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "lease_id": "$value:interact"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "not-geometry": {
+                "/error/data/kind": "no_lease"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "foreign-focus",
+                "method": "attach.focus",
+                "params": {
+                  "op_id": "$op:ffocus",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "lease_id": "$value:watching"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "foreign-focus": {
+                "/error/data/kind": "no_lease"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "unchanged",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "unchanged": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/geometry_owner/holder": "pane",
+                "/result/interact/lease_id": "$value:interact"
+              }
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
           }
         }
       ]

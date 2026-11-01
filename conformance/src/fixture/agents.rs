@@ -18,16 +18,14 @@ use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity, Terminal
 use ovis_terminal_protocol::schema::ids::ProcessToken;
 use ovis_terminal_protocol::schema::methods::input::InputSendParams;
 use ovis_terminal_protocol::schema::scalar::{Incarnation, TimestampMs};
-use ovis_terminal_server::dispatch::lanes::agent_status::{
-    AgentStatusLane, ClearStatus, GetAgent, GetStatus, RegisterAgent, ReportStatus,
-    TerminalDirectory,
-};
+use ovis_terminal_server::dispatch::agent::AgentAssembly;
+use ovis_terminal_server::dispatch::lanes::agent_status::TerminalDirectory;
 use ovis_terminal_server::dispatch::{Access, Completed, DispatchError, Execution, Method};
 use ovis_terminal_vt::{Geometry, HistoryLimit, Vt, VtConfig};
 use serde_json::{Value, json};
 
 use super::handler::{Dispatch, Event};
-use super::prompts::Gate;
+use super::prompts::{Gate, Pty};
 use super::rotation::Sequenced;
 use super::serve::at;
 use crate::error::RunnerError;
@@ -70,15 +68,26 @@ pub(crate) struct EchoProgram {
 /// The status service and terminal directory other agent lanes share.
 pub(crate) type AgentParts = (Arc<StatusService>, Arc<Directory>);
 
-/// Registers the agent status methods and the echoing programs, binding their tokens;
-/// the returned gate holds the prompts that block those programs' input, and the
+/// The production agent assembly over the fixture's terminal directory.
+pub(crate) type Assembly = AgentAssembly<Arc<Directory>>;
+
+/// What registration hands the other fixture lanes.
+pub(crate) type Registered = (AgentParts, Arc<Gate>, Arc<Sequenced>, Arc<Assembly>);
+
+/// Registers the production agent assembly and the echoing programs, binding their
+/// tokens; the returned gate holds the prompts that block those programs' input, and the
 /// sequenced terminal is the one whose input `authority` rechecks at its write boundary.
 pub(crate) fn register(
     dispatch: &mut Dispatch,
-    (runtime, core): (RuntimeIdentity, Arc<Core>),
+    (runtime, core, root): (RuntimeIdentity, Arc<Core>, &std::path::Path),
     authority: &Arc<Authority<RegistryIdentities>>,
-) -> Result<(AgentParts, Arc<Gate>, Arc<Sequenced>), RunnerError> {
-    let service = Arc::new(StatusService::new(runtime.runtime_id()));
+) -> Result<Registered, RunnerError> {
+    let directory = Arc::new(directory(runtime)?);
+    let pty = Arc::new(Pty::default());
+    let stores = super::transcripts::authorize(root)?;
+    let keys = super::prompts::keys(&pty);
+    let assembly = AgentAssembly::new(runtime, Arc::clone(&directory), (stores, Some(keys)));
+    let service = Arc::clone(assembly.status());
     for (id, _, token) in TERMINALS {
         let terminal = TerminalId::try_from(id).map_err(at("build a terminal id"))?;
         let owner = ProcessOwner::new(terminal, Incarnation::new(1));
@@ -87,25 +96,13 @@ pub(crate) fn register(
             .bind(&ProcessToken::new(token.to_owned()), owner)
             .map_err(at("bind a process token"))?;
     }
-    let directory = Arc::new(directory(runtime)?);
-    let lane = AgentStatusLane::new(Arc::clone(&directory), Arc::clone(&service));
-    let failed = at("register an agent status method");
-    dispatch
-        .register(RegisterAgent::new(&lane))
-        .map_err(failed)?;
-    dispatch
-        .register(GetAgent::new(&lane))
-        .map_err(at("register agent.get"))?;
-    dispatch
-        .register(ReportStatus::new(&lane))
-        .map_err(at("register status.report"))?;
-    dispatch
-        .register(GetStatus::new(&lane))
-        .map_err(at("register status.get"))?;
-    dispatch
-        .register(ClearStatus::new(&lane))
-        .map_err(at("register status.clear"))?;
-    let gate = Gate::new(runtime, &service);
+    assembly
+        .register(dispatch)
+        .map_err(at("register the agent assembly"))?;
+    let gate = Arc::new(Gate {
+        prompts: Arc::clone(assembly.prompts()),
+        pty,
+    });
     let sequenced = Sequenced::new(authority, runtime, Arc::clone(&gate.pty))?;
     dispatch
         .register(EchoProgram {
@@ -117,7 +114,7 @@ pub(crate) fn register(
             sequenced: Arc::clone(&sequenced),
         })
         .map_err(at("register input.send"))?;
-    Ok(((service, directory), gate, sequenced))
+    Ok(((service, directory), gate, sequenced, Arc::new(assembly)))
 }
 
 fn echo(program: &EchoProgram, terminal: TerminalId, text: &str) -> Result<Value, DispatchError> {

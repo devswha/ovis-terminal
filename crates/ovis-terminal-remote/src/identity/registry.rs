@@ -180,6 +180,18 @@ impl<L> Machines<L> {
         self.entry(binding).map(|entry| &entry.link)
     }
 
+    /// The live link of a bound machine, for handing it to the machine's actor.
+    ///
+    /// # Errors
+    ///
+    /// [`IdentityError::NotFound`] when the machine is no longer recorded.
+    pub fn link_mut(&mut self, binding: &Binding) -> Result<&mut L, IdentityError> {
+        self.entries
+            .get_mut(binding.machine_id())
+            .map(|entry| &mut entry.link)
+            .ok_or(IdentityError::NotFound)
+    }
+
     /// Fails unless `name` is free for the bound machine: unused, or already its own name
     /// or alias.
     ///

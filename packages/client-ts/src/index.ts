@@ -14,4 +14,5 @@ export { Admission, newOpId, sendText, type TextInput } from "./input";
 export { checkComponent, checkParams, checkResult } from "./schema";
 export { Stream, Streams, type Attached, type Chunk } from "./streams";
 export { Subscription, type Missed, type SubscriptionState } from "./subscriptions";
+export { endpointTransport } from "./transport";
 export { FrameDecoder, creditPayload, encodeFrame, type Frame, type FrameKind } from "./wire/frames";

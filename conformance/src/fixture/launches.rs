@@ -36,7 +36,7 @@ use ovis_terminal_vt::{Geometry, HistoryLimit, Vt, VtConfig};
 use serde_json::{Value, json};
 
 use super::agents::Directory;
-use super::serve::MACHINE;
+use super::peer::machine;
 use super::template_lane::{duplicate_name, feed, hub};
 
 /// Identity of the first launched terminal; earlier ids belong to the static terminals.
@@ -214,7 +214,7 @@ impl Launcher for RecordingLauncher {
         let wire = WireTerminalId::new(terminal.to_string());
         let address =
             TerminalAddress::new(format!("local/{}", name.as_deref().unwrap_or("unnamed")));
-        let identity = (wire, address, MachineId::new(MACHINE.to_owned()));
+        let identity = (wire, address, MachineId::new(machine().to_owned()));
         Ok(LaunchedTerminal::new(
             identity,
             (process, EventSeq::new(0)),

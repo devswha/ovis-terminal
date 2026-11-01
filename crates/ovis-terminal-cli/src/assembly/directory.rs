@@ -5,8 +5,9 @@ use std::collections::BTreeMap;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use ovis_terminal_core::registry::{
-    MachineId, TargetResolutionError, TerminalGeneration, TerminalId,
+    MachineId, TargetResolutionError, TerminalGeneration, TerminalId, TerminalState,
 };
+use ovis_terminal_core::terminals::Record;
 use ovis_terminal_protocol::schema::common::Target;
 use ovis_terminal_server::dispatch::lanes::agent_status::{ResolvedTerminal, TerminalDirectory};
 
@@ -48,6 +49,23 @@ impl Directory {
             live: true,
         };
         self.entries().insert(terminal, entry);
+    }
+
+    /// Registers the terminals earlier boots recorded, so their prompts, status and
+    /// history stay addressable; only a recorded running program keeps its name taken.
+    pub(super) fn recorded(&self, records: &[Record]) {
+        let mut entries = self.entries();
+        for record in records {
+            entries.entry(record.id()).or_insert_with(|| Entry {
+                generation: record.lifecycle.generation(),
+                name: record
+                    .launch
+                    .name
+                    .as_ref()
+                    .map(|name| name.as_str().to_owned()),
+                live: record.lifecycle.state() == TerminalState::Running,
+            });
+        }
     }
 
     /// The program of `terminal` ended; its name is free again.

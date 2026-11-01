@@ -23,6 +23,9 @@ use super::context::Credential;
 use super::error::CliError;
 use super::report::Failure;
 
+#[cfg(windows)]
+mod pipe;
+
 /// A connected byte stream of either platform transport.
 trait Duplex: AsyncRead + AsyncWrite + Unpin + Send {}
 
@@ -58,16 +61,15 @@ async fn connect(address: &EndpointAddress) -> Result<Stream, CliError> {
     }
 }
 
-/// Opening a named-pipe client completes immediately, so the future is already ready.
+/// Opens the named pipe, waiting out a busy instance for at most [`pipe::BUSY_BOUND`].
 #[cfg(windows)]
-fn connect(address: &EndpointAddress) -> std::future::Ready<Result<Stream, CliError>> {
-    std::future::ready(match address {
-        EndpointAddress::Pipe(name) => tokio::net::windows::named_pipe::ClientOptions::new()
-            .open(name)
-            .map(|pipe| Box::new(pipe) as Stream)
-            .map_err(|source| refused(PathBuf::from(name), source)),
+async fn connect(address: &EndpointAddress) -> Result<Stream, CliError> {
+    match address {
+        EndpointAddress::Pipe(name) => pipe::open(name, pipe::BUSY_BOUND)
+            .await
+            .map(|pipe| Box::new(pipe) as Stream),
         _ => Err(CliError::UnsupportedTransport),
-    })
+    }
 }
 
 fn hello_request(credential: Option<&Credential>) -> Result<RpcRequest, CliError> {
@@ -146,6 +148,7 @@ impl Wire {
 
     async fn settle(&mut self, id: &RequestId) -> Result<Value, Failure> {
         let limit = u64::try_from(MAX_FRAME_PAYLOAD).map_err(|_| CliError::Closed)?;
+        let mut restarting = false;
         loop {
             let mut line = String::new();
             let read = (&mut self.reader)
@@ -157,11 +160,19 @@ impl Wire {
                     source,
                 })?;
             if read == 0 || !line.ends_with('\n') {
-                return Err(CliError::Closed.into());
+                let closed = if restarting {
+                    CliError::Restarted
+                } else {
+                    CliError::Closed
+                };
+                return Err(closed.into());
             }
             let value: Value = serde_json::from_str(&line)
                 .map_err(|source| CliError::Reply(BoundaryError::invalid_response_json(source)))?;
             if value.get("id").is_none() {
+                restarting |= value.get("method").and_then(Value::as_str) == Some("$/closing")
+                    && value.pointer("/params/reason").and_then(Value::as_str)
+                        == Some("server_restart");
                 continue;
             }
             return match parse_reply(&line).map_err(CliError::Reply)? {

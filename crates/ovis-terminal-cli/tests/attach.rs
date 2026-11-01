@@ -12,7 +12,12 @@ use std::time::Duration;
 
 use rustix::termios::{self, Winsize};
 use serde_json::{Value, json};
-use support::{Outer, Served, TestResult, WAIT};
+use support::{Drawn, Outer, Served, TestResult, WAIT};
+
+/// A foreground job that prints the terminal size once SIGWINCH reaches it, then exits;
+/// `wait` returns on the trapped signal and the sleeping child is ended with it.
+const WINCH_REPORTER: &[u8] =
+    b"sh -c 'sleep 600 & p=$!; trap \"stty size; kill $p; exit\" WINCH; echo armed-$((2+2)); wait'\r";
 
 #[test]
 fn typed_input_reaches_the_program_resize_follows_and_ctrl_backslash_restores_the_terminal()
@@ -29,6 +34,13 @@ fn typed_input_reaches_the_program_resize_follows_and_ctrl_backslash_restores_th
         Some(&json!(format!("cli-{}", outer.client.id()))),
         "the default client label is per process"
     );
+    // The inner shell's foreground job prints the size when SIGWINCH reaches it, so the
+    // resize itself is the event awaited; nothing is typed again.
+    outer.type_bytes(WINCH_REPORTER)?;
+    assert!(
+        outer.shows("armed-4", Duration::from_secs(15)),
+        "the size reporter never armed"
+    );
     termios::tcsetwinsize(
         &outer.master,
         Winsize {
@@ -38,10 +50,10 @@ fn typed_input_reaches_the_program_resize_follows_and_ctrl_backslash_restores_th
             ws_ypixel: 0,
         },
     )?;
-    let resized = (0..20).any(|_| {
-        outer.type_bytes(b"stty size\r").is_ok() && outer.shows("40 120", Duration::from_secs(1))
-    });
-    assert!(resized, "the inner PTY never reported the new size");
+    assert!(
+        outer.shows("40 120", Duration::from_secs(15)),
+        "the inner PTY never reported the new size"
+    );
     outer.type_bytes(b"\x1c")?;
     let (code, record, restored) = outer.exited()?;
     assert_eq!(code, Some(0), "{record}");
@@ -138,27 +150,54 @@ fn observing_needs_no_tty_and_never_forwards_input() -> TestResult {
     interact.type_bytes(b"echo ready-$((2+3))\r")?;
     assert!(interact.shows("ready-5", WAIT));
     let mut observer = served
-        .command(&["terminal", "attach", "--target", "t1", "--observe"])
+        .command(&[
+            "terminal",
+            "attach",
+            "--target",
+            "t1",
+            "--observe",
+            "--client-id",
+            "watcher",
+        ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
-    observer
-        .stdin
-        .take()
-        .ok_or("stdin")?
-        .write_all(b"echo rogue-$((1+1))\r")?;
+    let mut screen = Drawn::follow(observer.stdout.take().ok_or("stdout")?);
+    assert!(
+        screen.shows("ready-5"),
+        "the observer never drew its first paint"
+    );
+    let leases = served.leases()?;
+    assert_eq!(
+        leases.pointer("/observers/0/holder"),
+        Some(&json!("watcher")),
+        "{leases}"
+    );
+    assert_eq!(
+        leases.pointer("/interact/holder"),
+        Some(&json!(format!("cli-{}", interact.client.id()))),
+        "{leases}"
+    );
+    let metrics = served.call("server.metrics", &json!({}))?;
+    assert_eq!(metrics.get("streams"), Some(&json!("2")), "{metrics}");
+    let mut stdin = observer.stdin.take().ok_or("stdin")?;
+    stdin.write_all(b"echo rogue-$((1+1))\r")?;
+    drop(stdin);
     interact.type_bytes(b"echo after-$((4+4))\r")?;
     assert!(interact.shows("after-8", WAIT));
-    assert!(
-        !interact.shows("rogue-2", Duration::from_millis(300)),
-        "observer input reached the program"
-    );
+    assert!(screen.shows("after-8"), "the observer stopped following");
     let pid = rustix::process::Pid::from_raw(i32::try_from(observer.id())?).ok_or("pid")?;
+    assert!(pid.as_raw_nonzero().get() > 1);
     rustix::process::kill_process(pid, rustix::process::Signal::TERM)?;
     let output = observer.wait_with_output()?;
     assert_eq!(output.status.code(), Some(0), "{output:?}");
-    assert!(String::from_utf8_lossy(&output.stdout).contains("after-8"));
+    interact.type_bytes(b"echo fence-$((5+5))\r")?;
+    assert!(interact.shows("fence-10", WAIT));
+    assert!(
+        !interact.shows("rogue-2", Duration::ZERO),
+        "observer input reached the program before the fence"
+    );
     let record: Value = serde_json::from_slice(&output.stderr)?;
     assert_eq!(
         record.pointer("/detached/reason"),

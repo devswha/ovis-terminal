@@ -1,0 +1,71 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "platform/matrix",
+  "title": "One per-runner platform contract run against the freshly built binary: service lifetime without auto-start, process roles with PID plus start token, a foreign protocol generation refused before anything can spawn, and two concurrent clients with observer denial",
+  "todo": 60,
+  "closes": ["GAP-049", "GAP-051", "GAP-095", "GAP-121"],
+  "delivers": ["IDEAL-001", "IDEAL-034", "IDEAL-071", "IDEAL-093"],
+  "excludes": ["EXCL-016", "EXCL-019", "EXCL-027"],
+  "platforms": ["linux", "macos"],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "The detached holder outlives the invocation that started it while status and server status never start anything; then, through the binary's connect bridge, process_info names launcher, foreground and background with PID plus start token, and a replaced incarnation loses its authority while the new one reports with its own token.",
+      "steps": [
+        {"include": {"scenario": "platform/unix-service", "case": "happy"}},
+        {"include": {"scenario": "platform/process-info", "case": "happy"}}
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "Before any hello succeeds on a connection through the binary's connect bridge, a numeric generation is invalid_params (u64 wire values are canonical decimal strings) and the canonical string \"999999\" is unsupported_generation, each with no result; a terminal.run on that still unauthenticated connection is refused, so nothing spawns. The same endpoint then serves an owner through the bridge and an observer on a direct socket concurrently: the owner's discovery is answered while every mutation the observer sends is forbidden with no result, and the endpoint reports three connections and no panic.",
+      "steps": [
+        {"serve": {"fixture": "protocol"}},
+        {"connect": {"conn": "probe", "via": "bridge"}},
+        {"inject": {
+          "conn": "probe",
+          "base": {"client": {"name": "ovis-conformance", "version": "0.1.0"}},
+          "planned": [
+            {
+              "request": {"method": "hello", "params": {"generation": 999999}},
+              "expect": {"/error/data/kind": "invalid_params", "/error/data/field_path": "params.generation", "/result": {"$present": false}}
+            },
+            {
+              "request": {"method": "hello", "params": {"generation": "999999"}},
+              "expect": {"/error/data/kind": "unsupported_generation", "/result": {"$present": false}}
+            }
+          ]
+        }},
+        {"send": {"conn": "probe", "requests": [
+          {"jsonrpc": "2.0", "id": "spawn", "method": "terminal.run", "params": {"argv": ["/bin/sh", "-c", "printf REFUSED_SPAWNED"]}}
+        ]}},
+        {"replies": {"conn": "probe", "expect": {
+          "spawn": {"/error/data/kind": "unauthenticated", "/result": {"$present": false}}
+        }}},
+        {"connect": {"conn": "owner", "via": "bridge"}},
+        {"connect": {"conn": "observer", "via": "socket", "principal": "observe"}},
+        {"hello": {"conn": "owner", "framed": false, "expect": {"/id": "hello", "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"}}},
+        {"hello": {"conn": "observer", "framed": false, "expect": {"/id": "hello", "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"}}},
+        {"send": {"conn": "owner", "requests": [
+          {"jsonrpc": "2.0", "id": "discover", "method": "rpc.discover", "params": {}}
+        ]}},
+        {"send": {"conn": "observer", "requests": [
+          {"jsonrpc": "2.0", "id": "run", "method": "terminal.run", "params": {"argv": ["/bin/sh", "-c", "printf OBSERVER_SPAWNED"]}},
+          {"jsonrpc": "2.0", "id": "input", "method": "input.send", "params": {}},
+          {"jsonrpc": "2.0", "id": "resize", "method": "attach.resize", "params": {}},
+          {"jsonrpc": "2.0", "id": "doc", "method": "doc.set", "params": {}}
+        ]}},
+        {"replies": {"conn": "observer", "expect": {
+          "run": {"/error/data/kind": "forbidden", "/result": {"$present": false}},
+          "input": {"/error/data/kind": "forbidden", "/result": {"$present": false}},
+          "resize": {"/error/data/kind": "forbidden", "/result": {"$present": false}},
+          "doc": {"/error/data/kind": "forbidden", "/result": {"$present": false}}
+        }}},
+        {"replies": {"conn": "owner", "expect": {
+          "discover": {"/result": {"$equals_file": "schema/ovis-terminal.openrpc.json"}, "/error": {"$present": false}}
+        }}},
+        {"stop": {"expect": {"/accepted": "3", "/panicked": "0"}}}
+      ]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ const EXECUTABLE: &[&str] = &[
     "_runner/self-test.json",
     "agent/binding.json",
     "agent/bridge.json",
+    "agent/e2e.json",
     "agent/launch.json",
     "agent/prompts.json",
     "agent/records.json",
@@ -17,6 +18,7 @@ const EXECUTABLE: &[&str] = &[
     "agent/tree.json",
     "all/all.json",
     "cli/interactive-attach.json",
+    "client/package.json",
     "observability/health.json",
     "part-a/task-21.json",
     "part-a/task-29.json",
@@ -24,6 +26,7 @@ const EXECUTABLE: &[&str] = &[
     "part-a/task-78.json",
     "part-a/task-79.json",
     "part-a/task-86.json",
+    "platform/matrix.json",
     "platform/process-info.json",
     "platform/unix-service.json",
     "protocol/deadline.json",
@@ -32,6 +35,9 @@ const EXECUTABLE: &[&str] = &[
     "protocol/multiplex.json",
     "protocol/pagination.json",
     "protocol/strict-target.json",
+    "quality/gates.json",
+    "recovery/e2e.json",
+    "remote/e2e.json",
     "remote/isolation.json",
     "security/rotation.json",
     "security/validation.json",
@@ -39,7 +45,14 @@ const EXECUTABLE: &[&str] = &[
 ];
 
 /// Executable scenarios whose server is the assembled binary itself (plan todo 31).
-const ASSEMBLED: [&str; 1] = ["part-a/task-31.json"];
+const ASSEMBLED: [&str; 6] = [
+    "part-a/task-22.json",
+    "part-a/task-26.json",
+    "part-a/task-27.json",
+    "part-a/task-31.json",
+    "recovery/restart.json",
+    "services/worktrees.json",
+];
 
 /// Every executable scenario file, sorted as the inventory reports them.
 fn executable() -> Vec<String> {
@@ -57,6 +70,15 @@ fn executable() -> Vec<String> {
 fn every_scenario_file_is_executed_or_a_listed_declaration() -> TestResult {
     let ran = conformance("all/all", "all", &[])?;
     assert_eq!(ran.output.status.code(), Some(0), "{}", ran.explain());
+    let summary: Value = serde_json::from_slice(&ran.output.stdout)?;
+    assert_eq!(
+        (
+            field(&summary, "/evidence_written"),
+            field(&summary, "/evidence_error")
+        ),
+        (&Value::Bool(true), &Value::Null),
+        "the summary reports the evidence file it wrote"
+    );
     let evidence = &ran.evidence;
     assert_eq!(strings(evidence, "/inventory/executed"), executable());
     let allowlist: Value = serde_json::from_slice(&std::fs::read(

@@ -1,0 +1,31 @@
+$ cargo run --locked --manifest-path probes/Cargo.toml --bin evidence-audit -- --fixture forged-matcher
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running `/dev/shm/ovt-target-lane-t61/debug/evidence-audit --fixture forged-matcher`
+{
+  "argv": [
+    "evidence-audit",
+    "--fixture",
+    "forged-matcher"
+  ],
+  "exempted": [],
+  "exit": 1,
+  "finding_count": "1",
+  "findings": [
+    {
+      "detail": "quality/gates/happy binary/stderr/error/hint: $bogus is not a runner matcher, so the assertion proves nothing",
+      "location": "seed/forged-matcher#0",
+      "rule": "unknown-matcher"
+    }
+  ],
+  "gate": "evidence-audit",
+  "hint": "rerun the conformance runner; a pass needs parsed exits, recomputable assertions and a binary hash",
+  "host": {
+    "arch": "x86_64",
+    "os": "linux"
+  },
+  "inputs": "1",
+  "kind": "evidence_invalid",
+  "runs": "1",
+  "verdict": "fail"
+}
+exit=1

@@ -6,14 +6,16 @@ use std::io::Write as _;
 use std::sync::Arc;
 use std::sync::mpsc::{self, RecvTimeoutError, TryRecvError};
 use std::thread::JoinHandle;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use ovis_terminal_authz::Authority;
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity, TerminalId};
+use ovis_terminal_core::restart::{Control, RestartError};
 use ovis_terminal_core::terminals::{TerminalError, Terminals};
 use ovis_terminal_holder::unix::Holder;
-use ovis_terminal_protocol::errors::BoundaryError;
+use ovis_terminal_protocol::errors::{BoundaryError, OpId};
 use ovis_terminal_protocol::schema::common::Geometry;
+use ovis_terminal_protocol::schema::methods::server::StopScope;
 use ovis_terminal_protocol::schema::scalar::{Revision, TimestampMs};
 use ovis_terminal_server::streams::{AttachLane, StreamSetup};
 use tokio::sync::oneshot;
@@ -24,8 +26,18 @@ use super::error::worker_gone;
 use super::live::Live;
 use super::{AssemblyError, StageSource};
 
-/// How long one wait for a holder message lasts before queued jobs run again.
-const POLL: Duration = Duration::from_millis(5);
+/// The holder link as one receive found it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Link {
+    /// A message from the current lifecycle was applied; more may be waiting.
+    Linked,
+    /// No message is waiting; the link is intact.
+    Idle,
+    /// A planned restart owns the lifecycle; the successor's messages follow it.
+    Restarting,
+    /// Control stopped or the holder went away; no message will follow.
+    Gone,
+}
 
 /// A unit of work run on the actor thread.
 type Job = Box<dyn FnOnce(&mut Runtime) + Send>;
@@ -33,7 +45,15 @@ type Job = Box<dyn FnOnce(&mut Runtime) + Send>;
 /// Everything the actor thread owns.
 #[derive(Debug)]
 pub(super) struct Runtime {
-    pub(super) terminals: Terminals,
+    pub(super) control: Arc<Control>,
+    /// How long the actor waits for a job, with the control released, before it looks
+    /// for holder messages again.
+    pub(super) poll: Duration,
+    /// QA seam: a FIFO opened, holding the control, before the next `terminal.run`.
+    pub(super) qa_hold: Option<std::path::PathBuf>,
+    pub(super) journal: Arc<super::journal::BootJournal>,
+    /// The current boot's status events, drained between jobs.
+    pub(super) status_feed: Option<ovis_terminal_core::events::Delivery<super::lanes::ServedEvent>>,
     pub(super) holder: Holder,
     pub(super) identity: RuntimeIdentity,
     pub(super) authority: Arc<Authority<RegistryIdentities>>,
@@ -41,10 +61,16 @@ pub(super) struct Runtime {
     pub(super) directory: Arc<Directory>,
     pub(super) setup: StreamSetup,
     pub(super) geometry_log: GeometryLog,
+    pub(super) layout_log: super::layout::LayoutLog,
     pub(super) live: BTreeMap<TerminalId, Live>,
     pub(super) launches: BTreeMap<TerminalId, (Geometry, Option<String>)>,
     pub(super) created: BTreeMap<TerminalId, Revision>,
-    pub(super) started: Instant,
+    /// Process tokens handed to spawned programs, shared with the agent lanes.
+    pub(super) status: Arc<ovis_terminal_agent::status::StatusService>,
+    /// The boot's health, which the runtime publishes its census into.
+    pub(super) health: Arc<ovis_terminal_core::health::Health>,
+    /// The census last published.
+    pub(super) census: Option<ovis_terminal_core::health::Census>,
 }
 
 /// The current wall-clock time in milliseconds.
@@ -62,35 +88,78 @@ fn report(stage: &str, error: &dyn std::error::Error) {
 }
 
 impl Runtime {
-    /// Applies at most one holder message; `false` once the holder link is gone.
-    pub(super) fn receive(&mut self, wait: Duration) -> bool {
-        match self.terminals.receive_message(wait) {
+    /// Runs `work` on the lifecycle the restart control currently owns.
+    pub(super) fn lifecycle<R>(
+        &self,
+        work: impl FnOnce(&mut Terminals) -> Result<R, TerminalError>,
+    ) -> Result<R, BoundaryError> {
+        self.control
+            .with_terminals(|terminals, _| work(terminals))
+            .map_err(|error| match error {
+                RestartError::Terminal(error) => super::terminal::terminal_refusal(&error),
+                other => super::error::refusal(other.kind(), other.hint()),
+            })
+    }
+
+    /// Applies at most one holder message that already arrived and says whether the holder
+    /// link is still there. It cannot wait while it holds the control (`try_receive_message`
+    /// takes no duration): a caller blocked on the lifecycle gets it between receives.
+    pub(super) fn receive(&mut self) -> Link {
+        let received = self
+            .control
+            .with_terminals(|terminals, _| terminals.try_receive_message());
+        match received {
             Ok(Some(message)) => {
                 if let Err(error) = self.follow(&message) {
                     report("follow holder message", error.as_ref());
                 }
-                true
+                Link::Linked
             }
-            Ok(None) | Err(TerminalError::Notification(RecvTimeoutError::Timeout)) => true,
-            Err(TerminalError::Notification(RecvTimeoutError::Disconnected)) => false,
+            Ok(None) => Link::Linked,
+            Err(RestartError::Terminal(TerminalError::Notification(RecvTimeoutError::Timeout))) => {
+                Link::Idle
+            }
+            Err(RestartError::Restarting { .. }) => Link::Restarting,
+            Err(
+                RestartError::Terminal(TerminalError::Notification(RecvTimeoutError::Disconnected))
+                | RestartError::ControlStopped,
+            ) => Link::Gone,
             Err(error) => {
                 report("apply holder message", &error);
-                true
+                Link::Linked
             }
         }
     }
 
     fn close(self) -> Result<(), AssemblyError> {
         drop(self.live);
-        self.terminals
-            .close()
-            .map_err(AssemblyError::stop("release the terminal lifecycle"))?;
+        stop_control(&self.control)?;
+        drop(self.control);
         self.holder
             .shutdown()
             .map_err(AssemblyError::stop("shut the holder down"))?;
         self.geometry_log
             .close()
-            .map_err(AssemblyError::stop("close the geometry log"))
+            .map_err(AssemblyError::stop("close the geometry log"))?;
+        self.layout_log
+            .close()
+            .map_err(AssemblyError::stop("close the layout log"))
+    }
+}
+
+/// Ends the programs this holder owns and releases control, without requiring the last
+/// handle: dispatched lanes may still hold the control while their tasks wind down.
+/// Programs a previous boot recorded and this holder never owned cannot be proven
+/// ended; control is then stopped without signalling anything further.
+fn stop_control(control: &Control) -> Result<(), AssemblyError> {
+    let op = || OpId::new(uuid::Uuid::now_v7().to_string());
+    let stopped = match control.stop(op(), StopScope::ControlAndPrograms) {
+        Err(RestartError::StopUnproven { .. }) => control.stop(op(), StopScope::ControlOnly),
+        other => other,
+    };
+    match stopped {
+        Ok(_) | Err(RestartError::ControlStopped) => Ok(()),
+        Err(error) => Err(AssemblyError::stop("stop the terminal lifecycle")(error)),
     }
 }
 
@@ -99,16 +168,28 @@ fn run(mut runtime: Runtime, jobs: &mpsc::Receiver<Job>) -> Result<(), AssemblyE
     loop {
         loop {
             match jobs.try_recv() {
-                Ok(job) => job(&mut runtime),
+                Ok(job) => applied(&mut runtime, job),
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => return runtime.close(),
             }
         }
+        // Events delivered while no job arrives still settle the waits they satisfy.
+        runtime.drain_status();
         if linked {
-            linked = runtime.receive(POLL);
+            match runtime.receive() {
+                Link::Linked => {}
+                // Waiting happens here, on the job queue, with the control released.
+                Link::Idle | Link::Restarting => match jobs.recv_timeout(runtime.poll) {
+                    Ok(job) => applied(&mut runtime, job),
+                    Err(RecvTimeoutError::Timeout) => {}
+                    Err(RecvTimeoutError::Disconnected) => return runtime.close(),
+                },
+                Link::Gone => linked = false,
+            }
+            runtime.publish_census();
         } else {
             match jobs.recv() {
-                Ok(job) => job(&mut runtime),
+                Ok(job) => applied(&mut runtime, job),
                 Err(_) => return runtime.close(),
             }
         }
@@ -116,7 +197,7 @@ fn run(mut runtime: Runtime, jobs: &mpsc::Receiver<Job>) -> Result<(), AssemblyE
 }
 
 /// The handle request handlers use to run work on the actor thread.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(super) struct Actor {
     jobs: mpsc::Sender<Job>,
 }
@@ -142,11 +223,34 @@ impl Actor {
         work: impl FnOnce(&mut Runtime) -> Result<R, BoundaryError> + Send + 'static,
     ) -> Result<R, BoundaryError> {
         let (reply, answer) = oneshot::channel();
-        let job: Job = Box::new(move |runtime| match reply.send(work(runtime)) {
-            Ok(()) | Err(_) => {}
+        let job: Job = Box::new(move |runtime| {
+            let result = work(runtime);
+            runtime.publish_census();
+            match reply.send(result) {
+                Ok(()) | Err(_) => {}
+            }
         });
         self.jobs.send(job).map_err(|_| worker_gone())?;
         answer.await.map_err(|_| worker_gone())?
+    }
+}
+
+impl Actor {
+    /// Runs `work` on the actor thread from synchronous code; `None` once it stopped.
+    pub(super) fn call_blocking<R: Send + 'static>(
+        &self,
+        work: impl FnOnce(&mut Runtime) -> R + Send + 'static,
+    ) -> Option<R> {
+        let (reply, answer) = mpsc::channel();
+        let job: Job = Box::new(move |runtime| {
+            let result = work(runtime);
+            runtime.publish_census();
+            match reply.send(result) {
+                Ok(()) | Err(_) => {}
+            }
+        });
+        self.jobs.send(job).ok()?;
+        answer.recv().ok()
     }
 }
 
@@ -158,4 +262,11 @@ impl ActorThread {
             source: "the runtime thread panicked".into(),
         })?
     }
+}
+
+/// Runs `job` after applying every status event delivered so far, so a job queued behind a
+/// `status.report` observes it whatever batch the two jobs land in.
+fn applied(runtime: &mut Runtime, job: Job) {
+    runtime.drain_status();
+    job(runtime);
 }

@@ -22,6 +22,7 @@ use ovis_terminal_holder::unix::{Holder, HolderConfig, HolderLimits};
 use ovis_terminal_protocol::domain::update::{BuildTarget, HolderGeneration};
 use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind, OpId};
 use ovis_terminal_protocol::schema::scalar::{ProtocolGeneration, TimestampMs};
+use ovis_terminal_server::dispatch::lanes::restart::{RestartLane, ServerRestart};
 use ovis_terminal_server::dispatch::lanes::update::UpdateLane;
 use ovis_terminal_server::dispatch::lanes::update::control::ControlRestart;
 use ovis_terminal_services::update::{Config, CurrentBuild, Requirement, Updates};
@@ -167,7 +168,7 @@ fn prepare(
     root: &Path,
     (authority, bearer): (&Arc<Authority<RegistryIdentities>>, &str),
     runtime: RuntimeIdentity,
-) -> Result<(UpdateLane, Held), RunnerError> {
+) -> Result<(UpdateLane, Arc<Control>, Held), RunnerError> {
     let root = root.join("update");
     std::fs::create_dir_all(&root).map_err(at("create the update root"))?;
     let facts = releases(&root)?;
@@ -180,10 +181,12 @@ fn prepare(
         CurrentBuild::new("1.0.0".parse().map_err(at("parse the version"))?, current),
         Requirement::new(ProtocolGeneration::new(1), HolderGeneration::new(2)),
     );
-    let restart = Arc::new(ControlRestart::new(Arc::new(control)));
+    let control = Arc::new(control);
+    let restart = Arc::new(ControlRestart::new(Arc::clone(&control)));
     let service = Updates::open(config, restart).map_err(at("open the install root"))?;
     Ok((
         UpdateLane::new(Arc::new(service), runtime.machine_id()),
+        control,
         Held(holder),
     ))
 }
@@ -195,11 +198,15 @@ pub(crate) async fn register(
     runtime: RuntimeIdentity,
 ) -> Result<Held, RunnerError> {
     let (root, authority, bearer) = (root.to_path_buf(), Arc::clone(authority), bearer.to_owned());
-    let (lane, held) =
+    let (lane, control, held) =
         tokio::task::spawn_blocking(move || prepare(&root, (&authority, &bearer), runtime))
             .await
             .map_err(at("join the update fixture setup"))??;
     lane.register(dispatch).map_err(at("register update.*"))?;
+    let restart = RestartLane::new(control, runtime.machine_id());
+    dispatch
+        .register(ServerRestart::new(&restart))
+        .map_err(at("register server.restart"))?;
     Ok(held)
 }
 

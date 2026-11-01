@@ -67,6 +67,19 @@ pub(super) struct ServeArgs {
     /// Also stop when standard input reaches end of file.
     #[arg(long)]
     pub(super) stdin_lifetime: bool,
+    /// Also serve the protocol over WebSocket on this loopback port (0 picks a free one).
+    #[arg(long)]
+    pub(super) websocket_port: Option<u16>,
+    /// QA seam: how long the runtime waits for a request, with the control released,
+    /// before it looks for holder messages again (milliseconds; 5 without it). Accepted
+    /// only with a `--root` that holds a `qa-fixture` file.
+    #[arg(long)]
+    pub(super) qa_holder_poll_ms: Option<u64>,
+    /// QA seam: before the next `terminal.run`, the runtime, holding the control, writes
+    /// `held` to this FIFO, then waits until a writer opens it again. Accepted only with a
+    /// `--root` that holds a `qa-fixture` file.
+    #[arg(long)]
+    pub(super) qa_actor_hold: Option<std::path::PathBuf>,
 }
 
 /// The two published contracts.

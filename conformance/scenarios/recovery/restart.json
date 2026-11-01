@@ -1,40 +1,516 @@
 {
+  "format": "ovis-conformance/1",
   "scenario": "recovery/restart",
-  "todo": 48,
   "title": "Planned control restart keeps program incarnations and reports interrupted work",
-  "closes": ["GAP-065", "GAP-122", "GAP-126"],
-  "delivers": ["IDEAL-045", "IDEAL-094", "IDEAL-099", "IDEAL-117"],
-  "excludes": ["EXCL-016", "EXCL-021", "EXCL-026", "EXCL-027"],
-  "platforms": ["linux", "macos"],
-  "verification": {
-    "status": "declared_until_routable",
-    "blocked_by": {
-      "31": "assembles the served binary that registers dispatch::lanes::restart (ServerRestart, ServerStop) over ovis_terminal_core::restart::Control and replaces its listener under the successor boot identity",
-      "21": "the runner's only fixture ('protocol') registers doc.set, doc.get, terminal.keep and the agent lanes, holds no holder-owned program, and its discovery scenario asserts server.stop is unserved"
-    },
-    "covered_meanwhile_by": [
-      "cargo test -p ovis-terminal-core --lib restart (real holder PTY, SQLite store and authority: restart, crash at every barrier, repeated interruption, host reboot, rollback, interrupted launch, both stop scopes)",
-      "cargo test -p ovis-terminal-server --lib lanes::restart (real Unix socket, Dispatcher and SQLite ledger: server.restart then hello on the successor boot; server.stop scope refusal and control_only)",
-      "cargo test -p ovis-terminal-protocol --lib domain::restart (records, decimal strings, identity transition table equals docs/identity-transitions.md)"
-    ]
-  },
+  "todo": 48,
+  "closes": [
+    "GAP-065",
+    "GAP-122",
+    "GAP-126"
+  ],
+  "delivers": [
+    "IDEAL-045",
+    "IDEAL-094",
+    "IDEAL-099",
+    "IDEAL-117"
+  ],
+  "excludes": [
+    "EXCL-016",
+    "EXCL-021",
+    "EXCL-026",
+    "EXCL-027"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
   "cases": [
     {
       "case": "happy",
+      "summary": "Real ovis-terminal serve runs /bin/sh as t1; server.restart answers with both boots and one preserved incarnation, the old connection closes server_restart, the server announces the successor boot, and a new connection sees the same lifetime, the new boot and the same program pid.",
       "steps": [
-        {"hold": "a live child '/bin/sh -c \"printf ARMED; read gate\"' and an output wait armed on its terminal"},
-        {"rpc": "server.restart", "params": {"op_id": "$uuidv7.restart"},
-         "expect": {"/server_boot_id_old": "boot:1", "/server_boot_id_new": "boot:2", "/preserved_incarnations": ["1"], "/ended_incarnations": []}},
-        {"reconnect": "hello", "expect": {"/runtime_lifetime": "unchanged", "/server_boot_id": "boot:2"}},
-        {"assert": "the child keeps its PID and start token; the wait ended cancelled with its resume cursor; seq_after > seq_before"}
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "server.restart",
+                  "server.stop",
+                  "server.status"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "shell",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "status",
+                "method": "server.status",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "before",
+                "method": "terminal.process_info",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "status": {
+                "/result/runtime_lifetime": {
+                  "$capture": "lifetime"
+                },
+                "/result/server_boot_id": {
+                  "$capture": "boot_old"
+                },
+                "/result/live_terminals": "1"
+              },
+              "before": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/launcher/pid": {
+                  "$capture": "pid"
+                },
+                "/result/launcher/start_token": {
+                  "$capture": "token"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "restart",
+                "method": "server.restart",
+                "params": {
+                  "op_id": "$op:restart"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "restart": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/server_boot_id_old": "$value:boot_old",
+                "/result/server_boot_id_new": {
+                  "$capture": "boot_new"
+                },
+                "/result/ended_incarnations": [],
+                "/result/preserved_incarnations/0": {
+                  "$present": true
+                },
+                "/result/preserved_incarnations/1": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "control",
+            "method": "$/closing",
+            "expect": {
+              "/params/reason": "server_restart",
+              "/params/incarnations_preserved": true
+            }
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "announced": {
+            "expect": {
+              "/restarted/server_boot_id": "$value:boot_new",
+              "/restarted/runtime_lifetime": "$value:lifetime"
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "successor",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "successor",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/runtime_lifetime": "$value:lifetime",
+              "/result/server_boot_id": "$value:boot_new"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "successor",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "status",
+                "method": "server.status",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "after",
+                "method": "terminal.process_info",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "successor",
+            "expect": {
+              "status": {
+                "/result/server_boot_id": "$value:boot_new",
+                "/result/runtime_lifetime": "$value:lifetime",
+                "/result/live_terminals": "1"
+              },
+              "after": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/launcher/pid": "$value:pid",
+                "/result/launcher/start_token": "$value:token"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "successor"
+          }
+        },
+        {
+          "closed": {
+            "conn": "successor"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
       ]
     },
     {
       "case": "failure",
+      "summary": "server.stop with an unknown scope is invalid_params at params.scope before any effect: the program keeps its pid and the boot keeps serving.",
       "steps": [
-        {"inject": {"method": "server.stop", "params": {"scope": "everything-implicitly"}},
-         "expect": {"/error/data/kind": "invalid_params", "/error/data/field_path": "params.scope"}},
-        {"assert": "no process ended: the child keeps its PID and start token and control still serves"}
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "server.restart",
+                  "server.stop",
+                  "server.status"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "shell",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "status",
+                "method": "server.status",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "before",
+                "method": "terminal.process_info",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "status": {
+                "/result/runtime_lifetime": {
+                  "$capture": "lifetime"
+                },
+                "/result/server_boot_id": {
+                  "$capture": "boot_old"
+                },
+                "/result/live_terminals": "1"
+              },
+              "before": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/launcher/pid": {
+                  "$capture": "pid"
+                },
+                "/result/launcher/start_token": {
+                  "$capture": "token"
+                }
+              }
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "control",
+            "base": {
+              "op_id": "$op:stop"
+            },
+            "planned": [
+              {
+                "request": {
+                  "method": "server.stop",
+                  "params": {
+                    "scope": "everything-implicitly"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/error/data/field_path": "params.scope",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "still",
+                "method": "terminal.process_info",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "served",
+                "method": "server.status",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "still": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/launcher/pid": "$value:pid",
+                "/result/launcher/start_token": "$value:token"
+              },
+              "served": {
+                "/result/server_boot_id": "$value:boot_old",
+                "/result/live_terminals": "1"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
       ]
     }
   ]

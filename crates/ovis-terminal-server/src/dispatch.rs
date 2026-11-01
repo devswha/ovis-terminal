@@ -1,5 +1,6 @@
 //! Typed method dispatch with deadlines and cancellation (plan todo 14).
 
+pub mod agent;
 mod control;
 mod deadline;
 mod error;
@@ -9,8 +10,10 @@ pub mod lanes;
 mod queue;
 mod read;
 mod registry;
+pub mod remote;
 mod reservation;
 mod runtime;
+pub mod services;
 mod tasks;
 
 pub use error::DispatchError;

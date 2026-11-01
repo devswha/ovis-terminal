@@ -32,6 +32,8 @@ ovis-terminal-agent = { workspace = true }
 ovis-terminal-authz = { workspace = true }
 ovis-terminal-core = { workspace = true }
 ovis-terminal-holder = { workspace = true }
+# The quality gates (todo 61) run in-process in the `gates` step.
+ovis-terminal-probes = { workspace = true }
 ovis-terminal-protocol = { workspace = true }
 ovis-terminal-remote = { workspace = true }
 ovis-terminal-server = { workspace = true }
@@ -46,7 +48,8 @@ thiserror = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
 
-# Outer PTYs for the attach steps; the version the holder resolves.
+# Outer PTYs for the attach steps, and stopping the fixture's peer runtime; the version
+# the holder resolves.
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1.1.6", features = ["fs", "process", "pty", "stdio", "termios"] }
 

@@ -27,11 +27,14 @@ fn internal<E: std::fmt::Debug>(cause: E) -> BoundaryError {
     super::error::internal("input admission")(cause)
 }
 
-/// The client label of `lease` when `session` owns it; knowing an id grants nothing.
-pub(super) fn owned_client(
+/// The client label a write or resize presenting `lease` is authorized under: the
+/// lease's own label when `session` holds it, otherwise the unleased label. The lease
+/// authority then refuses in its own order, permission (`forbidden`) before lease
+/// (`no_lease`), so knowing a lease id grants nothing.
+pub(super) fn presented_client(
     view: &LeaseView,
     (session, lease): (&Session, LeaseId),
-) -> Result<ClientId, BoundaryError> {
+) -> ClientId {
     let mut leases = view
         .interact
         .iter()
@@ -41,13 +44,10 @@ pub(super) fn owned_client(
         .find(|held: &&Lease| {
             held.lease_id == lease && held.owner.principal == *session.principal()
         })
-        .map(|held| held.owner.client.clone())
-        .ok_or_else(|| {
-            refusal(
-                "no_lease",
-                "attach with role interact and present its lease_id",
-            )
-        })
+        .map_or_else(
+            || ClientId::new(UNLEASED_CLIENT.to_owned()),
+            |held| held.owner.client.clone(),
+        )
 }
 
 /// The terminal a request names, served live by this runtime.
@@ -64,7 +64,7 @@ pub(super) fn live_terminal<'a>(
         .ok_or_else(|| refusal("not_found", "name a terminal this server spawned"))
 }
 
-fn result(receipt: &Receipt) -> Result<Value, BoundaryError> {
+pub(super) fn result(receipt: &Receipt) -> Result<Value, BoundaryError> {
     let value = json!({
         "receipt": {
             "op_id": receipt.op_id,
@@ -100,6 +100,16 @@ impl Runtime {
         session: &Session,
         admission: Admission<'_>,
     ) -> Result<Value, BoundaryError> {
+        result(&self.admit_receipt(session, admission)?)
+    }
+
+    /// Admits one write as [`Runtime::admit_input`] does and returns its receipt; the
+    /// terminal remembers it as its latest queued input.
+    pub(super) fn admit_receipt(
+        &mut self,
+        session: &Session,
+        admission: Admission<'_>,
+    ) -> Result<Receipt, BoundaryError> {
         let runtime_id = self.identity.runtime_id();
         let Self {
             directory,
@@ -109,7 +119,7 @@ impl Runtime {
         } = self;
         let live = live_terminal((directory, served), admission.target)?;
         if let Some(prior) = live.sequencer.receipt(admission.op_id) {
-            return result(prior);
+            return Ok(prior.clone());
         }
         live.geometry
             .input_ready()
@@ -123,10 +133,10 @@ impl Runtime {
             .hub
             .with_leases(TerminalLeases::view)
             .map_err(internal)?;
-        let client = match lease {
-            Some(lease) => owned_client(&view, (session, lease))?,
-            None => ClientId::new(UNLEASED_CLIENT.to_owned()),
-        };
+        let client = lease.map_or_else(
+            || ClientId::new(UNLEASED_CLIENT.to_owned()),
+            |lease| presented_client(&view, (session, lease)),
+        );
         let (modes, moment) = live.view_parts().map_err(internal)?;
         let writer = Writer::new(session, &client, moment.at);
         let writer = lease.map_or(writer, |lease| writer.presenting(lease));
@@ -143,8 +153,9 @@ impl Runtime {
             })
             .map_err(|error| error.boundary())?
             .map_err(|error| refusal(error.kind(), error.hint()))?;
+        live.last_input = receipt.queued_seq;
         live.pump(holder).map_err(internal)?;
-        result(&receipt)
+        Ok(receipt)
     }
 
     /// `input.raw`: base64 bytes under the interact lease.

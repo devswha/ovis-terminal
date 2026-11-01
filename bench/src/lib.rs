@@ -11,6 +11,10 @@ pub mod harness;
 #[path = "../tuning/tuning.rs"]
 pub mod tuning;
 
+#[cfg(unix)]
+#[path = "../terminal50/terminal50.rs"]
+pub mod terminal50;
+
 /// Cargo package name of this crate, used by the workspace layering record.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 

@@ -7,21 +7,41 @@
 //! sequencer and geometry transitions of the same terminal.
 
 mod actor;
+mod barrier;
 mod boot;
+mod boundary;
+mod credentials;
 mod directory;
+mod discovery;
 mod error;
+mod events;
+mod feed;
+mod generation;
 mod handler;
+mod health;
+mod identity;
 mod input;
 mod inspect;
+mod journal;
 mod lanes;
+mod layout;
+mod lease_ops;
+mod lifetime;
 mod live;
 mod mutations;
 mod reads;
 mod records;
+mod recovery;
 mod resize;
+mod restart;
 mod routes;
 mod serve;
+mod session;
+mod template_runs;
 mod terminal;
+mod turns;
+mod waited;
+mod websocket;
 
 use std::io;
 use std::path::PathBuf;
@@ -106,7 +126,26 @@ pub(crate) struct ServePlan {
     pub(crate) root: Option<PathBuf>,
     /// Stop when standard input reaches end of file, as well as on SIGINT or SIGTERM.
     pub(crate) stdin_lifetime: bool,
+    /// Also serve over WebSocket on this loopback port.
+    pub(crate) websocket_port: Option<u16>,
+    /// QA seams, refused unless the root is a QA fixture root.
+    pub(crate) qa: QaSeams,
 }
+
+/// Test seams of `serve`, each documented in its help and refused unless `--root` holds a
+/// `qa-fixture` file.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct QaSeams {
+    /// The runtime's idle wait for a request, in milliseconds.
+    pub(crate) holder_poll_ms: Option<u64>,
+    /// A FIFO the runtime opens, holding the control, before its next `terminal.run`.
+    pub(crate) actor_hold: Option<PathBuf>,
+}
+
+/// A QA seam named on a root that is not a QA fixture root.
+#[derive(Debug, thiserror::Error)]
+#[error("a QA seam was named, but --root holds no qa-fixture file")]
+pub(crate) struct QaRootRequired;
 
 /// Serves until SIGINT, SIGTERM or (with `stdin_lifetime`) end of stdin; prints one
 /// ready line before serving and one report line after stopping.

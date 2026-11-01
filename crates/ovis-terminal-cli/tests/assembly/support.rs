@@ -3,12 +3,19 @@
 use std::collections::BTreeSet;
 use std::io::{BufRead as _, BufReader, Write as _};
 use std::os::unix::net::UnixStream;
-use std::path::PathBuf;
-use std::process::{Child, ChildStdin, ChildStdout, Command, Output, Stdio};
+use std::path::{Path, PathBuf};
+use std::process::{Child, ChildStdin, ChildStdout, Output, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde_json::{Value, json};
+
+#[path = "support/launch.rs"]
+mod launch;
+#[path = "support/rpc.rs"]
+mod rpc;
+use launch::{ANNOUNCE_GUARD, product, readable};
+pub use rpc::rpc;
 
 /// Result of a test step; any failure fails the test.
 pub type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
@@ -33,6 +40,24 @@ pub fn op_id() -> TestResult<String> {
     Ok(uuid_text(id))
 }
 
+/// Where test state lives: `OVIS_FIXTURE_ROOT` when the host sets it, else `/tmp`, which
+/// stays inside every platform's socket path limit.
+fn fixture_root() -> PathBuf {
+    std::env::var_os("OVIS_FIXTURE_ROOT").map_or_else(|| PathBuf::from("/tmp"), PathBuf::from)
+}
+
+/// A new, empty server root below the fixture root.
+///
+/// # Errors
+///
+/// Fails when the directory cannot be created.
+pub fn fresh_root() -> TestResult<PathBuf> {
+    let unique = NEXT.fetch_add(1, Ordering::Relaxed);
+    let root = fixture_root().join(format!("ovt31a-{}-{unique}", std::process::id()));
+    std::fs::create_dir_all(&root)?;
+    Ok(root)
+}
+
 fn uuid_text(id: u128) -> String {
     let hex = format!("{id:032x}");
     let part = |from: usize, to: usize| hex.get(from..to).unwrap_or_default().to_owned();
@@ -55,22 +80,59 @@ pub struct Served {
     root: PathBuf,
     socket: String,
     bearer: String,
+    observer: String,
+    websocket: Option<String>,
+    ready: Value,
 }
 
 impl Served {
-    /// Starts `serve --root <fresh dir> --stdin-lifetime` and reads its ready line.
+    /// Starts `serve` with no extra flags.
     ///
     /// # Errors
     ///
     /// Fails when a process, socket or file step fails.
     pub fn start() -> TestResult<Self> {
-        let unique = NEXT.fetch_add(1, Ordering::Relaxed);
-        let root = PathBuf::from("/tmp").join(format!("ovt31a-{}-{unique}", std::process::id()));
-        std::fs::create_dir_all(&root)?;
-        let mut child = Command::new(BIN)
+        Self::start_with(&[])
+    }
+
+    /// The WebSocket listener address from the ready line, when one was started.
+    pub fn websocket(&self) -> Option<&str> {
+        self.websocket.as_deref()
+    }
+
+    /// The observe-only bearer from the ready line.
+    pub fn observer(&self) -> &str {
+        &self.observer
+    }
+
+    /// The owner bearer from the ready line.
+    pub fn bearer(&self) -> &str {
+        &self.bearer
+    }
+
+    /// Starts `serve --root <fresh dir> --stdin-lifetime <extra>` and reads its ready line.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a process, socket or file step fails.
+    pub fn start_with(extra: &[&str]) -> TestResult<Self> {
+        Self::start_at(&fresh_root()?, extra)
+    }
+
+    /// Starts `serve` on an existing `root`, as a later boot of the same state.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a process, socket or file step fails.
+    pub fn start_at(root: &Path, extra: &[&str]) -> TestResult<Self> {
+        let root = root.to_path_buf();
+        // Every test root is a QA fixture root, so the serve QA seams are accepted on it.
+        std::fs::write(root.join("qa-fixture"), b"")?;
+        let mut child = product()
             .args(["serve", "--root"])
             .arg(&root)
             .arg("--stdin-lifetime")
+            .args(extra)
             .env_clear()
             .env("PATH", "/usr/bin:/bin")
             .stdin(Stdio::piped())
@@ -90,6 +152,15 @@ impl Served {
             .pointer("/ready/bearer")
             .and_then(Value::as_str)
             .ok_or("bearer")?;
+        let observer = ready
+            .pointer("/ready/observer")
+            .and_then(Value::as_str)
+            .ok_or("observer")?
+            .to_owned();
+        let websocket = ready
+            .pointer("/ready/websocket")
+            .and_then(Value::as_str)
+            .map(str::to_owned);
         Ok(Self {
             child,
             stdin,
@@ -97,7 +168,51 @@ impl Served {
             root,
             socket: socket.to_owned(),
             bearer: bearer.to_owned(),
+            observer,
+            websocket,
+            ready,
         })
+    }
+
+    /// The root this server keeps its socket and state below.
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    /// The parsed ready line.
+    pub const fn ready(&self) -> &Value {
+        &self.ready
+    }
+
+    /// Kills the server process this test spawned and reaps it; its state stays.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the process cannot be signalled or reaped.
+    pub fn crash(mut self) -> TestResult<PathBuf> {
+        self.child.kill()?;
+        self.child.wait()?;
+        Ok(self.root)
+    }
+
+    /// Waits, with stdin still open, for the server to stop by itself and returns its
+    /// report line.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a process, socket or file step fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the server exits with a failure.
+    pub fn stopped_by_itself(mut self) -> TestResult<Value> {
+        let mut line = String::new();
+        self.stdout.read_line(&mut line)?;
+        let status = self.child.wait()?;
+        assert_eq!(status.code(), Some(0), "serve exited {status:?}: {line}");
+        drop(self.stdin.take());
+        std::fs::remove_dir_all(&self.root)?;
+        Ok(serde_json::from_str(&line)?)
     }
 
     /// Runs the binary with `--json` against this server's endpoint and bearer.
@@ -106,7 +221,7 @@ impl Served {
     ///
     /// Fails when a process, socket or file step fails.
     pub fn cli(&self, args: &[&str]) -> TestResult<Output> {
-        Ok(Command::new(BIN)
+        Ok(product()
             .arg("--json")
             .args(args)
             .env_clear()
@@ -165,25 +280,55 @@ impl Served {
         self.ok(&["call", "terminal.run", "--params", &params.to_string()])
     }
 
+    /// The raw reply to a hello presenting `bearer` on the local socket.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a process, socket or file step fails.
+    pub fn hello_reply(&self, bearer: &str) -> TestResult<Value> {
+        let mut stream = UnixStream::connect(&self.socket)?;
+        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
+        let hello = json!({"jsonrpc": "2.0", "id": "h", "method": "hello", "params": {
+            "generation": "1", "client": {"name": "t31", "version": "0"}, "credential": bearer,
+        }});
+        writeln!(stream, "{hello}")?;
+        let mut line = String::new();
+        BufReader::new(&stream).read_line(&mut line)?;
+        Ok(serde_json::from_str(&line)?)
+    }
+
+    /// The next line the server announced on stdout, such as a successor boot.
+    ///
+    /// # Errors
+    ///
+    /// Fails when stdout ended or the line is not JSON.
+    pub fn announcement(&mut self) -> TestResult<Value> {
+        if self.stdout.buffer().is_empty() && !readable(self.stdout.get_ref(), ANNOUNCE_GUARD)? {
+            let pid = self.child.id();
+            let state = std::fs::read_to_string(format!("/proc/{pid}/stat")).unwrap_or_default();
+            return Err(format!(
+                "no announcement within {ANNOUNCE_GUARD:?}: server pid {pid}, stat {state}"
+            )
+            .into());
+        }
+        let mut line = String::new();
+        if self.stdout.read_line(&mut line)? == 0 {
+            return Err("the server's stdout ended".into());
+        }
+        Ok(serde_json::from_str(&line)?)
+    }
+
     /// The method list hello advertises to the owner.
     ///
     /// # Errors
     ///
     /// Fails when a process, socket or file step fails.
     pub fn advertised(&self) -> TestResult<BTreeSet<String>> {
-        let mut stream = UnixStream::connect(&self.socket)?;
-        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
-        let hello = json!({"jsonrpc": "2.0", "id": "h", "method": "hello", "params": {
-            "generation": "1", "client": {"name": "t31", "version": "0"}, "credential": self.bearer,
-        }});
-        writeln!(stream, "{hello}")?;
-        let mut line = String::new();
-        BufReader::new(&stream).read_line(&mut line)?;
-        let reply: Value = serde_json::from_str(&line)?;
+        let reply = self.hello_reply(&self.bearer)?;
         let methods = reply
             .pointer("/result/methods")
             .and_then(Value::as_array)
-            .ok_or_else(|| line.clone())?;
+            .ok_or_else(|| reply.to_string())?;
         Ok(methods
             .iter()
             .filter_map(Value::as_str)
@@ -200,13 +345,27 @@ impl Served {
     /// # Panics
     ///
     /// Panics when the binary's behaviour differs from the expectation.
-    pub fn stop(mut self) -> TestResult<Value> {
+    pub fn stop(self) -> TestResult<Value> {
+        let (report, root) = self.stop_keeping_state()?;
+        std::fs::remove_dir_all(root)?;
+        Ok(report)
+    }
+
+    /// Closes stdin, as [`Served::stop`], and keeps the state for a later boot.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a process, socket or file step fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the server exits with a failure.
+    pub fn stop_keeping_state(mut self) -> TestResult<(Value, PathBuf)> {
         drop(self.stdin.take());
         let mut line = String::new();
         self.stdout.read_line(&mut line)?;
         let status = self.child.wait()?;
         assert_eq!(status.code(), Some(0), "serve exited {status:?}");
-        std::fs::remove_dir_all(&self.root)?;
-        Ok(serde_json::from_str(&line)?)
+        Ok((serde_json::from_str(&line)?, self.root.clone()))
     }
 }

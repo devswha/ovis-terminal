@@ -5,18 +5,15 @@ use std::path::Path;
 use std::sync::Arc;
 
 use ovis_terminal_authz::{
-    Authority, AuthorityConfig, EndpointPolicy, Grant, Issuance, IssueRequest, LocalAccount,
-    OwnerSpec, PeerEvidence, Permission, Presentation, PrincipalId, RemoteTransport, ResourceScope,
-    RuntimeBinding, ScopeResource, UnixUid,
+    Authority, AuthorityConfig, EndpointPolicy, FileEvidence, Grant, Issuance, IssueRequest,
+    LocalAccount, OwnerSpec, PeerEvidence, Permission, Presentation, PrincipalId, RemoteTransport,
+    ResourceScope, RuntimeBinding, ScopeResource, Session, UnixSocketEvidence, UnixUid,
 };
 use ovis_terminal_core::events::{Coordinator, EventError, Filter, SnapshotProducer};
 use ovis_terminal_core::geometry::GeometryEvent;
 use ovis_terminal_core::leases::LeaseEvent;
-use ovis_terminal_core::registry::{
-    HostBootId, HostIdentity, MachineId, RegistryIdentities, RuntimeId, RuntimeIdentity,
-    ServerBootId,
-};
-use ovis_terminal_core::terminals::{Host, Terminals};
+use ovis_terminal_core::registry::{MachineId, RegistryIdentities, RuntimeIdentity};
+use ovis_terminal_core::restart::{Boot, Control, ControlPlan};
 use ovis_terminal_holder::protocol::{HolderBuildId, HolderDescriptor, HolderInstanceId};
 use ovis_terminal_holder::unix::{Holder, HolderConfig, HolderLimits};
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
@@ -50,6 +47,36 @@ pub(super) struct Bearers {
     pub(super) writer: String,
 }
 
+/// The owner session the restart control runs its own steps under: the in-process peer
+/// is the server's account, evidenced by the private state directory it owns.
+fn owner_session(
+    authority: &Authority<RegistryIdentities>,
+    (state, bearer): (&Path, &str),
+) -> Result<Session, AssemblyError> {
+    use std::os::unix::fs::MetadataExt as _;
+    let metadata =
+        std::fs::metadata(state).map_err(AssemblyError::start("inspect the state directory"))?;
+    let uid = UnixUid::new(rustix::process::getuid().as_raw());
+    let evidence = FileEvidence::new(UnixUid::new(metadata.uid()), metadata.mode() & 0o7777);
+    let admission = EndpointPolicy::new(LocalAccount::Unix(uid))
+        .admit(&PeerEvidence::UnixSocket(UnixSocketEvidence::new(
+            evidence, evidence, uid,
+        )))
+        .map_err(AssemblyError::start("admit the control session"))?;
+    authority
+        .authenticate(&admission, Presentation::new(bearer, now()?))
+        .map_err(AssemblyError::start("authenticate the control session"))
+}
+
+fn now() -> Result<TimestampMs, AssemblyError> {
+    let elapsed = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(AssemblyError::start("read the clock"))?;
+    u64::try_from(elapsed.as_millis())
+        .map(TimestampMs::new)
+        .map_err(AssemblyError::start("read the clock"))
+}
+
 /// Everything started before the endpoint is bound.
 #[derive(Debug)]
 pub(super) struct Booted {
@@ -57,23 +84,12 @@ pub(super) struct Booted {
     pub(super) authority: Arc<Authority<RegistryIdentities>>,
     pub(super) bearers: Bearers,
     pub(super) holder: Holder,
-    pub(super) terminals: Terminals,
-    pub(super) leases: Arc<LeaseLog>,
+    pub(super) control: Arc<Control>,
+    pub(super) boot: Boot,
+    pub(super) inherited: Vec<ovis_terminal_core::recovery::Recorded>,
+    pub(super) recorded: Vec<ovis_terminal_core::terminals::Record>,
+    pub(super) leases: LeaseLog,
     pub(super) geometry: GeometryLog,
-}
-
-fn identity() -> Result<RuntimeIdentity, AssemblyError> {
-    let machine: MachineId = format!("machine:{}", uuid::Uuid::now_v7())
-        .parse()
-        .map_err(AssemblyError::start("mint the machine identity"))?;
-    let host = HostBootId::try_from(1).map_err(AssemblyError::start("host boot identity"))?;
-    let runtime = RuntimeId::try_from(1).map_err(AssemblyError::start("runtime identity"))?;
-    let boot = ServerBootId::try_from(1).map_err(AssemblyError::start("server boot identity"))?;
-    Ok(RuntimeIdentity::new(
-        HostIdentity::new(machine, host),
-        runtime,
-        boot,
-    ))
 }
 
 /// Issues a bearer holding exactly `grants` on the machine, authorized by the owner bearer.
@@ -109,14 +125,24 @@ fn delegate(
     Ok(issued.bearer().to_owned())
 }
 
-fn store(state: &Path, name: &str) -> Result<Store, AssemblyError> {
+/// Opens the store `name` below `state`.
+pub(super) fn store(state: &Path, name: &str) -> Result<Store, AssemblyError> {
     Store::open(&state.join(name), StoreOptions::default())
         .map_err(AssemblyError::start("open a store"))
 }
 
-/// Starts every piece of one server lifetime under `state`.
-pub(super) fn boot(state: &Path) -> Result<Booted, AssemblyError> {
-    let identity = identity()?;
+/// Starts every piece of one server lifetime under `state`, off the async runtime
+/// because adopting the holder and opening the stores block on their writers.
+pub(super) async fn boot(state: &Path) -> Result<Booted, AssemblyError> {
+    let state = state.to_path_buf();
+    tokio::task::spawn_blocking(move || boot_blocking(&state))
+        .await
+        .map_err(AssemblyError::start("boot the server"))?
+}
+
+fn boot_blocking(state: &Path) -> Result<Booted, AssemblyError> {
+    let identity = super::identity::next_boot(state)?;
+    let inherited = super::recovery::inherited(state, identity)?;
     let binding = RuntimeBinding::new(identity.machine_id(), identity.runtime_id());
     let owner = PrincipalId::parse("owner").map_err(AssemblyError::start("owner principal"))?;
     let (authority, issued) = Authority::bootstrap(AuthorityConfig::new(
@@ -150,21 +176,32 @@ pub(super) fn boot(state: &Path) -> Result<Booted, AssemblyError> {
         HolderInstanceId::new(uuid::Uuid::now_v7().to_string()),
     );
     let holder = Holder::new(HolderConfig::new(descriptor, HolderLimits::DEFAULT));
-    let host = Host::new(identity, Arc::clone(&authority), holder.clone());
-    let terminals = Terminals::new(store(state, "terminals.db")?, host)
-        .map_err(AssemblyError::start("adopt the holder"))?;
-    let leases = Arc::new(Coordinator::new(
-        store(state, "leases.db")?,
-        identity,
-        NoSections,
-    ));
+    let plan = ControlPlan::new(
+        state.join("control"),
+        (holder.clone(), Arc::clone(&authority)),
+        owner_session(&authority, (state, &bearers.owner))?,
+    );
+    std::fs::create_dir_all(state.join("control"))
+        .map_err(AssemblyError::start("create the control state"))?;
+    let (control, boot) =
+        Control::open(plan, identity).map_err(AssemblyError::start("adopt the holder"))?;
+    let identity = control
+        .identity()
+        .map_err(AssemblyError::start("read the boot identity"))?;
+    let recorded = control
+        .with_terminals(|terminals, session| terminals.list(session))
+        .map_err(AssemblyError::start("read the recorded terminals"))?;
+    let leases = Coordinator::new(store(state, "leases.db")?, identity, NoSections);
     let geometry = Coordinator::new(store(state, "geometry.db")?, identity, NoSections);
     Ok(Booted {
         identity,
         authority,
         bearers,
         holder,
-        terminals,
+        control: Arc::new(control),
+        boot,
+        inherited,
+        recorded,
         leases,
         geometry,
     })

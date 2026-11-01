@@ -6,6 +6,7 @@ use std::sync::Arc;
 use ovis_terminal_authz::{ResolvedTarget, TargetResource};
 use ovis_terminal_core::geometry::{GeometryController, GeometryEpoch};
 use ovis_terminal_core::input::encoding::ModeSnapshot;
+use ovis_terminal_core::input::receipts::InputSeq;
 use ovis_terminal_core::input::sequencer::{Binding, Moment, QueueLimits, Sequencer, View};
 use ovis_terminal_core::leases::TerminalLeases;
 use ovis_terminal_core::registry::{
@@ -16,7 +17,7 @@ use ovis_terminal_core::waits::Waits;
 use ovis_terminal_holder::protocol::{Message, Spawned, TerminalTarget};
 use ovis_terminal_protocol::schema::common::Geometry as WireGeometry;
 use ovis_terminal_protocol::schema::methods::server::WriteSequence;
-use ovis_terminal_protocol::schema::scalar::{ByteOffset, TimestampMs};
+use ovis_terminal_protocol::schema::scalar::{ByteOffset, EventSeq, TimestampMs};
 use ovis_terminal_server::streams::TerminalStreams;
 use ovis_terminal_vt::{Geometry, HistoryLimit, VtConfig};
 
@@ -37,6 +38,10 @@ pub(super) struct Live {
     pub(super) generation: TerminalGeneration,
     pub(super) ended: bool,
     pub(super) waits: Arc<Waits>,
+    /// The latest queued input; a status report is attributed to the turn it started.
+    pub(super) last_input: InputSeq,
+    /// Sequence of the latest status event fed to the wait hub.
+    pub(super) last_status: Option<EventSeq>,
 }
 
 impl Live {
@@ -130,6 +135,8 @@ impl Runtime {
             generation,
             ended: false,
             waits,
+            last_input: InputSeq::new(0),
+            last_status: None,
         };
         self.live.insert(terminal, live);
         Ok(())

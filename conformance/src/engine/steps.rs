@@ -12,13 +12,13 @@ use super::session::Session;
 use super::transport;
 use crate::error::RunnerError;
 use crate::evidence::{ConnectionReport, DescriptorRecord};
-use crate::fixture::launch;
 use crate::fixture::wire::decode;
 use crate::scenario::matcher::{Assertion, Subject};
 use crate::scenario::model::{
-    Connect, Effects, ExpectFailure, FixtureKind, Principal, Run, Send as SendStep, SendWire, Step,
-    Via,
+    Connect, Effects, ExpectFailure, Principal, Run, Send as SendStep, SendWire, Step, Via,
 };
+
+mod serve;
 
 type StepFuture<'s> = Pin<Box<dyn Future<Output = Result<(), RunnerError>> + Send + 's>>;
 
@@ -33,6 +33,7 @@ impl Session<'_> {
                 Step::Send(send) => self.send(send).await,
                 Step::SendWire(wire) => self.send_wire(wire).await,
                 Step::Replies(replies) => self.replies(replies).await,
+                Step::PollReply(poll) => self.poll_reply(poll).await,
                 Step::Notification(notification) => self.notification(notification).await,
                 Step::Closed(closed) => self.closed(&closed.conn).await,
                 Step::Hangup(hangup) => self.conn(&hangup.conn)?.hangup().await,
@@ -49,6 +50,7 @@ impl Session<'_> {
                     let checked = stopping.expect.check(subject, self.ctx.repo.root());
                     self.assert(checked)
                 }
+                Step::Announced(announced) => self.announced(announced).await,
                 Step::Include(include) => Err(RunnerError::ScenarioInconsistent {
                     scenario: include.scenario.to_string(),
                     detail: "an include survived planning",
@@ -58,40 +60,12 @@ impl Session<'_> {
                 Step::PtyOpen(_)
                 | Step::PtyType(_)
                 | Step::PtyExpect(_)
+                | Step::PtyAbsent(_)
                 | Step::PtyResize(_)
                 | Step::PtyExit(_) => self.pty(step).await,
+                Step::Gates(gates) => self.gates(gates).await,
             }
         })
-    }
-
-    async fn serve(&mut self, kind: FixtureKind) -> Result<(), RunnerError> {
-        if self.fixture.is_some() {
-            return Err(RunnerError::FixtureState);
-        }
-        if !cfg!(unix) {
-            return Err(RunnerError::UnsupportedPlatform);
-        }
-        let root = self.root.path();
-        let started = match kind {
-            FixtureKind::Protocol => {
-                launch::start(
-                    &self.ctx.runner,
-                    &["fixture".into(), "--root".into(), root.into()],
-                )
-                .await?
-            }
-            FixtureKind::Assembled => {
-                let args = [
-                    "serve".into(),
-                    "--stdin-lifetime".into(),
-                    "--root".into(),
-                    root.join("srv").into(),
-                ];
-                launch::start(&self.ctx.binary, &args).await?
-            }
-        };
-        self.fixture = Some(started);
-        Ok(())
     }
 
     async fn connect(&mut self, connect: &Connect) -> Result<(), RunnerError> {

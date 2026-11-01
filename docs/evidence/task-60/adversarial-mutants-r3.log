@@ -1,0 +1,24 @@
+Round 3 mutant: drop the reopen loop after WaitNamedPipeW (run on Windows CI)
+
+Mutant commit c6230d72e2d38d4ffcd21689ec6c867f7070cb28 (parent bcdc50d; throwaway branch t60-mutant-reopen-loop, deleted after the run)
+crates/ovis-terminal-cli/src/invocation/transport/pipe.rs, after `wait_for_instance(name, left).await?;`:
++        return Err(refused(PathBuf::from(name), error));
+(an open refused with ERROR_PIPE_BUSY waits once and then fails instead of opening again)
+
+Run: gh workflow run platform-qa.yml --ref t60-mutant-reopen-loop
+  https://github.com/devswha/ovis-terminal/actions/runs/41320572633  windows-smoke: completed failure
+  (an earlier dispatch, 41320537590, was cancelled: its commit 74be16e had an unmodified tree because the edit script failed)
+
+windows-smoke.json (sha c6230d7): windows_smoke fail
+  two-clients      fail
+    invocation::transport::pipe::tests::a_busy_pipe_is_waited_out_and_opened_once_an_instance_is_free  exit 101  -> KILLED
+      panicked at pipe_tests.rs:47:5 (`assert!(opened.is_ok())` after the open was observed pending in the wait), 0.20 s
+    invocation::transport::pipe::tests::sessions::two_invocations_opened_at_once_both_get_a_session_from_the_production_listener  exit 101
+      (the concurrent production opens hit ERROR_PIPE_BUSY on the hosted runner, and the mutant fails them)
+    invocation::transport::pipe::tests::a_pipe_that_stays_busy_is_pipe_busy_timeout_after_the_bound  exit 101
+      left: "transport_failed" right: "pipe_busy_timeout" (Io { operation: "connect", source: Os { code: 231 } })
+  observer-denial  fail
+    invocation::transport::pipe::tests::sessions::an_observer_invocation_is_refused_every_mutation_while_an_owner_is_served  exit 101
+  all other checks: pass
+
+killed 1/1 (by the named busy-wait test, plus three other production-client tests)

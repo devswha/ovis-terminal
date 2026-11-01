@@ -25,7 +25,13 @@ struct Traceability {
 struct Owners {
     todos: Vec<String>,
     scenarios: Vec<ScenarioId>,
+    /// Why the owners differ from the plan's derivation, when they do.
+    #[serde(default)]
+    note: Option<String>,
 }
+
+#[path = "traceability/unclaimed.rs"]
+mod unclaimed;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 
@@ -83,6 +89,12 @@ fn every_ledger_id_is_mapped_exactly_once_to_known_todos() -> TestResult {
         );
         for (id, owners) in section {
             assert!(!owners.todos.is_empty(), "{id} has no owning todo");
+            if let Some(note) = &owners.note {
+                assert!(
+                    note.contains("todo"),
+                    "{id}: a note names the todos it moves"
+                );
+            }
             assert!(!owners.scenarios.is_empty(), "{id} has no scenario");
             for todo in &owners.todos {
                 let number: u16 = todo.parse()?;

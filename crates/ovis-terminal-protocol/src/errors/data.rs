@@ -8,7 +8,9 @@ use super::kinds::ErrorKind;
 use crate::domain::conversation_records::Unavailable;
 use crate::domain::session_binding::HistoryHead;
 use crate::schema::ids::PromptId;
-use crate::schema::scalar::{DurationMs, PrincipalEpoch, QueuePosition, RecordVersion, ReportSeq};
+use crate::schema::scalar::{
+    DurationMs, EventSeq, PrincipalEpoch, QueuePosition, RecordVersion, ReportSeq,
+};
 
 /// Machine-readable context attached to a boundary failure.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,6 +68,9 @@ pub struct ErrorData {
     /// The principal's current authority epoch, present on a credential refusal.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub principal_epoch: Option<PrincipalEpoch>,
+    /// Last remote sequence mirrored from a machine, present on a refusal of a call to it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_seen_seq: Option<EventSeq>,
 }
 
 impl ErrorData {
@@ -89,6 +94,7 @@ impl ErrorData {
             prompt_ids: Vec::new(),
             unavailable: None,
             principal_epoch: None,
+            last_seen_seq: None,
         }
     }
 

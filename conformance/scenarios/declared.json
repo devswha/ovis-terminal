@@ -67,11 +67,6 @@
       "reason": "Free-form descriptor written by todo 20 before the runner existed; it runs once its steps are rewritten as ovis-conformance/1 over RPC routes wired by todos 23, 25 and 28-31 (real-binary serving lands with todo 31)."
     },
     {
-      "file": "part-a/task-22.json",
-      "owner_todo": "22",
-      "reason": "events.subscribe/update/unsubscribe are implemented in ovis-terminal-core (crates/ovis-terminal-core/src/subscriptions/) and proven by tests/subscriptions.rs; no serving fixture or binary routes events.* yet. The scenario runs once todo 31 wires the subscription hub into the served dispatcher and the connection notifier."
-    },
-    {
       "file": "part-a/task-23.json",
       "owner_todo": "23",
       "reason": "attach.open/credit/close/repaint are served by ovis_terminal_server::streams::AttachHandler and proven over a real socket by crates/ovis-terminal-server/tests/streams.rs; the todo-21 fixture registers no attach routes and no served binary feeds holder output into TerminalStreams until todo 31 assembles them."
@@ -85,16 +80,6 @@
       "file": "part-a/task-25.json",
       "owner_todo": "25",
       "reason": "Free-form descriptor written by todo 25 before the runner existed; it runs once its steps are rewritten as ovis-conformance/1 over RPC routes wired by todos 23, 25 and 28-31 (real-binary serving lands with todo 31)."
-    },
-    {
-      "file": "part-a/task-26.json",
-      "owner_todo": "26",
-      "reason": "ovis_terminal_core::geometry (resize admission under the geometry lease, ordered geometry.changed/checkpoint/input_ready commits, coalescing, repaint, focus) is a core seam no RPC route serves yet: attach.resize/release_geometry/focus/repaint reach it when todo 31 assembles the attach routes with the holder link (todo 31 is blocked by this todo). Until then the behavior runs as cargo nextest run -p ovis-terminal-core --test geometry (happy on a real holder PTY running unmodified bash; failure on the real authority, lease table and coordinator)."
-    },
-    {
-      "file": "part-a/task-27.json",
-      "owner_todo": "27",
-      "reason": "ovis_terminal_core::waits is a core seam that no RPC route serves yet: terminal.wait_output, turn.wait, events.wait and input.interrupt are wired to it by todos 28-31 (real-binary serving lands with todo 31). Until then the behavior runs as cargo nextest run -p ovis-terminal-core --test waits (happy/failure on a real holder PTY)."
     },
     {
       "file": "part-a/task-28.json",
@@ -147,6 +132,11 @@
       "reason": "The scheduler (crates/ovis-terminal-server/src/streams/scheduler/) and VT shard (crates/ovis-terminal-vt/src/shard/) are proven in-crate by scheduler::qa::{profile,failure,fanout,threads} and by bench/tuning on real PTYs; no served route feeds input.send/input.raw admission or attach output through terminal actors yet. It becomes executable when todo 31 assembles the binary over the input.* routes of todos 28-31 and the attach routes of todo 23 behind these actors."
     },
     {
+      "file": "performance/terminal50.json",
+      "owner_todo": "69",
+      "reason": "The terminal50 benchmark (bench/terminal50/, binary terminal50) measures ovis-terminal-server scheduler actors on real PTYs with real per-client Unix sockets and is verified by terminal50::tests plus the two native profile runs; no served route of the binary under test feeds input.send admission or events.subscribe delivery through those actors yet. It becomes executable when todo 31 assembles the binary over the input.* and events.* routes, at which point the runner can drive the same profiles over the real endpoint."
+    },
+    {
       "file": "platform/conpty.json",
       "owner_todo": "53",
       "reason": "The ConPTY terminal (ovis-terminal-holder windows::ConptyTerminal) and terminal.run admission (lanes::conpty::admit/spawn) exist, but no served binary routes terminal.run to them: todo 54 serves named pipes and the Windows service host that owns ConPTY holders, todo 31 assembles the served terminal.run, and the todo-21 runner's fixture serves only a Unix socket, so a windows-only case would be skipped on every runner it has. Covered meanwhile by the native Windows tests listed in the descriptor, run by ci.yml on windows-2025; todo 60 runs this scenario in Windows smoke CI."
@@ -159,32 +149,22 @@
     {
       "file": "recovery/crash.json",
       "owner_todo": "49",
-      "reason": "Crash recovery (ovis_terminal_core::recovery::recover) and its admission lane (dispatch::lanes::recovery) exist, but no served binary runs recovery at an unplanned boot or registers terminal.run until todo 31 assembles it, and the runner's only fixture (todo 21) holds no holder-owned program and cannot kill and restart its own core; todo 52 composes the fault-injection scenario over real endpoints. Covered meanwhile by the real-holder socket tests in recovery::qa, lanes::recovery and domain::recovery."
-    },
-    {
-      "file": "recovery/restart.json",
-      "owner_todo": "48",
-      "reason": "server.restart and server.stop are routed by dispatch::lanes::restart over ovis_terminal_core::restart::Control, but no served binary registers the lane or replaces its listener at the restart boundary until todo 31 assembles it, and the runner's only fixture (todo 21) holds no holder-owned program and asserts server.stop is unserved. Covered meanwhile by the real-holder core tests (restart) and the real-socket lane tests (lanes::restart)."
+      "reason": "Free-form todo-49 descriptor (its terminal.run isolation step is not a served route). Its behaviour executes in recovery/e2e (todo 52) through fixture.holders over real shared and dedicated holders on both runtimes: a core lost after its checkpoint survives with a non-exact screen and one gap, a dedicated holder lost is unknown/holder_unreachable while the shared one survives, another boot identity is restored_metadata with nothing adopted, and no program is relaunched. Covered meanwhile in-crate by recovery::qa."
     },
     {
       "file": "remote/identity.json",
       "owner_todo": "43",
-      "reason": "machine.add/get/rename are served only by dispatchers assembled in the todo-43 lane tests: no served binary registers the lane until todo 31 assembles it, and the scenario needs two private runtimes joined by a stdio transport plus the plan's --inject/--append runner flags, which the todo-21 runner (one fixture per case) does not have; todo 52 composes remote dispatch across two private runtimes over real endpoints."
+      "reason": "Free-form todo-43 descriptor. machine.add over a real argv (stdio) transport and over SSH (an sshd-free loopback accepting only the runtime's fixed SSH argument vector) to a second private runtime, auth_failed, trust_mismatch and invalid destinations execute in remote/e2e (todo 52); rename-while-waiting stays covered by the todo-43 lane tests."
     },
     {
       "file": "services/docs-retention.json",
       "owner_todo": "50",
-      "reason": "doc.get/doc.set are registered by dispatch::lanes::documents_retention on a Dispatcher whose event type carries doc.changed (DocumentsRetentionEvent). The runner's only fixture (todo 21) serves Dispatcher<OperationEvent, OperationProducer> with file-effect doc.* stubs that protocol/* scenarios depend on, and the runner has no --inject/--append or virtual-clock step. It runs once assembly (todo 52, blocked by this todo) serves the lane on the real binary; until then crates/ovis-terminal-server/tests/documents_retention.rs drives the same requests over a real socket."
+      "reason": "doc.get/doc.set need a Dispatcher whose event type carries doc.changed (DocumentsRetentionEvent), while the shared fixture serves the todo-21 file-effect doc.* stubs that protocol/* scenarios pin under the same names; the real documents lane is served once the binary is assembled (todo 66). A visible retention floor (plugin run output_floor after its 4 KiB tail) executes in recovery/e2e (todo 52); document floors are covered by crates/ovis-terminal-server/tests/documents_retention.rs."
     },
     {
       "file": "services/plugins.json",
       "owner_todo": "46",
-      "reason": "plugin.* routes exist (crates/ovis-terminal-server/src/dispatch/lanes/plugins.rs) but no served process registers them: todo 52 composes service lanes into the real server, and the todo-21 fixture registers only doc.set/doc.get/terminal.keep and has no --inject/--append/principal_fixture support. Covered meanwhile by the real-socket tests in lanes::plugins."
-    },
-    {
-      "file": "services/worktrees.json",
-      "owner_todo": "45",
-      "reason": "The worktree lane (crates/ovis-terminal-server/src/dispatch/lanes/worktrees.rs) is registered by assembly; the runner's only fixture kind ('protocol') does not register service lanes, the runner has no --inject/--append flags, and the layout-backed Workspaces owner arrives with todo 42. It becomes executable when todo 31 serves the real binary with assembled lanes (todo 42)."
+      "reason": "plugin.* is now served by the fixture through dispatch::services::ServiceLanes (todo 52) and its failed-run and missing-program outcomes run in recovery/e2e; this file stays a free-form todo-46 descriptor whose principal_fixture and cancel steps the runner does not model. Covered meanwhile by the real-socket tests in lanes::plugins."
     }
   ]
 }

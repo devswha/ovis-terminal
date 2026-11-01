@@ -6,6 +6,7 @@ use std::sync::Arc;
 use ovis_terminal_authz::Session;
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::rpc::RpcRequest;
+use ovis_terminal_protocol::schema::limits::TransportKind;
 use serde_json::Value;
 
 use super::Notifier;
@@ -26,6 +27,11 @@ pub struct Call {
 pub trait RequestHandler: Send + Sync + 'static {
     /// Catalog names of the methods this handler implements; hello advertises exactly these.
     fn methods(&self) -> Vec<&'static str>;
+
+    /// Transports the server serving this handler listens on; hello advertises them.
+    fn transports(&self) -> Vec<TransportKind> {
+        vec![TransportKind::Unix]
+    }
 
     /// Settles one call with a result or a typed error.
     fn call(&self, call: Call) -> impl Future<Output = Result<Value, BoundaryError>> + Send;
