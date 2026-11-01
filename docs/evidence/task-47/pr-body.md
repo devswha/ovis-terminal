@@ -227,3 +227,6 @@ Results:
 - `bash scripts/check.sh` exits 0: nextest `1115 tests run: 1115 passed (1 slow), 1 skipped`, hygiene `0 violation(s) in 1107 file(s)` (`r3-check-script.log`).
 - Windows `cargo check` and `cargo clippy -D warnings` exit 0 (`r3-windows.log`).
 - `services/update`: happy has 81 assertions, failure with the plan's `--inject --append` has 48, and `--case all` has 137; all exit 0 (`r3-qa.log`).
+
+
+Addendum (round-3 merge, head d1f2ab2 + this evidence commit): merged origin/integration 8cab061 (T55 processes registration + update lane + announce_report in conformance/src/fixture/serve.rs; stress workflow = integration's file + update option/job last); cargo build exit 0, conformance clippy exit 0, services/update --case all 137 assertions failed:0 skipped:0, all/all 1849 assertions 44 passed failed:0, Windows check/clippy exit 0, check.sh via with-slot exit 0 (docs/evidence/task-47/r4-gates.log). Integration has since moved to b77f0fb (dda248a adds stress probes), so the PR conflicts only in .github/workflows/probe-stress-macos.yml and GitHub runs no CI; awaiting orchestrator union-merge.
