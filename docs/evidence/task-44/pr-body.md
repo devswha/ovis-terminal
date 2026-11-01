@@ -120,3 +120,18 @@ Merge commit `aceba79` merges `origin/integration` 8a436e1 (T29 + T57).
 ## Addendum - merge round 2 (integration 8cab061 + dda248a)
 
 Merge commits `45a401e` (8cab061: the handler.rs/serve.rs union with T55's `processes::register` and shutdown-report helper alongside this lane's `machines` module; suite slice sorted; Cargo.lock regenerated offline) and `70183e1` (dda248a: `machine-actor` stress option/job kept last). The gates were re-run after a host reboot, on Linux x86_64 with binary sha256 `d1c4992325f89cf4add6c0fe342b81ffa39d35b80a34e67031178eb861cd36aa`. `with-slot.sh bash scripts/check.sh` exit 0 (`1136 tests run: 1136 passed (1 slow), 1 skipped`; hygiene `0 violation(s) in 1132 file(s)`). The Windows `cargo check`/`clippy` for `x86_64-pc-windows-gnu` with `-D warnings` exit 0. Lane `cargo test`/`clippy -D warnings` for remote/protocol/server exit 0. `remote/isolation --case all` exit 0 (111 assertions, failed 0, skipped 0). `all/all` exit 0 (44 passed, 1823 assertions, 37 declared-only, failed 0, skipped 0). Logs: `docs/evidence/task-44/r2-*`.
+
+## Addendum - CI round 3 (deadline count race)
+
+- **750584d `rustdoc -D warnings`:** an unresolved [`Inbox`] link in `conformance/src/fixture/machines.rs` is now the full path `ovis_terminal_remote::orphans::Inbox`. `RUSTDOCFLAGS=-Dwarnings cargo doc --no-deps -p ovis-terminal-conformance -p ovis-terminal-remote` exits 0.
+- **750584d `scripts/check.sh (ubuntu)`:** `remote/isolation` happy step 16 read `health.deadline_exceeded` = 1 where 2 was expected.
+  - Root cause (product, not scenario): `Actor::expire` (`crates/ovis-terminal-remote/src/actors/actor/expiry.rs`) answered the caller with `deadline_exceeded`, then awaited the `$/cancelRequest` writes, and only then counted the expiry in health. A caller that read health as soon as it heard of its deadline (the `deliver` replay, which stops on `deadline_exceeded`) could see the old count. How often that happened depended on scheduling.
+  - Fix: `expire` takes the ended calls out of `pending`, records them in health, and only then answers the callers and writes the cancels.
+  - The scenario's `2` is now the guaranteed invariant: step 12's expiry is counted before `bravo-stalls` gets its error, and the replay's expiry is counted before `deliver` sees `stopped: deadline_exceeded`. There are no sleeps or retries, and the scenario is unchanged.
+- **Regression test:** `actors::qa::isolation::an_expiry_is_counted_before_its_caller_hears_of_it`. It uses a 16-byte pipe, so the cancel write is backpressured and the old ordering is parked inside the 1 s control write when the caller reads health. On the old `expiry.rs` it fails deterministically (`r3-mutant-old-order.log`, nextest exit 100). On the fix, `cargo nextest run -p ovis-terminal-remote --lib` passes 41/41 (`r3-remote-tests.log`).
+- **Stress (through the heavy gate):** `remote/isolation --case all`, 25 runs pinned with `taskset -c 0-1` beside 8 busy loops on the same cores: `RESULT 25/25` (`r3-stress25.log`).
+- **Gates on the fixed tree** (Linux x86_64):
+  - `with-slot.sh bash scripts/check.sh` exit 0 (`1137 tests run: 1137 passed (1 slow), 1 skipped`; hygiene `0 violation(s) in 1132 file(s)`).
+  - Windows `cargo check`/`clippy -D warnings` exit 0.
+  - `remote/isolation --case all` exit 0 (111 assertions, failed 0, skipped 0).
+  - `all/all` exit 0 (44 passed, 1823 assertions, failed 0, skipped 0).

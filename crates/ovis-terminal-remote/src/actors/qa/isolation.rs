@@ -157,6 +157,32 @@ async fn a_hung_write_fills_only_that_machines_queue_and_then_loses_its_line() -
 }
 
 #[tokio::test]
+async fn an_expiry_is_counted_before_its_caller_hears_of_it() -> TestResult {
+    let bravo = machine(0xb2);
+    let (actors, _inbound) = Actors::new(limits());
+    actors.add(crate::qa_support::record(0xb2, "bravo")?)?;
+    let (line, mut peer) = pipe(16);
+    actors.attach(&bravo, line).await?;
+    let actors = std::sync::Arc::new(actors);
+    let expiring = {
+        let actors = std::sync::Arc::clone(&actors);
+        tokio::spawn(async move {
+            actors
+                .call(&machine(0xb2), ping(Duration::from_millis(50)))
+                .await
+        })
+    };
+    peer.next().await?;
+    let expired = tokio::time::timeout(HANG, expiring).await??;
+    assert_eq!(
+        expired.map_err(|error| error.kind()),
+        Err("deadline_exceeded")
+    );
+    assert_eq!(actors.health(&bravo)?.deadline_exceeded.get(), 1);
+    Ok(())
+}
+
+#[tokio::test]
 async fn refusals_are_typed_before_anything_is_sent() -> TestResult {
     let bravo = machine(0xb2);
     let (actors, _inbound, _peers) = served(limits(), &[(0xb2, "bravo")]).await?;

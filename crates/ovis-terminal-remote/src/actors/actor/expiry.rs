@@ -1,5 +1,7 @@
 //! Failing calls past their deadline, or whose caller left, and cancelling them remotely.
 
+use std::collections::BTreeMap;
+
 use serde_json::json;
 use tokio::time::Instant;
 
@@ -8,21 +10,27 @@ use crate::actors::line::Line;
 
 impl<L: Line> Actor<L> {
     /// Fails calls past their deadline, or whose caller left, and tells the peer to cancel.
+    ///
+    /// Health records the expiries before any caller is answered, so a caller that reads
+    /// health after its `deadline_exceeded` always sees its own expiry counted.
     pub(super) async fn expire(&mut self) {
         let now = Instant::now();
-        let ended: Vec<u64> = self
-            .pending
+        let (removed, kept): (BTreeMap<_, _>, BTreeMap<_, _>) = std::mem::take(&mut self.pending)
+            .into_iter()
+            .partition(|(_, pending)| pending.due <= now || pending.reply.is_closed());
+        self.pending = kept;
+        let expired = removed
             .iter()
-            .filter(|(_, pending)| pending.due <= now || pending.reply.is_closed())
-            .map(|(id, _)| *id)
-            .collect();
-        let mut expired = 0_u64;
-        for id in ended {
-            let Some(pending) = self.pending.remove(&id) else {
-                continue;
-            };
+            .filter(|(_, pending)| pending.due <= now)
+            .count();
+        if expired > 0 {
+            let expired = u64::try_from(expired).unwrap_or(u64::MAX);
+            self.health.expired((expired, self.pending.len()));
+        } else {
+            self.health.in_flight(self.pending.len());
+        }
+        for (id, pending) in removed {
             if pending.due <= now {
-                expired = expired.saturating_add(1);
                 let machine = self.machine.clone();
                 let deadline = pending.deadline;
                 drop(
@@ -34,11 +42,6 @@ impl<L: Line> Actor<L> {
             let cancel = json!({"jsonrpc": "2.0", "method": "$/cancelRequest",
                 "params": {"id": id.to_string()}});
             self.write_control(&cancel).await;
-        }
-        if expired > 0 {
-            self.health.expired((expired, self.pending.len()));
-        } else {
-            self.health.in_flight(self.pending.len());
         }
     }
 }
