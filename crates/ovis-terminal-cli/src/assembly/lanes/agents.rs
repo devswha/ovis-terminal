@@ -1,5 +1,5 @@
 //! Agent lanes: status, prompts (recovered from the log), session binding, reported
-//! conversation records and the agent tree.
+//! conversation records, provider history and the agent tree.
 
 use std::sync::Arc;
 
@@ -8,10 +8,12 @@ use ovis_terminal_agent::conversation::records::RecordsService;
 use ovis_terminal_agent::prompts::PromptService;
 use ovis_terminal_agent::status::StatusService;
 use ovis_terminal_agent::tree::TreeService;
+use ovis_terminal_authz::validation::ScopedRoot;
 use ovis_terminal_server::dispatch::lanes::agent_status::{
     AgentStatusLane, ClearStatus, GetAgent, GetStatus, RegisterAgent, ReportStatus,
 };
 use ovis_terminal_server::dispatch::lanes::agent_tree::{AgentTreeLane, ListChildren};
+use ovis_terminal_server::dispatch::lanes::boundary_policy::AgentHistory;
 use ovis_terminal_server::dispatch::lanes::conversation_records::{
     AppendRecords, ConversationRecordsLane, Records,
 };
@@ -72,6 +74,17 @@ fn prompt_routes(
         .map_err(stage("register prompt.list"))
 }
 
+/// `agent.history`: provider sessions below the state's authorized store root, listed as
+/// inert data by an unrecorded read; a path leaving the root is `forbidden`.
+fn history(dispatch: &mut Dispatch, hosting: &Hosting<'_>) -> Result<(), AssemblyError> {
+    let root = hosting.state.join("agent-stores");
+    std::fs::create_dir_all(&root).map_err(stage("create the agent store root"))?;
+    let scoped = ScopedRoot::open(&root).map_err(stage("open the agent store root"))?;
+    dispatch
+        .register_read(AgentHistory::new(scoped, hosting.identity.machine_id()))
+        .map_err(stage("register agent.history"))
+}
+
 /// Registers the agent lanes over one status service, with open prompts recovered.
 pub(super) fn register(
     dispatch: &mut Dispatch,
@@ -101,6 +114,7 @@ pub(super) fn register(
     dispatch
         .register_read(Records::new(&reported))
         .map_err(stage("register agent.records"))?;
+    history(dispatch, hosting)?;
     let stores = Stores::new(&[]).map_err(stage("authorize session stores"))?;
     let binding = Arc::new(BindingService::new(runtime, status, stores));
     let sessions = SessionBindingLane::new(Arc::clone(&hosting.directory), binding);

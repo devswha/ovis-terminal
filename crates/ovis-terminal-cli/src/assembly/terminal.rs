@@ -9,6 +9,7 @@ use ovis_terminal_agent::status::ProcessOwner;
 use ovis_terminal_authz::Session;
 use ovis_terminal_core::registry::{ResourceName, TerminalId};
 use ovis_terminal_core::terminals::{Call, Launch, LaunchState, Program, TerminalError};
+use ovis_terminal_protocol::domain::boundary_policy::{LaunchArgv, LaunchEnvironment};
 use ovis_terminal_protocol::errors::{BoundaryError, OpId};
 use ovis_terminal_protocol::schema::common::Target;
 use ovis_terminal_protocol::schema::ids::ProcessToken;
@@ -63,6 +64,18 @@ fn launch(params: TerminalRunParams) -> Result<(Launch, ProcessToken), TerminalE
     Ok((launch, token))
 }
 
+/// Refuses an oversized or unsafe launch before anything is admitted (plan todo 58): the
+/// argv and environment bounds, NUL bytes and runtime-reserved variables.
+fn bounded(params: &TerminalRunParams) -> Result<(), BoundaryError> {
+    if let Some(LaunchProgram::Argv(argv)) = &params.program {
+        LaunchArgv::parse(argv).map_err(|violation| violation.to_boundary())?;
+    }
+    if let Some(env) = &params.env {
+        LaunchEnvironment::parse(env).map_err(|violation| violation.to_boundary())?;
+    }
+    Ok(())
+}
+
 impl Runtime {
     pub(super) fn resolve_id(&self, target: &Target) -> Result<TerminalId, BoundaryError> {
         match target {
@@ -84,6 +97,7 @@ impl Runtime {
         session: &Session,
         params: TerminalRunParams,
     ) -> Result<Value, BoundaryError> {
+        bounded(&params)?;
         let op_id: OpId = params.op_id.clone();
         let grid = params.geometry;
         let (launch, token) = launch(params).map_err(|error| terminal_refusal(&error))?;

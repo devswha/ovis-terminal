@@ -26,8 +26,7 @@ use serde_json::{Value, json};
 use support::{BIN, Served, TestResult, op_id};
 
 /// Schema methods no landed crate implements; each must answer `method_not_found`.
-const UNIMPLEMENTED: [&str; 37] = [
-    "agent.history",
+const UNIMPLEMENTED: [&str; 36] = [
     "agent.list",
     "agent.note",
     "agent.release",

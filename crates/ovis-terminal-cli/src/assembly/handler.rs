@@ -17,6 +17,7 @@ use ovis_terminal_protocol::schema::methods::terminal::{TerminalGetParams, Termi
 use ovis_terminal_protocol::schema::records::LeaseRole;
 use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::conn::{Call, RequestHandler};
+use ovis_terminal_server::dispatch::lanes::boundary_policy::BoundaryPolicy;
 use ovis_terminal_server::dispatch::lanes::health::Measured;
 use ovis_terminal_server::streams::{AttachHandler, AttachLane};
 use ovis_terminal_store::OpId as StoreOpId;
@@ -215,8 +216,10 @@ impl Served {
     }
 }
 
-/// The connection handler: every call's latency is measured around authorization.
-pub(super) type Handler = Measured<Revalidated<Assembled>>;
+/// The connection handler: credentials are revalidated first, then every call's latency is
+/// measured around the boundary policy, which audits it and enforces payload and path
+/// bounds before the routes see it.
+pub(super) type Handler = Revalidated<Measured<BoundaryPolicy<Assembled>>>;
 
 /// The attach stream methods in front of [`Served`], with the geometry claim on open.
 #[derive(Debug)]

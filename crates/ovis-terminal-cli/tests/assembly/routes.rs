@@ -142,6 +142,33 @@ fn input_barrier_reports_the_admitted_input_reached_once_its_echo_arrived() -> T
 }
 
 #[test]
+fn agent_history_lists_only_below_its_root_and_the_boundary_policy_bounds_payloads() -> TestResult {
+    let served = Served::start()?;
+    let stores = served.root().join("state").join("agent-stores");
+    std::fs::create_dir_all(stores.join("claude"))?;
+    std::fs::write(stores.join("claude").join("session-1.jsonl"), b"{}\n")?;
+    let listed = call(&served, "agent.history", &json!({"store": "claude"}))?;
+    let sessions = listed.get("sessions").and_then(Value::as_array);
+    assert_eq!(sessions.map(Vec::len), Some(1), "{listed}");
+    let escaped = error(&served, "agent.history", &json!({"store": "../../secret"}))?;
+    assert_eq!(escaped.get("kind"), Some(&json!("forbidden")), "{escaped}");
+    let huge = "x".repeat(70_000);
+    let run = json!({"op_id": op_id()?, "program": {"argv": ["/bin/echo", huge]},
+        "geometry": {"cols": 80, "rows": 24}, "cwd": "/tmp", "env": {}, "name": null,
+        "labels": null, "parent": null, "child_policy": null, "keep": null,
+        "first_message": null, "machine": null});
+    let bounded = error(&served, "terminal.run", &run)?;
+    assert_ne!(
+        bounded.get("kind"),
+        Some(&json!("spawn_failed")),
+        "{bounded}"
+    );
+    assert!(bounded.get("bound").is_some(), "{bounded}");
+    served.stop()?;
+    Ok(())
+}
+
+#[test]
 fn service_describe_and_machine_add_answer_typed_outcomes_over_the_socket() -> TestResult {
     let served = Served::start()?;
     let described = error(&served, "service.describe", &json!({}))?;

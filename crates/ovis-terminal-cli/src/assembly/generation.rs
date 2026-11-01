@@ -4,6 +4,7 @@
 //! dispatcher and serves a new generation under the successor identity on the same
 //! endpoint, then says so on stdout.
 
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -12,8 +13,10 @@ use ovis_terminal_authz::Authority;
 use ovis_terminal_core::health::Health;
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
 use ovis_terminal_core::restart::Control;
+use ovis_terminal_core::telemetry::redaction::RetentionPolicy;
 use ovis_terminal_protocol::schema::limits::TransportKind;
 use ovis_terminal_server::authn::Revalidated;
+use ovis_terminal_server::dispatch::lanes::boundary_policy::{AuditTrail, BoundaryPolicy};
 use ovis_terminal_server::dispatch::lanes::health::Measured;
 use ovis_terminal_server::listen::{
     ServeReport, ServerConfig, ServerHandle, UnixEndpoint, serve_unix,
@@ -45,6 +48,18 @@ pub(super) struct Shared {
     pub(super) journal: Arc<BootJournal>,
     pub(super) stop: StopSignal,
     pub(super) restart: RestartSignal,
+}
+
+/// Calls each boot's audit trail keeps, and for how long.
+const AUDIT_RECORDS: usize = 1024;
+const AUDIT_RETAINED_MS: u64 = 10 * 60 * 1000;
+
+/// The audit trail of `identity`'s boot.
+fn audit(identity: RuntimeIdentity) -> Result<Arc<AuditTrail>, AssemblyError> {
+    let records = NonZeroUsize::new(AUDIT_RECORDS)
+        .ok_or_else(|| AssemblyError::start("size the audit trail")("no records"))?;
+    let policy = RetentionPolicy::new(records, AUDIT_RETAINED_MS);
+    Ok(Arc::new(AuditTrail::new(identity, policy)))
 }
 
 /// How a generation's listeners end.
@@ -100,8 +115,10 @@ impl Generation {
             served,
             transports,
         };
-        let revalidated = Revalidated::new(Arc::clone(&shared.authority), assembled);
-        let handler = Arc::new(Measured::new(health, Arc::new(revalidated)));
+        let policed =
+            BoundaryPolicy::new((Arc::clone(&shared.authority), audit(identity)?), assembled);
+        let measured = Measured::new(health, Arc::new(policed));
+        let handler = Arc::new(Revalidated::new(Arc::clone(&shared.authority), measured));
         let endpoint = UnixEndpoint::bind(&shared.socket)
             .await
             .map_err(AssemblyError::Endpoint)?;
