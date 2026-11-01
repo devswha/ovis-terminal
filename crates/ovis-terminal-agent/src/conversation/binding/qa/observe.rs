@@ -27,6 +27,47 @@ fn transcript(
     }
 }
 
+/// A transcript bound inside the store, then swapped for a link that leaves it, is refused
+/// at read time; the outside file's bytes are never returned.
+#[cfg(unix)]
+#[test]
+fn a_transcript_replaced_by_an_outside_link_after_binding_is_refused() -> Result<(), TestCaseError>
+{
+    use crate::conversation::binding::BindingError;
+    let fail = |e: std::io::Error| TestCaseError::fail(e.to_string());
+    let base = std::env::temp_dir().join(format!("ovis-t64-link-{}", uuid::Uuid::now_v7()));
+    let (store, outside) = (base.join("store"), base.join("outside"));
+    std::fs::create_dir_all(store.join("nested")).map_err(fail)?;
+    std::fs::create_dir_all(&outside).map_err(fail)?;
+    std::fs::write(store.join("t.jsonl"), b"inside\n").map_err(fail)?;
+    std::fs::write(store.join("nested/n.jsonl"), b"inside\n").map_err(fail)?;
+    std::fs::write(outside.join("t.jsonl"), b"outside secret\n").map_err(fail)?;
+    std::fs::write(outside.join("n.jsonl"), b"outside secret\n").map_err(fail)?;
+    let file = transcript(&store, "t.jsonl")?;
+    let nested = transcript(&store, "nested/n.jsonl")?;
+    prop_assert_eq!(
+        read(&file)
+            .map_err(|e| TestCaseError::fail(e.to_string()))?
+            .bytes,
+        b"inside\n"
+    );
+
+    std::fs::remove_file(store.join("t.jsonl")).map_err(fail)?;
+    std::os::unix::fs::symlink(outside.join("t.jsonl"), store.join("t.jsonl")).map_err(fail)?;
+    std::fs::remove_dir_all(store.join("nested")).map_err(fail)?;
+    std::os::unix::fs::symlink(&outside, store.join("nested")).map_err(fail)?;
+
+    for path in [&file, &nested] {
+        let refused = read(path);
+        prop_assert!(
+            matches!(refused, Err(BindingError::OutsideStores)),
+            "{refused:?}"
+        );
+    }
+    std::fs::remove_dir_all(&base).map_err(fail)?;
+    Ok(())
+}
+
 proptest! {
     #[test]
     fn appends_rewrites_and_truncations_are_told_apart(
