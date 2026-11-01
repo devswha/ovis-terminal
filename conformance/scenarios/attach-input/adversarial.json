@@ -128,7 +128,9 @@
                   "$present": false
                 },
                 "/result/outcome": "matched",
-                "/result/matched_at": "0"
+                "/result/matched_at": {
+                  "$capture": "prompt_at"
+                }
               }
             }
           }
@@ -1073,7 +1075,10 @@
                 "/error": {
                   "$present": false
                 },
-                "/result/outcome": "matched"
+                "/result/outcome": "matched",
+                "/result/cursor/offset": {
+                  "$capture": "stall_end"
+                }
               }
             }
           }
@@ -1125,9 +1130,7 @@
                 },
                 "/result/receipt/admitted_bytes": "65536",
                 "/result/receipt/queued_seq": "1",
-                "/result/receipt/output_cursor": {
-                  "offset": "7"
-                }
+                "/result/receipt/output_cursor/offset": "$value:stall_end"
               },
               "q2": {
                 "/error": {

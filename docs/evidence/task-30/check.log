@@ -1,32 +1,3 @@
-        PASS [  14.063s] (1425/1430) ovis-terminal-server::dispatch bounds::timed_out_work_keeps_its_connection_budget_and_control_remains_available
-        PASS [  33.831s] (1426/1430) ovis-terminal-server::ops_cancel cancel_race::every_parallel_interleaving_keeps_cancel_truthful
-        SLOW [> 60.000s] (─────────) ovis-terminal-conformance::runner suite::every_scenario_file_is_executed_or_a_listed_declaration
-        SLOW [> 60.000s] (─────────) ovis-terminal-conformance::runner suite::require_no_skips_fails_while_declarations_remain
-        SLOW [> 60.000s] (─────────) ovis-terminal-core restart::qa::readiness::a_caller_racing_a_planned_restart_is_told_restarting_never_control_stopped
-        SLOW [> 60.000s] (─────────) ovis-terminal-core::ops bounds::capacity_accepts_1024_and_rejects_1025_without_eviction
-        PASS [  77.896s] (1427/1430) ovis-terminal-core restart::qa::readiness::a_caller_racing_a_planned_restart_is_told_restarting_never_control_stopped
-        PASS [ 103.271s] (1428/1430) ovis-terminal-core::ops bounds::capacity_accepts_1024_and_rejects_1025_without_eviction
-        SLOW [>120.000s] (─────────) ovis-terminal-conformance::runner suite::every_scenario_file_is_executed_or_a_listed_declaration
-        SLOW [>120.000s] (─────────) ovis-terminal-conformance::runner suite::require_no_skips_fails_while_declarations_remain
-        PASS [ 131.713s] (1429/1430) ovis-terminal-conformance::runner suite::require_no_skips_fails_while_declarations_remain
-        PASS [ 133.153s] (1430/1430) ovis-terminal-conformance::runner suite::every_scenario_file_is_executed_or_a_listed_declaration
-────────────
-     Summary [ 136.295s] 1430 tests run: 1430 passed (4 slow), 2 skipped
-
-==> cargo test --doc --workspace --all-features --locked
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.08s
-   Doc-tests ovis_terminal_agent
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-
-   Doc-tests ovis_terminal_agent_adapters
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-
    Doc-tests ovis_terminal_authz
 
 running 0 tests
@@ -113,8 +84,37 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 
 ==> cargo test --locked -p ovis-terminal-core --test subscriptions
+   Compiling quote v1.0.47
+   Compiling once_cell v1.21.4
+   Compiling tempfile v3.27.0
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling rusty-fork v0.3.1
+   Compiling proptest v1.12.0
+   Compiling thiserror-impl v1.0.69
+   Compiling serde_derive_internals v0.30.0
+   Compiling thiserror v1.0.69
+   Compiling filedescriptor v0.8.3
+   Compiling serde_derive v1.0.229
+   Compiling ref-cast-impl v1.0.27
+   Compiling thiserror-impl v2.0.21
+   Compiling tokio-macros v2.7.2
+   Compiling portable-pty v0.9.0
+   Compiling schemars_derive v1.2.3
+   Compiling ref-cast v1.0.27
+   Compiling tokio v1.54.1
+   Compiling thiserror v2.0.21
+   Compiling serde v1.0.229
+   Compiling schemars v1.2.3
+   Compiling vte v0.15.0
+   Compiling alacritty_terminal v0.26.0
+   Compiling ovis-terminal-protocol v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t30/crates/ovis-terminal-protocol)
+   Compiling ovis-terminal-store v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t30/crates/ovis-terminal-store)
+   Compiling ovis-terminal-holder v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t30/crates/ovis-terminal-holder)
+   Compiling ovis-terminal-vt v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t30/crates/ovis-terminal-vt)
+   Compiling ovis-terminal-authz v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t30/crates/ovis-terminal-authz)
    Compiling ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t30/crates/ovis-terminal-core)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.73s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 24.70s
      Running tests/subscriptions.rs (/dev/shm/ovt-target-lane-t30/debug/deps/subscriptions-2118d7585f2c3018)
 
 running 22 tests
@@ -126,14 +126,14 @@ test wire::loss_markers_round_trip_every_sequence_as_a_decimal_string ... ok
 test wire::subscribe_parameters_decode_to_one_start_and_selector ... ok
 test wire::unusable_filters_and_cursors_are_typed_rejections ... ok
 test health::a_real_stalled_subscription_reports_its_queue_loss_and_resync ... ok
+test independence::an_idle_filtered_subscription_heartbeats_its_scan_cursor_and_identity ... ok
+test happy ... ok
 test failure ... ok
 test replay::a_cursor_ahead_of_the_head_installs_nothing ... ok
-test independence::an_idle_filtered_subscription_heartbeats_its_scan_cursor_and_identity ... ok
-test independence::unsubscribing_one_subscription_leaves_the_others_delivering ... ok
 test independence::the_subscription_limit_refuses_without_disturbing_installed_ones ... ok
+test independence::unsubscribing_one_subscription_leaves_the_others_delivering ... ok
 test replay::an_expired_cursor_misses_with_a_fresh_snapshot_and_the_floor_still_resumes ... ok
 test loss::a_forced_close_marker_names_the_first_undelivered_event_and_reconnect_replays_it ... ok
-test happy ... ok
 test loss::a_withheld_consumer_recovers_from_its_durable_marker_and_continues ... ok
 test stall::a_stalled_fanout_worker_loses_every_subscription_and_each_recovers ... ok
 test loss::the_session_budget_evicts_the_largest_queue_not_the_draining_one ... ok
@@ -151,7 +151,7 @@ workspace-hygiene: 0 violation(s) in 1449 file(s) checked
 manifests.sh: 16 member manifest(s) checked
 
 ==> bash scripts/hygiene/json.sh
-json.sh: 257 JSON file(s) checked
+json.sh: 258 JSON file(s) checked
 
 ==> cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin source-check -- --roots crates packages/client-ts conformance bench probes --max-pure-loc 250 --max-params 3 --violations docs/research/violations.md --checklist docs/quality-checklist.md
 {

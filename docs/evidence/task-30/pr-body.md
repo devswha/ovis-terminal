@@ -17,14 +17,14 @@ Host: Linux 7.0.0-38-generic x86_64 (`{"arch":"x86_64","family":"unix","os":"lin
 
 ```
 $ cargo run -q --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary /dev/shm/ovt-target-lane-t30/debug/ovis-terminal --scenario part-a/task-30 --isolated --case happy --evidence docs/evidence/task-30/task-30-happy.json
-{"case":"happy",...,"result":"passed","scenario":"part-a/task-30","totals":{"assertions":"386","cases":"1","failed":"0","passed":"1","skipped":"0"}}
+{"case":"happy",...,"result":"passed","scenario":"part-a/task-30","totals":{"assertions":"397","cases":"1","failed":"0","passed":"1","skipped":"0"}}
 EXIT=0
 $ ... --case failure --evidence docs/evidence/task-30/task-30-failure.json
-{"case":"failure",...,"result":"passed","scenario":"part-a/task-30","totals":{"assertions":"149","cases":"1","failed":"0","passed":"1","skipped":"0"}}
+{"case":"failure",...,"result":"passed","scenario":"part-a/task-30","totals":{"assertions":"150","cases":"1","failed":"0","passed":"1","skipped":"0"}}
 EXIT=0
 ```
 
-Socket transcript lines, verbatim from `task-30-happy.json`. The full excerpt (49 lines, both cases) is in `docs/evidence/task-30/after-transcript.md`.
+Socket transcript lines, verbatim from `task-30-happy.json`. The full excerpt (55 lines, both cases) is in `docs/evidence/task-30/after-transcript.md`.
 
 ```
 [control sent 46ms] {"id":"mark-wait",...,"method":"terminal.wait_output","params":{"cursor":{"offset":"2"},"pattern":{"text":"mark-42"},...}}
@@ -38,8 +38,9 @@ Socket transcript lines, verbatim from `task-30-happy.json`. The full excerpt (4
 
 The run uses the real `ovis-terminal serve` with a 64 KiB QA output ring.
 - **Advertised budgets in hello:** output ring 64 MiB, credit 256 KiB initial and 1 MiB max, input queue 16 MiB, session retained 4 GiB, session input and backlog 64 MiB each, VT 128 MiB, plus a stream backlog.
-- **First-paint parity:** the prompt is matched at offset 0. An interact writer and an observe-only viewer then receive the *identical* `first_paint` (the whole Checkpoint object, output_offset 2).
-- **Admission before delivery:** the `input.send` receipt has `admitted_bytes` "19", `queued_seq` "1" and `output_cursor` `{"offset":"2"}`, which is before the echo. The marker `mark-42` (the shell's evaluation, not the echoed command) matches at exactly offset 22. `input.barrier` on seq 1 then answers `reached` with 0 pending bytes.
+- **First-paint parity:** the prompt is matched, and the raw bytes at its `matched_at` read back as `$ `. An interact writer and an observe-only viewer then receive the *identical* `first_paint` (the whole Checkpoint object), whose `output_offset` is the prompt's end.
+- **Admission before delivery:** the `input.send` receipt has `admitted_bytes` "19" and `queued_seq` "1". Its `output_cursor` is the prompt's end, which is before the echo. The marker `mark-42` (the shell's evaluation, not the echoed command) matches exactly 20 bytes (the echoed command line) after that cursor, and the raw bytes at `matched_at` read back as `mark-42`. `input.barrier` on seq 1 then answers `reached` with 0 pending bytes.
+- **Offsets are relative to the run's own output, never absolute.** On Linux the prompt is at offset 0 (end 2, marker 22). On macOS, bash-as-`/bin/sh` first prints 8 invisible bytes: the screen revision advances once while the cursor stays at column 0, consistent with readline's `ESC[?1034h`. There the prompt ends at 10 (CI run 41347244132, artifact `all-families.json`). The product's byte accounting is the same on both platforms.
 - **Operator lease:**
   - The operator is `held` behind the writer. Its retry boundary is `{"on":"lease_released","lease":{"holder":"writer"}}`, with the epoch it observed.
   - It takes over by that epoch. The writer's stream reports, in order: checkpoint, input_ready, input_revoked, close `taken_over` by `operator`.
@@ -89,6 +90,12 @@ Each step below ends in a typed rejection or an asserted outcome.
 ### QA seam (disclosed, T31 precedent)
 
 `serve --qa-output-ring-bytes <N>` (N ≥ 4096) sets the raw output each terminal retains for `terminal.output` and output waits. The default is 8 MiB. The checkpoint interval (N/2) and parse slice (min(N/4, 64 KiB)) shrink with it, so the screen's retention invariant still holds. It is documented in `serve --help`. Like `--qa-holder-poll-ms` and `--qa-actor-hold`, it is refused (`accept the QA seams`) unless `--root` holds a `qa-fixture` file. The runner's `serve` step takes `"qa_output_ring_bytes": "<decimal>"`, which marks `<root>/srv` a QA fixture root and passes the flag. `pending::a_qa_seam_is_refused_on_a_root_that_is_not_a_qa_fixture_root` now covers both seams.
+
+### Round 2: macOS CI fix (b0d9bbd → this head)
+
+On macOS, all four task-30 cases failed at step 6: `reply[prompt]/result/matched_at` was "8" where "0" was expected. The artifact's first paints for `/bin/sh` show `output_offset` 10 and `revision` 3 on macOS, against 2 and 2 on Linux, with the cursor at column 2, row 0 on both and no modes enabled. So the program printed 8 invisible bytes before `$ `, matching bash 3.2/readline's 8-byte meta-mode sequence `ESC[?1034h` under `TERM=xterm`. The offsets are byte-exact raw-output offsets on both platforms, so this is not a product defect.
+
+The scenarios now capture the prompt's `matched_at` and its end cursor. They check the raw bytes at each match (`terminal.output` from `matched_at` returns `$ ` and `mark-42`), and the Rust test checks the arithmetic (marker = prompt end + echoed line). There are no `cfg` forks. A scratch variant that prints `ESC[?1034h` before `exec /bin/sh` passes on Linux.
 
 ## Reported findings (not fixed here; for F4 unless noted)
 

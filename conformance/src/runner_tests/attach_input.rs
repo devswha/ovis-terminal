@@ -37,9 +37,12 @@ fn passed(scenario: &str, case: &str) -> TestResult<Ran> {
     Ok(ran)
 }
 
-/// Both viewers get one first paint, input is admitted before its output, the marker
-/// wait matches the exact offset, the operator takes the lease over by epoch, retention
-/// stays at floor 0, and every 16-PTY admission and echo sample answers within 100 ms.
+/// Both viewers get one first paint at the prompt's end, input is admitted there before
+/// its output, the marker wait matches exactly one echoed command line later, the
+/// operator takes the lease over by epoch, the ring overflows into an accounted gap, and
+/// every 16-PTY admission and echo sample answers within 100 ms. Offsets are relative to
+/// the run's own prompt: a program may print invisible bytes first (Darwin's bash sends
+/// the 8-byte `ESC[?1034h`).
 #[test]
 fn happy() -> TestResult {
     let ran = passed("part-a/task-30", "happy")?;
@@ -48,12 +51,22 @@ fn happy() -> TestResult {
         held(&ran, "reply[observer-open]/result/first_paint")?,
         paint
     );
-    assert_eq!(field(paint, "/output_offset"), "2");
+    let prompt_end = held(&ran, "reply[prompt]/result/cursor/offset")?;
+    assert_eq!(field(paint, "/output_offset"), prompt_end);
+    assert_eq!(held(&ran, "reply[prompt-bytes]/result/data_b64")?, "JCA=");
     assert_eq!(
-        *held(&ran, "reply[mark]/result/receipt/output_cursor")?,
-        serde_json::json!({"offset": "2"})
+        held(&ran, "reply[mark]/result/receipt/output_cursor/offset")?,
+        prompt_end
     );
-    assert_eq!(held(&ran, "reply[mark-wait]/result/matched_at")?, "22");
+    let echoed = u64::try_from("echo mark-$((6*7))\r\n".len())?;
+    assert_eq!(
+        decimal(&ran, "reply[mark-wait]/result/matched_at")?,
+        decimal(&ran, "reply[prompt]/result/cursor/offset")? + echoed
+    );
+    assert_eq!(
+        held(&ran, "reply[mark-bytes]/result/data_b64")?,
+        "bWFyay00Mg=="
+    );
     assert_eq!(held(&ran, "reply[mark-barrier]/result/reached")?, true);
     assert_eq!(
         held(&ran, "reply[operator-open]/result/retry/on")?,
