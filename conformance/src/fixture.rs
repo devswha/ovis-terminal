@@ -24,6 +24,8 @@ pub mod machines;
 #[cfg(unix)]
 pub mod output;
 #[cfg(unix)]
+pub mod peer;
+#[cfg(unix)]
 pub mod processes;
 #[cfg(unix)]
 pub mod prompts;
@@ -31,6 +33,8 @@ pub mod prompts;
 pub mod rotation;
 #[cfg(unix)]
 pub mod serve;
+#[cfg(unix)]
+pub mod services;
 #[cfg(unix)]
 pub mod template_lane;
 #[cfg(unix)]
@@ -46,10 +50,37 @@ pub mod wire;
 #[cfg(unix)]
 pub(crate) use serve::serve;
 
+/// Which runtime a fixture process is: the one the runner drives, or the second private
+/// runtime it reaches as machine `peer`.
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub enum Role {
+    /// The runtime under test; `binary` carries its line to the peer.
+    Local {
+        /// The binary under test.
+        binary: Option<std::path::PathBuf>,
+    },
+    /// The second private runtime.
+    Peer,
+}
+
+impl Role {
+    /// The role the fixture command line asks for.
+    #[must_use]
+    pub fn of(peer: bool, binary: Option<std::path::PathBuf>) -> Self {
+        if peer {
+            Self::Peer
+        } else {
+            Self::Local { binary }
+        }
+    }
+}
+
 /// Without a Unix listener the fixture cannot bind its endpoint; already settled.
 #[cfg(not(unix))]
 pub(crate) fn serve(
     _: &std::path::Path,
+    _: Role,
 ) -> std::future::Ready<Result<(), crate::error::RunnerError>> {
     std::future::ready(Err(crate::error::RunnerError::Fixture {
         stage: "bind a listener",

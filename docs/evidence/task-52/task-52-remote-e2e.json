@@ -1,0 +1,1334 @@
+{
+  "binary": {
+    "bytes": "60562832",
+    "path": "/dev/shm/ovt-target-lane-t52/debug/ovis-terminal",
+    "sha256": "f0cc6a64a121993314eb5b5e02d545c8e5a6ae050f512a4fdf4979fd6f2cf903"
+  },
+  "case": "all",
+  "cases": [
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[describe]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "/usr/bin/env",
+            "OVIS_TERMINAL_SOCKET=/tmp/ovc-2958331-0/peer-0/run/s.sock",
+            "/dev/shm/ovt-target-lane-t52/debug/ovis-terminal",
+            "connect"
+          ],
+          "check": "reply[describe]/result/argv",
+          "expected": {
+            "$capture": "peer_argv"
+          },
+          "passed": true
+        },
+        {
+          "actual": "ovt1.c1.609dc895e78947c6bbaf2065bffc2441ff9792c16dcb4a3b8190f099327f4d81",
+          "check": "reply[describe]/result/credential",
+          "expected": {
+            "$capture": "peer_credential"
+          },
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+          "check": "reply[describe]/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+          "passed": true
+        },
+        {
+          "actual": [
+            "describe"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "describe"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[add-peer]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+          "check": "reply[add-peer]/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+          "passed": true
+        },
+        {
+          "actual": "peer",
+          "check": "reply[add-peer]/result/name",
+          "expected": "peer",
+          "passed": true
+        },
+        {
+          "actual": "connected",
+          "check": "reply[add-peer]/result/state",
+          "expected": "connected",
+          "passed": true
+        },
+        {
+          "actual": [
+            "add-peer"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "add-peer"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[roster]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+          "check": "reply[roster]/result/machines/2/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+          "passed": true
+        },
+        {
+          "actual": "connected",
+          "check": "reply[roster]/result/machines/2/state",
+          "expected": "connected",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[roster]/result/machines/3",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "roster"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "roster"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[run-local]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[run-local]/result/process_incarnation",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "terminal:6",
+          "check": "reply[run-local]/result/terminal_id",
+          "expected": {
+            "$capture": "run-local_terminal"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "run-local"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "run-local"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[run-peer]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[run-peer]/result/process_incarnation",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "terminal:6",
+          "check": "reply[run-peer]/result/terminal_id",
+          "expected": {
+            "$capture": "run-peer_terminal"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "run-peer"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "run-peer"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[peer-exits]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "recorded",
+          "check": "reply[peer-exits]/result/finished",
+          "expected": "recorded",
+          "passed": true
+        },
+        {
+          "actual": [
+            "peer-exits"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "peer-exits"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[local-live]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[local-live]/result/incarnation",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "reply[local-live]/result/kills",
+          "expected": "0",
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "reply[local-live]/result/live",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": [
+            "local-live"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "local-live"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[peer-ended]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[peer-ended]/result/incarnation",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[peer-ended]/result/live",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": [
+            "peer-ended"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "peer-ended"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[stall]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "reply[stall]/result/stopped",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": [
+            "stall"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "stall"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[local-during-stall]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "reply[local-during-stall]/result/live",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[roster-during-stall]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+          "check": "reply[roster-during-stall]/result/machines/2/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+          "passed": true
+        },
+        {
+          "actual": "connected",
+          "check": "reply[roster-during-stall]/result/machines/2/state",
+          "expected": "connected",
+          "passed": true
+        },
+        {
+          "actual": "deadline_exceeded",
+          "check": "reply[peer-stalls]/error/data/kind",
+          "expected": "deadline_exceeded",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[peer-stalls]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "local-during-stall",
+            "peer-stalls",
+            "roster-during-stall"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "local-during-stall",
+            "peer-stalls",
+            "roster-during-stall"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[resume]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[resume]/result/stopped",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": [
+            "resume"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "resume"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[peer-after-stall]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[peer-after-stall]/result/live",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": [
+            "peer-after-stall"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "peer-after-stall"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "4923",
+          "check": "connection[bridge]/bytes_received=bytes_decoded",
+          "expected": "4923",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "happy",
+      "connections": [
+        {
+          "bytes_decoded": "4923",
+          "bytes_received": "4923",
+          "bytes_sent": "2149",
+          "name": "bridge",
+          "records_received": "15",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "3867f06f11674ff049348c3178b6ae7238e287e75ae72927a6b9aa6e3d8d039a",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "1888",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "745bc386c590ac8d0b97bc412ce9073f68fbe09379d4d06c88875fb4a03f921f",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"server.status\",\"server.metrics\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.first_message\",\"terminal.keep\",\"terminal.process_info\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793523838037\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "89",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "f92b9e9575bf45f7fce01aa63b3c609c4069c4a2f56435436812ef2f43d3f127",
+              "text": "{\"id\":\"describe\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.peer\",\"params\":{\"action\":\"describe\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "151",
+              "bytes": "338",
+              "direction": "received",
+              "offset": "1888",
+              "sha256": "27ed60cdcf4f66feb7580441e8ef741b378e521381b08d8eb3eb0a4dcd645649",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"describe\",\"result\":{\"argv\":[\"/usr/bin/env\",\"OVIS_TERMINAL_SOCKET=/tmp/ovc-2958331-0/peer-0/run/s.sock\",\"/dev/shm/ovt-target-lane-t52/debug/ovis-terminal\",\"connect\"],\"credential\":\"<redacted-credential>\",\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000c3\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "151",
+              "bytes": "445",
+              "direction": "sent",
+              "offset": "323",
+              "sha256": "68a9c96986d13363f476b3b61fb3c40497f427fb5d1deb83d8323bf0ceb62c28",
+              "text": "{\"id\":\"add-peer\",\"jsonrpc\":\"2.0\",\"method\":\"machine.add\",\"params\":{\"credential\":\"<redacted-credential>\",\"expected_machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000c3\",\"name\":\"peer\",\"op_id\":\"01a19659-ecea-75bd-80c7-30bf624cd4a8\",\"transport\":{\"argv\":[\"/usr/bin/env\",\"OVIS_TERMINAL_SOCKET=/tmp/ovc-2958331-0/peer-0/run/s.sock\",\"/dev/shm/ovt-target-lane-t52/debug/ovis-terminal\",\"connect\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "175",
+              "bytes": "263",
+              "direction": "received",
+              "offset": "2226",
+              "sha256": "859211b678d27abfcc95099f25c5659940d4f122b0b82cf1d34eba0e6c514c60",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"add-peer\",\"result\":{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000c3\",\"name\":\"peer\",\"remote_boot_id\":\"boot:1\",\"remote_lifetime\":\"runtime:22\",\"revision\":\"1\",\"state\":\"connected\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "176",
+              "bytes": "68",
+              "direction": "sent",
+              "offset": "768",
+              "sha256": "62239f021087f4176050d4fa72462e399f0cc7e8aa3cbb813fa0dc0dd154e879",
+              "text": "{\"id\":\"roster\",\"jsonrpc\":\"2.0\",\"method\":\"machine.list\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "177",
+              "bytes": "706",
+              "direction": "received",
+              "offset": "2489",
+              "sha256": "8405754913c533a60775a71027a7895b9b7b4ff30678f9b6d40d42ae75f205d7",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"roster\",\"result\":{\"machines\":[{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000a1\",\"name\":\"alpha\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"1.0.0\"},{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"name\":\"bravo\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"1.0.0\"},{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000c3\",\"name\":\"peer\",\"remote_boot_id\":\"boot:1\",\"remote_lifetime\":\"runtime:22\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"0.1.0\"}]}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "178",
+              "bytes": "195",
+              "direction": "sent",
+              "offset": "836",
+              "sha256": "6308b852fcf014acd59d9727a6665fbd6593cc208a961dda29a252aeb5f85670",
+              "text": "{\"id\":\"run-local\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"geometry\":{\"cols\":80,\"rows\":24},\"name\":\"parent\",\"op_id\":\"01a19659-ed04-7388-9fd4-c72c3b19eff8\",\"program\":{\"argv\":[\"agent\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "191",
+              "bytes": "99",
+              "direction": "received",
+              "offset": "3195",
+              "sha256": "d5f30582b8d7cbc3d9831bdea95a535f111bc370325f3d109906bca53bc16b67",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run-local\",\"result\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:6\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "192",
+              "bytes": "220",
+              "direction": "sent",
+              "offset": "1031",
+              "sha256": "ad102ea31d4554d28e8a73f13938a96bc67c5ee66d9204da2c6d8074d6882933",
+              "text": "{\"id\":\"run-peer\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"geometry\":{\"cols\":80,\"rows\":24},\"machine\":{\"name\":\"peer\"},\"name\":\"parent\",\"op_id\":\"01a19659-ed12-7209-bd48-fb9aef99c33b\",\"program\":{\"argv\":[\"agent\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "206",
+              "bytes": "98",
+              "direction": "received",
+              "offset": "3294",
+              "sha256": "4558c462a6d7b1d97c64703a9f91509c97149369b14e629848961429bf0e27c6",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run-peer\",\"result\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:6\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "206",
+              "bytes": "106",
+              "direction": "sent",
+              "offset": "1251",
+              "sha256": "5cb7de222e3cc12da6e9e7f2683572d59ff0fb8adce7c3668439acf77ecefcfd",
+              "text": "{\"id\":\"peer-exits\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.exit\",\"params\":{\"target\":{\"address\":\"peer/parent\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "211",
+              "bytes": "96",
+              "direction": "received",
+              "offset": "3392",
+              "sha256": "91c88e13b7fcd3620e23d3fe004c7222f5a173010bd9d4b64c05c8d79d781b88",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"peer-exits\",\"result\":{\"end_orders\":[],\"ended\":[],\"finished\":\"recorded\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "211",
+              "bytes": "101",
+              "direction": "sent",
+              "offset": "1357",
+              "sha256": "3c2d0859204112f367d880c9d7fedc0a0e796b5c6b859d872303937352d9f839",
+              "text": "{\"id\":\"local-live\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.program\",\"params\":{\"target\":{\"name\":\"parent\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "211",
+              "bytes": "89",
+              "direction": "received",
+              "offset": "3488",
+              "sha256": "d114192c3999e3d264d6de0ef3245498386c09a46461829a5a04fb2a4b6a1cd6",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"local-live\",\"result\":{\"incarnation\":\"1\",\"kills\":\"0\",\"live\":true}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "212",
+              "bytes": "109",
+              "direction": "sent",
+              "offset": "1458",
+              "sha256": "68dbaa1d3c4722b188d45238d30c8858cc863b6101e736fa6f63211d8e80f34a",
+              "text": "{\"id\":\"peer-ended\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.program\",\"params\":{\"target\":{\"address\":\"peer/parent\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "212",
+              "bytes": "90",
+              "direction": "received",
+              "offset": "3577",
+              "sha256": "9c1e7015c1f72f41f01e569759268d6ed12f572dad8103ef2b3e5d11e232ae28",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"peer-ended\",\"result\":{\"incarnation\":\"1\",\"kills\":\"0\",\"live\":false}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "212",
+              "bytes": "82",
+              "direction": "sent",
+              "offset": "1567",
+              "sha256": "d076b7c220284a1386460c280033b47b7705ffca8c1c64c690c0f340de597f48",
+              "text": "{\"id\":\"stall\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.peer\",\"params\":{\"action\":\"stop\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "214",
+              "bytes": "57",
+              "direction": "received",
+              "offset": "3667",
+              "sha256": "b3d4f5aacfb31e0a3f96ff3768793f59ca386f59382f57e7b6e0b4dd6b4f20be",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"stall\",\"result\":{\"stopped\":true}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "214",
+              "bytes": "300",
+              "direction": "sent",
+              "offset": "1649",
+              "sha256": "e298e30a325ea4847d0429277839ef711cdff4aa728b7ace896163fd125f46a6",
+              "text": "{\"id\":\"peer-stalls\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.program\",\"params\":{\"target\":{\"address\":\"peer/parent\"}}}\n{\"id\":\"roster-during-stall\",\"jsonrpc\":\"2.0\",\"method\":\"machine.list\",\"params\":{}}\n{\"id\":\"local-during-stall\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.program\",\"params\":{\"target\":{\"name\":\"parent\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "215",
+              "bytes": "97",
+              "direction": "received",
+              "offset": "3724",
+              "sha256": "574d9f993688c99d50f48cba71f8aafb86a181d3da398be19c9e0b8ddf2e55df",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"local-during-stall\",\"result\":{\"incarnation\":\"1\",\"kills\":\"0\",\"live\":true}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "216",
+              "bytes": "719",
+              "direction": "received",
+              "offset": "3821",
+              "sha256": "6764fc7aa5d2a62e28e5dd7a138b854626e6a7eeee4337f88860c06c73709ef7",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"roster-during-stall\",\"result\":{\"machines\":[{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000a1\",\"name\":\"alpha\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"1.0.0\"},{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"name\":\"bravo\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"1.0.0\"},{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000c3\",\"name\":\"peer\",\"remote_boot_id\":\"boot:1\",\"remote_lifetime\":\"runtime:22\",\"revision\":\"9\",\"state\":\"connected\",\"version\":\"0.1.0\"}]}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3217",
+              "bytes": "228",
+              "direction": "received",
+              "offset": "4540",
+              "sha256": "710e6a3c261f204bef7f58ff63e7dd45e589a06e3049c54a5158c22f770499ad",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"peer-stalls\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"deadline_exceeded\",\"hint\":\"inspect the remote operation before retrying; other machines are unaffected\",\"retryable\":true}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3217",
+              "bytes": "85",
+              "direction": "sent",
+              "offset": "1949",
+              "sha256": "543220295e30573efa496fc56672eac811688c9ef8a207781281c5764626d031",
+              "text": "{\"id\":\"resume\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.peer\",\"params\":{\"action\":\"resume\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3219",
+              "bytes": "59",
+              "direction": "received",
+              "offset": "4768",
+              "sha256": "ecffcca5bc6d676e582328713c7e2707b0fc6cd4c5f280631980632c3d3a25ff",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"resume\",\"result\":{\"stopped\":false}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3219",
+              "bytes": "115",
+              "direction": "sent",
+              "offset": "2034",
+              "sha256": "ab55fca98e21e516a136e8a6e131094ca720bf4ef1d57e25f41657ffd6471b99",
+              "text": "{\"id\":\"peer-after-stall\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.program\",\"params\":{\"target\":{\"address\":\"peer/parent\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3220",
+              "bytes": "96",
+              "direction": "received",
+              "offset": "4827",
+              "sha256": "bc5306466f8994d61bdcc16106cdb75daecb29f1ab2da0d8145c4360a90ed535",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"peer-after-stall\",\"result\":{\"incarnation\":\"1\",\"kills\":\"0\",\"live\":false}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "13"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-106",
+          "GAP-109"
+        ],
+        "delivers": [
+          "IDEAL-080",
+          "IDEAL-083"
+        ],
+        "excludes": [
+          "EXCL-014",
+          "EXCL-016"
+        ],
+        "title": "Remote requests reach only their machine: a second private runtime added over a real authenticated stdio transport, isolated when it stalls",
+        "todo": "52"
+      },
+      "descriptors": [],
+      "elapsed_ms": "3860",
+      "failure": null,
+      "fixture": {
+        "accepted": "1",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-t52/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "2961607",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-t52/debug/conformance",
+            "fixture",
+            "--root",
+            "/tmp/ovc-2958331-0",
+            "--binary",
+            "/dev/shm/ovt-target-lane-t52/debug/ovis-terminal"
+          ],
+          "exit_code": 0,
+          "pid": "2961419",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "remote/e2e",
+      "summary": "The peer runtime (this runner re-run as `fixture --peer`, its own authority, store and machine id ...c3) is added with the real machine.add over an argv transport that runs the binary under test as `ovis-terminal connect`; the hello boot proof answers a fresh challenge. machine.list lists it connected. terminal.run with machine {name: peer} and peer/parent addresses reach only the peer: the peer's parent exits while the local parent of the same name stays live at incarnation 1 with no kills. The peer process is then SIGSTOPped: a call to it ends deadline_exceeded at the 3 s remote deadline while machine.list and a local call answer; after SIGCONT the same line still serves the peer (the server now honours the actor's $/cancelRequest instead of closing the connection)."
+    },
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[describe]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "/usr/bin/env",
+            "OVIS_TERMINAL_SOCKET=/tmp/ovc-2958331-1/peer-0/run/s.sock",
+            "/dev/shm/ovt-target-lane-t52/debug/ovis-terminal",
+            "connect"
+          ],
+          "check": "reply[describe]/result/argv",
+          "expected": {
+            "$capture": "peer_argv"
+          },
+          "passed": true
+        },
+        {
+          "actual": "ovt1.c1.eb28c1104d194cec89bc3131105501ade567b0c82c864da2829705ea5bc0c65a",
+          "check": "reply[describe]/result/credential",
+          "expected": {
+            "$capture": "peer_credential"
+          },
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+          "check": "reply[describe]/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+          "passed": true
+        },
+        {
+          "actual": [
+            "describe"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "describe"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "auth_failed",
+          "check": "reply[wrong-credential]/error/data/kind",
+          "expected": "auth_failed",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[wrong-credential]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "wrong-credential"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "wrong-credential"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "trust_mismatch",
+          "check": "reply[wrong-machine]/error/data/kind",
+          "expected": "trust_mismatch",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[wrong-machine]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "wrong-machine"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "wrong-machine"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[roster-unchanged]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[roster-unchanged]/result/machines/2",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "roster-unchanged"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "roster-unchanged"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[add-peer]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+          "check": "reply[add-peer]/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+          "passed": true
+        },
+        {
+          "actual": "peer",
+          "check": "reply[add-peer]/result/name",
+          "expected": "peer",
+          "passed": true
+        },
+        {
+          "actual": "connected",
+          "check": "reply[add-peer]/result/state",
+          "expected": "connected",
+          "passed": true
+        },
+        {
+          "actual": [
+            "add-peer"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "add-peer"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "params.target.address",
+          "check": "reply[ghost]/error/data/field_path",
+          "expected": "params.target.address",
+          "passed": true
+        },
+        {
+          "actual": "not_found",
+          "check": "reply[ghost]/error/data/kind",
+          "expected": "not_found",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[ghost]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "ghost"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "ghost"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": "forbidden",
+          "check": "reply[viewer-input]/error/data/kind",
+          "expected": "forbidden",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[viewer-input]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "viewer-input"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "viewer-input"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "2088",
+          "check": "connection[viewer]/bytes_received=bytes_decoded",
+          "expected": "2088",
+          "passed": true
+        },
+        {
+          "actual": "3719",
+          "check": "connection[bridge]/bytes_received=bytes_decoded",
+          "expected": "3719",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "failure",
+      "connections": [
+        {
+          "bytes_decoded": "2088",
+          "bytes_received": "2088",
+          "bytes_sent": "422",
+          "name": "viewer",
+          "records_received": "2",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "e606e8c4a418f7dab4a0684e43c28c79d53ddbb5a2c08d2dc526d4642f4ec386",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "1888",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "33d133ce4fdc785bec7c7e258624fcc44c57e6294f7a0209932bf321602a56f7",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"server.status\",\"server.metrics\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.first_message\",\"terminal.keep\",\"terminal.process_info\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793523842132\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "188",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "f5a5d548da3ea173e75e32fb41b661fc1380331ec5d983b08af86cb856142efa",
+              "text": "{\"id\":\"viewer-input\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"op_id\":\"01a19659-fc54-76e9-99f5-edeef6d7712c\",\"submit\":\"enter\",\"target\":{\"address\":\"peer/parent\"},\"text\":\"rm -rf /\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "200",
+              "direction": "received",
+              "offset": "1888",
+              "sha256": "09bbd6ed9e4bff012357257f00004a5ead1bf35ef05924fd437e5fb85a5bc5a7",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"viewer-input\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"forbidden\",\"hint\":\"ask an administrator for a grant covering this target\",\"retryable\":false}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "2"
+        },
+        {
+          "bytes_decoded": "3719",
+          "bytes_received": "3719",
+          "bytes_sent": "1805",
+          "name": "bridge",
+          "records_received": "7",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "c225b3c4e2b40fe71d0d8eb575bbb008bd0cf5799feec2b2677c6de6846db8dc",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "1888",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "4894d1b4898ad1d111fb16846c5d4e4f7371b0798ffffc25d802be627fa69559",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"server.status\",\"server.metrics\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.first_message\",\"terminal.keep\",\"terminal.process_info\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793523841898\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "89",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "f92b9e9575bf45f7fce01aa63b3c609c4069c4a2f56435436812ef2f43d3f127",
+              "text": "{\"id\":\"describe\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.peer\",\"params\":{\"action\":\"describe\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "161",
+              "bytes": "338",
+              "direction": "received",
+              "offset": "1888",
+              "sha256": "bbd3d1de75a2311dcddccf3abfc66668d4e1baf011b025df49b4ede2ed48be1f",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"describe\",\"result\":{\"argv\":[\"/usr/bin/env\",\"OVIS_TERMINAL_SOCKET=/tmp/ovc-2958331-1/peer-0/run/s.sock\",\"/dev/shm/ovt-target-lane-t52/debug/ovis-terminal\",\"connect\"],\"credential\":\"<redacted-credential>\",\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000c3\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "161",
+              "bytes": "404",
+              "direction": "sent",
+              "offset": "323",
+              "sha256": "f70f72b36bdd806e3cdc67eae53f1484f8693cae34faecb47723b8f0164cfabc",
+              "text": "{\"id\":\"wrong-credential\",\"jsonrpc\":\"2.0\",\"method\":\"machine.add\",\"params\":{\"credential\":\"not-the-peer-credential\",\"expected_machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000c3\",\"name\":\"peer\",\"op_id\":\"01a19659-fc09-7681-8e7a-0a7a6ead1b48\",\"transport\":{\"argv\":[\"/usr/bin/env\",\"OVIS_TERMINAL_SOCKET=/tmp/ovc-2958331-1/peer-0/run/s.sock\",\"/dev/shm/ovt-target-lane-t52/debug/ovis-terminal\",\"connect\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "183",
+              "bytes": "246",
+              "direction": "received",
+              "offset": "2226",
+              "sha256": "592ed7219a64d133424c88688c9247bbb2f32bf74024ff0711e5356c57c3efbc",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"wrong-credential\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"auth_failed\",\"hint\":\"issue a fresh credential on the remote runtime\",\"retryable\":false,\"op_id\":\"01a19659-fc09-7681-8e7a-0a7a6ead1b48\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "183",
+              "bytes": "450",
+              "direction": "sent",
+              "offset": "727",
+              "sha256": "b94cb13c4353af931fe68526c918353a0a8319e7afe0e9d54d627280afad5c9f",
+              "text": "{\"id\":\"wrong-machine\",\"jsonrpc\":\"2.0\",\"method\":\"machine.add\",\"params\":{\"credential\":\"<redacted-credential>\",\"expected_machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000ee\",\"name\":\"peer\",\"op_id\":\"01a19659-fc1f-72b7-93e6-f6beaa9893be\",\"transport\":{\"argv\":[\"/usr/bin/env\",\"OVIS_TERMINAL_SOCKET=/tmp/ovc-2958331-1/peer-0/run/s.sock\",\"/dev/shm/ovt-target-lane-t52/debug/ovis-terminal\",\"connect\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "204",
+              "bytes": "249",
+              "direction": "received",
+              "offset": "2472",
+              "sha256": "9e95858830bdf40552cdbd7d45cf852261d7d73f469bd3f14d5ed45caa87fda5",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"wrong-machine\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"trust_mismatch\",\"hint\":\"verify the transport reaches the expected runtime\",\"retryable\":false,\"op_id\":\"01a19659-fc1f-72b7-93e6-f6beaa9893be\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "205",
+              "bytes": "78",
+              "direction": "sent",
+              "offset": "1177",
+              "sha256": "499eb9125d92c6e3b7a18ca2324d4dab2ece0e90c41a1fe24e57ffb2a4474030",
+              "text": "{\"id\":\"roster-unchanged\",\"jsonrpc\":\"2.0\",\"method\":\"machine.list\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "206",
+              "bytes": "496",
+              "direction": "received",
+              "offset": "2721",
+              "sha256": "1fdc991d5895a8bbb7b8e2c4ce7049a82a8a4cf56b25e0d4d98fedfaeb156e2a",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"roster-unchanged\",\"result\":{\"machines\":[{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000a1\",\"name\":\"alpha\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"1.0.0\"},{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"name\":\"bravo\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"1.0.0\"}]}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "206",
+              "bytes": "445",
+              "direction": "sent",
+              "offset": "1255",
+              "sha256": "44e4d41181c54db8d4a6491988d349d0e97c5ff9e39fc25f3edab05bc5151912",
+              "text": "{\"id\":\"add-peer\",\"jsonrpc\":\"2.0\",\"method\":\"machine.add\",\"params\":{\"credential\":\"<redacted-credential>\",\"expected_machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000c3\",\"name\":\"peer\",\"op_id\":\"01a19659-fc36-7250-ae41-d34a3d2b8f14\",\"transport\":{\"argv\":[\"/usr/bin/env\",\"OVIS_TERMINAL_SOCKET=/tmp/ovc-2958331-1/peer-0/run/s.sock\",\"/dev/shm/ovt-target-lane-t52/debug/ovis-terminal\",\"connect\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "232",
+              "bytes": "263",
+              "direction": "received",
+              "offset": "3217",
+              "sha256": "859211b678d27abfcc95099f25c5659940d4f122b0b82cf1d34eba0e6c514c60",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"add-peer\",\"result\":{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000c3\",\"name\":\"peer\",\"remote_boot_id\":\"boot:1\",\"remote_lifetime\":\"runtime:22\",\"revision\":\"1\",\"state\":\"connected\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "233",
+              "bytes": "105",
+              "direction": "sent",
+              "offset": "1700",
+              "sha256": "06e226446b1ea71140406cfbf8abd42b45981577a8b33a3f9003e5ba3dd620fa",
+              "text": "{\"id\":\"ghost\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.program\",\"params\":{\"target\":{\"address\":\"ghost/parent\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "233",
+              "bytes": "239",
+              "direction": "received",
+              "offset": "3480",
+              "sha256": "02970e9ac6f61477ac5bcff6ab864d74accbf9b813b73e919ed2244793b0b5d1",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"ghost\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_found\",\"hint\":\"list machines to find a live name; nothing ran locally instead\",\"retryable\":false,\"field_path\":\"params.target.address\"}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "7"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-106",
+          "GAP-109"
+        ],
+        "delivers": [
+          "IDEAL-080",
+          "IDEAL-083"
+        ],
+        "excludes": [
+          "EXCL-014",
+          "EXCL-016"
+        ],
+        "title": "Remote requests reach only their machine: a second private runtime added over a real authenticated stdio transport, isolated when it stalls",
+        "todo": "52"
+      },
+      "descriptors": [],
+      "elapsed_ms": "653",
+      "failure": null,
+      "fixture": {
+        "accepted": "2",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-t52/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "2970025",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-t52/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "2969616",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-t52/debug/conformance",
+            "fixture",
+            "--root",
+            "/tmp/ovc-2958331-1",
+            "--binary",
+            "/dev/shm/ovt-target-lane-t52/debug/ovis-terminal"
+          ],
+          "exit_code": 0,
+          "pid": "2969283",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "remote/e2e",
+      "summary": "machine.add with a credential the peer never issued is auth_failed and with another expected machine id is trust_mismatch; neither records a machine. After the peer is added, an address qualified by an unknown machine is not_found at params.target.address and nothing runs locally, and an observe-only principal's input.send to peer/parent is forbidden before anything is sent to the peer."
+    }
+  ],
+  "elapsed_ms": "6573",
+  "error": null,
+  "format": "ovis-conformance-evidence/1",
+  "host": {
+    "arch": "x86_64",
+    "family": "unix",
+    "os": "linux"
+  },
+  "inventory": null,
+  "result": "passed",
+  "runner_version": "0.1.0",
+  "scenario": "remote/e2e",
+  "totals": {
+    "assertions": "89",
+    "cases": "2",
+    "declared_only": "0",
+    "failed": "0",
+    "passed": "2",
+    "skipped": "0"
+  }
+}

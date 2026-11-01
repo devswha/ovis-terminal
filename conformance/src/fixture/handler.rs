@@ -82,6 +82,7 @@ pub(crate) struct Probes {
     pub(crate) tree: Arc<Tree>,
     pub(crate) health: Arc<super::health::Probe>,
     pub(crate) machines: Arc<Machines>,
+    pub(crate) peer: Option<Arc<super::peer::PeerSide>>,
     pub(crate) programs: Arc<Programs>,
     pub(crate) audit: (Arc<AuditTrail>, Arc<Authority<RegistryIdentities>>),
 }
@@ -174,6 +175,12 @@ impl RequestHandler for FixtureHandler {
                 super::boundary::audit((trail, authority), (&call.session, &call.request))
             }
             ORPHANED_ACK => machines::acknowledge(&self.probes.machines, &call.request).await,
+            super::peer::CONTROL => {
+                super::peer::control(self.probes.peer.as_deref(), &call.request).await
+            }
+            super::peer::LOST_MACHINE => {
+                super::peer::lost_machine(&self.probes.machines, &call.request).await
+            }
             _ => self.dispatch.call(call).await,
         }
     }

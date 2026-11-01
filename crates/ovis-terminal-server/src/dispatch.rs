@@ -9,8 +9,10 @@ pub mod lanes;
 mod queue;
 mod read;
 mod registry;
+pub mod remote;
 mod reservation;
 mod runtime;
+pub mod services;
 mod tasks;
 
 pub use error::DispatchError;

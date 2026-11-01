@@ -68,7 +68,8 @@ impl Session<'_> {
         if !cfg!(unix) {
             return Err(RunnerError::UnsupportedPlatform);
         }
-        self.fixture = Some(launch::start(&self.ctx.runner, self.root.path()).await?);
+        self.fixture =
+            Some(launch::start(&self.ctx.runner, self.root.path(), &self.ctx.binary).await?);
         Ok(())
     }
 

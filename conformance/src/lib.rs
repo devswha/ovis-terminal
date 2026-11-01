@@ -49,21 +49,23 @@ pub fn main() -> ExitCode {
         }
     };
     match cli.mode {
-        Some(Mode::Fixture { root }) => match runtime.block_on(fixture::serve(&root)) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(error) => {
-                let mut chain = error.to_string();
-                let mut source = std::error::Error::source(&error);
-                while let Some(inner) = source {
-                    chain.push_str(": ");
-                    chain.push_str(&inner.to_string());
-                    source = inner.source();
+        Some(Mode::Fixture { root, peer, binary }) => {
+            match runtime.block_on(fixture::serve(&root, fixture::Role::of(peer, binary))) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(error) => {
+                    let mut chain = error.to_string();
+                    let mut source = std::error::Error::source(&error);
+                    while let Some(inner) = source {
+                        chain.push_str(": ");
+                        chain.push_str(&inner.to_string());
+                        source = inner.source();
+                    }
+                    let line = serde_json::json!({"error": {"kind": error.kind(), "hint": error.hint(), "detail": chain}});
+                    drop(writeln!(std::io::stderr().lock(), "{line}"));
+                    ExitCode::FAILURE
                 }
-                let line = serde_json::json!({"error": {"kind": error.kind(), "hint": error.hint(), "detail": chain}});
-                drop(writeln!(std::io::stderr().lock(), "{line}"));
-                ExitCode::FAILURE
             }
-        },
+        }
         None => runtime.block_on(invocation::main(cli)),
     }
 }

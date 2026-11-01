@@ -1,0 +1,1020 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "recovery/e2e",
+  "title": "Remote faults settle as typed outcomes over real endpoints: a crashed peer mid-operation is outcome_unknown, a lost machine is machine_unreachable with its last seen sequence, a failed plugin is a durable failed run",
+  "todo": 52,
+  "closes": [
+    "GAP-108",
+    "GAP-118"
+  ],
+  "delivers": [
+    "IDEAL-082",
+    "IDEAL-091",
+    "IDEAL-117"
+  ],
+  "excludes": [
+    "EXCL-020",
+    "EXCL-021"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Planned replacement of the peer runtime: after the peer and the local runtime each run a program named parent, fixture.peer restart stops the peer process and starts a fresh one, which proves the same machine id over a fresh challenge and takes the same actor (line epoch 2, no orphan notice left to replay). The peer's parent incarnation is lost on the new runtime (incarnation 0, not live), the local parent is preserved (incarnation 1, live, no kills), and a new terminal.run on the peer starts incarnation 1 there.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "describe",
+                "method": "fixture.peer",
+                "params": {
+                  "action": "describe"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "describe": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+                "/result/argv": {
+                  "$capture": "peer_argv"
+                },
+                "/result/credential": {
+                  "$capture": "peer_credential"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "add-peer",
+                "method": "machine.add",
+                "params": {
+                  "op_id": "$op:add-peer",
+                  "name": "peer",
+                  "transport": {
+                    "argv": "$value:peer_argv"
+                  },
+                  "credential": "$value:peer_credential",
+                  "expected_machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "add-peer": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+                "/result/name": "peer",
+                "/result/state": "connected"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run-local",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run-local",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "parent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "run-local": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": {
+                  "$capture": "run-local_terminal"
+                },
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run-peer",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run-peer",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "parent",
+                  "machine": {
+                    "name": "peer"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "run-peer": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": {
+                  "$capture": "run-peer_terminal"
+                },
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "restart",
+                "method": "fixture.peer",
+                "params": {
+                  "action": "restart"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "restart": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/health/state": "connected",
+                "/result/health/line_epoch": "2",
+                "/result/replayed/remaining": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "roster-after-restart",
+                "method": "machine.list",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "roster-after-restart": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/machines/2/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+                "/result/machines/2/state": "connected"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "peer-lost",
+                "method": "fixture.program",
+                "params": {
+                  "target": {
+                    "address": "peer/parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "peer-lost": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/live": false,
+                "/result/incarnation": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "local-kept",
+                "method": "fixture.program",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "local-kept": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/live": true,
+                "/result/incarnation": "1",
+                "/result/kills": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "rerun-peer",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:rerun-peer",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "parent",
+                  "machine": {
+                    "name": "peer"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "rerun-peer": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": {
+                  "$capture": "rerun-peer_terminal"
+                },
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "peer-relaunched",
+                "method": "fixture.program",
+                "params": {
+                  "target": {
+                    "address": "peer/parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "peer-relaunched": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/live": true,
+                "/result/incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "A machine named disconnected mirrored events through remote sequence 41 and lost its line: the injected input.send to disconnected/t1 is machine_unreachable with last_seen_seq \"41\" and the machine as target, and ghost/t1 is not_found; nothing runs locally. The peer is added and SIGSTOPped, an input.send to peer/parent is written to its line and the peer process is killed while the call is in flight: the call settles outcome_unknown with its op_id, the roster keeps the peer and the lost machine as unreachable, a later call to peer/parent is machine_unreachable (no local fallback) and the local parent is untouched. A plugin whose program prints boom and exits 3 is a durable failed run (exit_code 3, output kept, op receipt committed), while a sibling plugin with a missing program is listed executable_missing and refused action_unavailable.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "lose",
+                "method": "fixture.lost_machine",
+                "params": {
+                  "name": "disconnected",
+                  "last_seen_seq": "41"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "lose": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "unreachable",
+                "/result/last_seen_seq": "41"
+              }
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "bridge",
+            "base": {},
+            "planned": [
+              {
+                "request": {
+                  "method": "input.send",
+                  "params": {
+                    "target": {
+                      "address": "disconnected/t1"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "machine_unreachable",
+                  "/result": {
+                    "$present": false
+                  },
+                  "/error/data/last_seen_seq": "41",
+                  "/error/data/target": "machine:0191f1a2-0000-7000-8000-0000000000d4",
+                  "/error/data/retryable": true
+                }
+              },
+              {
+                "request": {
+                  "method": "input.send",
+                  "params": {
+                    "target": {
+                      "address": "ghost/t1"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "not_found",
+                  "/result": {
+                    "$present": false
+                  },
+                  "/error/data/field_path": "params.target.address"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "describe",
+                "method": "fixture.peer",
+                "params": {
+                  "action": "describe"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "describe": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+                "/result/argv": {
+                  "$capture": "peer_argv"
+                },
+                "/result/credential": {
+                  "$capture": "peer_credential"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "add-peer",
+                "method": "machine.add",
+                "params": {
+                  "op_id": "$op:add-peer",
+                  "name": "peer",
+                  "transport": {
+                    "argv": "$value:peer_argv"
+                  },
+                  "credential": "$value:peer_credential",
+                  "expected_machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "add-peer": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+                "/result/name": "peer",
+                "/result/state": "connected"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run-local",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run-local",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "parent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "run-local": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": {
+                  "$capture": "run-local_terminal"
+                },
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run-peer",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run-peer",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "parent",
+                  "machine": {
+                    "name": "peer"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "run-peer": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": {
+                  "$capture": "run-peer_terminal"
+                },
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stall",
+                "method": "fixture.peer",
+                "params": {
+                  "action": "stop"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "stall": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/stopped": true
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "lost-input",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:lost-input",
+                  "target": {
+                    "address": "peer/parent"
+                  },
+                  "text": "echo once",
+                  "submit": "enter"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "crash",
+                "method": "fixture.peer",
+                "params": {
+                  "action": "crash"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "lost-input": {
+                "/error/data/kind": "outcome_unknown",
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/op_id": "$op:lost-input",
+                "/error/data/target": "machine:0191f1a2-0000-7000-8000-0000000000c3"
+              },
+              "crash": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/crashed": true,
+                "/result/health/state": "unreachable"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "roster-after-crash",
+                "method": "machine.list",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "roster-after-crash": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/machines/2/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+                "/result/machines/2/state": "unreachable",
+                "/result/machines/3/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000d4",
+                "/result/machines/3/state": "unreachable",
+                "/result/machines/3/last_seen_seq": "41"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "no-local-fallback",
+                "method": "fixture.program",
+                "params": {
+                  "target": {
+                    "address": "peer/parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "no-local-fallback": {
+                "/error/data/kind": "machine_unreachable",
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/target": "machine:0191f1a2-0000-7000-8000-0000000000c3"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "local-untouched",
+                "method": "fixture.program",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "local-untouched": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/live": true,
+                "/result/incarnation": "1",
+                "/result/kills": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "plugins",
+                "method": "plugin.list",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "plugins": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/plugins/0/plugin_id": "broken",
+                "/result/plugins/0/actions/0/unavailable": "executable_missing",
+                "/result/plugins/1/plugin_id": "failing",
+                "/result/plugins/1/actions/0/unavailable": null
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "plugin-fails",
+                "method": "plugin.invoke",
+                "params": {
+                  "op_id": "$op:plugin-fails",
+                  "plugin_id": "failing",
+                  "action_id": "fail",
+                  "input": {},
+                  "target": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "plugin-fails": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "failed",
+                "/result/exit_code": 3,
+                "/result/output_b64": "Ym9vbQo=",
+                "/result/truncated": false,
+                "/result/run_id": {
+                  "$capture": "failed_run"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "plugin-run",
+                "method": "plugin.run_get",
+                "params": {
+                  "run_id": "$value:failed_run"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "plugin-run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "failed",
+                "/result/exit_code": 3
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "plugin-receipt",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:plugin-fails"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "plugin-receipt": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "committed",
+                "/result/result/state": "failed"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "plugin-missing",
+                "method": "plugin.invoke",
+                "params": {
+                  "op_id": "$op:plugin-missing",
+                  "plugin_id": "broken",
+                  "action_id": "run",
+                  "input": {},
+                  "target": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "plugin-missing": {
+                "/error/data/kind": "action_unavailable",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -31,6 +31,8 @@ const EXECUTABLE: &[&str] = &[
     "protocol/multiplex.json",
     "protocol/pagination.json",
     "protocol/strict-target.json",
+    "recovery/e2e.json",
+    "remote/e2e.json",
     "remote/isolation.json",
     "security/rotation.json",
     "security/validation.json",
