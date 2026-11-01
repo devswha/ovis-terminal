@@ -116,7 +116,7 @@ fn run(mut runtime: Runtime, jobs: &mpsc::Receiver<Job>) -> Result<(), AssemblyE
 }
 
 /// The handle request handlers use to run work on the actor thread.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(super) struct Actor {
     jobs: mpsc::Sender<Job>,
 }
@@ -147,6 +147,21 @@ impl Actor {
         });
         self.jobs.send(job).map_err(|_| worker_gone())?;
         answer.await.map_err(|_| worker_gone())?
+    }
+}
+
+impl Actor {
+    /// Runs `work` on the actor thread from synchronous code; `None` once it stopped.
+    pub(super) fn call_blocking<R: Send + 'static>(
+        &self,
+        work: impl FnOnce(&mut Runtime) -> R + Send + 'static,
+    ) -> Option<R> {
+        let (reply, answer) = mpsc::channel();
+        let job: Job = Box::new(move |runtime| match reply.send(work(runtime)) {
+            Ok(()) | Err(_) => {}
+        });
+        self.jobs.send(job).ok()?;
+        answer.recv().ok()
     }
 }
 

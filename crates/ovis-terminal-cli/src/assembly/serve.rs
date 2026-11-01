@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use ovis_terminal_protocol::schema::limits::{Limits, TransportKind};
+use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::listen::{
     EndpointDescriptor, EndpointEnvironment, Platform, ServerConfig, UnixEndpoint, serve_unix,
 };
@@ -93,13 +94,6 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
     let backlog = Arc::new(SessionBacklog::new(SESSION_BACKLOG_BYTES));
     let journal: Arc<dyn LeaseJournal> = Arc::<LeaseLog>::clone(&booted.leases);
     let setup = StreamSetup::new(limits, backlog, journal);
-    let (dispatch, dispatch_log) = super::lanes::host(super::lanes::Hosting {
-        state: &state,
-        identity: booted.identity,
-        authority: Arc::clone(&booted.authority),
-        directory: Arc::clone(&directory),
-    })?;
-    let dispatch = Arc::new(dispatch);
     let runtime = Runtime {
         terminals: booted.terminals,
         holder: booted.holder,
@@ -115,20 +109,31 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         started: Instant::now(),
     };
     let (actor, thread) = Actor::spawn(runtime)?;
+    let (dispatch, dispatch_log) = super::lanes::host(super::lanes::Hosting {
+        state: &state,
+        identity: booted.identity,
+        authority: Arc::clone(&booted.authority),
+        directory: Arc::clone(&directory),
+        actor: actor.clone(),
+    })?;
+    let dispatch = Arc::new(dispatch);
     let served = Arc::new(Served {
         actor,
         lane: Arc::clone(&lane),
         dispatch: Arc::clone(&dispatch),
     });
-    let handler = Arc::new(Assembled {
-        attach: AttachHandler::new(Arc::clone(&served), Arc::clone(&lane)),
-        served,
-        transports: if plan.websocket_port.is_some() {
-            vec![TransportKind::Unix, TransportKind::Websocket]
-        } else {
-            vec![TransportKind::Unix]
+    let handler = Arc::new(Revalidated::new(
+        Arc::clone(&booted.authority),
+        Assembled {
+            attach: AttachHandler::new(Arc::clone(&served), Arc::clone(&lane)),
+            served,
+            transports: if plan.websocket_port.is_some() {
+                vec![TransportKind::Unix, TransportKind::Websocket]
+            } else {
+                vec![TransportKind::Unix]
+            },
         },
-    });
+    ));
     let endpoint = UnixEndpoint::bind(&socket)
         .await
         .map_err(AssemblyError::Endpoint)?;

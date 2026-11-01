@@ -29,6 +29,8 @@ fn hello_advertises_exactly_the_routed_methods_and_the_rest_is_method_not_found(
         "attach.open",
         "attach.repaint",
         "attach.resize",
+        "credential.revoke",
+        "credential.rotate",
         "doc.get",
         "doc.set",
         "input.keys",

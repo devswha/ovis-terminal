@@ -180,3 +180,24 @@ fn hosted_lanes_answer_documents_plugins_prompts_and_status_over_the_socket() ->
     served.stop()?;
     Ok(())
 }
+
+#[test]
+fn revoking_the_observer_credential_refuses_its_next_hello() -> TestResult {
+    let served = Served::start()?;
+    let before = served.hello_reply(served.observer())?;
+    assert!(before.get("result").is_some(), "{before}");
+    let revoked = call(
+        &served,
+        "credential.revoke",
+        &json!({"op_id": op_id()?, "credential": "c2"}),
+    )?;
+    assert!(revoked.is_object(), "{revoked}");
+    let after = served.hello_reply(served.observer())?;
+    assert_eq!(
+        after.pointer("/error/data/kind"),
+        Some(&json!("credential_revoked")),
+        "{after}"
+    );
+    served.stop()?;
+    Ok(())
+}

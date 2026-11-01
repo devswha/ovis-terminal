@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use ovis_terminal_core::events::{Coordinator, EventData, SnapshotProducer};
+use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::listen::ServerHandle;
 use ovis_terminal_server::streams::AttachLane;
 use ovis_terminal_server::ws::WsServerHandle;
@@ -25,7 +26,7 @@ pub(super) struct Lifetime {
     pub(super) listener: ServerHandle,
     pub(super) lane: Arc<AttachLane<Arc<Directory>>>,
     pub(super) dispatch: Arc<Dispatch>,
-    pub(super) handler: Arc<Assembled>,
+    pub(super) handler: Arc<Revalidated<Assembled>>,
     pub(super) thread: ActorThread,
     pub(super) logs: (Arc<DispatchLog>, Arc<LeaseLog>),
 }

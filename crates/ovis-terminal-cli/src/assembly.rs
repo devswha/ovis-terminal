@@ -8,6 +8,7 @@
 
 mod actor;
 mod boot;
+mod credentials;
 mod directory;
 mod error;
 mod handler;

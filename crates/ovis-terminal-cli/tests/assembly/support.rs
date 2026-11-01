@@ -55,6 +55,7 @@ pub struct Served {
     root: PathBuf,
     socket: String,
     bearer: String,
+    observer: String,
     websocket: Option<String>,
 }
 
@@ -71,6 +72,11 @@ impl Served {
     /// The WebSocket listener address from the ready line, when one was started.
     pub fn websocket(&self) -> Option<&str> {
         self.websocket.as_deref()
+    }
+
+    /// The observe-only bearer from the ready line.
+    pub fn observer(&self) -> &str {
+        &self.observer
     }
 
     /// The owner bearer from the ready line.
@@ -111,6 +117,11 @@ impl Served {
             .pointer("/ready/bearer")
             .and_then(Value::as_str)
             .ok_or("bearer")?;
+        let observer = ready
+            .pointer("/ready/observer")
+            .and_then(Value::as_str)
+            .ok_or("observer")?
+            .to_owned();
         let websocket = ready
             .pointer("/ready/websocket")
             .and_then(Value::as_str)
@@ -122,6 +133,7 @@ impl Served {
             root,
             socket: socket.to_owned(),
             bearer: bearer.to_owned(),
+            observer,
             websocket,
         })
     }
@@ -191,25 +203,34 @@ impl Served {
         self.ok(&["call", "terminal.run", "--params", &params.to_string()])
     }
 
+    /// The raw reply to a hello presenting `bearer` on the local socket.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a process, socket or file step fails.
+    pub fn hello_reply(&self, bearer: &str) -> TestResult<Value> {
+        let mut stream = UnixStream::connect(&self.socket)?;
+        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
+        let hello = json!({"jsonrpc": "2.0", "id": "h", "method": "hello", "params": {
+            "generation": "1", "client": {"name": "t31", "version": "0"}, "credential": bearer,
+        }});
+        writeln!(stream, "{hello}")?;
+        let mut line = String::new();
+        BufReader::new(&stream).read_line(&mut line)?;
+        Ok(serde_json::from_str(&line)?)
+    }
+
     /// The method list hello advertises to the owner.
     ///
     /// # Errors
     ///
     /// Fails when a process, socket or file step fails.
     pub fn advertised(&self) -> TestResult<BTreeSet<String>> {
-        let mut stream = UnixStream::connect(&self.socket)?;
-        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
-        let hello = json!({"jsonrpc": "2.0", "id": "h", "method": "hello", "params": {
-            "generation": "1", "client": {"name": "t31", "version": "0"}, "credential": self.bearer,
-        }});
-        writeln!(stream, "{hello}")?;
-        let mut line = String::new();
-        BufReader::new(&stream).read_line(&mut line)?;
-        let reply: Value = serde_json::from_str(&line)?;
+        let reply = self.hello_reply(&self.bearer)?;
         let methods = reply
             .pointer("/result/methods")
             .and_then(Value::as_array)
-            .ok_or_else(|| line.clone())?;
+            .ok_or_else(|| reply.to_string())?;
         Ok(methods
             .iter()
             .filter_map(Value::as_str)
