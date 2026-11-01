@@ -356,6 +356,48 @@ The macOS stress job was not re-dispatched this round (merge only). CI's macOS t
 
 **Seams (round 5).** Public API: `ovis_terminal_protocol::errors::ErrorData::current` (new field) and `BoundaryError::with_current_lease` (new builder). Both are additive: the wire field is optional and omitted when absent. Server crate: `StreamError::boundary()` now attaches the current lease for `EpochMismatch`.
 
+
+## DoneClaim r5
+
+```json
+{
+  "task": "62 (round 5)",
+  "pr_url": "https://github.com/devswha/ovis-terminal/pull/67",
+  "base": "origin/integration 93d7fb7 (unchanged since round 4)",
+  "head_sha": "efd84eaf955ebbd692c2259c10ace950fe7a83d1",
+  "fixes": {
+    "B_current_epoch": "ErrorData.current (Option<Box<LeaseRecord>>) + BoundaryError::with_current_lease; StreamError::boundary maps LeaseError::EpochMismatch{current}; attach.takeover and attach.open takeover report error.data.current",
+    "schema": "schema/ovis-terminal.openrpc.json regenerated; openrpc compat vs released: compatible; client-ts regenerated (bun run generate, 31 files); quality-matrix --mode contract pass (conformance/ideal-map.json); task-61 quality/gates evidence re-recorded (65/64/129) as in 31183dd",
+    "scenario": "served attach.takeover on the relay's held stream: plan epoch '0' -> invalid_params (no lease holds epoch 0, core Takeover::new), stale epoch '7' -> lease_epoch_mismatch with error.data.current epoch '1', holder 'cli', role interact; attach.open takeover 7 asserts current too; holder unchanged; literal malformed inject asserts invalid_params",
+    "viewer": "gone reply receiver ends the route loop (no disguised .ok())",
+    "observer_assertions": "present in merged tests/attach.rs: rogue-2 absent after a fence (lines 196-198), observer stdout after-8 via Drawn (line 189)",
+    "credit_mutant": "attach/session/credit_tests.rs; mutant without attach.credit stalls at 16/64 and fails (lane suite exit 100); unmutated 50/50; docs/evidence/task-62/mutant-credit-r5.log"
+  },
+  "tests": "check.sh exit 0 at 0b56ab1: 1455 passed, 2 skipped, hygiene 0, source-check pass, evidence-audit pass; protocol lease_epoch_mismatch tests; server streams::qa::takeover asserts data.current; Windows check + clippy -D warnings exit 0",
+  "manual_qa": "happy exit 0 (41); literal --inject failure --append exit 0 (72); all exit 0 (120); part-a/task-31 all exit 0 (115); Linux x86_64; binary sha256 f685337b396c465301d60c50cea444578ae11df62809c0ac76555911e2117515",
+  "ci": {
+    "head": "efd84ea",
+    "result": "every check SUCCESS (test ubuntu/macos/windows, probe x3, unix-full x2, quality gates x2, scripts/check.sh, windows-smoke, rustdoc, msrv, cargo deny, machete, client-ts x2; CodeRabbit skipped)",
+    "note": "run 41347735243 attempt 1: test (ubuntu-latest) failed in the holder test unix::service_tests::stop_wakes_accept_and_joins_while_a_core_is_connected (service_tests.rs:58, stop returned ConnectionRefused) - crates/ovis-terminal-holder is untouched by this branch; attempt 2 (re-run not started by this executor) passed. Reported as an out-of-scope holder flake.",
+    "superseded": "1aad84f failed quality gates because docs/evidence/task-62/doneclaim-r5.json was audited as a conformance manifest; the file was removed (no exemption) in efd84ea"
+  },
+  "seams": [
+    "ErrorData::current (additive, optional on the wire)",
+    "BoundaryError::with_current_lease",
+    "server StreamError::boundary attaches current lease on EpochMismatch"
+  ],
+  "cleanup": "lane RAM target and Windows target removed after the gate; no <worktree>/target; the claim file lives outside docs/evidence",
+  "risks": [
+    "epoch '0' cannot be stale by construction (invalid_params); the lease_epoch_mismatch-with-current check uses epoch 7",
+    "macOS stress not re-dispatched (CI macOS test job covers the lane tests)",
+    "local gate used CARGO_INCREMENTAL=0 + line-tables-only per host policy"
+  ],
+  "unmet": [],
+  "gated_code_head": "0b56ab19bb30f252bdf2aa13a37ce13122134660 (check.sh, Windows pre-check and QA ran here; 1aad84f and efd84ea add only docs/evidence changes)",
+  "claim_path": "/dev/shm/ovt-fixtures/t62-scratch/doneclaim-r5.json"
+}
+```
+
 ## Seams
 
 Files outside the write scope (`crates/ovis-terminal-cli/src/attach/`, `conformance/scenarios/cli/interactive-attach/`), and why:
