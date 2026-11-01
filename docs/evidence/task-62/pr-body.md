@@ -25,7 +25,7 @@ Gap baseline: GAP-039, GAP-040, GAP-041, GAP-042, GAP-043, GAP-044, GAP-045, GAP
 - **Keys.** There is no prefix key and no client mode. Ctrl-\ (0x1c) detaches without touching the child. Every other byte, including unknown escape sequences and non-UTF-8, goes through `input.raw` unchanged, and its refusal is the server's typed error.
 - **Stream credit.** Credit is download-only: `attach.credit` acknowledges every half window.
 - **Terminal restore on every exit path.** Modes the program switched on (mouse, bracketed paste, sync output, keypad, keyboard protocol, cursor, alternate screen last) are switched off. Then the saved termios is put back, on detach, refusal, connection loss, signal and hangup.
-- **Signals.** Handlers are installed before raw mode. An interruption before the stream is attached ends as typed `interrupted` at its stage. A second interruption while detaching stops waiting for CLOSE.
+- **Signals.** Handlers are installed before raw mode. An interruption before the stream is attached ends as typed `interrupted` at its stage. Interruptions delivered while a detach is in progress join that detach. They do not cut its wait for CLOSE short; only `CLOSE_BOUND` (5 s) ends that wait early. The server sends CLOSE only after it commits the lease revocation, so the record's `leases_released` is read after the release, never racing it.
 - **Hangup.** A hung-up outer terminal detaches with `reason: hangup`, exit 0, every lease released, and the program untouched.
   - On the raw keyboard terminal (VMIN 1), a zero-byte read or EIO is classified as hangup; any other read error is typed `transport_failed`.
   - Screen draws write the descriptor unbuffered on the blocking pool, so a failed draw leaves nothing queued for the exit report's flush to fail on. This was the cause of a 1-in-5 exit-1 race found by the 5x loop.
@@ -111,6 +111,26 @@ Raw evidence (request/response transcripts, process argv/stdout/stderr, binary h
 - `docs/evidence/task-62/attach-loop-5x.log`: 5/5 iterations of `cargo nextest run -p ovis-terminal-cli --test attach --test interactive_attach --test interactive_restore` pinned to 4 CPUs (`taskset -c 0-3`), 11/11 tests each.
 - Before the unbuffered-draw fix, the hangup test failed 1 in 5 (exit 1, no record). After it, the isolated hangup test passed 30/30 under the same pinning.
 
+**CI round 2 (fe8f4de, ubuntu `scripts/check.sh`).**
+
+`repeated_signals_while_attached_detach_once_and_restore_the_terminal` failed with `leases_released: false, stream_closed: false`.
+
+Root cause, in the product:
+- `attach.close` replies before the server commits the lease revocation; CLOSE follows the commit.
+- The client let a second interruption cut its wait for CLOSE short, then read `attach.leases` before the revocation landed.
+- A notice that could not be drawn (a hung-up terminal) also ended the wait as if it were CLOSE. That is the same early read on the hangup path.
+
+Fix (`attach/session.rs`, `attach/signals.rs`):
+- Interruptions delivered while detaching join the detach in progress.
+- Only CLOSE (or `CLOSE_BOUND`, 5 s) ends the wait.
+- The lease read therefore always follows the committed release.
+
+Proof, under 8 busy loops pinned to CPUs 0-1 with the tests pinned to the same CPUs, through the heavy gate, 25 runs of `cargo nextest run -p ovis-terminal-cli --test interactive_restore`:
+- Before the fix: 13/25 (`docs/evidence/task-62/repeated-signals-load25-before-fix.log`). The repeated-signals test failed 10 times and the hangup test twice, all with `leases_released: false`.
+- After the fix: 25/25 (`repeated-signals-load25.log`).
+- `cargo nextest run -p ovis-terminal-cli`: 46/46.
+- `cli/interactive-attach --case all`: 94 assertions, exit 0.
+
 ### Mutants (`docs/evidence/task-62/mutants.log`)
 
 4 of 5 killed; 1 is equivalent:
@@ -134,7 +154,7 @@ All gate, acceptance and QA results above are from the tree after the authorized
 
 The macOS stress job runs on the stress-only branch `lane/t62-stress`, so the shared workflow file stays at base in this PR. Each run does 25 iterations of the three attach PTY test binaries plus `cli/interactive-attach --case all` on `macos-latest`.
 - Previous lane head (9e009f4): https://github.com/devswha/ovis-terminal/actions/runs/41256920783 (success).
-- This head (9e07178, merged into stress branch 50c522c): https://github.com/devswha/ovis-terminal/actions/runs/41273039178 (dispatched; result recorded below when it finishes).
+- This head (9e07178, merged into stress branch 50c522c): https://github.com/devswha/ovis-terminal/actions/runs/41273039178: success (25/25 iterations on `macos-latest`). The attach client is unchanged by the later integration merge, which only touched the runner and the assembled fixture's ready line.
 
 ## Seams
 

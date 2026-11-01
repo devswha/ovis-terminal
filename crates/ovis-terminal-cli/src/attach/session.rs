@@ -45,20 +45,18 @@ struct Attached {
 }
 
 impl Attached {
-    /// Closes the stream, which releases every lease it holds, waits (bounded, and cut
-    /// short by a second interruption) for its CLOSE, then reads the leases back so the
-    /// record states whether any lease this client was granted is still held.
-    async fn detach(
-        &mut self,
-        (notices, signals): (&mut Notices, &mut Signals),
-        reason: &str,
-    ) -> Value {
+    /// Closes the stream, which releases every lease it holds, waits for its CLOSE, then
+    /// reads the leases back so the record states whether any lease this client was granted
+    /// is still held. The server sends CLOSE only after the revocation is committed, so a
+    /// CLOSE received means the read sees it. Interruptions delivered meanwhile join this
+    /// detach instead of cutting the wait short; only [`CLOSE_BOUND`] ends it early.
+    async fn detach(&mut self, notices: &mut Notices, reason: &str) -> Value {
         let requested = self
             .client
             .call("attach.close", json!({"stream_id": self.stream}))
             .await
             .is_ok();
-        let closed = requested && self.await_close(notices, signals).await;
+        let closed = requested && self.await_close(notices).await;
         let granted: Vec<String> = self
             .lease
             .iter()
@@ -73,22 +71,18 @@ impl Attached {
         }})
     }
 
-    async fn await_close(&mut self, notices: &mut Notices, signals: &mut Signals) -> bool {
+    async fn await_close(&mut self, notices: &mut Notices) -> bool {
+        // Only CLOSE ends the wait: the outcome is already detach, so a notice that cannot
+        // be drawn or read (a hung-up terminal) changes nothing the record reports.
         let close = async {
             while let Some(notice) = notices.recv().await {
-                if matches!(self.notice(notice).await, Ok(Some(_)) | Err(_)) {
+                if let Ok(Some(_)) = self.notice(notice).await {
                     return true;
                 }
             }
             false
         };
-        let raced = async {
-            tokio::select! {
-                closed = close => closed,
-                _ = signals.stop() => false,
-            }
-        };
-        tokio::time::timeout(CLOSE_BOUND, raced)
+        tokio::time::timeout(CLOSE_BOUND, close)
             .await
             .unwrap_or(false)
     }
@@ -200,23 +194,23 @@ impl Attached {
                         Ok(None) => {}
                         Ok(Some(end)) => return Ok(end),
                         Err(AttachError::TerminalGone) => {
-                            return Ok(self.detach((notices, signals), "hangup").await);
+                            return Ok(self.detach(notices, "hangup").await);
                         }
                         Err(error) => return Err(error),
                     },
                 },
                 typed = typed_or_never(keyboard.as_mut()) => match typed {
                     Typed::Bytes(bytes) => if self.typed(&bytes).await? {
-                        return Ok(self.detach((notices, signals), "detach_key").await);
+                        return Ok(self.detach(notices, "detach_key").await);
                     },
-                    Typed::HungUp => return Ok(self.detach((notices, signals), "hangup").await),
+                    Typed::HungUp => return Ok(self.detach(notices, "hangup").await),
                     Typed::Failed(source) => {
                         return Err(AttachError::Io { operation: "read the keyboard", source });
                     }
                 },
                 delivered = signals.next() => match delivered {
                     Interrupt::Resize => self.resize().await?,
-                    stop => return Ok(self.detach((notices, signals), stop.reason()).await),
+                    stop => return Ok(self.detach(notices, stop.reason()).await),
                 },
             }
         }

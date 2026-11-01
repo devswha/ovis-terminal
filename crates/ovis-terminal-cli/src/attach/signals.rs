@@ -3,8 +3,8 @@
 //! Every handler is installed before the outer terminal is touched, so no interruption
 //! can take the default action (terminate, or dump core on SIGQUIT) while raw mode is on.
 //! Before a stream is attached an interruption ends the attach as `interrupted` at its
-//! stage; once attached it detaches; a second interruption while detaching stops waiting
-//! for the server's CLOSE. Window changes only ever resize.
+//! stage; once attached it detaches, and interruptions delivered while detaching join that
+//! detach (its wait for CLOSE is bounded). Window changes only ever resize.
 
 use std::future::Future;
 
