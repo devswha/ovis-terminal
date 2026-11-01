@@ -33,7 +33,7 @@ use crate::conn::{Call, RequestHandler};
 mod registration;
 
 /// Reads that may answer at once; [`Dispatcher::shutdown`] waits for all of them.
-const READS: u32 = 1 << 16;
+const READS: u16 = u16::MAX;
 
 /// Strict dispatcher sharing the core's actual operation/event coordinator.
 ///
@@ -75,7 +75,7 @@ where
                 authority,
                 identity,
                 core,
-                reads: Arc::new(Semaphore::new(READS as usize)),
+                reads: Arc::new(Semaphore::new(usize::from(READS))),
             }),
             routes: BTreeMap::new(),
             reads: BTreeMap::new(),
@@ -103,7 +103,7 @@ where
         let joined = running.join().await;
         // A read cancelled with its connection still runs off the executor and holds the
         // event log; wait for every one so the log has no other holder once this returns.
-        if let Ok(all) = self.state.reads.acquire_many(READS).await {
+        if let Ok(all) = self.state.reads.acquire_many(u32::from(READS)).await {
             self.state.reads.close();
             drop(all);
         }

@@ -129,6 +129,8 @@ pub(crate) enum Step {
     PtyResize(super::pty::PtyResize),
     /// Await the PTY client's exit and check its terminal settings.
     PtyExit(super::pty::PtyExit),
+    /// Run planned quality gates in-process, or only the one `--inject` names.
+    Gates(super::gates::Gates),
 }
 
 /// How a connection reaches the endpoint.

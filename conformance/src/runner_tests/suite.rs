@@ -32,6 +32,7 @@ const EXECUTABLE: &[&str] = &[
     "protocol/multiplex.json",
     "protocol/pagination.json",
     "protocol/strict-target.json",
+    "quality/gates.json",
     "recovery/e2e.json",
     "remote/e2e.json",
     "remote/isolation.json",
@@ -66,6 +67,15 @@ fn executable() -> Vec<String> {
 fn every_scenario_file_is_executed_or_a_listed_declaration() -> TestResult {
     let ran = conformance("all/all", "all", &[])?;
     assert_eq!(ran.output.status.code(), Some(0), "{}", ran.explain());
+    let summary: Value = serde_json::from_slice(&ran.output.stdout)?;
+    assert_eq!(
+        (
+            field(&summary, "/evidence_written"),
+            field(&summary, "/evidence_error")
+        ),
+        (&Value::Bool(true), &Value::Null),
+        "the summary reports the evidence file it wrote"
+    );
     let evidence = &ran.evidence;
     assert_eq!(strings(evidence, "/inventory/executed"), executable());
     let allowlist: Value = serde_json::from_slice(&std::fs::read(

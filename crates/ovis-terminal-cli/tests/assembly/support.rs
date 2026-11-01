@@ -4,14 +4,17 @@ use std::collections::BTreeSet;
 use std::io::{BufRead as _, BufReader, Write as _};
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
-use std::process::{Child, ChildStdin, ChildStdout, Command, Output, Stdio};
+use std::process::{Child, ChildStdin, ChildStdout, Output, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde_json::{Value, json};
 
+#[path = "support/launch.rs"]
+mod launch;
 #[path = "support/rpc.rs"]
 mod rpc;
+use launch::{ANNOUNCE_GUARD, product, readable};
 pub use rpc::rpc;
 
 /// Result of a test step; any failure fails the test.
@@ -41,34 +44,6 @@ pub fn op_id() -> TestResult<String> {
 /// stays inside every platform's socket path limit.
 fn fixture_root() -> PathBuf {
     std::env::var_os("OVIS_FIXTURE_ROOT").map_or_else(|| PathBuf::from("/tmp"), PathBuf::from)
-}
-
-/// The binary under test. With `OVIS_TEST_PIN_CORES` set (a `taskset -c` list), it runs
-/// pinned to those cores, so a loaded-core run loads only the server and CLI under test
-/// while the harness keeps its own cores.
-fn product() -> Command {
-    std::env::var("OVIS_TEST_PIN_CORES").map_or_else(
-        |_| Command::new(BIN),
-        |cores| {
-            let mut pinned = Command::new("/usr/bin/taskset");
-            pinned.args(["-c", &cores, BIN]);
-            pinned
-        },
-    )
-}
-
-/// Hang guard on one server announcement; a missing one fails with the live server pid.
-const ANNOUNCE_GUARD: Duration = Duration::from_secs(60);
-
-/// Whether `stdout` has bytes (or end of file) to read within `guard`.
-fn readable(stdout: &ChildStdout, guard: Duration) -> TestResult<bool> {
-    use rustix::event::{PollFd, PollFlags, Timespec, poll};
-    let mut fds = [PollFd::new(stdout, PollFlags::IN)];
-    let timeout = Timespec {
-        tv_sec: i64::try_from(guard.as_secs())?,
-        tv_nsec: 0,
-    };
-    Ok(poll(&mut fds, Some(&timeout))? > 0)
 }
 
 /// A new, empty server root below the fixture root.
@@ -341,37 +316,6 @@ impl Served {
             return Err("the server's stdout ended".into());
         }
         Ok(serde_json::from_str(&line)?)
-    }
-
-    /// A connection on the local socket that completed hello as the owner and stays open.
-    ///
-    /// # Errors
-    ///
-    /// Fails when a socket step fails or hello is refused.
-    pub fn connected(&self) -> TestResult<BufReader<UnixStream>> {
-        self.connected_as(&self.bearer)
-    }
-
-    /// A raw connection that completed hello with `bearer`.
-    ///
-    /// # Errors
-    ///
-    /// Fails when a socket step fails or hello is refused.
-    pub fn connected_as(&self, bearer: &str) -> TestResult<BufReader<UnixStream>> {
-        let stream = UnixStream::connect(&self.socket)?;
-        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
-        let mut connection = BufReader::new(stream);
-        let hello = json!({"jsonrpc": "2.0", "id": "h", "method": "hello", "params": {
-            "generation": "1", "client": {"name": "t31", "version": "0"}, "credential": bearer,
-        }});
-        writeln!(connection.get_mut(), "{hello}")?;
-        let mut line = String::new();
-        connection.read_line(&mut line)?;
-        let reply: Value = serde_json::from_str(&line)?;
-        if reply.get("result").is_none() {
-            return Err(reply.to_string().into());
-        }
-        Ok(connection)
     }
 
     /// The server process's pid.
