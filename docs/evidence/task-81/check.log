@@ -1,0 +1,15 @@
+==> cargo +nightly fmt --all -- --check
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+        PASS [   0.011s] ( 963/1025) workspace-hygiene::fixtures malformed_source_is_a_syntax_violation
+        PASS [   0.007s] ( 967/1025) workspace-hygiene::fixtures receivers_count_as_parameters
+        PASS [   0.030s] ( 970/1025) workspace-hygiene::fixtures exactly_250_pure_loc_and_three_parameters_pass
+        PASS [   0.043s] ( 972/1025) workspace-hygiene::fixtures one_line_and_one_parameter_over_the_limit_both_fail
+        PASS [   0.049s] ( 976/1025) workspace-hygiene::fixtures violations_report_file_line_rule_and_count
+     Summary [ 129.843s] 1025 tests run: 1025 passed (1 slow), 1 skipped
+==> cargo test --doc --workspace --all-features --locked
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 1020 file(s) checked
+==> bash scripts/hygiene/manifests.sh
+==> bash scripts/hygiene/json.sh
+check_exit=0
