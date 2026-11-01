@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart, template-launch, agent-tree, credential-rotation, process-info, machine-actor]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart, template-launch, agent-tree, credential-rotation, process-info, waits, client-ts, prompt-bridge, recovery, machine-actor]
 
 permissions:
   contents: read
@@ -1019,6 +1019,138 @@ jobs:
             process-info-stress-macos.log
             process-info-*.json
           if-no-files-found: error
+  waits:
+    if: inputs.probe == 'waits'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat wait and interrupt tests 50 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 50); do
+              printf '\nITERATION %s/50\n' "$iteration"
+              cargo nextest run -p ovis-terminal-core --test waits --locked --no-tests=fail --no-capture
+              printf 'PASS %s/50\n' "$iteration"
+            done
+            printf 'RESULT 50/50\n'
+          } 2>&1 | tee waits-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: waits-stress-macos-${{ github.run_id }}
+          path: waits-stress-macos.log
+          if-no-files-found: error
+  client-ts:
+    if: inputs.probe == 'client-ts'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - name: generated SDK check, then the Bun suite 25 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal -p ovis-terminal-conformance --bin conformance
+          bun install --frozen-lockfile
+          cd packages/client-ts
+          {
+            uname -a
+            bun --version
+            git rev-parse HEAD
+            bun run generate:check
+            bun run typecheck
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              bun test
+              printf 'PASS %s/25\n' "$iteration"
+            done
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee ../../client-ts-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: client-ts-stress-macos-${{ github.run_id }}
+          path: client-ts-stress-macos.log
+          if-no-files-found: error
+  prompt-bridge:
+    if: inputs.probe == 'prompt-bridge'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat prompt bridge tests and scenario 25 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              cargo nextest run -p ovis-terminal-agent -p ovis-terminal-protocol -p ovis-terminal-server --lib --locked --no-tests=fail -E 'test(bridge)'
+              cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/bridge --isolated --case all --evidence "bridge-$iteration.json"
+              printf 'PASS %s/25\n' "$iteration"
+            done
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee prompt-bridge-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prompt-bridge-stress-macos-${{ github.run_id }}
+          path: prompt-bridge-stress-macos.log
+          if-no-files-found: error
+  recovery:
+    if: inputs.probe == 'recovery'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat crash recovery tests 25 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              cargo nextest run -p ovis-terminal-core --lib --locked --no-tests=fail -E 'test(recovery::)'
+              cargo nextest run -p ovis-terminal-server --lib --locked --no-tests=fail -E 'test(lanes::recovery)'
+              cargo nextest run -p ovis-terminal-protocol --lib --locked --no-tests=fail -E 'test(domain::recovery)'
+              printf 'PASS %s/25\n' "$iteration"
+            done
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee recovery-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recovery-stress-macos-${{ github.run_id }}
+          path: recovery-stress-macos.log
+          if-no-files-found: error
+
 
   machine-actor:
     if: inputs.probe == 'machine-actor'
