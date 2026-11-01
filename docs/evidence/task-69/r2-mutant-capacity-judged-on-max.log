@@ -1,0 +1,8 @@
+mutant capacity-judged-on-max: bench/terminal50/verdict.rs
+- let p99 = stats::summarize(measured).p99_ms;
++ let p99 = stats::summarize(measured).max_ms;
+$ cargo nextest run --locked -p ovis-terminal-bench --no-tests=fail --no-fail-fast
+
+FAIL terminal50::tests::one_slow_sample_fails_the_ideal_profile_but_not_the_capacity_p99
+Summary [   2.295s] 17 tests run: 16 passed, 1 failed, 0 skipped
+NEXTEST_EXIT=100

@@ -1,0 +1,11 @@
+mutant filter-slow-event-samples: bench/terminal50/delivery.rs
+- let sample = committed.at.elapsed();
++ let sample = committed.at.elapsed();
+                if sample > Duration::from_millis(100) {
+                    continue;
+                }
+$ cargo nextest run --locked -p ovis-terminal-bench --no-tests=fail --no-fail-fast
+
+FAIL terminal50::tests::runs::a_delayed_control_writer_breaks_the_event_budget_with_every_sample_kept
+Summary [   2.296s] 17 tests run: 16 passed, 1 failed, 0 skipped
+NEXTEST_EXIT=100

@@ -1,0 +1,9 @@
+mutant M-a-fleet-capped-at-two: bench/terminal50/fleet.rs
+- for terminal in 0..plan.shape.terminals {
++ for terminal in 0..plan.shape.terminals.min(2) {
+$ cargo nextest run --locked -p ovis-terminal-bench --no-tests=fail --no-fail-fast
+
+FAIL terminal50::tests::bound::the_verdict_reads_the_fleet_that_actually_ran
+FAIL terminal50::tests::runs::every_committed_event_is_delivered_lost_or_undelivered_for_each_client
+Summary [   2.293s] 17 tests run: 15 passed, 2 failed, 0 skipped
+NEXTEST_EXIT=100

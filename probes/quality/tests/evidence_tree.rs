@@ -40,13 +40,14 @@ fn audit_tree(exemptions: Option<&str>) -> ovis_terminal_probes::quality::GateRu
 }
 
 #[test]
-fn the_committed_evidence_passes_with_its_listed_exemptions() {
+fn the_committed_evidence_passes_with_its_listed_exemptions() -> TestResult {
     let ran = audit_tree(Some("probes/quality/evidence-exemptions.json"));
     assert_eq!(ran.exit, 0, "{}", ran.report);
     assert_eq!(
         field(&ran.report, "/exempted").as_array().map(Vec::len),
-        Some(22)
+        Some(exempted_paths()?.len())
     );
+    Ok(())
 }
 
 #[test]

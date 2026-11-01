@@ -1,0 +1,8 @@
+mutant M-b-admission-latency-zero: bench/terminal50/lanes.rs
+- samples.admission((warmup, started.elapsed()));
++ samples.admission((warmup, Duration::ZERO));
+$ cargo nextest run --locked -p ovis-terminal-bench --no-tests=fail --no-fail-fast
+
+FAIL terminal50::tests::bound::an_admission_delay_breaks_the_admission_budget_through_the_run
+Summary [   2.294s] 17 tests run: 16 passed, 1 failed, 0 skipped
+NEXTEST_EXIT=100
