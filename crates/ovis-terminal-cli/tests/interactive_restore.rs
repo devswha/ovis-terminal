@@ -9,11 +9,14 @@ pub mod support;
 #[path = "interactive_attach/helpers.rs"]
 pub mod helpers;
 
-use std::io::Read as _;
+use std::fs::File;
+use std::io::{Read as _, Write as _};
 use std::os::unix::net::UnixListener;
+use std::os::unix::process::CommandExt as _;
 use std::process::{Command, Stdio};
 
 use helpers::{attached, incarnation};
+use rustix::termios::{self, Winsize};
 use serde_json::{Value, json};
 use support::{BIN, Served, TestResult, WAIT};
 
@@ -148,4 +151,82 @@ fn a_signal_before_the_stream_is_attached_is_a_typed_interruption_at_its_stage()
     drop(accepted);
     std::fs::remove_dir_all(&root)?;
     Ok(())
+}
+
+#[test]
+fn an_outer_terminal_that_hangs_up_while_attached_detaches_and_releases_every_lease() -> TestResult
+{
+    let served = Served::start()?;
+    let before = incarnation(&served)?;
+    let master = File::from(rustix::pty::openpt(
+        rustix::pty::OpenptFlags::RDWR | rustix::pty::OpenptFlags::NOCTTY,
+    )?);
+    // The client must not inherit the master: a copy held open in the client would
+    // keep the terminal from ever hanging up when the test closes its side.
+    rustix::io::fcntl_setfd(&master, rustix::io::FdFlags::CLOEXEC)?;
+    rustix::pty::grantpt(&master)?;
+    rustix::pty::unlockpt(&master)?;
+    let slave_path = rustix::pty::ptsname(&master, Vec::new())?;
+    let slave = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(slave_path.to_str()?)?;
+    let grid = Winsize {
+        ws_row: 30,
+        ws_col: 100,
+        ws_xpixel: 0,
+        ws_ypixel: 0,
+    };
+    termios::tcsetwinsize(&master, grid)?;
+    let mut command = served.command(&["--json", "terminal", "attach", "--target", "t1"]);
+    command
+        .stdin(slave.try_clone()?)
+        .stdout(slave.try_clone()?)
+        .stderr(Stdio::piped());
+    // SAFETY: between fork and exec the closure only calls async-signal-safe setsid and
+    // the TIOCSCTTY ioctl on its own stdin, making the PTY slave its controlling terminal.
+    unsafe {
+        command.pre_exec(|| {
+            rustix::process::setsid()?;
+            rustix::process::ioctl_tiocsctty(rustix::stdio::stdin())?;
+            Ok(())
+        });
+    }
+    let client = command.spawn()?;
+    drop((command, slave));
+    let mut reader = master.try_clone()?;
+    let mut seen: Vec<u8> = Vec::new();
+    let mut buffer = [0_u8; 4096];
+    let mut typed = master.try_clone()?;
+    typed.write_all(b"echo hup-$((40+2))\r")?;
+    while !seen.windows(6).any(|window| window == b"hup-42") {
+        let read = reader.read(&mut buffer)?;
+        assert_ne!(read, 0, "the attach ended before the program answered");
+        seen.extend(buffer.get(..read).unwrap_or_default());
+    }
+    drop((reader, typed, master));
+    let output = client.wait_with_output()?;
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let record: Value = serde_json::from_str(stderr.lines().last().unwrap_or("null"))?;
+    assert_eq!(output.status.code(), Some(0), "{stderr}");
+    assert_eq!(
+        record.pointer("/detached/reason"),
+        Some(&json!("hangup")),
+        "{stderr}"
+    );
+    assert_eq!(
+        record.pointer("/detached/leases_released"),
+        Some(&json!(true)),
+        "{stderr}"
+    );
+    assert_eq!(
+        served.leases()?,
+        json!({"interact": null, "geometry_owner": null, "observers": []})
+    );
+    assert_eq!(
+        incarnation(&served)?,
+        before,
+        "the program outlives its viewer"
+    );
+    served.stop()
 }

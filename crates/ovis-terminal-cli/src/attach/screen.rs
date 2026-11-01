@@ -2,9 +2,7 @@
 //! it tracked so the modes the program switched on are switched off again when the
 //! guard drops, on every exit path, before the saved settings are put back.
 
-use std::io::Write as _;
-
-use tokio::io::AsyncWriteExt as _;
+use std::io;
 
 use super::AttachError;
 use super::modes::ModeTracker;
@@ -34,14 +32,26 @@ impl Screen {
         })
     }
 
-    /// Draws terminal bytes on stdout, unchanged.
+    /// Draws terminal bytes on stdout, unchanged; a terminal that hung up (EIO) is
+    /// [`AttachError::TerminalGone`], which detaches instead of failing. The bytes go
+    /// straight to the descriptor on the blocking pool, never through the process's
+    /// buffered stdout, so a failed draw leaves nothing queued for the exit report's
+    /// flush to fail on.
     pub(super) async fn draw(&mut self, bytes: &[u8]) -> Result<(), AttachError> {
         self.tracker.track(bytes);
-        let mut stdout = tokio::io::stdout();
-        let written = stdout.write_all(bytes).await.and(stdout.flush().await);
-        written.map_err(|source| AttachError::Io {
-            operation: "write the screen to stdout",
-            source,
+        let chunk = bytes.to_vec();
+        let written = tokio::task::spawn_blocking(move || tty::write_unbuffered(&chunk))
+            .await
+            .unwrap_or_else(|join| Err(io::Error::other(join)));
+        written.map_err(|source| {
+            if source.raw_os_error() == Some(rustix::io::Errno::IO.raw_os_error()) {
+                AttachError::TerminalGone
+            } else {
+                AttachError::Io {
+                    operation: "write the screen to stdout",
+                    source,
+                }
+            }
         })
     }
 }
@@ -52,8 +62,7 @@ impl Drop for Screen {
         if !self.stdout_tty || reset.is_empty() {
             return;
         }
-        let mut stdout = std::io::stdout().lock();
-        if let Err(error) = stdout.write_all(&reset).and_then(|()| stdout.flush()) {
+        if let Err(error) = tty::write_unbuffered(&reset) {
             tty::warn("reset terminal modes", &error.to_string());
         }
     }

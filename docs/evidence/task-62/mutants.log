@@ -1,0 +1,43 @@
+=== MUTANT detach-key: crates/ovis-terminal-cli/src/attach/input.rs: 'pub(super) const DETACH_KEY: u8 = 0x1c;' -> 'pub(super) const DETACH_KEY: u8 = 0x1d;'
+ crates/ovis-terminal-cli/src/attach/input.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+        FAIL [   0.009s] (1/3) ovis-terminal-cli attach::input::tests::the_detach_key_ends_forwarding_mid_chunk
+     Summary [   0.402s] 3 tests run: 2 passed, 1 failed, 27 skipped
+MUTANT detach-key KILLED
+=== MUTANT stale-epoch: crates/ovis-terminal-cli/src/attach/open.rs: 'if error.data.kind.token() == "lease_epoch_mismatch" =>' -> 'if error.data.kind.token() == "lease_epoch_mismatch_never" =>'
+ crates/ovis-terminal-cli/src/attach/open.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+        FAIL [   0.262s] (2/2) ovis-terminal-cli::interactive_attach a_stale_takeover_names_the_current_epoch_and_a_current_one_displaces_the_holder
+     Summary [   0.265s] 2 tests run: 1 passed, 1 failed, 0 skipped
+MUTANT stale-epoch KILLED
+=== MUTANT held-not-conflict: crates/ovis-terminal-cli/src/attach/open.rs: 'OpenEnum::Known(AttachOutcome::Held) => Some(AttachError::Conflict {
+            holder: record(opened.holder.as_ref()),
+            retry: record(opened.retry.as_ref()),
+        }),' -> 'OpenEnum::Known(AttachOutcome::Held) => Some(AttachError::Refused { reason: reason() }),'
+ crates/ovis-terminal-cli/src/attach/open.rs | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+        FAIL [   0.156s] (2/7) ovis-terminal-cli::attach a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_terminal
+        FAIL [   0.412s] (5/7) ovis-terminal-cli::interactive_attach a_stale_takeover_names_the_current_epoch_and_a_current_one_displaces_the_holder
+     Summary [   1.250s] 7 tests run: 5 passed, 2 failed, 0 skipped
+MUTANT held-not-conflict KILLED
+=== MUTANT alt-screen-not-reset: crates/ovis-terminal-cli/src/attach/modes.rs: '1047, 47, 1049,
+];' -> '1047, 47, 1048,
+];'
+ crates/ovis-terminal-cli/src/attach/modes.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+        FAIL [   0.010s] (2/6) ovis-terminal-cli attach::modes::tests::modes_left_on_are_reset_with_the_alternate_screen_last
+        FAIL [   0.251s] (6/6) ovis-terminal-cli::interactive_restore unknown_sequences_reach_the_program_and_its_modes_are_switched_off_on_detach
+     Summary [   0.252s] 6 tests run: 4 passed, 2 failed, 23 skipped
+MUTANT alt-screen-not-reset KILLED
+=== MUTANT observer-resizes: crates/ovis-terminal-cli/src/attach/session.rs: 'let geometry_lease = if plan.observe {
+        None' -> 'let geometry_lease = if plan.observe && false {
+        None'
+ crates/ovis-terminal-cli/src/attach/session.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+MUTANT observer-resizes SURVIVED
+
+RESULT: 4 killed, 1 survived (equivalent).
+observer-resizes is equivalent: open.rs geometry_lease returns a lease only when attach.leases names this client as
+the geometry_owner holder, and an observe-role attach is never granted geometry, so reading it while observing still
+yields None. The observable it guards (the observer's grid never reaches the program; geometry_owner unchanged) is
+asserted by interactive_attach::an_observer_on_a_terminal_never_resizes_and_stays_live_after_the_operator_detaches.
