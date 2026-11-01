@@ -184,3 +184,8 @@ impl Runtime {
             .map_err(|e| layout_refusal(&e))
     }
 }
+
+/// The published tree of `layout`.
+pub(super) fn tree_of(layout: &ovis_terminal_core::layout::Layout) -> Value {
+    wire::tree(layout)
+}

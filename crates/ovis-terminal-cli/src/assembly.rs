@@ -36,6 +36,7 @@ mod resize;
 mod restart;
 mod routes;
 mod serve;
+mod session;
 mod terminal;
 mod turns;
 mod waited;

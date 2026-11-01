@@ -212,6 +212,20 @@ impl StatusService {
         }))
     }
 
+    /// The agent bound to `terminal` at `snapshot`, if any.
+    ///
+    /// # Errors
+    ///
+    /// Returns a store or decoding failure.
+    pub fn binding(
+        &self,
+        snapshot: &Snapshot,
+        terminal: TerminalId,
+    ) -> Result<Option<AgentBinding>, StatusError> {
+        self.current(snapshot, terminal)
+            .map(|stored| stored.row.agent)
+    }
+
     /// Reads a terminal's agent; a valid terminal without one has `agent: null`.
     ///
     /// # Errors

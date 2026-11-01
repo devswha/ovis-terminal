@@ -63,6 +63,13 @@ pub(super) fn register(
     dispatch
         .register(GetTurn::new(&turns))
         .map_err(stage("register turn.get"))?;
+    dispatch
+        .register_read(crate::assembly::session::SessionRead {
+            actor: hosting.actor.clone(),
+            status: Arc::clone(agents.status()),
+            machine: hosting.identity.machine_id(),
+        })
+        .map_err(stage("register session.snapshot"))?;
     let tree = Arc::new(TreeService::new(
         hosting.identity,
         (Arc::clone(agents.status()), Arc::clone(agents.prompts())),

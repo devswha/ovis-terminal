@@ -20,6 +20,8 @@ mod records;
 pub mod restart;
 #[path = "assembly/routes.rs"]
 mod routes;
+#[path = "assembly/session.rs"]
+mod session;
 #[path = "assembly/support.rs"]
 pub mod support;
 #[path = "assembly/templates.rs"]
@@ -40,7 +42,7 @@ use serde_json::{Value, json};
 use support::{BIN, Served, TestResult, op_id};
 
 /// Schema methods no landed crate implements; each must answer `method_not_found`.
-const UNIMPLEMENTED: [&str; 18] = [
+const UNIMPLEMENTED: [&str; 17] = [
     "agent.list",
     "agent.note",
     "agent.release",
@@ -55,7 +57,6 @@ const UNIMPLEMENTED: [&str; 18] = [
     "server.start",
     "service.install",
     "service.remove",
-    "session.snapshot",
     "terminal.first_message",
     "terminal.history",
     "terminal.search",
