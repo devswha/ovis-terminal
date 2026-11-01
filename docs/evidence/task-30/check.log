@@ -1,5 +1,3 @@
-   Doc-tests ovis_terminal_authz
-
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -94,13 +92,13 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
    Compiling thiserror-impl v1.0.69
    Compiling serde_derive_internals v0.30.0
    Compiling thiserror v1.0.69
-   Compiling filedescriptor v0.8.3
    Compiling serde_derive v1.0.229
    Compiling ref-cast-impl v1.0.27
    Compiling thiserror-impl v2.0.21
    Compiling tokio-macros v2.7.2
-   Compiling portable-pty v0.9.0
+   Compiling filedescriptor v0.8.3
    Compiling schemars_derive v1.2.3
+   Compiling portable-pty v0.9.0
    Compiling ref-cast v1.0.27
    Compiling tokio v1.54.1
    Compiling thiserror v2.0.21
@@ -114,28 +112,28 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
    Compiling ovis-terminal-vt v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t30/crates/ovis-terminal-vt)
    Compiling ovis-terminal-authz v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t30/crates/ovis-terminal-authz)
    Compiling ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t30/crates/ovis-terminal-core)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 24.70s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 23.86s
      Running tests/subscriptions.rs (/dev/shm/ovt-target-lane-t30/debug/deps/subscriptions-2118d7585f2c3018)
 
 running 22 tests
 test independence::heartbeat_bounds_never_exceed_fifteen_seconds ... ok
 test durability::close_forced_returns_only_after_its_marker_is_durable ... ok
-test durability::missed_is_returned_only_after_its_marker_is_durable ... ok
+test health::a_real_stalled_subscription_reports_its_queue_loss_and_resync ... ok
 test wire::loss_markers_reject_numeric_and_unknown_fields ... ok
-test wire::loss_markers_round_trip_every_sequence_as_a_decimal_string ... ok
+test durability::missed_is_returned_only_after_its_marker_is_durable ... ok
 test wire::subscribe_parameters_decode_to_one_start_and_selector ... ok
 test wire::unusable_filters_and_cursors_are_typed_rejections ... ok
-test health::a_real_stalled_subscription_reports_its_queue_loss_and_resync ... ok
 test independence::an_idle_filtered_subscription_heartbeats_its_scan_cursor_and_identity ... ok
+test independence::the_subscription_limit_refuses_without_disturbing_installed_ones ... ok
+test wire::loss_markers_round_trip_every_sequence_as_a_decimal_string ... ok
 test happy ... ok
 test failure ... ok
 test replay::a_cursor_ahead_of_the_head_installs_nothing ... ok
-test independence::the_subscription_limit_refuses_without_disturbing_installed_ones ... ok
 test independence::unsubscribing_one_subscription_leaves_the_others_delivering ... ok
 test replay::an_expired_cursor_misses_with_a_fresh_snapshot_and_the_floor_still_resumes ... ok
+test stall::a_stalled_fanout_worker_loses_every_subscription_and_each_recovers ... ok
 test loss::a_forced_close_marker_names_the_first_undelivered_event_and_reconnect_replays_it ... ok
 test loss::a_withheld_consumer_recovers_from_its_durable_marker_and_continues ... ok
-test stall::a_stalled_fanout_worker_loses_every_subscription_and_each_recovers ... ok
 test loss::the_session_budget_evicts_the_largest_queue_not_the_draining_one ... ok
 test independence::an_idle_subscription_heartbeats_within_its_interval_whatever_the_caller_waits ... ok
 test loss::a_dropped_consumer_still_leaves_a_durable_marker ... ok
@@ -145,13 +143,13 @@ test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fin
 
 
 ==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
-workspace-hygiene: 0 violation(s) in 1449 file(s) checked
+workspace-hygiene: 0 violation(s) in 1477 file(s) checked
 
 ==> bash scripts/hygiene/manifests.sh
 manifests.sh: 16 member manifest(s) checked
 
 ==> bash scripts/hygiene/json.sh
-json.sh: 258 JSON file(s) checked
+json.sh: 267 JSON file(s) checked
 
 ==> cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin source-check -- --roots crates packages/client-ts conformance bench probes --max-pure-loc 250 --max-params 3 --violations docs/research/violations.md --checklist docs/quality-checklist.md
 {
@@ -212,11 +210,11 @@ json.sh: 258 JSON file(s) checked
     ]
   },
   "sources": {
-    "files_checked": "1437",
+    "files_checked": "1465",
     "roots": [
       {
         "root": "crates",
-        "rust_files": "1238"
+        "rust_files": "1265"
       },
       {
         "root": "packages/client-ts",
@@ -224,7 +222,7 @@ json.sh: 258 JSON file(s) checked
       },
       {
         "root": "conformance",
-        "rust_files": "80"
+        "rust_files": "81"
       },
       {
         "root": "bench",
@@ -279,7 +277,9 @@ json.sh: 258 JSON file(s) checked
     "docs/evidence/task-69/bench/failure-writer-delay-150ms-linux.samples.json",
     "docs/evidence/task-69/bench/failure-admission-delay-150ms-linux.json",
     "docs/evidence/task-69/bench/failure-admission-delay-150ms-linux.samples.json",
-    "docs/evidence/task-69/bench/mutant-M-a-fleet-capped-at-two-linux.json"
+    "docs/evidence/task-69/bench/mutant-M-a-fleet-capped-at-two-linux.json",
+    "docs/evidence/task-61/acceptance-evidence.json",
+    "docs/evidence/task-61/task-61-ovis-terminal-v1.json"
   ],
   "exit": 0,
   "finding_count": "0",
@@ -290,9 +290,9 @@ json.sh: 258 JSON file(s) checked
     "arch": "x86_64",
     "os": "linux"
   },
-  "inputs": "102",
+  "inputs": "108",
   "kind": null,
-  "runs": "148",
+  "runs": "155",
   "verdict": "pass"
 }
 
