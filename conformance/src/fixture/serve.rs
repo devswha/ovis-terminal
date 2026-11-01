@@ -5,11 +5,10 @@ use std::io::Write as _;
 use std::path::Path;
 use std::sync::Arc;
 
-use ovis_terminal_agent::bridge::PromptBridge;
 use ovis_terminal_authz::{
-    Authority, AuthorityConfig, EndpointPolicy, Grant, Issuance, IssueRequest, LocalAccount,
-    OwnerSpec, PeerEvidence, Permission, Presentation, PrincipalId, RemoteTransport, ResourceScope,
-    RuntimeBinding, ScopeResource, UnixUid,
+    Authority, AuthorityConfig, EndpointPolicy, Grant, Issuance, IssueRequest, IssuedCredential,
+    LocalAccount, OwnerSpec, PeerEvidence, Permission, Presentation, PrincipalId, RemoteTransport,
+    ResourceScope, RuntimeBinding, ScopeResource, UnixUid,
 };
 use ovis_terminal_core::events::Coordinator;
 use ovis_terminal_core::ops::OperationProducer;
@@ -26,11 +25,10 @@ use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
 use tokio::io::AsyncReadExt as _;
 
-use super::bridge::{Extension, QUEUE_LIMIT};
-use super::documents::{DocGet, DocSet};
-use super::handler::{Dispatch, Event, FixtureHandler, Probes};
-use super::terminals::TerminalKeep;
+use super::handler::{Dispatch, Event, FixtureHandler};
 use crate::error::RunnerError;
+
+mod registration;
 
 /// Machine identity every fixture reports in hello.
 pub(crate) const MACHINE: &str = "machine:0191f1a2-0000-7000-8000-000000000021";
@@ -59,9 +57,16 @@ pub(crate) fn identity() -> Result<RuntimeIdentity, RunnerError> {
     ))
 }
 
-/// Serves until stdin reaches end of file, then prints the serve report and returns.
-pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
-    let runtime = identity()?;
+/// The owner's authority over `runtime`, and the owner bearer it issued.
+fn bootstrap(
+    runtime: RuntimeIdentity,
+) -> Result<
+    (
+        Arc<Authority<RegistryIdentities>>,
+        IssuedCredential<RegistryIdentities>,
+    ),
+    RunnerError,
+> {
     let binding = RuntimeBinding::new(runtime.machine_id(), runtime.runtime_id());
     let owner = PrincipalId::parse("owner").map_err(at("parse the owner principal"))?;
     let (authority, issued) = Authority::bootstrap(AuthorityConfig::new(
@@ -69,69 +74,35 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         OwnerSpec::new(owner, TimestampMs::new(u64::MAX)),
     ))
     .map_err(at("bootstrap the authority"))?;
-    let authority = Arc::new(authority);
+    Ok((Arc::new(authority), issued))
+}
+
+/// Serves until stdin reaches end of file, then prints the serve report and returns.
+pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
+    let runtime = identity()?;
+    let (authority, issued) = bootstrap(runtime)?;
     let core = open_core(root, runtime)?;
-    let effects = root.join("effects");
-    std::fs::create_dir(&effects).map_err(at("create the effect directory"))?;
     let mut dispatch = Dispatch::new(Arc::clone(&authority), runtime, Arc::clone(&core));
-    dispatch
-        .register(DocSet::new(&effects, runtime))
-        .map_err(at("register doc.set"))?;
-    dispatch
-        .register(DocGet::new(&effects, runtime))
-        .map_err(at("register doc.get"))?;
-    dispatch
-        .register(TerminalKeep::new(&effects, runtime)?)
-        .map_err(at("register terminal.keep"))?;
-    let (agents, gate, sequenced) =
-        super::agents::register(&mut dispatch, (runtime, Arc::clone(&core)), &authority)?;
-    super::rotation::register(&mut dispatch, &authority, (runtime, Arc::clone(&sequenced)))?;
-    let (status, directory) = (Arc::clone(&agents.0), Arc::clone(&agents.1));
-    super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
-    let programs = super::processes::register(
-        &mut dispatch,
-        (root, runtime),
-        (&authority, issued.bearer(), &agents.0),
-    )
-    .await?;
-    let parts = (&authority, &*core, agents.clone());
-    let template = super::template_lane::register(&mut dispatch, (runtime, root), parts)?;
-    let launch = (runtime, Arc::clone(&core), template);
-    let tree = super::tree::register(&mut dispatch, (&agents, &gate), launch)?;
-    let fleet = (runtime, Arc::clone(&core));
-    let machines = super::machines::register(&mut dispatch, (&agents, &gate), fleet).await?;
-    super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
-    let health = super::health::register(&mut dispatch, runtime, root)?;
-    let held = super::update::register(&mut dispatch, (root, &authority, issued.bearer()), runtime)
-        .await?;
+    let lanes = (&authority, issued.bearer(), &core);
+    let registered = registration::register(&mut dispatch, (root, runtime), lanes).await?;
     let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
     let writer = delegate(&authority, issued.bearer(), ("writer", WRITER))?;
-    let prompts = Arc::clone(&gate.prompts);
-    let bridge = PromptBridge::new(Arc::clone(&status), Arc::clone(&prompts), QUEUE_LIMIT);
-    let probes = Probes {
-        gate,
-        directory: Arc::clone(&directory),
-        extension: Extension::new(bridge, Arc::clone(&core)),
-        sequenced,
-        tree,
-        health: Arc::clone(&health),
-        machines,
-        programs,
-    };
+    let directory = Arc::clone(&registered.probes.directory);
+    let health = Arc::clone(&registered.probes.health.health);
     let handler = Arc::new(FixtureHandler::new(
         Arc::new(dispatch),
         root.to_path_buf(),
-        probes,
+        registered.probes,
     ));
     let gated = Gated::new(
-        PromptBridgeGate::new(directory, (status, prompts)),
+        PromptBridgeGate::new(directory, (registered.status, registered.prompts)),
         Arc::clone(&handler),
     );
     let socket = root.join("run").join("s.sock");
     let endpoint = UnixEndpoint::bind(&socket)
         .await
         .map_err(at("bind the socket"))?;
-    let measured = Measured::new(Arc::clone(&health.health), Arc::new(gated));
+    let measured = Measured::new(health, Arc::new(gated));
     let revalidated = Revalidated::new(Arc::clone(&authority), measured);
     let config = ServerConfig::new(authority, runtime);
     let server = serve_unix(endpoint, config, Arc::new(revalidated)).map_err(at("serve"))?;
@@ -145,6 +116,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .map_err(at("shut the server down"))?;
     handler.shutdown().await?;
     drop(handler);
+    let held = registered.held;
     tokio::task::spawn_blocking(move || held.shutdown())
         .await
         .map_err(at("join the update holder shutdown"))??;
