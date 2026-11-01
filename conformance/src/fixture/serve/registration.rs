@@ -66,11 +66,8 @@ pub(super) async fn register(
     (authority, bearer, core): Shared<'_>,
 ) -> Result<Registered, RunnerError> {
     documents(dispatch, root, runtime)?;
-    let (agents, gate, sequenced, assembly) = super::super::agents::register(
-        dispatch,
-        (runtime, Arc::clone(core), root),
-        authority,
-    )?;
+    let (agents, gate, sequenced, assembly) =
+        super::super::agents::register(dispatch, (runtime, Arc::clone(core), root), authority)?;
     super::super::rotation::register(dispatch, authority, (runtime, Arc::clone(&sequenced)))?;
     let (status, directory) = (Arc::clone(&agents.0), Arc::clone(&agents.1));
     let programs = super::super::processes::register(
