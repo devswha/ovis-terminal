@@ -21,7 +21,7 @@ use ovis_terminal_vt::OutputOffset;
 use serde_json::{Value, json};
 
 use super::actor::Runtime;
-use super::error::{internal, refusal};
+use super::error::{checked, internal, refusal};
 use super::input::live_terminal;
 use super::records::unreported;
 
@@ -38,14 +38,6 @@ fn wait_refusal(error: &WaitError) -> BoundaryError {
         ),
         other => internal("arm an output wait")(other),
     }
-}
-
-/// `value` decoded as the method's closed result type before it leaves the server.
-fn checked<T: serde::de::DeserializeOwned + serde::Serialize>(
-    value: Value,
-) -> Result<Value, BoundaryError> {
-    let typed: T = serde_json::from_value(value).map_err(internal("encode a read result"))?;
-    serde_json::to_value(typed).map_err(internal("encode a read result"))
 }
 
 /// The wire result of a finished output wait.

@@ -51,7 +51,7 @@ impl Served {
     /// Fails when a process, socket or file step fails.
     pub fn start() -> TestResult<Self> {
         let unique = NEXT.fetch_add(1, Ordering::Relaxed);
-        let root = PathBuf::from("/tmp").join(format!("ovt31b-{}-{unique}", std::process::id()));
+        let root = fixture_root().join(format!("ovt31b-{}-{unique}", std::process::id()));
         std::fs::create_dir_all(&root)?;
         let mut child = Command::new(BIN)
             .args(["serve", "--stdin-lifetime", "--root"])
@@ -161,6 +161,12 @@ pub struct Outer {
     original: String,
     /// The attach client process.
     pub client: Child,
+}
+
+/// Where test state lives: `OVIS_FIXTURE_ROOT` when the host sets it, else `/tmp`, which
+/// stays inside every platform's socket path limit.
+fn fixture_root() -> PathBuf {
+    std::env::var_os("OVIS_FIXTURE_ROOT").map_or_else(|| PathBuf::from("/tmp"), PathBuf::from)
 }
 
 fn settings(file: &File) -> TestResult<String> {

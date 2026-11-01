@@ -5,6 +5,7 @@
 
 mod agents;
 mod machine;
+mod service;
 
 use std::path::Path;
 use std::sync::Arc;

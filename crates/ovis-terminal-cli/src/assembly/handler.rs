@@ -211,7 +211,10 @@ pub(super) struct Assembled {
 
 impl RequestHandler for Assembled {
     fn methods(&self) -> Vec<&'static str> {
-        self.attach.methods()
+        let mut methods = self.attach.methods();
+        methods.push(super::discovery::HELLO);
+        methods.extend(super::discovery::DISCOVERY);
+        methods
     }
 
     fn transports(&self) -> Vec<TransportKind> {
@@ -219,6 +222,9 @@ impl RequestHandler for Assembled {
     }
 
     async fn call(&self, call: Call) -> Result<Value, BoundaryError> {
+        if super::discovery::DISCOVERY.contains(&call.request.method()) {
+            return super::discovery::answer(&call, &self.transports);
+        }
         if call.request.method() != "attach.open" {
             return self.attach.call(call).await;
         }

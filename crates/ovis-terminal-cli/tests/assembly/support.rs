@@ -33,6 +33,12 @@ pub fn op_id() -> TestResult<String> {
     Ok(uuid_text(id))
 }
 
+/// Where test state lives: `OVIS_FIXTURE_ROOT` when the host sets it, else `/tmp`, which
+/// stays inside every platform's socket path limit.
+fn fixture_root() -> PathBuf {
+    std::env::var_os("OVIS_FIXTURE_ROOT").map_or_else(|| PathBuf::from("/tmp"), PathBuf::from)
+}
+
 fn uuid_text(id: u128) -> String {
     let hex = format!("{id:032x}");
     let part = |from: usize, to: usize| hex.get(from..to).unwrap_or_default().to_owned();
@@ -92,7 +98,7 @@ impl Served {
     /// Fails when a process, socket or file step fails.
     pub fn start_with(extra: &[&str]) -> TestResult<Self> {
         let unique = NEXT.fetch_add(1, Ordering::Relaxed);
-        let root = PathBuf::from("/tmp").join(format!("ovt31a-{}-{unique}", std::process::id()));
+        let root = fixture_root().join(format!("ovt31a-{}-{unique}", std::process::id()));
         std::fs::create_dir_all(&root)?;
         Self::start_at(&root, extra)
     }

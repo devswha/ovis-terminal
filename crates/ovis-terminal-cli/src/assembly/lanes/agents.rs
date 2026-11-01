@@ -1,9 +1,10 @@
-//! Agent lanes: status, prompts (recovered from the log), session binding and the agent
-//! tree.
+//! Agent lanes: status, prompts (recovered from the log), session binding, reported
+//! conversation records and the agent tree.
 
 use std::sync::Arc;
 
 use ovis_terminal_agent::conversation::binding::{BindingService, Stores};
+use ovis_terminal_agent::conversation::records::RecordsService;
 use ovis_terminal_agent::prompts::PromptService;
 use ovis_terminal_agent::status::StatusService;
 use ovis_terminal_agent::tree::TreeService;
@@ -11,6 +12,9 @@ use ovis_terminal_server::dispatch::lanes::agent_status::{
     AgentStatusLane, ClearStatus, GetAgent, GetStatus, RegisterAgent, ReportStatus,
 };
 use ovis_terminal_server::dispatch::lanes::agent_tree::{AgentTreeLane, ListChildren};
+use ovis_terminal_server::dispatch::lanes::conversation_records::{
+    AppendRecords, ConversationRecordsLane, Records,
+};
 use ovis_terminal_server::dispatch::lanes::prompts::{
     AnswerPrompt, ClosePrompt, GetPrompt, ListPrompts, OpenPrompt, PromptLane,
 };
@@ -89,6 +93,14 @@ pub(super) fn register(
     dispatch
         .register_read(ListChildren::new(&children))
         .map_err(stage("register agent.children"))?;
+    let records = Arc::new(RecordsService::new(runtime, Arc::clone(&status)));
+    let reported = ConversationRecordsLane::new(Arc::clone(&hosting.directory), records);
+    dispatch
+        .register(AppendRecords::new(&reported))
+        .map_err(stage("register agent.append_records"))?;
+    dispatch
+        .register_read(Records::new(&reported))
+        .map_err(stage("register agent.records"))?;
     let stores = Stores::new(&[]).map_err(stage("authorize session stores"))?;
     let binding = Arc::new(BindingService::new(runtime, status, stores));
     let sessions = SessionBindingLane::new(Arc::clone(&hosting.directory), binding);

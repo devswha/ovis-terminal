@@ -5,9 +5,13 @@
 #[path = "assembly/lanes.rs"]
 mod lanes;
 #[path = "assembly/prompts.rs"]
-mod prompts;
+pub mod prompts;
+#[path = "assembly/records.rs"]
+mod records;
 #[path = "assembly/restart.rs"]
 mod restart;
+#[path = "assembly/routes.rs"]
+mod routes;
 #[path = "assembly/support.rs"]
 pub mod support;
 #[path = "assembly/websocket.rs"]
@@ -19,79 +23,98 @@ use std::process::Command;
 use serde_json::{Value, json};
 use support::{BIN, Served, TestResult, op_id};
 
+/// Schema methods no landed crate implements; each must answer `method_not_found`.
+const UNIMPLEMENTED: [&str; 46] = [
+    "agent.history",
+    "agent.list",
+    "agent.note",
+    "agent.release",
+    "agent.wait_children",
+    "attach.focus",
+    "attach.release_geometry",
+    "attach.takeover",
+    "doc.list",
+    "events.ack",
+    "events.subscribe",
+    "events.unsubscribe",
+    "events.update",
+    "events.wait",
+    "input.barrier",
+    "input.interrupt",
+    "layout.edit",
+    "layout.get",
+    "machine.exec",
+    "machine.file",
+    "machine.list",
+    "machine.login",
+    "machine.rm",
+    "selection.set",
+    "server.metrics",
+    "server.restart",
+    "server.start",
+    "service.install",
+    "service.remove",
+    "session.snapshot",
+    "template.get",
+    "template.list",
+    "terminal.first_message",
+    "terminal.history",
+    "terminal.search",
+    "turn.get",
+    "turn.wait",
+    "update.activate",
+    "update.query",
+    "update.rollback",
+    "update.stage",
+    "update.verify",
+    "worktree.create",
+    "worktree.list",
+    "worktree.open",
+    "worktree.remove",
+];
+
+/// Every method name the committed OpenRPC document publishes.
+fn schema_methods() -> TestResult<BTreeSet<String>> {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../schema/ovis-terminal.openrpc.json"
+    );
+    let document: Value = serde_json::from_slice(&std::fs::read(path)?)?;
+    Ok(document
+        .get("methods")
+        .and_then(Value::as_array)
+        .ok_or("the document lists no methods")?
+        .iter()
+        .filter_map(|method| method.get("name").and_then(Value::as_str))
+        .map(str::to_owned)
+        .collect())
+}
+
 #[test]
-fn hello_advertises_exactly_the_routed_methods_and_the_rest_is_method_not_found() -> TestResult {
+fn hello_advertises_every_schema_method_but_the_unimplemented_which_are_method_not_found()
+-> TestResult {
     let served = Served::start()?;
-    let expected: BTreeSet<String> = [
-        "agent.children",
-        "agent.conversation",
-        "agent.get",
-        "agent.register",
-        "agent.update_session",
-        "attach.close",
-        "attach.credit",
-        "attach.leases",
-        "attach.open",
-        "attach.repaint",
-        "attach.resize",
-        "credential.revoke",
-        "credential.rotate",
-        "doc.get",
-        "doc.set",
-        "input.keys",
-        "input.paste",
-        "input.raw",
-        "input.send",
-        "machine.get",
-        "machine.rename",
-        "op.cancel",
-        "op.get",
-        "plugin.invoke",
-        "plugin.list",
-        "plugin.run_get",
-        "prompt.answer",
-        "prompt.close",
-        "prompt.get",
-        "prompt.list",
-        "prompt.open",
-        "server.status",
-        "server.stop",
-        "status.clear",
-        "status.get",
-        "status.report",
-        "terminal.get",
-        "terminal.keep",
-        "terminal.kill",
-        "terminal.label",
-        "terminal.list",
-        "terminal.output",
-        "terminal.process_info",
-        "terminal.recover",
-        "terminal.rename",
-        "terminal.rm",
-        "terminal.run",
-        "terminal.screen",
-        "terminal.wait_output",
-    ]
-    .map(str::to_owned)
-    .into();
-    assert_eq!(served.advertised()?, expected);
-    for unrouted in [
-        "layout.get",
-        "machine.list",
-        "server.restart",
-        "template.list",
-        "update.query",
-    ] {
-        let error = served.refused(&["call", unrouted, "--params", "{}"], 4)?;
+    let advertised = served.advertised()?;
+    let schema = schema_methods()?;
+    let unpublished: Vec<&String> = advertised.difference(&schema).collect();
+    assert!(
+        unpublished.is_empty(),
+        "advertised outside the schema: {unpublished:?}"
+    );
+    let missing: BTreeSet<String> = schema.difference(&advertised).cloned().collect();
+    let unimplemented: BTreeSet<String> = UNIMPLEMENTED.map(str::to_owned).into();
+    assert_eq!(
+        missing, unimplemented,
+        "schema methods hello does not advertise"
+    );
+    for method in UNIMPLEMENTED {
+        let error = served.refused(&["call", method, "--params", "{}"], 4)?;
         assert_eq!(
             error.get("kind"),
             Some(&json!("method_not_found")),
-            "{unrouted}: {error}"
+            "{method}: {error}"
         );
     }
-    let layout = served.refused(&["call", "layout.get", "--params", "{}"], 4)?;
-    assert_eq!(layout.get("kind"), Some(&json!("method_not_found")));
     let report = served.stop()?;
     assert_eq!(report.pointer("/report/panicked"), Some(&json!("0")));
     Ok(())

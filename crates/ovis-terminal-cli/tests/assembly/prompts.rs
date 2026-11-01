@@ -14,7 +14,15 @@ fn call(served: &Served, method: &str, params: &Value) -> TestResult<Value> {
 }
 
 /// The token the shell running as `t1` was spawned with, printed by the shell itself.
-fn spawned_token(served: &Served) -> TestResult<String> {
+///
+/// # Errors
+///
+/// Fails when a process or socket step fails or the screen shows no token.
+///
+/// # Panics
+///
+/// Panics when the shell's marker never appears.
+pub fn spawned_token(served: &Served) -> TestResult<String> {
     let text = r#"printf 'tok=%s=\n' "$OVIS_TERMINAL_PROCESS_TOKEN"; echo done-$((1+1))"#;
     let sent = call(
         served,

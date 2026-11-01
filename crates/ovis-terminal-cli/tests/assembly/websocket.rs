@@ -1,5 +1,6 @@
 //! `serve --websocket-port 0`: hello over an RFC 6455 binary message answers like the socket.
 
+use std::collections::BTreeSet;
 use std::io::{BufRead as _, BufReader, Write as _};
 use std::net::TcpStream;
 use std::time::Duration;
@@ -90,11 +91,15 @@ fn hello_over_websocket_advertises_both_transports_and_the_same_methods() -> Tes
         reply.pointer("/result/capabilities/transports"),
         Some(&json!(["unix", "websocket"]))
     );
-    let methods = reply
+    let methods: BTreeSet<String> = reply
         .pointer("/result/methods")
         .and_then(Value::as_array)
-        .map(Vec::len);
-    assert_eq!(methods, Some(49));
+        .ok_or_else(|| reply.to_string())?
+        .iter()
+        .filter_map(Value::as_str)
+        .map(str::to_owned)
+        .collect();
+    assert_eq!(methods, served.advertised()?);
     drop((reader, stream));
     served.stop()?;
     Ok(())

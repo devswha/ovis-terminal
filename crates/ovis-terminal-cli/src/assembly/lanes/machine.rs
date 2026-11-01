@@ -1,5 +1,5 @@
-//! Machine-scoped lanes: credentials, `server.stop`, documents, plugins and machine
-//! identity.
+//! Machine-scoped lanes: credentials, `server.stop`, documents, plugins, machine
+//! identity and the holder service description.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -8,7 +8,7 @@ use ovis_terminal_server::dispatch::lanes::credential_rotation::{
     CredentialLane, RevokeCredential, RotateCredential,
 };
 use ovis_terminal_server::dispatch::lanes::machine_identity::{
-    MachineGet, MachineLane, MachineRename,
+    MachineAdd, MachineGet, MachineLane, MachineRename,
 };
 use ovis_terminal_server::dispatch::lanes::{documents_retention, plugins};
 use ovis_terminal_services::plugins::Plugins;
@@ -59,5 +59,9 @@ pub(super) fn register(
         .map_err(stage("register machine.get"))?;
     dispatch
         .register(MachineRename::new(&machines))
-        .map_err(stage("register machine.rename"))
+        .map_err(stage("register machine.rename"))?;
+    dispatch
+        .register(MachineAdd::new(&machines))
+        .map_err(stage("register machine.add"))?;
+    super::service::register(dispatch, machine)
 }

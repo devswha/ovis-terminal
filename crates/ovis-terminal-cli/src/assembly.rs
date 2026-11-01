@@ -10,6 +10,7 @@ mod actor;
 mod boot;
 mod credentials;
 mod directory;
+mod discovery;
 mod error;
 mod handler;
 mod identity;
