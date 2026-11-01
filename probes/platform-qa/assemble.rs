@@ -104,7 +104,7 @@ mod tests {
             exit_code,
             timed_out: exit_code.is_none(),
             stdout: stdout.as_bytes().to_vec(),
-            stderr: Vec::new(),
+            stderr: b"   Compiling ovis-terminal-holder".to_vec(),
         }
     }
 
@@ -116,6 +116,11 @@ mod tests {
         let ok = TestRun::captured(&test(), &done(PASSED, Some(0)), "kill-0.log");
         assert_eq!(ok.verdict, Verdict::Pass);
         assert_eq!(ok.stdout_sha256, sha256_hex(PASSED.as_bytes()));
+        assert_eq!(
+            ok.stderr_sha256,
+            sha256_hex(b"   Compiling ovis-terminal-holder")
+        );
+        assert_ne!(ok.stderr_sha256, sha256_hex(b""));
         assert_eq!(ok.argv.first().map(String::as_str), Some("cargo"));
         let hung = TestRun::captured(&test(), &done("", None), "kill-1.log");
         assert_eq!(hung.verdict, Verdict::Fail);

@@ -61,9 +61,11 @@
     },
     {
       "name": "two-clients",
-      "observes": "two clients hold the same pipe endpoint at once and each gets its own correlated replies; the serve report counts two accepted connections and no failure.",
+      "observes": "two ovis-terminal invocations opened at once through the production CLI client both complete hello and get their replies from the production pipe listener (two accepted, no failure); a client refused with ERROR_PIPE_BUSY waits with WaitNamedPipeW and opens the freed instance, and one whose pipe stays busy past the bound reports pipe_busy_timeout.",
       "tests": [
-        {"package": "ovis-terminal-probes", "target": "pipe_smoke", "test": "two_clients_are_served_concurrently_over_one_owner_only_pipe", "ignored": false}
+        {"package": "ovis-terminal-cli", "target": "lib", "test": "invocation::transport::pipe::tests::two_invocations_opened_at_once_both_get_a_session_from_the_production_listener", "ignored": false},
+        {"package": "ovis-terminal-cli", "target": "lib", "test": "invocation::transport::pipe::tests::a_busy_pipe_is_waited_out_and_opened_once_an_instance_is_free", "ignored": false},
+        {"package": "ovis-terminal-cli", "target": "lib", "test": "invocation::transport::pipe::tests::a_pipe_that_stays_busy_is_pipe_busy_timeout_after_the_bound", "ignored": false}
       ]
     },
     {

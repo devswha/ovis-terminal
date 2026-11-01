@@ -2100,16 +2100,15 @@
         "12",
         "53",
         "54",
-        "60",
         "64"
       ],
       "scenarios": [
         "part-a/task-12",
         "platform/conpty",
         "platform/windows-service",
-        "platform/matrix",
         "client/fixtures"
-      ]
+      ],
+      "note": "Reassigned from todo 60 (2026-11-01): platform/matrix runs on Linux and macOS only, and the Windows smoke tier proves the holder's ordered ConPTY read, not a served attach stream over the named pipe. The Windows served attach is owned by todo 64, whose client/fixtures replay runs against the binary on every released platform."
     },
     "GAP-049": {
       "todos": [
@@ -2126,14 +2125,13 @@
     "GAP-050": {
       "todos": [
         "26",
-        "54",
-        "60"
+        "62"
       ],
       "scenarios": [
         "part-a/task-26",
-        "platform/windows-service",
-        "platform/matrix"
-      ]
+        "cli/interactive-attach"
+      ],
+      "note": "Reassigned from todos 54 and 60 (2026-11-01): neither scenario delivers a geometry-change event over the Windows pipe, because no served attach exists there yet. Todo 26 delivers the event on Linux and macOS. Todo 62 (interactive attach, blocked by 53 and 54, resize through RPC on every platform) owns the Windows half, since the event reaches a client over the attach stream it builds. Todo 85 was considered and rejected: it marks image placements in screen reads and touches no attach or pipe."
     },
     "GAP-051": {
       "todos": [

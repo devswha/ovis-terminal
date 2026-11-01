@@ -1,0 +1,6 @@
+# Todo 60 seams for other owners (2026-11-01)
+
+- client-ts (todo 63, "Package generated TypeScript types and persistent Bun client"): `packages/client-ts/src/transport.ts:32-34` opens the endpoint with `Bun.connect` on a Unix socket path only, so the TypeScript client has no Windows named-pipe transport. When it is built, it must follow the Windows client contract the CLI now follows (`crates/ovis-terminal-cli/src/invocation/transport/pipe.rs`): an open refused with `ERROR_PIPE_BUSY` (231) waits in `WaitNamedPipe` for a free instance, bounded, and opens again; after the bound it reports `pipe_busy_timeout`.
+- GAP-050 (todo 62): the Windows geometry-change event before a new-grid screen reaches clients over the served attach stream todo 62 builds; `docs/design/traceability.json` lists todo 62 and `cli/interactive-attach`.
+- GAP-048 Windows served attach (todo 64): stays with `client/fixtures`, replayed against the binary on every released platform.
+- Traceability exceptions: `docs/design/traceability-unclaimed.json` records 46 pre-existing EXCL rows whose listed owner scenario does not declare them (todos 2-15, 19, 21, 37, 43, 52). Each owner removes its entries when its scenario declares the row; `conformance/src/traceability/unclaimed.rs` fails on any new unclaimed row and on any stale entry.

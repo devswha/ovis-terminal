@@ -1,6 +1,55 @@
 Todo 60 (wave 16): first-class Unix QA and Windows smoke CI on freshly built binaries.
 
-Closes GAP-048, GAP-049, GAP-051, GAP-095, GAP-121 (GAP-050 stays open; see Risks). Delivers IDEAL-001, IDEAL-034, IDEAL-071, IDEAL-093. Enforces EXCL-016, EXCL-019, EXCL-027.
+Closes GAP-049, GAP-051, GAP-095, GAP-121. GAP-050 and the Windows served-attach half of GAP-048 are reassigned in `docs/design/traceability.json` (to todo 62 and todo 64, with reasons; see Round 2). Delivers IDEAL-001, IDEAL-034, IDEAL-071, IDEAL-093. Enforces EXCL-016, EXCL-019, EXCL-027.
+
+## Round 2 (review of 2da8a9d)
+
+**B1, fixed in the product.** The CLI's Windows connect (`crates/ovis-terminal-cli/src/invocation/transport.rs:62-71` at 2da8a9d) opened the pipe once. A second concurrent invocation that hit `ERROR_PIPE_BUSY` (231) failed as a generic `transport_failed`. Only my smoke test client retried, so round 1's "the product is correct" ruling was wrong for the client half. I retract it.
+
+- `invocation/transport/pipe.rs` (new): on `ERROR_PIPE_BUSY` the CLI waits in `WaitNamedPipeW` for a free instance (on a blocking thread), bounded by what is left of `BUSY_BOUND` = 5 s (inside the 10 s exchange deadline), then opens again.
+- After the bound it returns the typed `CliError::PipeBusy`: kind `pipe_busy_timeout`, a hint, `waited_ms`, and the OS error as `#[source]`. Any other open error keeps its old mapping (`NotRunning` stopped / `stale_endpoint`, or `transport_failed`).
+- The pipe listener is unchanged; it already creates the next instance before serving (`listen/pipe/endpoint.rs:126`, `:139-142`).
+- `two-clients` now drives the production client path. It runs `ovis-terminal-cli` `invocation::transport::pipe::tests`:
+  - two `Session::open` invocations at once against the production pipe listener, both completing hello and `doc.get`, with the serve report showing 2 accepted and 0 failed;
+  - a pipe whose only instance is held: the waiting open succeeds once a second instance appears;
+  - a pipe that stays busy: `pipe_busy_timeout` after the bound, and an absent pipe is still `server_not_running`/`stopped`.
+- The test-client `two_clients` test in `probes/platform-qa/tests/pipe_smoke.rs` is removed. That file keeps only server-side checks (generation refusal, observer denial).
+
+**B2, ledger reassigned.**
+
+- `docs/design/traceability.json` GAP-050 now lists todos `26, 62` and scenarios `part-a/task-26, cli/interactive-attach`, with a `note`.
+  - Todo 26 delivers the geometry-change event on Linux and macOS.
+  - Todo 62 (interactive attach, blocked by 53 and 54, resize through RPC on every platform) owns the Windows half, because the event reaches a client over the attach stream it builds.
+  - Todo 85 was considered and rejected: it marks image placements in screen reads (Closes GAP-153) and touches no attach or pipe.
+- GAP-048 drops todo 60 and `platform/matrix` (`matrix.json` no longer closes it; it runs on Linux and macOS only). The Windows served attach stays with todo 64 (`client/fixtures`), with a `note`.
+- `Owners` gained an optional `note`, checked to name the todos it moves.
+
+**Reverse traceability check.** `conformance/src/traceability/unclaimed.rs` now flags any row whose listed owner scenario exists but does not declare the id.
+
+- Pinned by `a_listed_owner_that_dropped_the_row_is_flagged` on a synthetic tree.
+- The 46 rows that are unclaimed today are pre-existing and all EXCL. They come from part-a declaration files written before the runner, and from executable scenarios of todos 21, 37, 43 and 52.
+- Those rows are recorded in `docs/design/traceability-unclaimed.json`, each naming the scenario's own todo, which the test checks against the file.
+- The test fails on any new unclaimed row and on any recorded row that no longer applies, so the list only shrinks.
+- With the reassignment, no row of todo 60 is in it.
+
+**N1 hardening.**
+
+- `SmokeReport::verify` refuses an empty requested commit (`usage`), and any run whose stdout or stderr hash is not a 64-hex SHA-256 (`report_inconsistent`).
+- New tests cover the empty-test-list refusal at manifest load and the captured-stderr hash.
+
+**client-ts seam (not built here).** `packages/client-ts/src/transport.ts:32-34` connects with `Bun.connect` to a Unix socket path only, so the TypeScript client has no Windows named-pipe transport at all. That is recorded for the client-ts owner (todo 63, "Package generated TypeScript types and persistent Bun client") in `docs/evidence/task-60/seams.md`. When it is built, it needs the same `ERROR_PIPE_BUSY` wait-and-reopen.
+
+**Round-2 mutants** (`adversarial-mutants-r2.log`), 5/5 killed:
+
+- R1: GAP-050 lists `platform/matrix` again, killed by `every_listed_owner_claims_its_row_except_the_recorded_ones`.
+- R2: the reverse checker ignores unclaimed rows, killed by both reverse tests.
+- R3: `verify` accepts an empty commit, killed by `an_empty_commit_or_a_run_without_output_hashes_is_refused`.
+- R4: a run records the hash of empty stderr, killed by `a_proven_run_passes_and_a_timed_out_run_fails_its_check`.
+- R5: a manifest check with no test loads, killed by `a_manifest_check_with_no_native_test_is_refused_at_load`.
+
+The CLI busy-wait tests are Windows-only and run in `windows-smoke` and `test (windows-latest)`.
+
+**C1/C2.** This file is the committed mirror of the PR body, with no placeholders. CI results for the round-2 head go in a PR comment and the DoneClaim, so the mirror never has to change after the push. The `platform-qa` macOS stress lane is re-dispatched on the round-2 head.
 
 ## Before
 
@@ -13,7 +62,7 @@ Closes GAP-048, GAP-049, GAP-051, GAP-095, GAP-121 (GAP-050 stays open; see Risk
 
 ## After
 
-Native host: `Linux x86_64` (`docs/evidence/task-60/host.log`). Binary sha256 `74ddd6efa194f57c82e702473448cf5f9c687041c2a18033464536079ed6fe4b` (`docs/evidence/task-60/binary.sha256`). `$B` is `$CARGO_TARGET_DIR/debug/ovis-terminal`; the lane keeps its cargo target on RAM, so that path stands in for `target/debug/ovis-terminal`.
+Native host: `Linux x86_64` (`docs/evidence/task-60/host.log`). Binary sha256 in `docs/evidence/task-60/binary.sha256` (re-recorded on the round-2 build). `$B` is `$CARGO_TARGET_DIR/debug/ovis-terminal`; the lane keeps its cargo target on RAM, so that path stands in for `target/debug/ovis-terminal`.
 
 | Command | Exit | Result |
 |---|---|---|
@@ -36,21 +85,47 @@ What the failure evidence shows (`docs/evidence/task-60/qa-failure-assertions.lo
 
 Shipped tests: `cargo nextest run --locked -p ovis-terminal-probes -E 'test(platform_qa) | binary(platform_qa)'` passes 19/19 (libtest verdicts, report verification, deadline kill, evidence append, manifest and lane checks). The Windows pipe smoke tests compile and lint clean for `x86_64-pc-windows-gnu`; they run on the `windows-smoke` job.
 
-CI_RESULTS_PLACEHOLDER
+### CI at head 2da8a9d (all checks green; `gh pr checks 73 --watch` exit 0)
+
+`platform-qa` run [41313712028](https://github.com/devswha/ovis-terminal/actions/runs/41313712028):
+
+| Runner (native OS/arch) | Command | Exit | Result |
+|---|---|---|---|
+| unix-full ubuntu-latest (Linux x86_64) | all/all, matrix happy, matrix failure numeric, matrix failure decimal, service tests, no-skips | 0 each | all/all 62/62, failed 0, skipped 0; matrix happy/failure/failure each failed 0, skipped 0; binary sha256 0720354c... |
+| unix-full macos-latest (Darwin arm64) | same | 0 each | all/all 62/62, failed 0, skipped 0; binary sha256 622889b6... |
+| windows-smoke (windows x86_64) | windows-smoke over 13 checks | 0 | `windows_smoke: pass`: named-pipe-hello, generation-refusal, conpty-run, conpty-attach, conpty-input, conpty-resize, final-output-order, observer-denial, two-clients, core-restart, job-survival, service-status, conpty-kill |
+
+So `unsupported_generation` before any spawn holds on all three runners:
+
+- Linux and macOS: through the conformance runner and `ovis-terminal connect`. The numeric generation is `invalid_params`, `"999999"` is `unsupported_generation`, and `terminal.run` is `unauthenticated`.
+- Windows: through the production named pipe (`generation-refusal`), with zero handler calls.
+
+ci.yml is green too, including `test (windows-latest)` (nextest on Windows runs `pipe_smoke`).
+
+verify-ci (literal acceptance command, run at head 2da8a9d):
+
+```
+$ cargo run --locked --manifest-path probes/Cargo.toml --bin verify-ci -- --repo devswha/ovis-terminal --workflow platform-qa.yml --job windows-smoke --sha "$(git rev-parse HEAD)" --require named-pipe-hello,conpty-run,conpty-attach,conpty-input,conpty-resize,final-output-order,observer-denial,two-clients,core-restart,job-survival,conpty-kill --download "$ATTEMPT_DIR/windows" --evidence "$ATTEMPT_DIR/task-60-ovis-terminal-v1.json"
+{"result":"passed","run_id":"41313712028","job_conclusion":"success", "report": {"os":"windows","arch":"x86_64","windows_smoke":"pass", ...}}
+exit_status: 0
+```
+
+macOS stress, lane `platform-qa` (25 iterations of the platform_qa tests plus platform/matrix all), dispatched on ac81e38: [41311577409](https://github.com/devswha/ovis-terminal/actions/runs/41311577409), conclusion success.
 
 ## What runs where
 
 - `.github/workflows/platform-qa.yml` triggers on `pull_request`, on `push` to integration and main, and on `workflow_dispatch`. Concurrency is grouped per PR or ref, and only PR runs are cancelled.
   - `unix-full (ubuntu-latest | macos-latest)`: runs `probes/platform-qa/unix-full.sh`. That covers all/all, the matrix happy case, both literal failure injections, and the Unix service + remote/SSH-loopback + services dispatch tests. Each command's argv, exit code, stdout, stderr (including `--manual-transcript` wire transcripts), the binary and runner sha256, and the evidence sha256 are archived. Any non-zero exit, failed case or skipped case fails the job.
   - `windows-smoke (windows-2025)`: the `windows-smoke` binary runs each check of `probes/platform-qa/windows-smoke.json` one native test at a time (`cargo test <path> -- --exact`) under a 900 s deadline. A check passes only when its output shows `test <name> ... ok` and `1 passed; 0 failed; 0 ignored`, so a missing prerequisite or an ignored test fails instead of skipping. Checks: named-pipe-hello, generation-refusal, conpty-run, conpty-attach, conpty-input, conpty-resize, final-output-order, observer-denial, two-clients, core-restart, job-survival, service-status, conpty-kill. Each records what it observes (ACL, mode, offset, cleanup, service lifetime). The report states it is the smoke tier, not full Windows manual QA.
-  - New `probes/platform-qa/tests/pipe_smoke.rs` runs on the production named-pipe listener, connection core and boundary policy. It covers two concurrent clients, numeric -> `invalid_params` / `"999999"` -> `unsupported_generation` / `terminal.run` -> `unauthenticated` with zero handler calls, and an observer forbidden every published mutation while the owner is served.
+  - `two-clients` runs the production CLI client (`ovis-terminal-cli` `invocation::transport::pipe::tests`): two concurrent `Session::open` invocations against the production pipe listener, busy-instance wait, and `pipe_busy_timeout`.
+  - New `probes/platform-qa/tests/pipe_smoke.rs` runs on the production named-pipe listener, connection core and boundary policy. It covers numeric -> `invalid_params` / `"999999"` -> `unsupported_generation` / `terminal.run` -> `unauthenticated` with zero handler calls, and an observer forbidden every published mutation while the owner is served.
 - `verify-ci` finds the latest completed `platform-qa.yml` run at a commit and requires the named job's conclusion to be `success`. It downloads the `windows-smoke` artifact, requires the report's sha to equal the commit and every `--require`d check to pass, and appends the outcome to the evidence file.
 - `.github/workflows/ci.yml` now also runs on push to integration, with per-PR concurrency.
 - `probe-stress-macos.yml` is data-driven: `probe` is a free-text lane name, and a `resolve` job reads `probes/platform-qa/stress/<lane>.json` (variants, timeout, setup) and runs `<lane>.sh`.
   - The 41 existing lanes were generated mechanically from their old job blocks, with scripts verbatim. The platform lane's `$PROBE` matrix variable became `$STRESS_VARIANT`.
   - A new lane adds two files and edits no shared line. `every_stress_lane_resolves_and_the_union_is_kept` keeps the 41 + `platform-qa` union as a floor.
 
-Gates: `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` exit 0 (nextest 1318/1318 passed, hygiene 0 violations, `check-sh.log`). `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exit 0, and `cargo clippy ... --target x86_64-pc-windows-gnu -- -D warnings` exit 0 (`windows-precheck.log`).
+Gates (round 1): `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` exit 0 (nextest 1318/1318 passed, hygiene 0 violations, `check-sh.log`). Round 2 gates: `round4-gates.log`. `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exit 0, and `cargo clippy ... --target x86_64-pc-windows-gnu -- -D warnings` exit 0 (`windows-precheck.log`).
 
 ## Round 2: Windows smoke harness fix
 
@@ -73,7 +148,7 @@ All three are `pipe_smoke` tests in the `ovis-terminal-probes` package. `cargo t
 
 On head 7643079 the harness fix held: `generation-refusal` and all native checks passed. `two-clients` and `observer-denial` failed at the second concurrent `ClientOptions::open` with `Os { code: 231, message: "All pipe instances are busy." }` (run 41312728281, artifact `windows-smoke`, `two-clients-0.log` / `observer-denial-0.log`, `pipe_smoke.rs:26` / `:82`).
 
-Per-check verdict: the **check** was wrong. The product is correct.
+Per-check verdict at the time: the check encoded a Unix assumption. The round-2 review rejected the accompanying "product is correct" ruling: the server side is correct, but the CLI client lacked the busy wait (fixed in Round 2 above).
 
 - The production listener creates its following instance before it returns the accepted connection, so before serving it. See `crates/ovis-terminal-server/src/listen/pipe/endpoint.rs:126` ("the following instance exists before this returns") and `:139-142`.
 - `ERROR_PIPE_BUSY` is the short window between a client taking the waiting instance and the accept loop creating the next one.
@@ -111,17 +186,23 @@ Files outside the literal write scope, and why:
 - `conformance/src/runner_tests/suite.rs`: the scenario registered in `EXECUTABLE`, in sorted order. Nothing was added to `declared.json`, since the scenario is executable.
 - `conformance/scenarios/platform/windows-service.json`: GAP-050 removed from its `closes` (owner seam: deliver it or correct the list).
 - `probes/src/lib.rs`: one `#[path] pub mod platform_qa;` line.
-- `Cargo.lock`: clap and sha2 for probes, plus the Windows dev-dependencies.
+- `Cargo.lock`: clap and sha2 for probes, plus the Windows dependencies.
+- `crates/ovis-terminal-cli/src/invocation/transport.rs`, `transport/pipe.rs`, `transport/pipe_tests.rs`, `error.rs`, `report.rs`, `crates/ovis-terminal-cli/Cargo.toml`: the round-2 B1 product fix (bounded `ERROR_PIPE_BUSY` wait and reopen, typed `pipe_busy_timeout`, and production-client tests). The reviewer named this as a seam owned by T28/T54; I made it here at the lead's direction, without changing the listener.
+- `docs/design/traceability.json`, `docs/design/traceability-unclaimed.json`, `conformance/src/traceability.rs`, `conformance/src/traceability/unclaimed.rs`: the GAP-050 and GAP-048 reassignment with notes, and the reverse owner check with its shrink-only exceptions list.
+- client-ts (todo 63): it has no Windows named-pipe transport (`packages/client-ts/src/transport.ts:32-34` is Unix-socket only). Recorded in `docs/evidence/task-60/seams.md`, not built here.
 - `.github/workflows/probe-stress-macos.yml`: the conflict-free conversion the T60 seam note asked for.
 - `.github/workflows/ci.yml`: push CI on integration plus concurrency (the T82 ledger finding).
 - `docs/evidence/task-60/`: evidence.
 
 ## Risks
 
-- GAP-050 (geometry events for mirror clients on Windows) is not delivered. A served attach over the Windows pipe is still unmet (T54 notes), so `platform/matrix` does not claim it. I also removed the claim from the `windows-service` declaration. `docs/design/traceability.json` still lists both scenarios as GAP-050 owners, and a later todo has to deliver it.
+- GAP-050 (geometry events for mirror clients on Windows) is not delivered. It is reassigned to todos 26 and 62 in `docs/design/traceability.json` with a note, and neither `platform/matrix` nor `platform/windows-service` claims it. The Windows served attach (GAP-048's Windows half) stays with todo 64.
+- The CLI busy-wait tests run only on Windows (CI `windows-smoke` and `test (windows-latest)`); locally they are checked by the Windows-target clippy only.
 - On Windows the conformance fixture is Unix-only (`conformance/src/fixture.rs:86`), so `platform/matrix` declares linux and macos. On Windows, the generation refusal is proven by `generation-refusal` over the production pipe, not by the conformance runner.
 - `conpty-attach` is the holder's ordered ConPTY output read with mode state. It is not a served `attach.open` over the pipe, which is unmet on Windows.
 - The Windows report's `sha` is the PR head (`github.event.pull_request.head.sha`). On pull_request runs, the code that actually ran is the PR merge ref.
 - The happy case ends with a single fixture serve. The runner cannot serve twice in one isolated root (`create_dir` on the effects dir in `conformance/src/fixture/serve.rs:84`), so the two-clients and observer-denial checks live in the failure case.
 
-DEFERRED_PLACEHOLDER
+DEFERRED VERIFICATION
+
+None open for round 1: verify-ci ran against 2da8a9d's green windows-smoke job and exited 0 (above). For the round-2 head, verify-ci runs after the CI watch, and its verbatim result is posted as a PR comment and in the round-2 DoneClaim.

@@ -185,6 +185,11 @@ impl SmokeReport {
         let inconsistent = |detail: &str| QaError::ReportInconsistent {
             detail: detail.to_owned(),
         };
+        if sha.is_empty() {
+            return Err(QaError::Usage {
+                detail: "the commit to verify is empty".to_owned(),
+            });
+        }
         if self.format != REPORT_FORMAT {
             return Err(inconsistent("unknown report format"));
         }
@@ -193,6 +198,19 @@ impl SmokeReport {
                 expected: sha.to_owned(),
                 reported: self.sha.clone(),
             });
+        }
+        let hashed = |hash: &str| {
+            hash.len() == 64
+                && hash
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        };
+        let runs = self.checks.iter().flat_map(|check| &check.tests);
+        if runs
+            .clone()
+            .any(|run| !hashed(&run.stdout_sha256) || !hashed(&run.stderr_sha256))
+        {
+            return Err(inconsistent("a run lacks a SHA-256 of its captured output"));
         }
         for check in &self.checks {
             let all = check.tests.iter().all(|run| run.verdict == Verdict::Pass);

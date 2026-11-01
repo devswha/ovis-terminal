@@ -1,5 +1,5 @@
-use super::{CheckReport, NativeTest, REPORT_FORMAT, SmokeReport, TestRun, Verdict};
-use crate::platform_qa::QaError;
+use super::{CheckReport, NativeTest, REPORT_FORMAT, SmokeManifest, SmokeReport, TestRun, Verdict};
+use crate::platform_qa::{QaError, sha256_hex};
 
 const SHA: &str = "0123456789abcdef0123456789abcdef01234567";
 
@@ -11,8 +11,8 @@ fn run(verdict: Verdict) -> TestRun {
         verdict,
         failure: None,
         log: "named-pipe-hello-0.log".to_owned(),
-        stdout_sha256: String::new(),
-        stderr_sha256: String::new(),
+        stdout_sha256: sha256_hex(b"out"),
+        stderr_sha256: sha256_hex(b"err"),
     }
 }
 
@@ -137,4 +137,43 @@ fn an_ignored_lib_test_is_run_exactly_and_included() {
         integration.cargo_args().last().map(String::as_str),
         Some("--exact")
     );
+}
+
+#[test]
+fn an_empty_commit_or_a_run_without_output_hashes_is_refused() {
+    let report = report(vec![check("conpty-kill", Verdict::Pass)]);
+    let empty = report.verify("", &[]).unwrap_err();
+    assert_eq!(empty.kind(), "usage");
+
+    let mut unhashed = report;
+    if let Some(run) = unhashed
+        .checks
+        .first_mut()
+        .and_then(|c| c.tests.first_mut())
+    {
+        run.stderr_sha256 = String::new();
+    }
+    assert_eq!(
+        unhashed.verify(SHA, &[]).unwrap_err().kind(),
+        "report_inconsistent"
+    );
+}
+
+#[test]
+fn a_manifest_check_with_no_native_test_is_refused_at_load() {
+    let dir = std::env::temp_dir().join(format!("ovis-qa-manifest-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("windows-smoke.json");
+    let check = |tests: &str| {
+        format!(
+            r#"{{"format":"ovis-windows-smoke-manifest/1","checks":[{{"name":"two-clients","observes":"x","tests":{tests}}}]}}"#
+        )
+    };
+    std::fs::write(&path, check("[]")).unwrap();
+    let refused = SmokeManifest::load(&path).unwrap_err();
+    assert_eq!(refused.kind(), "manifest_invalid");
+    let one = r#"[{"package":"p","target":"lib","test":"t","ignored":false}]"#;
+    std::fs::write(&path, check(one)).unwrap();
+    assert_eq!(SmokeManifest::load(&path).unwrap().checks.len(), 1);
+    std::fs::remove_dir_all(&dir).unwrap();
 }
