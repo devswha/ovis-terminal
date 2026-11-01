@@ -6,6 +6,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::conversation_records::{ConversationTurn, RecordBlock};
 use crate::schema::common::{PageInfo, PageToken};
 use crate::schema::ids::{AgentId, HistoryId, RecordId};
 use crate::schema::methods::agent::{AgentConversationResult, ConversationRecord};
@@ -196,12 +197,12 @@ impl From<BindingFacts> for SessionBindingRecord {
 }
 
 impl ConversationRecord {
-    /// Record `record_id` under `parent`, with `role` and provider `blocks`.
+    /// Record `record_id` under `parent`, with `role` and `blocks`.
     #[must_use]
     pub fn new(
         record_id: RecordId,
         parent: Option<RecordId>,
-        (role, blocks): (String, Vec<serde_json::Value>),
+        (role, blocks): (String, Vec<RecordBlock>),
     ) -> Self {
         Self {
             record_id,
@@ -209,6 +210,10 @@ impl ConversationRecord {
             role,
             blocks,
             provenance: String::new(),
+            phase: None,
+            turn: None,
+            at_ms: None,
+            links: Vec::new(),
         }
     }
 }
@@ -236,6 +241,8 @@ pub struct ConversationPage {
     pub total: u32,
     /// Continuation, absent on the last page.
     pub next: Option<ConversationCursor>,
+    /// Status turns of the page's reported records.
+    pub turns: Vec<ConversationTurn>,
 }
 
 impl TryFrom<ConversationPage> for AgentConversationResult {
@@ -256,6 +263,7 @@ impl TryFrom<ConversationPage> for AgentConversationResult {
             records: page.records,
             page: PageInfo::new(Revision::new(page.revision.get()), page.total, token),
             next_cursor: page.next,
+            turns: page.turns,
         })
     }
 }
