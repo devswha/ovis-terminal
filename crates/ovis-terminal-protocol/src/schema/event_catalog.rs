@@ -15,6 +15,7 @@ use super::methods::status::{PromptRecord, TurnRecord};
 use super::methods::update::UpdateRecord;
 use super::methods::worktree::WorktreeRecord;
 use super::records::{AgentBinding, StatusSnapshot, TerminalGeometry, TerminalRecord};
+use crate::domain::conversation_records::RecordsAppended;
 use crate::domain::graphics::{GraphicsDroppedData, GraphicsEvictedData};
 use crate::domain::session_binding::SessionBindingRecord;
 
@@ -98,6 +99,11 @@ pub(super) const EVENTS: &[EventSpec] = &[
         "agent.session_bound",
         "An owning process bound, resumed, branched or replaced its session.",
         SessionBindingRecord
+    ),
+    event!(
+        "agent.records_appended",
+        "An owning process appended typed conversation records.",
+        RecordsAppended
     ),
     event!(
         "agent.released",
