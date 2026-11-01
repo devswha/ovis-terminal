@@ -16,8 +16,9 @@ use crate::dispatch::Dispatcher;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
 type Dispatch = Dispatcher<OperationEvent, OperationProducer>;
+type Core = Coordinator<OperationEvent, OperationProducer>;
 
-fn dispatcher(root: &std::path::Path) -> TestResult<(Dispatch, RuntimeIdentity)> {
+fn dispatcher(root: &std::path::Path) -> TestResult<(Dispatch, Arc<Core>, RuntimeIdentity)> {
     let runtime = RuntimeIdentity::new(
         HostIdentity::new(
             "machine:0191f1a2-0000-7000-8000-000000000052".parse()?,
@@ -35,14 +36,15 @@ fn dispatcher(root: &std::path::Path) -> TestResult<(Dispatch, RuntimeIdentity)>
         runtime,
         OperationProducer::new(runtime.runtime_id()),
     ));
-    Ok((Dispatch::new(Arc::new(authority), runtime, core), runtime))
+    let dispatch = Dispatch::new(Arc::new(authority), runtime, Arc::clone(&core));
+    Ok((dispatch, core, runtime))
 }
 
 #[test]
 fn configured_services_register_exactly_their_methods_and_a_second_time_is_refused() -> TestResult {
     let root = std::env::temp_dir().join(format!("ovt52-services-{}", std::process::id()));
     std::fs::create_dir_all(&root)?;
-    let (mut dispatch, runtime) = dispatcher(&root)?;
+    let (mut dispatch, core, runtime) = dispatcher(&root)?;
     let plugins = Arc::new(Plugins::new(root.join("plugins")));
     let before = dispatch.methods();
 
@@ -65,6 +67,9 @@ fn configured_services_register_exactly_their_methods_and_a_second_time_is_refus
     assert_eq!(added, ["plugin.invoke", "plugin.list", "plugin.run_get"]);
     assert!(again.is_err(), "a duplicate registration must be refused");
     drop(dispatch);
+    // An open database cannot be removed on Windows: close the store before cleanup.
+    let core = Arc::try_unwrap(core).map_err(|_| "the coordinator is still shared")?;
+    core.close()?;
     std::fs::remove_dir_all(&root)?;
     Ok(())
 }

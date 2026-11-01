@@ -143,3 +143,9 @@ The independent background review on terra was not possible: the spawn was refus
 - **Windows:** integration is completed by the todo-60 CI smoke lane, as the block states.
 
 DEFERRED VERIFICATION: none for the scenarios in this PR. The runner executes both new scenarios on this host with failed 0 and skipped 0. macOS is covered by the `service-integration` stress job (run URL below) and by CI's macOS lane.
+
+## Round 2 (CI on c23c4a3)
+
+CI failed only on `test (windows-latest)`: `dispatch::services::tests::configured_services_register_exactly_their_methods_and_a_second_time_is_refused` returned `Os { code: 32 }` ("being used by another process") from `remove_dir_all`. The test dropped the dispatcher but never closed the SQLite store, and Windows cannot delete an open database file; Unix can, which is why ubuntu and macOS passed. The defect was in the test's cleanup, not in the product. The test now keeps the coordinator and calls `Coordinator::close()` before removing its directory, on every platform. There is no cfg and no skip. Local: the test passes; server clippy `-D warnings` exits 0; fmt and hygiene (0 violations) pass; `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exits 0; the matching `cargo clippy ... -D warnings` exits 0.
+
+macOS stress probe (dispatched once on c23c4a3): https://github.com/devswha/ovis-terminal/actions/runs/41292367994
