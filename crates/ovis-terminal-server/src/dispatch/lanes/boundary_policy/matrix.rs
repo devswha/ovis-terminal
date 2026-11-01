@@ -9,6 +9,7 @@ use ovis_terminal_authz::Action;
 
 /// Each published mutation and the action it performs.
 pub const MUTATION_ROLES: &[(&str, Action)] = &[
+    ("agent.append_records", Action::Report),
     ("agent.note", Action::Report),
     ("agent.register", Action::Report),
     ("agent.release", Action::Report),

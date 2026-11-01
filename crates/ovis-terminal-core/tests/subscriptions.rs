@@ -4,6 +4,8 @@
 mod durability;
 #[path = "../src/subscriptions/qa/fixture.rs"]
 pub mod fixture;
+#[path = "../src/subscriptions/qa/health.rs"]
+mod health;
 #[path = "../src/subscriptions/qa/independence.rs"]
 mod independence;
 #[path = "../src/subscriptions/qa/loss.rs"]

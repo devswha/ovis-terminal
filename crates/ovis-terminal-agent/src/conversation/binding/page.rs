@@ -5,6 +5,7 @@
 //! so a page never mixes records of two revisions.
 
 use ovis_terminal_core::ops::{Completion, OperationError};
+use ovis_terminal_protocol::domain::conversation_records::RecordBlock;
 use ovis_terminal_protocol::domain::session_binding::{
     ConversationCursor, ConversationPage, HistoryChange,
 };
@@ -46,6 +47,18 @@ fn limit(page: Option<&PageRequest>) -> usize {
     page.and_then(|page| page.limit)
         .and_then(|limit| usize::try_from(limit).ok())
         .map_or(DEFAULT_LIMIT, |limit| limit.clamp(1, MAX_LIMIT))
+}
+
+impl Read {
+    /// The cursor this read continues from, given as `cursor` or as a `page.after` token.
+    pub(crate) fn continued(&self) -> Result<Option<ConversationCursor>, BindingError> {
+        continuation(self.cursor.clone(), self.page.as_ref())
+    }
+
+    /// Records one page of this read carries.
+    pub(crate) fn limit(&self) -> usize {
+        limit(self.page.as_ref())
+    }
 }
 
 /// Refuses a cursor issued for another identity or revision than `row` has now.
@@ -104,7 +117,15 @@ fn cut(observed: &Observed, read: &Read) -> Result<Value, BindingError> {
             let mut out = ConversationRecord::new(
                 record.id.clone(),
                 parent,
-                (record.role.clone(), record.blocks.clone()),
+                (
+                    record.role.clone(),
+                    record
+                        .blocks
+                        .iter()
+                        .cloned()
+                        .map(RecordBlock::Provider)
+                        .collect(),
+                ),
             );
             observed.provenance.clone_into(&mut out.provenance);
             out
@@ -134,6 +155,7 @@ fn cut(observed: &Observed, read: &Read) -> Result<Value, BindingError> {
         records,
         total: u32::try_from(chain.len()).map_err(|_| BindingError::TooLarge)?,
         next,
+        turns: Vec::new(),
     })?;
     Ok(serde_json::to_value(result)?)
 }

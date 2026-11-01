@@ -2,8 +2,11 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
+use crate::domain::conversation_records::{
+    AgentRecordsParams, AppendRecordsParams, ConversationTurn, MessagePhase, RecordBlock,
+    RecordsAppended, ToolLink,
+};
 use crate::domain::session_binding::{ConversationCursor, SessionChange};
 use crate::errors::OpId;
 use crate::schema::common::{PageInfo, PageRequest, Target};
@@ -11,7 +14,7 @@ use crate::schema::ids::{HistoryId, NoteId, ProcessToken, RecordId, TerminalId};
 use crate::schema::method::{MethodSpec, method};
 use crate::schema::records::{AgentBinding, SessionRef, StatusSnapshot};
 use crate::schema::scalar::{
-    DurationMs, EventSeq, HistoryRevision, Incarnation, OpenEnum, Revision,
+    DurationMs, EventSeq, HistoryRevision, Incarnation, OpenEnum, Revision, TimestampMs, TurnNumber,
 };
 
 /// Parameters of `agent.register`; the label is arbitrary and never brand-matched.
@@ -240,10 +243,22 @@ pub struct ConversationRecord {
     pub parent: Option<RecordId>,
     /// Record role, such as user or assistant.
     pub role: String,
-    /// Typed block content as read from the provider store.
-    pub blocks: Vec<Value>,
-    /// Provider store the record came from.
+    /// Content blocks; reported records carry only typed blocks.
+    pub blocks: Vec<RecordBlock>,
+    /// Provider store the record came from, or `records` for reported records.
     pub provenance: String,
+    /// Phase of assistant text, when the provider recorded one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phase: Option<OpenEnum<MessagePhase>>,
+    /// Status turn that was running when the record was reported.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turn: Option<TurnNumber>,
+    /// Time the provider recorded for the record.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub at_ms: Option<TimestampMs>,
+    /// Records whose calls this record's tool results answer, in block order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub links: Vec<ToolLink>,
 }
 
 /// Result of `agent.conversation`.
@@ -266,6 +281,9 @@ pub struct AgentConversationResult {
     pub page: PageInfo,
     /// Continuation bound to this history identity and revision; absent on the last page.
     pub next_cursor: Option<ConversationCursor>,
+    /// Status turns of the page's reported records, in turn order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub turns: Vec<ConversationTurn>,
 }
 
 /// Parameters of `agent.history`.
@@ -311,6 +329,10 @@ pub(crate) const METHODS: &[MethodSpec] = &[
     "Wait for news from children.", [CursorExpired]},
     method! {"agent.conversation", Query, Terminal, AgentConversationParams => AgentConversationResult,
     "Read conversation records with provenance.", [CursorExpired, HistoryChanged, ConversationUnavailable, FrameTooLarge]},
+    method! {"agent.append_records", Mutation, Terminal, AppendRecordsParams => RecordsAppended,
+    "Append typed conversation records as the owning process.", [NotOwner, InvalidRecords, TooLarge]},
+    method! {"agent.records", Query, Terminal, AgentRecordsParams => AgentConversationResult,
+    "Read the typed records and turns an agent's owning process reported.", [CursorExpired, HistoryChanged, ConversationUnavailable]},
     method! {"agent.history", Query, Untargeted, AgentHistoryParams => AgentHistoryResult,
     "List sessions found in authorized provider stores.", [StoreUnavailable, PathNotFound, TooLarge]},
 ];

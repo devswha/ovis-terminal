@@ -1,7 +1,7 @@
 //! State shared by the hub, its fan-out worker and every consumer handle.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, OnceLock};
 
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -10,6 +10,7 @@ use super::fanout::Offered;
 use super::table::Table;
 use super::{LossRecord, QueueLimits, SubscriptionError, loss};
 use crate::events::{Coordinator, Delivery, Event, EventData, SnapshotProducer, StateSnapshot};
+use crate::health::Health;
 use crate::registry::RuntimeIdentity;
 
 #[derive(Debug)]
@@ -20,6 +21,7 @@ pub(super) struct Shared<D, P> {
     pub table: Mutex<Table<D>>,
     pub ready: Condvar,
     pub stopped: AtomicBool,
+    pub health: OnceLock<Arc<Health>>,
     persisting: Mutex<()>,
 }
 
@@ -36,6 +38,7 @@ impl<D, P> Shared<D, P> {
             table: Mutex::new(table),
             ready: Condvar::new(),
             stopped: AtomicBool::new(false),
+            health: OnceLock::new(),
             persisting: Mutex::new(()),
         }
     }

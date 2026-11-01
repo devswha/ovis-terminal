@@ -97,6 +97,7 @@ impl<D: Clone> Table<D> {
                 .queue
                 .push_back((offered.event.clone(), offered.bytes));
             entry.bytes = entry.bytes.saturating_add(offered.bytes);
+            entry.report_queued(offered.bytes);
             self.session_bytes = self.session_bytes.saturating_add(offered.bytes);
         }
     }

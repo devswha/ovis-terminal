@@ -35,6 +35,9 @@ pub mod boundary_policy;
 #[path = "../src/dispatch/lanes/boundary_policy/history_qa.rs"]
 /// `agent.history` below an authorized root.
 pub mod boundary_policy_history;
+#[path = "../src/dispatch/lanes/conversation_records/qa.rs"]
+/// The conversation record lane: typed appends and reads over a real socket.
+pub mod conversation_records;
 #[path = "../src/dispatch/lanes/credential_rotation/qa.rs"]
 /// Credential rotation and per-request revalidation over a real socket.
 pub mod credential_rotation;

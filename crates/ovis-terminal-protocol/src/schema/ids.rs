@@ -133,6 +133,10 @@ string_id!(
     RecordId
 );
 string_id!(
+    /// Identity of one tool call inside an agent's conversation records.
+    CallId
+);
+string_id!(
     /// Capability token handed to a spawned program for reports it owns.
     ProcessToken
 );

@@ -3,6 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::health::{CensusState, ConsumerLoss, ConsumerRef, MethodLatency, RecoveryState};
 use crate::domain::machine_identity::{BootChallenge, BootProof};
 use crate::errors::OpId;
 use crate::schema::common::{NoParams, PageInfo, PageRequest};
@@ -13,7 +14,7 @@ use crate::schema::limits::{Capabilities, Limits, TransportKind};
 use crate::schema::method::{MethodSpec, method};
 use crate::schema::records::{AgentBinding, LeaseRecord, TerminalRecord};
 use crate::schema::scalar::{
-    ByteCount, DurationMs, EventSeq, Incarnation, OpenEnum, ProtocolGeneration, Revision,
+    ByteCount, Count, DurationMs, EventSeq, Incarnation, OpenEnum, ProtocolGeneration, Revision,
     TimestampMs,
 };
 
@@ -108,10 +109,18 @@ pub struct ServerStatusResult {
     pub server_boot_id: Option<ServerBootId>,
     /// Uptime, when running.
     pub uptime_ms: Option<DurationMs>,
-    /// Live holder processes.
-    pub holder_count: u32,
-    /// Live terminals.
-    pub live_terminals: u32,
+    /// Live holder processes; null when no census was reported.
+    #[schemars(required, schema_with = "crate::domain::health::nullable_count")]
+    pub holder_count: Option<Count>,
+    /// Live terminals; null when no census was reported.
+    #[schemars(required, schema_with = "crate::domain::health::nullable_count")]
+    pub live_terminals: Option<Count>,
+    /// Whether `holder_count` and `live_terminals` were reported; absent from an
+    /// answer that predates it, which reported no census either.
+    #[serde(default = "crate::domain::health::census_not_reported")]
+    pub census: OpenEnum<CensusState>,
+    /// Recovery summary, reported by a running server; absent when nothing answers.
+    pub recovery_state: Option<RecoveryState>,
 }
 
 /// Parameters of `server.start`.
@@ -184,7 +193,13 @@ pub struct ConsumerQueue {
     /// Event delivery lag.
     pub event_lag_ms: DurationMs,
     /// Events dropped and later resynchronized.
-    pub resynced_events: u32,
+    pub resynced_events: Count,
+    /// The stream or subscription this backlog belongs to.
+    pub consumer: ConsumerRef,
+    /// Retained dropped ranges, oldest first, each marked once resynchronized.
+    pub losses: Vec<ConsumerLoss>,
+    /// Older dropped ranges no longer retained.
+    pub losses_omitted: Count,
 }
 
 /// One recorded recovery fact; reads never clear it.
@@ -206,15 +221,27 @@ pub struct RecoveryEvidence {
 #[non_exhaustive]
 pub struct ServerMetricsResult {
     /// Active attach streams.
-    pub streams: u32,
+    pub streams: Count,
     /// Active event subscriptions.
-    pub subscriptions: u32,
+    pub subscriptions: Count,
     /// Per-consumer backlog.
     pub consumers: Vec<ConsumerQueue>,
     /// Latest committed event sequence.
     pub latest_seq: EventSeq,
     /// Recovery evidence of the current runtime lifetime.
     pub recovery: Vec<RecoveryEvidence>,
+    /// Holder-supervisor lifetime the metrics were collected under.
+    pub runtime_lifetime: RuntimeLifetimeId,
+    /// Control-server boot the metrics were collected under.
+    pub server_boot_id: ServerBootId,
+    /// Collection time.
+    pub collected_ms: TimestampMs,
+    /// Consumers refused tracking because the bounded table was full.
+    pub consumers_untracked: Count,
+    /// Per-method latency since this boot.
+    pub rpc_latency: Vec<MethodLatency>,
+    /// Recovery summary; reading it never acknowledges or clears it.
+    pub recovery_state: RecoveryState,
 }
 
 /// Parameters of `session.snapshot`.
