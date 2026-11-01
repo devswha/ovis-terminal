@@ -66,8 +66,16 @@ verbatim.
 | `graphics.dropped` | `graphics_dropped{too_large}` | `GraphicsDroppedData` | `protocol`, `reason` (`too_large`), `output_offset`, `sequence_bytes`, `limit_bytes` |
 | `graphics.evicted` | `graphics_evicted{store_full}` | `GraphicsEvictedData` | `reason` (`store_full`), `evicted_sequences`, `evicted_bytes`, `retained_bytes`, `limit_bytes` |
 
-A notice carries counts and offsets, never image bytes, so it fits every
-event and receipt bound.
+Both data objects are closed: `additionalProperties: false`, with exactly the
+typed fields above, all of them required. Rust decoding refuses any extra
+field. Every count is a decimal string of at most 20 digits. The only
+free-form text a notice can carry is a reason or protocol token. Those enums
+stay open under the output-enum rule, so a client keeps an unknown future token
+verbatim, but the runtime's constructors (`GraphicsCaps::admit`,
+`GraphicsEvictedData::store_full`) emit known tokens only. A notice
+therefore carries counts and offsets, never image bytes, and fits every event
+and receipt bound. Adding a field to either object is a protocol change that
+must be reviewed against this bound.
 
 ## Layer budget: every advertised bound must be reachable
 

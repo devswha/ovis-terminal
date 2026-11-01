@@ -47,6 +47,7 @@ pub enum GraphicsEvictReason {
 
 /// Data of `graphics.dropped`: one sequence was dropped whole, never delivered in part.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct GraphicsDroppedData {
     /// Protocol of the dropped sequence.
@@ -63,6 +64,7 @@ pub struct GraphicsDroppedData {
 
 /// Data of `graphics.evicted`: the oldest retained sequences left the terminal's store.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct GraphicsEvictedData {
     /// Why sequences were evicted.

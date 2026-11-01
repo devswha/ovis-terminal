@@ -4,8 +4,9 @@ use super::{
     GraphicsCaps, GraphicsDroppedData, GraphicsEvictedData, GraphicsProtocol, SequenceAdmission,
 };
 use crate::schema::limits::Limits;
-use crate::schema::openrpc_document;
 use crate::schema::scalar::{ByteCount, ByteOffset, Count};
+
+mod notices;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 
@@ -26,22 +27,56 @@ fn hello_limits_carry_both_graphics_caps_as_decimal_strings() -> TestResult {
     Ok(())
 }
 
-fn with_cap(name: &str, value: Value) -> Result<Value, Box<dyn std::error::Error>> {
+fn limits_with(caps: &[(&str, Value)]) -> Result<Value, Box<dyn std::error::Error>> {
     let mut limits = serde_json::to_value(Limits::v1())?;
-    *limits.get_mut(name).ok_or_else(|| name.to_owned())? = value;
+    for (name, value) in caps {
+        *limits.get_mut(*name).ok_or_else(|| (*name).to_owned())? = value.clone();
+    }
     Ok(limits)
+}
+
+#[test]
+fn the_caps_are_read_from_the_limits_a_hello_reply_carries() -> TestResult {
+    // Given a hello reply that advertises non-default caps, decoded as a client would.
+    let limits: Limits = serde_json::from_value(limits_with(&[
+        ("graphics_sequence_max_bytes", json!("7")),
+        ("graphics_terminal_store_max_bytes", json!("11")),
+    ])?)?;
+    // When the caps are taken from it and enforced.
+    let caps = GraphicsCaps::advertised(&limits);
+    let at = |bytes| (ByteOffset::new(0), ByteCount::new(bytes));
+    let admitted = caps.admit(GraphicsProtocol::Iterm2, at(7));
+    let SequenceAdmission::Dropped(dropped) = caps.admit(GraphicsProtocol::Iterm2, at(8)) else {
+        return Err("8 bytes exceed an advertised 7-byte cap".into());
+    };
+    let evicted = GraphicsEvictedData::store_full(
+        caps,
+        (Count::new(1), ByteCount::new(8)),
+        ByteCount::new(3),
+    );
+    // Then both caps and both notices follow those limits, not the v1 defaults.
+    assert_eq!(
+        (caps.sequence_max_bytes, caps.terminal_store_max_bytes),
+        (ByteCount::new(7), ByteCount::new(11))
+    );
+    assert_eq!(admitted, SequenceAdmission::Admitted);
+    assert_eq!(
+        (dropped.limit_bytes, evicted.limit_bytes),
+        (ByteCount::new(7), ByteCount::new(11))
+    );
+    Ok(())
 }
 
 #[test]
 fn graphics_caps_round_trip_u64_max_and_refuse_numbers() -> TestResult {
     for name in CAPS {
-        let widest = with_cap(name, json!("18446744073709551615"))?;
+        let widest = limits_with(&[(name, json!("18446744073709551615"))])?;
         let decoded = serde_json::from_value::<Limits>(widest)?;
         assert_eq!(
             serde_json::to_value(decoded)?.get(name),
             Some(&json!(u64::MAX.to_string()))
         );
-        let numeric = with_cap(name, json!(8_388_608))?;
+        let numeric = limits_with(&[(name, json!(8_388_608))])?;
         assert!(serde_json::from_value::<Limits>(numeric).is_err(), "{name}");
     }
     Ok(())
@@ -94,46 +129,6 @@ fn an_eviction_notice_names_store_full_and_the_store_cap() -> TestResult {
             "limit_bytes": "33554432",
         })
     );
-    Ok(())
-}
-
-#[test]
-fn the_event_catalog_publishes_both_graphics_notices() -> TestResult {
-    let document = openrpc_document()?;
-    let events = document
-        .get("x-events")
-        .and_then(Value::as_array)
-        .ok_or("x-events")?;
-    let schema_of = |name: &str| {
-        events
-            .iter()
-            .find(|event| event.get("name") == Some(&json!(name)))
-            .and_then(|event| event.pointer("/schema/$ref"))
-            .cloned()
-    };
-    assert_eq!(
-        schema_of("graphics.dropped"),
-        Some(json!("#/components/schemas/GraphicsDroppedData"))
-    );
-    assert_eq!(
-        schema_of("graphics.evicted"),
-        Some(json!("#/components/schemas/GraphicsEvictedData"))
-    );
-    let schemas = document.pointer("/components/schemas").ok_or("schemas")?;
-    let tokens = |name: &str| -> Vec<Value> {
-        schemas
-            .pointer(&format!("/{name}/oneOf"))
-            .and_then(Value::as_array)
-            .map(|variants| {
-                variants
-                    .iter()
-                    .filter_map(|v| v.get("const").cloned())
-                    .collect()
-            })
-            .unwrap_or_default()
-    };
-    assert_eq!(tokens("GraphicsDropReason"), vec![json!("too_large")]);
-    assert_eq!(tokens("GraphicsEvictReason"), vec![json!("store_full")]);
     Ok(())
 }
 
