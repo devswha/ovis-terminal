@@ -22,6 +22,7 @@ mod input;
 mod inspect;
 mod journal;
 mod lanes;
+mod lease_ops;
 mod lifetime;
 mod live;
 mod mutations;

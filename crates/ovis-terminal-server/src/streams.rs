@@ -37,4 +37,5 @@ pub use journal::LeaseJournal;
 pub use lane::AttachLane;
 pub use limits::{SessionBacklog, StreamLimits};
 pub use offset::{LogOffset, StreamOffset};
+pub use records::lease_record;
 pub use upstream::{StreamChannels, Upstream};

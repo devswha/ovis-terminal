@@ -298,11 +298,20 @@ impl Served {
     ///
     /// Fails when a socket step fails or hello is refused.
     pub fn connected(&self) -> TestResult<BufReader<UnixStream>> {
+        self.connected_as(&self.bearer)
+    }
+
+    /// A raw connection that completed hello with `bearer`.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a socket step fails or hello is refused.
+    pub fn connected_as(&self, bearer: &str) -> TestResult<BufReader<UnixStream>> {
         let stream = UnixStream::connect(&self.socket)?;
         stream.set_read_timeout(Some(Duration::from_secs(10)))?;
         let mut connection = BufReader::new(stream);
         let hello = json!({"jsonrpc": "2.0", "id": "h", "method": "hello", "params": {
-            "generation": "1", "client": {"name": "t31", "version": "0"}, "credential": self.bearer,
+            "generation": "1", "client": {"name": "t31", "version": "0"}, "credential": bearer,
         }});
         writeln!(connection.get_mut(), "{hello}")?;
         let mut line = String::new();

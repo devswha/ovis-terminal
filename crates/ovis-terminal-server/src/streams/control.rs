@@ -3,11 +3,12 @@
 //! and the geometry lease an interact client asks for with its first grid.
 
 use ovis_terminal_core::leases::{Acquire, Caller, ControlSlot, LeaseError, TerminalLeases};
+use ovis_terminal_core::registry::LeaseId;
 use ovis_terminal_core::screen::Screen;
 use ovis_terminal_protocol::schema::common::Target;
 use ovis_terminal_protocol::schema::methods::attach::AttachLeasesResult;
 use ovis_terminal_protocol::schema::records::{LeaseRecord, Modes};
-use ovis_terminal_protocol::schema::scalar::Revision;
+use ovis_terminal_protocol::schema::scalar::{EventSeq, Revision};
 use ovis_terminal_store::OpId;
 use ovis_terminal_vt::{ModeRevision, TerminalModes};
 
@@ -83,6 +84,31 @@ impl<T: TerminalDirectory> AttachLane<T> {
         let record = lease_record(&granted.lease);
         hub.setup.journal.record(op, granted.transition)?;
         Ok(Some(record))
+    }
+
+    /// Releases `lease` when it is `target`'s geometry lease and `caller` holds it; the
+    /// next waiting interact client, if any, becomes the geometry owner. Answers the owner
+    /// afterwards and the committed sequence, `None` when nothing changed.
+    ///
+    /// # Errors
+    ///
+    /// `no_lease` unless `lease` is the caller's geometry lease, or a journal failure.
+    pub fn release_geometry(
+        &self,
+        caller: Caller<'_>,
+        (target, lease, op): (&Target, LeaseId, OpId),
+    ) -> Result<(Option<LeaseRecord>, Option<EventSeq>), StreamError> {
+        let hub = self.hub(&self.terminals.resolve(target)?)?;
+        let mut state = hub.lock()?;
+        let geometry = state.leases.view().geometry.map(|held| held.lease_id);
+        if geometry != Some(lease) {
+            return Err(LeaseError::NoLease.into());
+        }
+        let transition = state.leases.release(caller, lease)?;
+        let owner = state.leases.view().geometry.as_ref().map(lease_record);
+        drop(state);
+        let seq = hub.setup.journal.record(op, transition)?;
+        Ok((owner, seq))
     }
 }
 

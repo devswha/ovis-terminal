@@ -4,6 +4,8 @@
 
 #[path = "assembly/lanes.rs"]
 mod lanes;
+#[path = "assembly/leases.rs"]
+mod leases;
 #[path = "assembly/prompts.rs"]
 pub mod prompts;
 #[path = "assembly/records.rs"]
@@ -26,13 +28,11 @@ use serde_json::{Value, json};
 use support::{BIN, Served, TestResult, op_id};
 
 /// Schema methods no landed crate implements; each must answer `method_not_found`.
-const UNIMPLEMENTED: [&str; 36] = [
+const UNIMPLEMENTED: [&str; 34] = [
     "agent.list",
     "agent.note",
     "agent.release",
     "agent.wait_children",
-    "attach.focus",
-    "attach.release_geometry",
     "doc.list",
     "events.ack",
     "events.subscribe",

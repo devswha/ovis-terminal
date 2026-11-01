@@ -50,6 +50,7 @@ type Job = Box<dyn FnOnce(&mut Runtime) + Send>;
 #[derive(Debug)]
 pub(super) struct Runtime {
     pub(super) control: Arc<Control>,
+    pub(super) journal: Arc<super::journal::BootJournal>,
     pub(super) holder: Holder,
     pub(super) identity: RuntimeIdentity,
     pub(super) authority: Arc<Authority<RegistryIdentities>>,

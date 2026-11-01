@@ -9,7 +9,7 @@ use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::schema::decode_params;
 use ovis_terminal_protocol::schema::limits::TransportKind;
 use ovis_terminal_protocol::schema::methods::attach::{
-    AttachLeasesParams, AttachOpenParams, AttachResizeParams,
+    AttachLeaseParams, AttachLeasesParams, AttachOpenParams, AttachResizeParams,
 };
 use ovis_terminal_protocol::schema::methods::input::InputBarrierParams;
 use ovis_terminal_protocol::schema::methods::server::OpRefParams;
@@ -31,7 +31,7 @@ use super::error::{refusal, worker_gone};
 use super::lanes::Dispatch;
 
 /// Methods served by the runtime actor and the lease table, besides the attach streams.
-pub(super) const ROUTED: [&str; 21] = [
+pub(super) const ROUTED: [&str; 23] = [
     "terminal.run",
     "terminal.list",
     "terminal.get",
@@ -53,6 +53,8 @@ pub(super) const ROUTED: [&str; 21] = [
     "input.barrier",
     "attach.resize",
     "attach.leases",
+    "attach.focus",
+    "attach.release_geometry",
 ];
 
 type Lane = AttachLane<Arc<Directory>>;
@@ -125,6 +127,18 @@ impl RequestHandler for Served {
                 let params: AttachResizeParams = decode(&call)?;
                 self.actor
                     .call(move |runtime| runtime.resize(&session, &params))
+                    .await
+            }
+            "attach.release_geometry" => {
+                let params: AttachLeaseParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.release_geometry(&session, &params))
+                    .await
+            }
+            "attach.focus" => {
+                let params: AttachLeaseParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.focus(&session, &params))
                     .await
             }
             "attach.leases" => {

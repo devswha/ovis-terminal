@@ -15,7 +15,7 @@ use ovis_terminal_vt::{
 use super::offset::StreamOffset;
 
 /// The wire record of a core lease.
-pub(super) fn lease_record(lease: &Lease) -> LeaseRecord {
+pub fn lease_record(lease: &Lease) -> LeaseRecord {
     let role = match lease.slot {
         LeaseSlot::Observe => LeaseRole::Observe,
         _ => LeaseRole::Interact,

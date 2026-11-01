@@ -48,6 +48,20 @@ impl BootJournal {
         Ok(())
     }
 
+    /// The lease log's current position: the sequence a read of the lease state reflects.
+    pub(super) fn cursor(&self) -> Result<EventSeq, StreamError> {
+        let slot = self.slot();
+        let log = slot
+            .as_ref()
+            .ok_or(StreamError::Journal(EventError::AdmissionWithdrawn))?;
+        let pinned = log.pin_snapshot().map_err(StreamError::Journal)?;
+        let seq = EventSeq::new(pinned.cursor.seq.get());
+        log.release_snapshot(&pinned.token)
+            .map_err(StreamError::Journal)?;
+        drop(slot);
+        Ok(seq)
+    }
+
     /// Closes the log; later transitions are refused as withdrawn.
     pub(super) fn close(&self) -> Result<(), AssemblyError> {
         let log = self.slot().take();
