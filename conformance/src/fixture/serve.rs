@@ -27,7 +27,7 @@ use tokio::io::AsyncReadExt as _;
 
 use super::bridge::{Extension, QUEUE_LIMIT};
 use super::documents::{DocGet, DocSet};
-use super::handler::{Dispatch, FixtureHandler, Probes};
+use super::handler::{Dispatch, Event, FixtureHandler, Probes};
 use super::terminals::TerminalKeep;
 use crate::error::RunnerError;
 
@@ -69,13 +69,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     ))
     .map_err(at("bootstrap the authority"))?;
     let authority = Arc::new(authority);
-    let store = Store::open(&root.join("state.db"), StoreOptions::default())
-        .map_err(at("open the store"))?;
-    let core = Arc::new(Coordinator::new(
-        store,
-        runtime,
-        OperationProducer::new(runtime.runtime_id()),
-    ));
+    let core = open_core(root, runtime)?;
     let effects = root.join("effects");
     std::fs::create_dir(&effects).map_err(at("create the effect directory"))?;
     let mut dispatch = Dispatch::new(Arc::clone(&authority), runtime, Arc::clone(&core));
@@ -106,6 +100,8 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let fleet = (runtime, Arc::clone(&core));
     let machines = super::machines::register(&mut dispatch, (&agents, &gate), fleet).await?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
+    let held = super::update::register(&mut dispatch, (root, &authority, issued.bearer()), runtime)
+        .await?;
     let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
     let writer = delegate(&authority, issued.bearer(), ("writer", WRITER))?;
     let prompts = Arc::clone(&gate.prompts);
@@ -149,12 +145,29 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .map_err(at("shut the server down"))?;
     handler.shutdown().await?;
     drop(handler);
+    tokio::task::spawn_blocking(move || held.shutdown())
+        .await
+        .map_err(at("join the update holder shutdown"))??;
     let core = Arc::try_unwrap(core).map_err(|_| at("release the coordinator")("still shared"))?;
     tokio::task::spawn_blocking(move || core.close())
         .await
         .map_err(at("join the store close"))?
         .map_err(at("close the store"))?;
     announce_report(&report)
+}
+
+/// The coordinator over the run's SQLite store, sequencing as `runtime`.
+fn open_core(
+    root: &Path,
+    runtime: RuntimeIdentity,
+) -> Result<Arc<Coordinator<Event, OperationProducer>>, RunnerError> {
+    let store = Store::open(&root.join("state.db"), StoreOptions::default())
+        .map_err(at("open the store"))?;
+    Ok(Arc::new(Coordinator::new(
+        store,
+        runtime,
+        OperationProducer::new(runtime.runtime_id()),
+    )))
 }
 
 /// The serve report line: accepted connections, failures by kind, panics.

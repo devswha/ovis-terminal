@@ -4,8 +4,9 @@
 //! the fixture-only `fixture.transcript` provider write, `fixture.pty` input byte count,
 //! `fixture.bridge` extension driver, the `fixture.exit` and `fixture.program` program
 //! lifecycle stand-ins, `fixture.deliver`, which lets the sequenced terminal's holder
-//! stand-in write, the `fixture.remote`, `fixture.machine` and `fixture.remote_child`
-//! machine stand-ins, and `$/orphanedAck` answered by the machine actor lane.
+//! stand-in write, the `fixture.update` release probe, the `fixture.remote`,
+//! `fixture.machine` and `fixture.remote_child` machine stand-ins, and `$/orphanedAck`
+//! answered by the machine actor lane.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -156,6 +157,7 @@ impl RequestHandler for FixtureHandler {
                 let _: NoParams = decode_params(&call.request).map_err(BoundaryError::from)?;
                 self.probes.sequenced.deliver()
             }
+            super::update::PROBE => super::update::probe(&self.root),
             REMOTE_CALL => machines::call(&self.probes.machines, &call.request).await,
             MACHINE_CONTROL => machines::control(&self.probes.machines, &call.request).await,
             REMOTE_CHILD => machines::remote_child(&self.probes.machines, &call.request).await,

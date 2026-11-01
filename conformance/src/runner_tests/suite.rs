@@ -30,6 +30,7 @@ const EXECUTABLE: &[&str] = &[
     "protocol/strict-target.json",
     "remote/isolation.json",
     "security/rotation.json",
+    "services/update.json",
 ];
 
 /// Every executable file runs and passes; every other file is a listed declaration.

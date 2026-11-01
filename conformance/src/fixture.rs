@@ -35,6 +35,8 @@ pub mod terminals;
 pub mod transcripts;
 #[cfg(unix)]
 pub mod tree;
+#[cfg(unix)]
+pub mod update;
 pub mod wire;
 
 #[cfg(unix)]
