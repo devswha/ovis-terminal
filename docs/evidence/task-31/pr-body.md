@@ -368,3 +368,14 @@ Verified before pushing:
 - **Follow-up for todo 61 (gate N1):** actor-routed reads have no server deadline.
 - **Merge:** `origin/integration` d064c74 (T69). No conflicts; lockfile regenerated; `evidence-audit` passes; SDK unchanged.
 
+## Round 7
+
+- **B2, residual.** Core's `Terminals::receive_message(Duration)` is now `pub(crate)` and compiled only under `cfg(all(test, unix))`, the same gate as its one remaining caller, `restart/qa/readiness.rs`. The original defect, `receive_message(Duration::from_millis(5))` under the control in `assembly/actor.rs`, no longer compiles.
+  - `Terminals::receive(Duration)` stays `pub`: core's integration tests call it from outside the crate (`src/terminals/qa/authority.rs:53`, `qa/mod.rs:134`).
+  - It cannot silently restore the defect, because it applies a message without returning it. The mutant that puts `receive(5 ms)` under the control fails 27 of the 74 CLI tests.
+- **Bounded FIFO reads.** `pending::read_fifo_within` replaces the unbounded FIFO reads in `turns.rs` and `pending.rs`. Past 60 s it opens the FIFO for writing itself, which unblocks the waiting open, and fails the test.
+- **Named gaps (not fixed in this PR):**
+  - **OSC 7501 is not ingested by the shipped binary.** `StatusService::ingest` (`crates/ovis-terminal-agent/src/status/ingest.rs:119`) has no production caller. An OSC-declared `idle` therefore never satisfies a state wait, and a template's first message waiting on it expires. Only `status.report` declares status today. Ledger: `docs/design/ideal-state.md:213` (OSC 7501 status, CAT-3122), declared status IDEAL-064+ and EXCL-008/009.
+  - **A first message refused after start leaves the program running.** The holder assigns the incarnation at spawn, so a launch cannot be rolled back before the program runs (holder follow-up, B1 seam).
+  - **`LaunchSessions` entries are never pruned.** An op id whose launch fails before `reserve`, and every terminal after its first message settles, keep their session entry.
+
