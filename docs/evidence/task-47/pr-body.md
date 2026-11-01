@@ -180,3 +180,27 @@ After the merge:
 - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exits 0, and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` exits 0 (`merge-windows.log`).
 - `bash scripts/check.sh` exits 0: nextest `1069 tests run: 1069 passed (1 slow), 1 skipped`, hygiene `0 violation(s) in 1065 file(s)`, and `json.sh: 113 JSON file(s)` (`merge-check-script.log`).
 - `services/update`: happy has 81 assertions, failure with the plan's `--inject --append` has 48, and `--case all` has 137 (2/2). All exit 0 with failed 0 and skipped 0 (`merge-qa.log`, `merge-case-all.json`).
+
+## Round 2 (gate review: surviving mutants M1 and M3a, note N3)
+
+- **B1 (M1, pre-selection digest re-check).** New test `update::tests::crash::an_executable_changed_after_verification_is_refused_before_selection`. It verifies `2.0.0`, then rewrites `builds/<id>/ovis-terminal`, then calls `activate`. It asserts:
+  - `UpdateError::Rejected(DigestMismatch)` with kind `integrity_failed`;
+  - `query().active` unchanged and `previous` still `None`;
+  - the record is `rejected` with reason `digest_mismatch`;
+  - 0 restarts and no journal file.
+- **B2 (M3a, durable `ready` record).**
+  - `activate` gains a `#[cfg(test)]` crash barrier (`Updates::crash_after`), following todo 48's `crash_after`. It stops right after the last durable step (`selected`: after the restart and before the `ready` record; `ready`: after the `ready` record), and the test then reopens the install root.
+  - Both tests read the journal that the real `activate` wrote to `activation.json`.
+  - `a_crash_after_the_ready_record_is_finished_on_open_without_a_second_restart`: the journal phase is `ready`. Reopening finishes the activation: the active build is the new one, the record is `activated`, the receipt's `restart` equals the journal's, there is exactly 1 restart, and the journal is removed.
+  - `a_crash_before_the_ready_record_is_rolled_back_on_open`: the journal phase is `selected` and has no restart. Reopening selects the old build again with an `interrupted` receipt.
+- **N3.** `RollbackFailed` is now raised only by refusals that leave the selection unchanged; its hint stays "the selection is unchanged". A failed restore after the swap is the new `UpdateError::RestoreFailed`. It keeps the kind `rollback_failed`, its hint is "the new build may still be selected; the next open reverts it from the journal", and it is not proven, so it is recorded `outcome_unknown`.
+- **Mutants applied by me on this tree** (each reverted after its run; logs `r2-mutant-*.log`):
+  - M1 (`!= build.binary_sha256 && false`) is killed by the B1 test.
+  - M3a (the `ready` journal write deleted) is killed by `a_crash_after_the_ready_record_is_finished_on_open_without_a_second_restart`.
+
+  Both runs: `SVC_EXIT=101`, 16 passed, 1 failed.
+- **Gates:**
+  - `bash scripts/check.sh` exits 0: nextest `1072 tests run: 1072 passed (1 slow), 1 skipped`, hygiene `0 violation(s) in 1066 file(s)`.
+  - Windows `cargo check` and `cargo clippy -D warnings` (`x86_64-pc-windows-gnu`) exit 0 (`r2-windows.log`, `r2-check-script.log`).
+  - Services `update::` passes 17/17.
+- Pushed on top of `3d11b7b`; integration is not merged (`b96f583`).

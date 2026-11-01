@@ -60,7 +60,7 @@ impl Updates {
         (journal, reason, readiness): (&Journal, RollbackReason, Option<ReadinessEvidence>),
     ) -> Result<(), UpdateError> {
         self.select(state, &journal.before)
-            .map_err(|error| UpdateError::RollbackFailed {
+            .map_err(|error| UpdateError::RestoreFailed {
                 source: Box::new(error),
             })?;
         if journal.step == Step::Activate {

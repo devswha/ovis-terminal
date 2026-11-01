@@ -105,9 +105,13 @@ impl Updates {
                 return Err(UpdateError::ActivationFailed(RollbackReason::RestartFailed));
             }
         }
+        #[cfg(test)]
+        self.crash_point(ActivationPhase::Selected)?;
         journal.readiness = Some(readiness);
         journal.phase = ActivationPhase::Ready;
         self.journal(&mut state, &journal)?;
+        #[cfg(test)]
+        self.crash_point(ActivationPhase::Ready)?;
         let record = self.finish(&mut state, &journal);
         drop(state);
         record
@@ -174,5 +178,18 @@ impl Updates {
         let record = self.finish(&mut state, &journal);
         drop(state);
         record
+    }
+
+    /// Stops `activate` as a crash would once `phase` is the last durable step.
+    #[cfg(test)]
+    fn crash_point(&self, phase: ActivationPhase) -> Result<(), UpdateError> {
+        let armed = *self.crash_after.lock().map_err(|_| UpdateError::Poisoned)?;
+        if armed == Some(phase) {
+            return Err(UpdateError::Io {
+                operation: "stop at a test crash barrier",
+                source: std::io::Error::other("simulated crash"),
+            });
+        }
+        Ok(())
     }
 }

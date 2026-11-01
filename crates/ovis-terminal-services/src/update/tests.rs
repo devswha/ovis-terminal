@@ -1,3 +1,4 @@
+mod crash;
 mod fixture;
 mod lifecycle;
 mod recovery;

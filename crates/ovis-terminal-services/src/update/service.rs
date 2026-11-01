@@ -32,6 +32,9 @@ pub struct Updates {
     pub(super) config: Config,
     pub(super) control: Arc<dyn RestartControl>,
     pub(super) state: Mutex<State>,
+    /// Test barrier: `activate` stops as a crash would right after this phase is durable.
+    #[cfg(test)]
+    pub(super) crash_after: Mutex<Option<ovis_terminal_protocol::domain::update::ActivationPhase>>,
 }
 
 impl Updates {
@@ -70,6 +73,8 @@ impl Updates {
             layout,
             config,
             control,
+            #[cfg(test)]
+            crash_after: Mutex::new(None),
         };
         updates.recover()?;
         Ok(updates)

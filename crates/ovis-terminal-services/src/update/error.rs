@@ -62,9 +62,16 @@ pub enum UpdateError {
     /// The selected build failed and the previous build was selected again.
     #[error("the selected build failed and the previous build was restored")]
     ActivationFailed(RollbackReason),
-    /// The previous build could not be selected again.
+    /// A rollback was refused before it changed the selection.
     #[error("the previous build could not be selected again")]
     RollbackFailed {
+        /// Why.
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+    /// Selecting the previous build again failed after the swap; the journal is kept.
+    #[error("restoring the previous build failed after the selection changed")]
+    RestoreFailed {
         /// Why.
         #[source]
         source: Box<dyn std::error::Error + Send + Sync>,
@@ -111,7 +118,7 @@ impl UpdateError {
             Self::DigestMismatch { .. } => "integrity_failed",
             Self::Rejected(reason) => rejection_kind(*reason),
             Self::ActivationFailed(_) => "activation_failed",
-            Self::RollbackFailed { .. } => "rollback_failed",
+            Self::RollbackFailed { .. } | Self::RestoreFailed { .. } => "rollback_failed",
             Self::Restart(failure) => failure.kind(),
             Self::Cancelled => "cancelled",
             Self::Io { .. } | Self::Record(_) => "persistence_failed",
@@ -133,6 +140,9 @@ impl UpdateError {
             Self::Rejected(reason) => rejection_hint(*reason),
             Self::ActivationFailed(_) => "update.query shows the rollback receipt and evidence",
             Self::RollbackFailed { .. } => "the selection is unchanged; inspect the install root",
+            Self::RestoreFailed { .. } => {
+                "the new build may still be selected; the next open reverts it from the journal"
+            }
             Self::Restart(failure) => failure.hint(),
             Self::Cancelled => "stage the release again when needed",
             Self::Io { .. } | Self::Record(_) => "check the install root's disk and permissions",
@@ -152,6 +162,7 @@ impl UpdateError {
                 | Self::Restart(_)
                 | Self::Value(_)
                 | Self::Poisoned
+                | Self::RestoreFailed { .. }
         )
     }
 }
