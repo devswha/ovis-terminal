@@ -5,17 +5,16 @@ use std::sync::Arc;
 
 use ovis_terminal_authz::{Authority, EndpointPolicy, LocalAccount, UnixUid};
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
-use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::ws::{WsBinding, WsConfig, WsEndpoint, WsServerHandle, serve_websocket};
 
 use super::AssemblyError;
-use super::handler::Assembled;
+use super::handler::Handler;
 
 /// Binds `127.0.0.1:<port>` and serves `handler` over WebSocket until shut down.
 pub(super) async fn start(
     port: u16,
     (authority, identity): (Arc<Authority<RegistryIdentities>>, RuntimeIdentity),
-    handler: &Arc<Revalidated<Assembled>>,
+    handler: &Arc<Handler>,
 ) -> Result<WsServerHandle, AssemblyError> {
     let endpoint = WsEndpoint::bind(WsBinding::loopback(port))
         .await

@@ -1,5 +1,5 @@
-//! The landed dispatcher lanes the server hosts behind its own routes: documents, plugins,
-//! machine identity, agent status, prompts and session binding, on one dispatcher whose
+//! The landed dispatcher lanes the server hosts behind its own routes: health, documents,
+//! plugins, machine identity, agent status, prompts and session binding, on one dispatcher whose
 //! coordinator commits their operation, agent and document events. Each registration
 //! phase lives in its own child module, so a later lane adds one call here.
 
@@ -82,6 +82,7 @@ pub(super) struct Hosting<'a> {
     pub(super) actor: super::actor::Actor,
     pub(super) control: Arc<ovis_terminal_core::restart::Control>,
     pub(super) status: Arc<ovis_terminal_agent::status::StatusService>,
+    pub(super) health: Arc<ovis_terminal_core::health::Health>,
 }
 
 fn stage<E: Into<super::StageSource>>(stage: &'static str) -> impl FnOnce(E) -> AssemblyError {
@@ -99,6 +100,12 @@ pub(super) fn host(hosting: &Hosting<'_>) -> Result<(Dispatch, Arc<DispatchLog>)
         OperationProducer::new(identity.runtime_id()),
     ));
     let mut dispatch = Dispatcher::new(Arc::clone(&hosting.authority), identity, Arc::clone(&log));
+    ovis_terminal_server::dispatch::lanes::health::register(
+        &mut dispatch,
+        &hosting.health,
+        identity,
+    )
+    .map_err(stage("register server.status and server.metrics"))?;
     machine::register(&mut dispatch, hosting)?;
     agents::register(&mut dispatch, hosting, &log)?;
     Ok((dispatch, log))

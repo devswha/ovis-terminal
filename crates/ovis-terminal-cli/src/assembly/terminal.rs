@@ -154,21 +154,4 @@ impl Runtime {
         let record = self.lifecycle(|terminals| terminals.operation(session, op_id))?;
         serde_json::to_value(record).map_err(|_| refusal("internal", "report the build"))
     }
-
-    pub(super) fn status(&self) -> Value {
-        let live = self
-            .live
-            .values()
-            .filter(|live| live.hub.streams().is_ok())
-            .count();
-        let uptime = u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX);
-        json!({
-            "state": "running",
-            "runtime_lifetime": self.identity.runtime_id().to_string(),
-            "server_boot_id": self.identity.server_boot_id().to_string(),
-            "uptime_ms": uptime.to_string(),
-            "holder_count": 1,
-            "live_terminals": live,
-        })
-    }
 }

@@ -160,6 +160,8 @@ fn observing_needs_no_tty_and_never_forwards_input() -> TestResult {
         Some(&json!("cli")),
         "{leases}"
     );
+    let metrics = served.call("server.metrics", &json!({}))?;
+    assert_eq!(metrics.get("streams"), Some(&json!("2")), "{metrics}");
     let mut stdin = observer.stdin.take().ok_or("stdin")?;
     stdin.write_all(b"echo rogue-$((1+1))\r")?;
     drop(stdin);

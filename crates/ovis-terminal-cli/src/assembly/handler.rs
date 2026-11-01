@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use ovis_terminal_core::leases::Caller;
 use ovis_terminal_protocol::errors::BoundaryError;
-use ovis_terminal_protocol::schema::common::NoParams;
 use ovis_terminal_protocol::schema::decode_params;
 use ovis_terminal_protocol::schema::limits::TransportKind;
 use ovis_terminal_protocol::schema::methods::attach::{
@@ -15,7 +14,9 @@ use ovis_terminal_protocol::schema::methods::attach::{
 use ovis_terminal_protocol::schema::methods::server::OpRefParams;
 use ovis_terminal_protocol::schema::methods::terminal::{TerminalGetParams, TerminalRunParams};
 use ovis_terminal_protocol::schema::records::LeaseRole;
+use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::conn::{Call, RequestHandler};
+use ovis_terminal_server::dispatch::lanes::health::Measured;
 use ovis_terminal_server::streams::{AttachHandler, AttachLane};
 use ovis_terminal_store::OpId as StoreOpId;
 use serde::de::DeserializeOwned;
@@ -27,8 +28,7 @@ use super::error::{refusal, worker_gone};
 use super::lanes::Dispatch;
 
 /// Methods served by the runtime actor and the lease table, besides the attach streams.
-pub(super) const ROUTED: [&str; 21] = [
-    "server.status",
+pub(super) const ROUTED: [&str; 20] = [
     "terminal.run",
     "terminal.list",
     "terminal.get",
@@ -81,10 +81,6 @@ impl RequestHandler for Served {
     async fn call(&self, call: Call) -> Result<Value, BoundaryError> {
         let session = Arc::clone(&call.session);
         match call.request.method() {
-            "server.status" => {
-                let _: NoParams = decode(&call)?;
-                self.actor.call(|runtime| Ok(runtime.status())).await
-            }
             "terminal.run" => {
                 let params: TerminalRunParams = decode(&call)?;
                 let run = move |runtime: &mut super::actor::Runtime| {
@@ -200,6 +196,9 @@ impl Served {
             .map(drop)
     }
 }
+
+/// The connection handler: every call's latency is measured around authorization.
+pub(super) type Handler = Measured<Revalidated<Assembled>>;
 
 /// The attach stream methods in front of [`Served`], with the geometry claim on open.
 #[derive(Debug)]

@@ -5,10 +5,10 @@ use std::collections::BTreeMap;
 use std::io::Write as _;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Instant;
 
 use ovis_terminal_protocol::schema::limits::{Limits, TransportKind};
 use ovis_terminal_server::authn::Revalidated;
+use ovis_terminal_server::dispatch::lanes::health::Measured;
 use ovis_terminal_server::listen::{
     EndpointDescriptor, EndpointEnvironment, Platform, ServerConfig, UnixEndpoint, serve_unix,
 };
@@ -134,9 +134,10 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
     let limits = StreamLimits::advertised(&Limits::v1());
     let backlog = Arc::new(SessionBacklog::new(SESSION_BACKLOG_BYTES));
     let journal: Arc<dyn LeaseJournal> = Arc::<LeaseLog>::clone(&booted.leases);
-    let setup = StreamSetup::new(limits, backlog, journal);
+    let health = super::health::open(&state, booted.identity, recovery.recovery.clone())?;
+    let setup = StreamSetup::new(limits, backlog, journal).reporting_to(Arc::clone(&health));
     let control = booted.control;
-    let runtime = Runtime {
+    let mut runtime = Runtime {
         control: Arc::clone(&control),
         holder: booted.holder,
         identity: booted.identity,
@@ -148,9 +149,11 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         live: BTreeMap::new(),
         launches: BTreeMap::new(),
         created: BTreeMap::new(),
-        started: Instant::now(),
         status: Arc::clone(&booted.status),
+        health: Arc::clone(&health),
+        census: None,
     };
+    runtime.publish_census();
     let (actor, thread) = Actor::spawn(runtime)?;
     let (dispatch, dispatch_log) = super::lanes::host(&super::lanes::Hosting {
         state: &state,
@@ -160,6 +163,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         actor: actor.clone(),
         control,
         status: Arc::clone(&booted.status),
+        health: Arc::clone(&health),
     })?;
     let stop = StopSignal::default();
     let dispatch = Arc::new(dispatch);
@@ -169,7 +173,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         dispatch: Arc::clone(&dispatch),
         stop: stop.clone(),
     });
-    let handler = Arc::new(Revalidated::new(
+    let revalidated = Revalidated::new(
         Arc::clone(&booted.authority),
         Assembled {
             attach: AttachHandler::new(Arc::clone(&served), Arc::clone(&lane)),
@@ -180,7 +184,8 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
                 vec![TransportKind::Unix]
             },
         },
-    ));
+    );
+    let handler = Arc::new(Measured::new(health, Arc::new(revalidated)));
     let endpoint = UnixEndpoint::bind(&socket)
         .await
         .map_err(AssemblyError::Endpoint)?;

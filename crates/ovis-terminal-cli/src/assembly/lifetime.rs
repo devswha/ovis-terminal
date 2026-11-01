@@ -5,7 +5,6 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use ovis_terminal_core::events::{Coordinator, EventData, SnapshotProducer};
-use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::listen::ServerHandle;
 use ovis_terminal_server::streams::AttachLane;
 use ovis_terminal_server::ws::WsServerHandle;
@@ -17,7 +16,7 @@ use super::AssemblyError;
 use super::actor::ActorThread;
 use super::boot::LeaseLog;
 use super::directory::Directory;
-use super::handler::Assembled;
+use super::handler::Handler;
 use super::lanes::{Dispatch, DispatchLog};
 
 /// Everything a running server owns that must be released in order.
@@ -26,7 +25,7 @@ pub(super) struct Lifetime {
     pub(super) listener: ServerHandle,
     pub(super) lane: Arc<AttachLane<Arc<Directory>>>,
     pub(super) dispatch: Arc<Dispatch>,
-    pub(super) handler: Arc<Revalidated<Assembled>>,
+    pub(super) handler: Arc<Handler>,
     pub(super) thread: ActorThread,
     pub(super) logs: (Arc<DispatchLog>, Arc<LeaseLog>),
 }

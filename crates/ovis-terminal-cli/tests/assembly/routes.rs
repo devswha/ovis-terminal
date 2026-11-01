@@ -60,6 +60,45 @@ fn discovery_reads_answer_from_the_committed_document_and_agree_with_hello() -> 
 }
 
 #[test]
+fn metrics_count_every_settled_call_and_status_reports_the_published_census() -> TestResult {
+    let served = Served::start()?;
+    let before = call(&served, "server.status", &json!({}))?;
+    assert_eq!(before.get("live_terminals"), Some(&json!("0")), "{before}");
+    served.run_shell("shell")?;
+    for _ in 0..3 {
+        call(&served, "terminal.list", &json!({}))?;
+    }
+    let refused = error(
+        &served,
+        "terminal.get",
+        &json!({"target": {"address": "t9"}}),
+    )?;
+    assert_eq!(refused.get("kind"), Some(&json!("not_found")), "{refused}");
+    let status = call(&served, "server.status", &json!({}))?;
+    assert_eq!(status.get("live_terminals"), Some(&json!("1")), "{status}");
+    assert_eq!(status.get("holder_count"), Some(&json!("1")), "{status}");
+    let metrics = call(&served, "server.metrics", &json!({}))?;
+    let row = |method: &str| {
+        metrics
+            .get("rpc_latency")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .find(|row| row.get("method") == Some(&json!(method)))
+            .cloned()
+    };
+    let listed = row("terminal.list").ok_or_else(|| metrics.to_string())?;
+    assert_eq!(listed.get("calls"), Some(&json!("3")), "{listed}");
+    let got = row("terminal.get").ok_or_else(|| metrics.to_string())?;
+    assert_eq!(got.get("failures"), Some(&json!("1")), "{got}");
+    assert_eq!(metrics.get("server_boot_id"), status.get("server_boot_id"));
+    let reset = error(&served, "server.metrics", &json!({"reset": true}))?;
+    assert_eq!(reset.get("kind"), Some(&json!("invalid_params")), "{reset}");
+    served.stop()?;
+    Ok(())
+}
+
+#[test]
 fn service_describe_and_machine_add_answer_typed_outcomes_over_the_socket() -> TestResult {
     let served = Served::start()?;
     let described = error(&served, "service.describe", &json!({}))?;

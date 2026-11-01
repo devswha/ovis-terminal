@@ -6,7 +6,7 @@ use std::io::Write as _;
 use std::sync::Arc;
 use std::sync::mpsc::{self, RecvTimeoutError, TryRecvError};
 use std::thread::JoinHandle;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use ovis_terminal_authz::Authority;
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity, TerminalId};
@@ -46,9 +46,12 @@ pub(super) struct Runtime {
     pub(super) live: BTreeMap<TerminalId, Live>,
     pub(super) launches: BTreeMap<TerminalId, (Geometry, Option<String>)>,
     pub(super) created: BTreeMap<TerminalId, Revision>,
-    pub(super) started: Instant,
     /// Process tokens handed to spawned programs, shared with the agent lanes.
     pub(super) status: Arc<ovis_terminal_agent::status::StatusService>,
+    /// The boot's health, which the runtime publishes its census into.
+    pub(super) health: Arc<ovis_terminal_core::health::Health>,
+    /// The census last published.
+    pub(super) census: Option<ovis_terminal_core::health::Census>,
 }
 
 /// The current wall-clock time in milliseconds.
@@ -147,6 +150,7 @@ fn run(mut runtime: Runtime, jobs: &mpsc::Receiver<Job>) -> Result<(), AssemblyE
         }
         if linked {
             linked = runtime.receive(POLL);
+            runtime.publish_census();
         } else {
             match jobs.recv() {
                 Ok(job) => job(&mut runtime),
@@ -183,8 +187,12 @@ impl Actor {
         work: impl FnOnce(&mut Runtime) -> Result<R, BoundaryError> + Send + 'static,
     ) -> Result<R, BoundaryError> {
         let (reply, answer) = oneshot::channel();
-        let job: Job = Box::new(move |runtime| match reply.send(work(runtime)) {
-            Ok(()) | Err(_) => {}
+        let job: Job = Box::new(move |runtime| {
+            let result = work(runtime);
+            runtime.publish_census();
+            match reply.send(result) {
+                Ok(()) | Err(_) => {}
+            }
         });
         self.jobs.send(job).map_err(|_| worker_gone())?;
         answer.await.map_err(|_| worker_gone())?
@@ -198,8 +206,12 @@ impl Actor {
         work: impl FnOnce(&mut Runtime) -> R + Send + 'static,
     ) -> Option<R> {
         let (reply, answer) = mpsc::channel();
-        let job: Job = Box::new(move |runtime| match reply.send(work(runtime)) {
-            Ok(()) | Err(_) => {}
+        let job: Job = Box::new(move |runtime| {
+            let result = work(runtime);
+            runtime.publish_census();
+            match reply.send(result) {
+                Ok(()) | Err(_) => {}
+            }
         });
         self.jobs.send(job).ok()?;
         answer.recv().ok()

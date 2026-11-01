@@ -13,6 +13,7 @@ mod directory;
 mod discovery;
 mod error;
 mod handler;
+mod health;
 mod identity;
 mod input;
 mod inspect;

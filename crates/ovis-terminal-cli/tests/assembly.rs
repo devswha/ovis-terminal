@@ -24,7 +24,7 @@ use serde_json::{Value, json};
 use support::{BIN, Served, TestResult, op_id};
 
 /// Schema methods no landed crate implements; each must answer `method_not_found`.
-const UNIMPLEMENTED: [&str; 46] = [
+const UNIMPLEMENTED: [&str; 45] = [
     "agent.history",
     "agent.list",
     "agent.note",
@@ -49,7 +49,6 @@ const UNIMPLEMENTED: [&str; 46] = [
     "machine.login",
     "machine.rm",
     "selection.set",
-    "server.metrics",
     "server.restart",
     "server.start",
     "service.install",
@@ -186,7 +185,8 @@ fn terminal_run_spawns_a_real_program_that_list_get_and_status_report() -> TestR
     );
     let status = served.ok(&["server", "status"])?;
     assert_eq!(status.get("state"), Some(&json!("running")));
-    assert_eq!(status.get("live_terminals"), Some(&json!(1)));
+    assert_eq!(status.get("live_terminals"), Some(&json!("1")));
+    assert_eq!(status.get("holder_count"), Some(&json!("1")));
     let uptime = status
         .get("uptime_ms")
         .and_then(Value::as_str)
