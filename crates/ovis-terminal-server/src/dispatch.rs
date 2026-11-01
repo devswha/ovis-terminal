@@ -1,5 +1,6 @@
 //! Typed method dispatch with deadlines and cancellation (plan todo 14).
 
+pub mod agent;
 mod control;
 mod deadline;
 mod error;

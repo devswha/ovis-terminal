@@ -1,0 +1,77 @@
+# Mutants applied one at a time against the lane head; each reverted after its run.
+# Each compiled and was killed by a shipped test (exit 101).
+
+## M1-no-remote-mark
+file: crates/ovis-terminal-core/src/commit/boundary.rs
+mutation: '.write(remote::advance(snapshot, origin)?)\n                        .mirrored_from' -> '.mirrored_from'
+command: cargo test -p ovis-terminal-core --test commit
+exit: 101
+killed_by:
+  test remote::an_unreadable_upstream_mark_is_never_reset_to_a_default ... FAILED
+  test remote::upstream_positions_round_trip_as_decimal_strings ... FAILED
+  test remote::replayed_or_reordered_upstream_positions_are_refused ... FAILED
+  test result: FAILED. 6 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+
+## M2-inclusive-expiry
+file: crates/ovis-terminal-core/src/commit/pager.rs
+mutation: 'if now < expires_ms {' -> 'if now <= expires_ms {'
+command: cargo test -p ovis-terminal-core --test commit
+exit: 101
+killed_by:
+  test pages::pages_stay_on_one_revision_until_their_expiry ... FAILED
+  test result: FAILED. 8 passed; 1 failed
+
+## M3-never-truncated
+file: crates/ovis-terminal-core/src/commit/pager.rs
+mutation: 'truncated: continuation.is_some() && data.len() < limit,' -> 'truncated: false,'
+command: cargo test -p ovis-terminal-core --test commit
+exit: 101
+killed_by:
+  test pages::pages_stay_on_one_revision_until_their_expiry ... FAILED
+  test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+
+## M4-drop-status-clear
+file: crates/ovis-terminal-server/src/dispatch/agent.rs
+mutation: '        dispatcher.register(ClearStatus::new(&status))?;\n' -> ''
+command: cargo test -p ovis-terminal-server --test dispatch agent_assembly
+exit: 101
+killed_by:
+  test agent_assembly::the_assembly_routes_exactly_its_catalog_methods_once ... FAILED
+  test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.12s
+
+## M5-no-storage-full
+file: crates/ovis-terminal-core/src/commit/error.rs
+mutation: 'EventError::Store(store) if store.is_storage_full() =>' -> 'EventError::Store(store) if store.is_storage_full() && false =>'
+command: cargo test -p ovis-terminal-core --test commit
+exit: 101
+killed_by:
+  test storage::a_full_store_acknowledges_and_publishes_nothing ... FAILED
+
+## M6-op-get-ignores-settled-ledger (after the CI fix)
+file: crates/ovis-terminal-server/src/dispatch/control.rs
+mutation: report OpRecord::queued for a queued retry without consulting Operations::settled
+command: cargo test -p ovis-terminal-server --test dispatch agent_assembly
+exit: 101
+killed_by:
+  test agent_assembly::a_queued_retry_of_a_committed_answer_still_inspects_as_committed ... FAILED
+  (left: "queued", queued_position "1"; right: "committed")
+
+## Round 2 (gate findings B1, B2)
+
+## M7-no-hold (B1)
+file: conformance/src/fixture/commit_barrier.rs
+mutation: committers no longer wait for the release after their tenth commit
+command: conformance --scenario agent/e2e --isolated --case happy
+exit: 1 (fixture_failed: a finished committer dropped its receiver, so the release send failed)
+
+## M7b-no-hold-tolerant-release (B1)
+mutation: the M7 change plus release sends whose error is ignored
+command: conformance --scenario agent/e2e --isolated --case happy
+exit: 1
+failed: snapshot/revision "91" (expected "30"), subscription/snapshot_seq "97" (expected "30"), subscription/delivered "23" (expected "90"), subscription/delivered_remote "23" (expected "30")
+
+## M8-no-mirrored-from (B2)
+file: crates/ovis-terminal-core/src/commit/boundary.rs
+mutation: '.mirrored_from(origin.clone())' removed from the remote arm
+command: cargo test -p ovis-terminal-core --test commit -> exit 101, killed_by: remote::replayed_or_reordered_upstream_positions_are_refused (the delivered event's own origin)
+command: conformance agent/e2e --case happy -> exit 1, failed: subscription/delivered_origins_intact false

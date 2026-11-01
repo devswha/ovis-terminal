@@ -5,8 +5,6 @@ use std::path::Path;
 use std::sync::Arc;
 
 use ovis_terminal_agent::bridge::PromptBridge;
-use ovis_terminal_agent::prompts::PromptService;
-use ovis_terminal_agent::status::StatusService;
 use ovis_terminal_authz::Authority;
 use ovis_terminal_core::events::Coordinator;
 use ovis_terminal_core::ops::OperationProducer;
@@ -34,10 +32,8 @@ pub(super) type Shared<'a> = (
 pub(super) struct Registered {
     /// The stand-in probes the handler answers.
     pub(super) probes: Probes,
-    /// Agent status, shared with the prompt bridge gate.
-    pub(super) status: Arc<StatusService>,
-    /// Open prompts, shared with the prompt bridge gate.
-    pub(super) prompts: Arc<PromptService>,
+    /// The production agent assembly, whose prompt bridge gate fronts the handler.
+    pub(super) assembly: Arc<super::super::agents::Assembly>,
     /// The update lane's holder, shut down after the dispatcher.
     pub(super) held: Held,
     /// The audit trail the boundary policy records every call in.
@@ -70,11 +66,13 @@ pub(super) async fn register(
     (authority, bearer, core): Shared<'_>,
 ) -> Result<Registered, RunnerError> {
     documents(dispatch, root, runtime)?;
-    let (agents, gate, sequenced) =
-        super::super::agents::register(dispatch, (runtime, Arc::clone(core)), authority)?;
+    let (agents, gate, sequenced, assembly) = super::super::agents::register(
+        dispatch,
+        (runtime, Arc::clone(core), root),
+        authority,
+    )?;
     super::super::rotation::register(dispatch, authority, (runtime, Arc::clone(&sequenced)))?;
     let (status, directory) = (Arc::clone(&agents.0), Arc::clone(&agents.1));
-    super::super::prompts::register(dispatch, (&gate, Arc::clone(&directory)), runtime)?;
     let programs = super::super::processes::register(
         dispatch,
         (root, runtime),
@@ -87,7 +85,6 @@ pub(super) async fn register(
     let tree = super::super::tree::register(dispatch, (&agents, &gate), launch)?;
     let fleet = (runtime, Arc::clone(core));
     let machines = super::super::machines::register(dispatch, (&agents, &gate), fleet).await?;
-    super::super::transcripts::register(dispatch, agents, (runtime, root))?;
     let health = super::super::health::register(dispatch, runtime, root)?;
     let held = super::super::update::register(dispatch, (root, authority, bearer), runtime).await?;
     let trail = super::super::boundary::register(dispatch, root, runtime)?;
@@ -106,8 +103,7 @@ pub(super) async fn register(
     };
     Ok(Registered {
         probes,
-        status,
-        prompts,
+        assembly,
         held,
         trail,
     })

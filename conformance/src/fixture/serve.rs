@@ -20,7 +20,6 @@ use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::dispatch::lanes::boundary_policy::BoundaryPolicy;
 use ovis_terminal_server::dispatch::lanes::health::Measured;
-use ovis_terminal_server::dispatch::lanes::prompt_bridge::{Gated, PromptBridgeGate};
 use ovis_terminal_server::listen::{ServeReport, ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
@@ -88,17 +87,13 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let registered = registration::register(&mut dispatch, (root, runtime), lanes).await?;
     let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
     let writer = delegate(&authority, issued.bearer(), ("writer", WRITER))?;
-    let directory = Arc::clone(&registered.probes.directory);
     let health = Arc::clone(&registered.probes.health.health);
     let handler = Arc::new(FixtureHandler::new(
         Arc::new(dispatch),
         root.to_path_buf(),
         registered.probes,
     ));
-    let gated = Gated::new(
-        PromptBridgeGate::new(directory, (registered.status, registered.prompts)),
-        Arc::clone(&handler),
-    );
+    let gated = registered.assembly.gate(Arc::clone(&handler));
     let socket = root.join("run").join("s.sock");
     let endpoint = UnixEndpoint::bind(&socket)
         .await
