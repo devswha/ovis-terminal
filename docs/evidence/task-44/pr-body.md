@@ -116,3 +116,7 @@ Merge commit `aceba79` merges `origin/integration` 8a436e1 (T29 + T57).
   - `all/all` exit 0 (42 passed, 37 declared-only, failed 0, skipped 0).
   - Logs are in `docs/evidence/task-44/m-*`.
 - **CI:** none. While the gate ran, `origin/integration` moved again to 8cab061 (T55, PR #47). That merge conflicts with this lane in `conformance/src/fixture/handler.rs` and `conformance/src/fixture/serve.rs`, so the PR is `CONFLICTING` again and GitHub created no `ci` run for aceba79 (checked once). No second merge was made, because this round named 8a436e1.
+
+## Addendum - merge round 2 (integration 8cab061 + dda248a)
+
+Merge commits `45a401e` (8cab061: the handler.rs/serve.rs union with T55's `processes::register` and shutdown-report helper alongside this lane's `machines` module; suite slice sorted; Cargo.lock regenerated offline) and `70183e1` (dda248a: `machine-actor` stress option/job kept last). The gates were re-run after a host reboot, on Linux x86_64 with binary sha256 `d1c4992325f89cf4add6c0fe342b81ffa39d35b80a34e67031178eb861cd36aa`. `with-slot.sh bash scripts/check.sh` exit 0 (`1136 tests run: 1136 passed (1 slow), 1 skipped`; hygiene `0 violation(s) in 1132 file(s)`). The Windows `cargo check`/`clippy` for `x86_64-pc-windows-gnu` with `-D warnings` exit 0. Lane `cargo test`/`clippy -D warnings` for remote/protocol/server exit 0. `remote/isolation --case all` exit 0 (111 assertions, failed 0, skipped 0). `all/all` exit 0 (44 passed, 1823 assertions, 37 declared-only, failed 0, skipped 0). Logs: `docs/evidence/task-44/r2-*`.
