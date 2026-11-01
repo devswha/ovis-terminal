@@ -1,0 +1,101 @@
+{
+  "format": "ovis-windows-smoke-manifest/1",
+  "checks": [
+    {
+      "name": "named-pipe-hello",
+      "observes": "hello and pipelined requests over a production owner-only pipe; the instance owner is the current user and the DACL is one allow entry for it (ACL observation).",
+      "tests": [
+        {"package": "ovis-terminal-server", "target": "lib", "test": "listen::pipe::tests::hello_and_pipelined_requests_share_one_owner_only_pipe_connection", "ignored": false},
+        {"package": "ovis-terminal-server", "target": "lib", "test": "listen::pipe::tests::an_anonymous_token_cannot_open_the_pipe", "ignored": false}
+      ]
+    },
+    {
+      "name": "generation-refusal",
+      "observes": "over a production pipe, a numeric generation is invalid_params, the decimal string \"999999\" is unsupported_generation, and a terminal.run behind them is unauthenticated with zero handler calls.",
+      "tests": [
+        {"package": "ovis-terminal-probes", "target": "pipe_smoke", "test": "a_foreign_generation_is_refused_on_the_pipe_before_any_call", "ignored": false}
+      ]
+    },
+    {
+      "name": "conpty-run",
+      "observes": "terminal.run admission for a ConPTY launch, then a cmd.exe program on a holder-owned pseudoconsole producing a UTF-8 marker.",
+      "tests": [
+        {"package": "ovis-terminal-server", "target": "lib", "test": "dispatch::lanes::conpty::tests::malformed_argv_is_invalid_params_and_a_valid_launch_is_admitted", "ignored": false},
+        {"package": "ovis-terminal-holder", "target": "lib", "test": "windows::terminal_tests::utf8_output_and_win32_input_mode_precede_an_exit_carrying_the_final_offset", "ignored": false}
+      ]
+    },
+    {
+      "name": "conpty-attach",
+      "observes": "the holder's ordered output read of a running ConPTY program carries the marker and the win32-input mode (mode observation); a served attach.open over the pipe is not part of this tier.",
+      "tests": [
+        {"package": "ovis-terminal-holder", "target": "lib", "test": "windows::terminal_tests::utf8_output_and_win32_input_mode_precede_an_exit_carrying_the_final_offset", "ignored": false}
+      ]
+    },
+    {
+      "name": "conpty-input",
+      "observes": "a keypress written as win32-input reaches the program through the input path.",
+      "tests": [
+        {"package": "ovis-terminal-holder", "target": "lib", "test": "windows::terminal_tests::a_resize_and_a_keypress_reach_the_program_through_separate_paths", "ignored": false}
+      ]
+    },
+    {
+      "name": "conpty-resize",
+      "observes": "a resize reaches the program outside the input queue and shows in its output.",
+      "tests": [
+        {"package": "ovis-terminal-holder", "target": "lib", "test": "windows::terminal_tests::a_resize_and_a_keypress_reach_the_program_through_separate_paths", "ignored": false}
+      ]
+    },
+    {
+      "name": "final-output-order",
+      "observes": "the exit is reported only after output through its final offset (offset observation).",
+      "tests": [
+        {"package": "ovis-terminal-holder", "target": "lib", "test": "windows::terminal_tests::utf8_output_and_win32_input_mode_precede_an_exit_carrying_the_final_offset", "ignored": false}
+      ]
+    },
+    {
+      "name": "observer-denial",
+      "observes": "an observer invocation opened through the production CLI client against the production pipe listener and boundary policy is refused every published mutation (forbidden) with zero handler calls, while an owner invocation opened at the same time is served.",
+      "tests": [
+        {"package": "ovis-terminal-cli", "target": "lib", "test": "invocation::transport::pipe::tests::sessions::an_observer_invocation_is_refused_every_mutation_while_an_owner_is_served", "ignored": false}
+      ]
+    },
+    {
+      "name": "two-clients",
+      "observes": "two ovis-terminal invocations opened at once through the production CLI client both complete hello and get their replies from the production pipe listener (two accepted, no failure); a client first observed refused with ERROR_PIPE_BUSY (its open is pending in WaitNamedPipeW) opens the instance freed after that, and one whose pipe stays busy past the bound reports pipe_busy_timeout.",
+      "tests": [
+        {"package": "ovis-terminal-cli", "target": "lib", "test": "invocation::transport::pipe::tests::sessions::two_invocations_opened_at_once_both_get_a_session_from_the_production_listener", "ignored": false},
+        {"package": "ovis-terminal-cli", "target": "lib", "test": "invocation::transport::pipe::tests::a_busy_pipe_is_waited_out_and_opened_once_an_instance_is_free", "ignored": false},
+        {"package": "ovis-terminal-cli", "target": "lib", "test": "invocation::transport::pipe::tests::a_pipe_that_stays_busy_is_pipe_busy_timeout_after_the_bound", "ignored": false}
+      ]
+    },
+    {
+      "name": "core-restart",
+      "observes": "a new core re-adopts the same terminal incarnation, pid and start token from the service holder and reads output written before the restart.",
+      "tests": [
+        {"package": "ovis-terminal-holder", "target": "lib", "test": "service::windows::host_tests::a_core_restart_re_adopts_the_same_incarnation_and_its_output_survives", "ignored": false}
+      ]
+    },
+    {
+      "name": "job-survival",
+      "observes": "the SCM-owned holder keeps its program after the launching client's kill-on-close job ends, serves only its owner, and stop plus uninstall remove the service (service lifetime and cleanup observation).",
+      "tests": [
+        {"package": "ovis-terminal-cli", "target": "lib", "test": "service::windows::fixture_tests::the_service_holder_outlives_its_launch_job_and_serves_only_its_owner", "ignored": true}
+      ]
+    },
+    {
+      "name": "service-status",
+      "observes": "inspecting a session with no installed service describes nothing and creates nothing.",
+      "tests": [
+        {"package": "ovis-terminal-server", "target": "lib", "test": "dispatch::lanes::windows_service::native::tests::a_session_without_an_installed_service_is_not_described_and_nothing_is_created", "ignored": false}
+      ]
+    },
+    {
+      "name": "conpty-kill",
+      "observes": "kill ends a program that never reads input, the job is left empty, and closing the terminal leaves no handle open (cleanup observation).",
+      "tests": [
+        {"package": "ovis-terminal-holder", "target": "lib", "test": "windows::terminal_tests::kill_ends_a_program_that_never_reads_input_and_the_job_is_left_empty", "ignored": false},
+        {"package": "ovis-terminal-holder", "target": "lib", "test": "windows::terminal_tests::closing_a_terminal_leaves_no_handle_open", "ignored": false}
+      ]
+    }
+  ]
+}

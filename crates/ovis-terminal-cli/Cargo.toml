@@ -42,6 +42,11 @@ ovis-terminal-vt = { workspace = true }
 rustix = { version = "1.1.6", features = ["process", "stdio", "termios"] }
 uuid = { workspace = true }
 
+# The named-pipe client waits out a busy instance with WaitNamedPipeW, as the Windows
+# pipe contract requires; the version Cargo.lock already resolves.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Pipes"] }
+
 # The Windows service fixture test (plan todo 54) logs on as its account and owns a
 # launch job; the version Cargo.lock already resolves.
 [target.'cfg(windows)'.dev-dependencies]

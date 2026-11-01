@@ -1,0 +1,39 @@
+== M1 libtest accepts a failed exit (probes/platform-qa/libtest.rs)
+-'    if exit_code != Some(0) {\n        return Err(NotProven::Exit(exit_code));\n    }\n'
++''
+exit_status: 100 -> KILLED
+        FAIL [   0.015s] (16/19) ovis-terminal-probes platform_qa::libtest::tests::a_second_summary_or_a_failed_exit_is_rejected
+     Summary [   0.039s] 19 tests run: 18 passed, 1 failed, 4 skipped
+        FAIL [   0.015s] (16/19) ovis-terminal-probes platform_qa::libtest::tests::a_second_summary_or_a_failed_exit_is_rejected
+
+== M2 report verification ignores the commit (probes/platform-qa/smoke.rs)
+-'        if self.sha != sha {'
++'        if self.sha != sha && false {'
+exit_status: 100 -> KILLED
+        FAIL [   0.010s] (13/19) ovis-terminal-probes platform_qa::smoke::tests::a_report_for_another_commit_is_refused
+     Summary [   0.036s] 19 tests run: 18 passed, 1 failed, 4 skipped
+        FAIL [   0.010s] (13/19) ovis-terminal-probes platform_qa::smoke::tests::a_report_for_another_commit_is_refused
+
+== M3 a child killed at its deadline is reported as exit 0 (probes/platform-qa/bounded.rs)
+-'        reap(&mut child)?;\n        None\n'
++'        reap(&mut child)?;\n        Some(0)\n'
+exit_status: 100 -> KILLED
+        FAIL [   0.010s] (13/19) ovis-terminal-probes platform_qa::bounded::tests::a_child_still_running_at_the_deadline_is_killed_and_reported
+     Summary [   0.034s] 19 tests run: 18 passed, 1 failed, 4 skipped
+        FAIL [   0.010s] (13/19) ovis-terminal-probes platform_qa::bounded::tests::a_child_still_running_at_the_deadline_is_killed_and_reported
+
+== M4 server skips the hello generation check (crates/ovis-terminal-server/src/conn/hello.rs)
+-'    if params.generation != PROTOCOL_GENERATION {'
++'    if params.generation != PROTOCOL_GENERATION && false {'
+exit_status: 1 -> KILLED
+{"case":"failure","error":null,"evidence":"/home/devswha/.ovis-run/scratch/t60/mutant.json","evidence_written":null,"result":"failed","scenario":"platform/matrix","totals":{"assertions":"4","cases":"1","declared_only":"0","failed":"1","passed":"0","skipped":"0"}}
+
+killed 4/4
+
+Note (2026-11-01): the first attempt hung on an earlier M3 (timed_out forced false: the deadline test's
+parked child was never killed). That one stalled child (this lane's own test binary, pid > 1, matched by
+exact argv) was killed, and M3 was replaced by the non-hanging mutant above; every mutant command now runs
+under `timeout 900`. The first M4 attempt rebuilt only ovis-terminal and survived, because the protocol
+fixture server is linked into the conformance runner; M4 now rebuilds both and is killed. Restoring a
+mutated file from its backup gives it an mtime older than the mutant build, so the four restored files were
+touched and the binaries rebuilt before the acceptance evidence was re-recorded (binary.sha256).

@@ -7,6 +7,9 @@
 #[path = "../platform/platform.rs"]
 pub mod platform;
 
+#[path = "../platform-qa/platform_qa.rs"]
+pub mod platform_qa;
+
 #[path = "../quality/quality.rs"]
 pub mod quality;
 

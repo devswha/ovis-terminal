@@ -74,6 +74,18 @@ pub(super) enum CliError {
         #[source]
         source: io::Error,
     },
+    /// Every instance of the Windows named pipe stayed busy for the whole connect bound.
+    #[cfg(windows)]
+    #[error("every instance of {pipe} stayed busy for {waited_ms} ms")]
+    PipeBusy {
+        /// The pipe name.
+        pipe: String,
+        /// The bound waited for a free instance.
+        waited_ms: u64,
+        /// The last refusal, `ERROR_PIPE_BUSY`.
+        #[source]
+        source: io::Error,
+    },
     /// The server closed the connection before answering.
     #[error("the server closed the connection before answering")]
     Closed,
@@ -128,6 +140,8 @@ impl CliError {
             Self::Endpoint(error) => error.kind(),
             Self::NotRunning { .. } => "server_not_running",
             Self::Io { .. } => "transport_failed",
+            #[cfg(windows)]
+            Self::PipeBusy { .. } => "pipe_busy_timeout",
             Self::Closed => "connection_closed",
             Self::Restarted => "server_restart",
             Self::Reply(_) | Self::Result(_) => "invalid_response",
@@ -161,6 +175,10 @@ impl CliError {
             Self::Endpoint(error) => error.hint(),
             Self::NotRunning { .. } => "start the server explicitly; inspection never starts one",
             Self::Io { .. } => "check the endpoint path and its permissions",
+            #[cfg(windows)]
+            Self::PipeBusy { .. } => {
+                "every pipe instance stayed taken; retry, and check the server's accept loop keeps serving"
+            }
             Self::Closed => "check the server log; the connection ended early",
             Self::Restarted => {
                 "reconnect to the same endpoint; ask op.get whether a mutation committed"
