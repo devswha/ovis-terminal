@@ -166,8 +166,9 @@ impl Runtime {
             "runtime_lifetime": self.identity.runtime_id().to_string(),
             "server_boot_id": self.identity.server_boot_id().to_string(),
             "uptime_ms": uptime.to_string(),
-            "holder_count": 1,
-            "live_terminals": live,
+            "census": "reported",
+            "holder_count": "1",
+            "live_terminals": live.to_string(),
         })
     }
 }

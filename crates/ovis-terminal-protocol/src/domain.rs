@@ -4,8 +4,11 @@ pub mod agent_status;
 pub mod agent_tree;
 
 pub mod conpty;
+pub mod conversation_records;
 pub mod credential_rotation;
 pub mod documents_retention;
+pub mod health;
+pub mod machine_actor;
 pub mod machine_identity;
 pub mod plugins;
 pub mod process_info;

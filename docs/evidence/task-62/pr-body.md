@@ -168,6 +168,32 @@ The macOS stress job runs on the stress-only branch `lane/t62-stress`, so the sh
 - This head (9e07178, merged into stress branch 50c522c): https://github.com/devswha/ovis-terminal/actions/runs/41273039178: success (25/25 iterations on `macos-latest`). The attach client is unchanged by the later integration merge, which only touched the runner and the assembled fixture's ready line.
 - Round 2 did not re-dispatch the stress job (not requested for this round). CI's `test (macos-latest)` job runs the new owners and transparency tests on every push.
 
+## Merge addendum: origin/integration 26278c1 (authorized; merge-only round)
+
+Round 2 (8f1e5d0) was CI-green and awaits the gate. Integration then moved to 26278c1 (T59 health/metrics, PR #66, with a regenerated schema and SDK), and PR #67 became CONFLICTING. This merge commit keeps the PR reviewable. The lane is still stacked on #57: merged, not rebased.
+
+- **Textual conflict**, `conformance/src/runner_tests/suite.rs`: both sides added an entry to the sorted `EXECUTABLE` slice. Both are kept (`cli/interactive-attach.json`, `observability/health.json`); the slice stays sorted and unique.
+- **Semantic conflict, the assembled `server.status`.** T59 changed `ServerStatusResult`:
+  - `holder_count` and `live_terminals` are now `Count` (a canonical decimal string) or null;
+  - a new `census` flag says whether those counts were reported;
+  - `recovery_state` is optional.
+
+  #57's assembled `serve` (`crates/ovis-terminal-cli/src/assembly/terminal.rs::status()`) still emitted JSON numbers, so the CLI's typed decoder rejected `server status` as `invalid_response`, and `assembly::terminal_run_spawns_a_real_program_that_list_get_and_status_report` failed. The fix:
+  - `status()` now emits `census: "reported"` with decimal-string counts, the same shape as integration's own fixture (`tests/cli/support.rs`);
+  - `tests/assembly.rs` asserts `census`, `holder_count: "1"` and `live_terminals: "1"`.
+
+  The assembled serve does not report the optional `recovery_state` yet; that is a todo-31 follow-up. #57 needs the same two hunks in its own integration merge.
+- **Generated outputs, regenerated rather than trusted from the textual merge.** Both came out byte-identical to integration's, so this PR carries no schema or SDK change of its own:
+  - OpenRPC: `cargo run --locked -p ovis-terminal-protocol --bin openrpc -- write schema/ovis-terminal.openrpc.json` (639597 bytes), then `check` (fresh) and `compat schema/released.openrpc.json` (compatible).
+  - SDK, in `packages/client-ts`: `bun install --frozen-lockfile && bun run generate` (31 files, 0 changed) `&& bun run generate:check` (fresh) `&& bun run typecheck && bun test` (30 pass, 0 fail). The tests ran against `OVIS_TERMINAL_BIN` and `OVIS_CONFORMANCE_BIN` freshly built into the RAM target, with `TMPDIR=$OVIS_FIXTURE_ROOT`.
+- **`Cargo.lock`:** `git show origin/integration:Cargo.lock > Cargo.lock && cargo generate-lockfile --offline && cargo metadata --locked`. The result is identical to the textually merged lock: integration's plus 8 lines for #57/lane packages (`base64` for the unix attach client).
+- **Stress workflow:** merged without conflict. This lane does not change the shared workflow; the t62 stress job stays on `lane/t62-stress`.
+- **Verification on the merged tree**, all with `CARGO_TARGET_DIR=/dev/shm/ovt-target-lane-t62`:
+  - `cargo clippy -p ovis-terminal-cli --all-targets -- -D warnings`: exit 0.
+  - `cargo nextest run -p ovis-terminal-cli`: 49/49.
+  - Conformance `--case all`: `cli/interactive-attach` 94, `part-a/task-31` 49 and `observability/health` 96 assertions, each exit 0.
+  - `check.sh` through the heavy gate: exit 0 (`1256 tests run: 1256 passed (3 slow), 1 skipped`; hygiene, manifests and json pass; `docs/evidence/task-62/check-summary.log`). The first attempt stopped in the test build with rustc `Disk quota exceeded (os error 122)`: `/dev/shm` is a tmpfs with a per-user quota that every lane shares. After freeing this lane's 7.3 GB incremental cache, the rerun used `CARGO_INCREMENTAL=0`; this is a cache setting only and matches CI's rust-cache, with no change to code or gate steps.
+
 ## Seams
 
 Files outside the write scope (`crates/ovis-terminal-cli/src/attach/`, `conformance/scenarios/cli/interactive-attach/`), and why:
@@ -199,6 +225,7 @@ Files outside the write scope (`crates/ovis-terminal-cli/src/attach/`, `conforma
   - `conformance/src/engine/session.rs`: `ptys` and `kept` fields;
   - `suite.rs`: as above.
 - `crates/ovis-terminal-cli/src/assembly/{boot.rs,serve.rs}`: integration's fixture launcher now requires a `writer` bearer in the ready line (`deny_unknown_fields`). Without it, both assembled-binary scenarios (`part-a/task-31`, `cli/interactive-attach`) failed with `fixture_report`. `boot.rs` is taken verbatim from #57's head (`delegate` issuing observer and writer bearers), and `serve.rs` adds the same `"writer"` ready field #57 announces, so the union with #57 stays conflict-free.
+- `crates/ovis-terminal-cli/src/assembly/terminal.rs` and `crates/ovis-terminal-cli/tests/assembly.rs` (both #57's): the `server.status` census and decimal-string resolution of the 26278c1 merge (see the merge addendum).
 - `docs/evidence/task-62/`: evidence.
 
 No schema change, so the SDK was not regenerated.

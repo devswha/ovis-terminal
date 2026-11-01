@@ -152,7 +152,9 @@ fn terminal_run_spawns_a_real_program_that_list_get_and_status_report() -> TestR
     );
     let status = served.ok(&["server", "status"])?;
     assert_eq!(status.get("state"), Some(&json!("running")));
-    assert_eq!(status.get("live_terminals"), Some(&json!(1)));
+    assert_eq!(status.get("census"), Some(&json!("reported")));
+    assert_eq!(status.get("holder_count"), Some(&json!("1")));
+    assert_eq!(status.get("live_terminals"), Some(&json!("1")));
     let uptime = status
         .get("uptime_ms")
         .and_then(Value::as_str)

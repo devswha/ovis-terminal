@@ -1,0 +1,810 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "remote/isolation",
+  "title": "Each machine has its own actor: a stalled or lost machine blocks no other, stays listed, and gets its orphan notice once it returns",
+  "todo": 44,
+  "closes": [
+    "GAP-108",
+    "GAP-109",
+    "GAP-119",
+    "GAP-120"
+  ],
+  "delivers": [
+    "IDEAL-080",
+    "IDEAL-082",
+    "IDEAL-083",
+    "IDEAL-092"
+  ],
+  "excludes": [
+    "EXCL-015",
+    "EXCL-020",
+    "EXCL-021",
+    "EXCL-026"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the bridge: alpha and bravo are listed connected. A local parent incarnation 1 has a child on bravo. bravo is frozen: a call to it ends deadline_exceeded while a call to alpha and machine.list answer and both stay listed. The parent exits; delivering its orphan notice to frozen bravo stops at its deadline and the notice stays in the outbox. bravo's line is cut and machine.list keeps it as unreachable; reconnecting replays the notice once (applied 1, outbox empty, line epoch 2) and a repeated $/orphanedAck of it is a duplicate.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "roster-before",
+                "method": "machine.list",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "roster-before": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/machines/0/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000a1",
+                "/result/machines/0/state": "connected",
+                "/result/machines/1/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+                "/result/machines/1/state": "connected",
+                "/result/machines/2": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run-parent",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run-parent",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "parent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "run-parent": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": "terminal:6",
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "child-on-bravo",
+                "method": "fixture.remote_child",
+                "params": {
+                  "parent": {
+                    "terminal_id": "terminal:6",
+                    "incarnation": "1"
+                  },
+                  "machine": "bravo"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "child-on-bravo": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/linked": true
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "freeze-bravo",
+                "method": "fixture.machine",
+                "params": {
+                  "machine": "bravo",
+                  "action": "freeze"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "freeze-bravo": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/remote/frozen": true
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "bravo-stalls",
+                "method": "fixture.remote",
+                "params": {
+                  "machine": "bravo",
+                  "method": "server.status",
+                  "deadline_ms": "300"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "alpha-answers",
+                "method": "fixture.remote",
+                "params": {
+                  "machine": "alpha",
+                  "method": "server.status",
+                  "deadline_ms": "5000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "roster-during-stall",
+                "method": "machine.list",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "bravo-stalls": {
+                "/error/data/kind": "deadline_exceeded",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "alpha-answers": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/reply/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000a1"
+              },
+              "roster-during-stall": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/machines/0/state": "connected",
+                "/result/machines/1/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+                "/result/machines/1/state": "connected"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "parent-exits",
+                "method": "fixture.exit",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "parent-exits": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/finished": "recorded"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver-frozen",
+                "method": "fixture.machine",
+                "params": {
+                  "machine": "bravo",
+                  "action": "deliver"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "deliver-frozen": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/replayed/stopped": "deadline_exceeded",
+                "/result/replayed/remaining": "1",
+                "/result/outbox": [
+                  "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+                ],
+                "/result/remote/applied": "0",
+                "/result/health/deadline_exceeded": "2"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cut-bravo",
+                "method": "fixture.machine",
+                "params": {
+                  "machine": "bravo",
+                  "action": "cut"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "cut-bravo": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/health/state": "unreachable",
+                "/result/outbox": [
+                  "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "roster-unreachable",
+                "method": "machine.list",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "roster-unreachable": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/machines/0/state": "connected",
+                "/result/machines/1/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+                "/result/machines/1/state": "unreachable"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "reconnect-bravo",
+                "method": "fixture.machine",
+                "params": {
+                  "machine": "bravo",
+                  "action": "reconnect"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "reconnect-bravo": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/replayed/applied": "1",
+                "/result/replayed/duplicates": "0",
+                "/result/replayed/remaining": "0",
+                "/result/replayed/stopped": null,
+                "/result/outbox": [],
+                "/result/remote/applied": "1",
+                "/result/health/state": "connected",
+                "/result/health/line_epoch": "2"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "ack-replayed",
+                "method": "$/orphanedAck",
+                "params": {
+                  "notification_id": "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2",
+                  "parent_incarnation": "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "ack-replayed": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/notification_id": "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2",
+                "/result/outcome": "duplicate"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "roster-after",
+                "method": "machine.list",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "roster-after": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/machines/1/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+                "/result/machines/1/state": "connected"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "After the parent with a child on bravo exits and bravo's line is cut, the plan's injected $/orphanedAck {notification_id: unknown, parent_incarnation: reused-old} is not_found; the real notice id under a reused-old or later parent incarnation is stale_target and a numeric incarnation invalid_params. The notice stays in the outbox, bravo never applied it, a call to bravo is machine_unreachable with no local fallback, and machine.list keeps bravo listed as unreachable.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run-parent",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run-parent",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "parent"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "run-parent": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal_id": "terminal:6",
+                "/result/process_incarnation": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "child-on-bravo",
+                "method": "fixture.remote_child",
+                "params": {
+                  "parent": {
+                    "terminal_id": "terminal:6",
+                    "incarnation": "1"
+                  },
+                  "machine": "bravo"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "child-on-bravo": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/linked": true
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "parent-exits",
+                "method": "fixture.exit",
+                "params": {
+                  "target": {
+                    "name": "parent"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "parent-exits": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/finished": "recorded"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cut-bravo",
+                "method": "fixture.machine",
+                "params": {
+                  "machine": "bravo",
+                  "action": "cut"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "cut-bravo": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/health/state": "unreachable",
+                "/result/outbox": [
+                  "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "bridge",
+            "base": {},
+            "planned": [
+              {
+                "request": {
+                  "method": "$/orphanedAck",
+                  "params": {
+                    "parent_incarnation": "reused-old",
+                    "notification_id": "unknown"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "not_found",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "$/orphanedAck",
+                  "params": {
+                    "parent_incarnation": "reused-old",
+                    "notification_id": "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "stale_target",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "$/orphanedAck",
+                  "params": {
+                    "parent_incarnation": "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/2",
+                    "notification_id": "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "stale_target",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "$/orphanedAck",
+                  "params": {
+                    "parent_incarnation": 1,
+                    "notification_id": "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "outbox-retained",
+                "method": "fixture.machine",
+                "params": {
+                  "machine": "bravo",
+                  "action": "inspect"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "outbox-retained": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outbox": [
+                  "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+                ],
+                "/result/remote/applied": "0",
+                "/result/health/state": "unreachable"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "no-local-fallback",
+                "method": "fixture.remote",
+                "params": {
+                  "machine": "bravo",
+                  "method": "server.status",
+                  "deadline_ms": "5000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "roster-keeps-bravo",
+                "method": "machine.list",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "no-local-fallback": {
+                "/error/data/kind": "machine_unreachable",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "roster-keeps-bravo": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/machines/0/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000a1",
+                "/result/machines/0/state": "connected",
+                "/result/machines/1/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+                "/result/machines/1/state": "unreachable",
+                "/result/machines/2": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

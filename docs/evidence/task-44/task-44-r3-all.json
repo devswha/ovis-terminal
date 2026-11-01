@@ -1,0 +1,1489 @@
+{
+  "binary": {
+    "bytes": "165025352",
+    "path": "target/debug/ovis-terminal",
+    "sha256": "7f226337a09c609cf652e21a3989e6f3004d14c14e7c3949d4eee8858a2fe915"
+  },
+  "case": "all",
+  "cases": [
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[roster-before]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000a1",
+          "check": "reply[roster-before]/result/machines/0/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000a1",
+          "passed": true
+        },
+        {
+          "actual": "connected",
+          "check": "reply[roster-before]/result/machines/0/state",
+          "expected": "connected",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+          "check": "reply[roster-before]/result/machines/1/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+          "passed": true
+        },
+        {
+          "actual": "connected",
+          "check": "reply[roster-before]/result/machines/1/state",
+          "expected": "connected",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[roster-before]/result/machines/2",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "roster-before"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "roster-before"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[run-parent]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[run-parent]/result/process_incarnation",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "terminal:6",
+          "check": "reply[run-parent]/result/terminal_id",
+          "expected": "terminal:6",
+          "passed": true
+        },
+        {
+          "actual": [
+            "run-parent"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "run-parent"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[child-on-bravo]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "reply[child-on-bravo]/result/linked",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": [
+            "child-on-bravo"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "child-on-bravo"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[freeze-bravo]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "reply[freeze-bravo]/result/remote/frozen",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": [
+            "freeze-bravo"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "freeze-bravo"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[alpha-answers]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000a1",
+          "check": "reply[alpha-answers]/result/reply/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000a1",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[roster-during-stall]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "connected",
+          "check": "reply[roster-during-stall]/result/machines/0/state",
+          "expected": "connected",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+          "check": "reply[roster-during-stall]/result/machines/1/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+          "passed": true
+        },
+        {
+          "actual": "connected",
+          "check": "reply[roster-during-stall]/result/machines/1/state",
+          "expected": "connected",
+          "passed": true
+        },
+        {
+          "actual": "deadline_exceeded",
+          "check": "reply[bravo-stalls]/error/data/kind",
+          "expected": "deadline_exceeded",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[bravo-stalls]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "alpha-answers",
+            "bravo-stalls",
+            "roster-during-stall"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "alpha-answers",
+            "bravo-stalls",
+            "roster-during-stall"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[parent-exits]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "recorded",
+          "check": "reply[parent-exits]/result/finished",
+          "expected": "recorded",
+          "passed": true
+        },
+        {
+          "actual": [
+            "parent-exits"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "parent-exits"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[deliver-frozen]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[deliver-frozen]/result/health/deadline_exceeded",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": [
+            "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+          ],
+          "check": "reply[deliver-frozen]/result/outbox",
+          "expected": [
+            "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "reply[deliver-frozen]/result/remote/applied",
+          "expected": "0",
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[deliver-frozen]/result/replayed/remaining",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "deadline_exceeded",
+          "check": "reply[deliver-frozen]/result/replayed/stopped",
+          "expected": "deadline_exceeded",
+          "passed": true
+        },
+        {
+          "actual": [
+            "deliver-frozen"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "deliver-frozen"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[cut-bravo]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "unreachable",
+          "check": "reply[cut-bravo]/result/health/state",
+          "expected": "unreachable",
+          "passed": true
+        },
+        {
+          "actual": [
+            "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+          ],
+          "check": "reply[cut-bravo]/result/outbox",
+          "expected": [
+            "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "cut-bravo"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "cut-bravo"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[roster-unreachable]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "connected",
+          "check": "reply[roster-unreachable]/result/machines/0/state",
+          "expected": "connected",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+          "check": "reply[roster-unreachable]/result/machines/1/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+          "passed": true
+        },
+        {
+          "actual": "unreachable",
+          "check": "reply[roster-unreachable]/result/machines/1/state",
+          "expected": "unreachable",
+          "passed": true
+        },
+        {
+          "actual": [
+            "roster-unreachable"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "roster-unreachable"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[reconnect-bravo]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[reconnect-bravo]/result/health/line_epoch",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": "connected",
+          "check": "reply[reconnect-bravo]/result/health/state",
+          "expected": "connected",
+          "passed": true
+        },
+        {
+          "actual": [],
+          "check": "reply[reconnect-bravo]/result/outbox",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[reconnect-bravo]/result/remote/applied",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[reconnect-bravo]/result/replayed/applied",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "reply[reconnect-bravo]/result/replayed/duplicates",
+          "expected": "0",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "reply[reconnect-bravo]/result/replayed/remaining",
+          "expected": "0",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[reconnect-bravo]/result/replayed/stopped",
+          "expected": null,
+          "passed": true
+        },
+        {
+          "actual": [
+            "reconnect-bravo"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "reconnect-bravo"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[ack-replayed]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2",
+          "check": "reply[ack-replayed]/result/notification_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2",
+          "passed": true
+        },
+        {
+          "actual": "duplicate",
+          "check": "reply[ack-replayed]/result/outcome",
+          "expected": "duplicate",
+          "passed": true
+        },
+        {
+          "actual": [
+            "ack-replayed"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "ack-replayed"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[roster-after]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+          "check": "reply[roster-after]/result/machines/1/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+          "passed": true
+        },
+        {
+          "actual": "connected",
+          "check": "reply[roster-after]/result/machines/1/state",
+          "expected": "connected",
+          "passed": true
+        },
+        {
+          "actual": [
+            "roster-after"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "roster-after"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "6210",
+          "check": "connection[bridge]/bytes_received=bytes_decoded",
+          "expected": "6210",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "happy",
+      "connections": [
+        {
+          "bytes_decoded": "6210",
+          "bytes_received": "6210",
+          "bytes_sent": "2004",
+          "name": "bridge",
+          "records_received": "15",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "b2850ad534a14d1096c26071a9bb11e16beb8eb7eea3fdc89492c7c72a445a90",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "1539",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "bd589065b145cabda36737a01bd2a6a3e1ba397fc5e605e172c3765d6feff50e",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.first_message\",\"terminal.keep\",\"terminal.process_info\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"template.list\",\"template.get\",\"doc.get\",\"doc.set\",\"machine.list\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793504492790\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "75",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "b95ff96e111e2843ef869fc4627d504886b0bc2db489c4e9eee2caada9fd82e8",
+              "text": "{\"id\":\"roster-before\",\"jsonrpc\":\"2.0\",\"method\":\"machine.list\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "5",
+              "bytes": "493",
+              "direction": "received",
+              "offset": "1539",
+              "sha256": "f3c7b987a938299e770cec42505b5b0795c1f7236bc0a2d8d3f4b1b5f8f36c58",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"roster-before\",\"result\":{\"machines\":[{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000a1\",\"name\":\"alpha\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"1.0.0\"},{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"name\":\"bravo\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"1.0.0\"}]}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "5",
+              "bytes": "196",
+              "direction": "sent",
+              "offset": "309",
+              "sha256": "ff69d9e3d668adfa656b6df732a506bbfafc90ce335af4b6894484a6a9c2a751",
+              "text": "{\"id\":\"run-parent\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"geometry\":{\"cols\":80,\"rows\":24},\"name\":\"parent\",\"op_id\":\"01a19532-bcf9-7099-aa49-c0c579e7c094\",\"program\":{\"argv\":[\"agent\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "18",
+              "bytes": "100",
+              "direction": "received",
+              "offset": "2032",
+              "sha256": "e21ee39139dcddff2d42bb5fcde12813f9212844b1ca3b02594808f3b8ed1152",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run-parent\",\"result\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:6\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "18",
+              "bytes": "157",
+              "direction": "sent",
+              "offset": "505",
+              "sha256": "5b2a43592f6613c880ddd60c48e88d23fc4c0fc5e818ba18b7ac030e22f1dd53",
+              "text": "{\"id\":\"child-on-bravo\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.remote_child\",\"params\":{\"machine\":\"bravo\",\"parent\":{\"incarnation\":\"1\",\"terminal_id\":\"terminal:6\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "34",
+              "bytes": "65",
+              "direction": "received",
+              "offset": "2132",
+              "sha256": "379c474127f3ee9296d3a0d84ee9e0916febb72b573c8f4e992434ba67efb1af",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"child-on-bravo\",\"result\":{\"linked\":true}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "34",
+              "bytes": "112",
+              "direction": "sent",
+              "offset": "662",
+              "sha256": "e740a097c2aa25272645150d50f7580b93a6b8d238c5fd9faa54f86897331eec",
+              "text": "{\"id\":\"freeze-bravo\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.machine\",\"params\":{\"action\":\"freeze\",\"machine\":\"bravo\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "35",
+              "bytes": "340",
+              "direction": "received",
+              "offset": "2197",
+              "sha256": "98cf119a64d67fb8b049506b4e3c81c570a9d0b97714371dcd4743ce603e546d",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"freeze-bravo\",\"result\":{\"health\":{\"deadline_exceeded\":\"0\",\"in_flight\":\"0\",\"inbound_dropped\":\"0\",\"last_failure\":null,\"last_seen_seq\":null,\"line_epoch\":\"1\",\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"revision\":\"1\",\"state\":\"connected\"},\"outbox\":[],\"remote\":{\"applied\":\"0\",\"cancels\":\"0\",\"frozen\":true}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "35",
+              "bytes": "359",
+              "direction": "sent",
+              "offset": "774",
+              "sha256": "e16e607e8c347f9ab173b2389ebc6abd9a731f816c4b24de55992d9ab2bc1a51",
+              "text": "{\"id\":\"bravo-stalls\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.remote\",\"params\":{\"deadline_ms\":\"300\",\"machine\":\"bravo\",\"method\":\"server.status\"}}\n{\"id\":\"alpha-answers\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.remote\",\"params\":{\"deadline_ms\":\"5000\",\"machine\":\"alpha\",\"method\":\"server.status\"}}\n{\"id\":\"roster-during-stall\",\"jsonrpc\":\"2.0\",\"method\":\"machine.list\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "36",
+              "bytes": "120",
+              "direction": "received",
+              "offset": "2537",
+              "sha256": "18590ac231bd949ed9dbb937142dda7f968386b1aa61613c0f83b1705d686b0e",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"alpha-answers\",\"result\":{\"reply\":{\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000a1\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "36",
+              "bytes": "499",
+              "direction": "received",
+              "offset": "2657",
+              "sha256": "64473a3e834a8b08f205f84f4a63b44576a47eb3b3ef587509fe059e5b559fd0",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"roster-during-stall\",\"result\":{\"machines\":[{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000a1\",\"name\":\"alpha\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"4\",\"state\":\"connected\",\"version\":\"1.0.0\"},{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"name\":\"bravo\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"3\",\"state\":\"connected\",\"version\":\"1.0.0\"}]}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "339",
+              "bytes": "229",
+              "direction": "received",
+              "offset": "3156",
+              "sha256": "a9666cf7474dafc0d971291ea6179f61cbf1914f6ed95067faeaeca44dd869bf",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"bravo-stalls\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"deadline_exceeded\",\"hint\":\"inspect the remote operation before retrying; other machines are unaffected\",\"retryable\":true}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "340",
+              "bytes": "100",
+              "direction": "sent",
+              "offset": "1133",
+              "sha256": "86421c9faa19ad651554ae2ca357906744c5a46122e88f2f4294f87c648f4c74",
+              "text": "{\"id\":\"parent-exits\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.exit\",\"params\":{\"target\":{\"name\":\"parent\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "350",
+              "bytes": "98",
+              "direction": "received",
+              "offset": "3385",
+              "sha256": "2a4300f405d4a6c5dc473d01cbf1632cac47d9edb5abc0a7ce8c2d75030ae23e",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"parent-exits\",\"result\":{\"end_orders\":[],\"ended\":[],\"finished\":\"recorded\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "350",
+              "bytes": "115",
+              "direction": "sent",
+              "offset": "1233",
+              "sha256": "90fa2cf4b5c8e52c038cbdf73fe86098b8462a76048e142a1a6436c4eaf0ef93",
+              "text": "{\"id\":\"deliver-frozen\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.machine\",\"params\":{\"action\":\"deliver\",\"machine\":\"bravo\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "856",
+              "bytes": "584",
+              "direction": "received",
+              "offset": "3483",
+              "sha256": "dc80fbb0d3ed9b2bfe06e57f37ca90d7585e336024f0e9637204c5a581eeee40",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"deliver-frozen\",\"result\":{\"health\":{\"deadline_exceeded\":\"2\",\"in_flight\":\"0\",\"inbound_dropped\":\"0\",\"last_failure\":{\"at_ms\":\"1793504493642\",\"kind\":\"deadline_exceeded\"},\"last_seen_seq\":null,\"line_epoch\":\"1\",\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"revision\":\"5\",\"state\":\"connected\"},\"outbox\":[\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\"],\"remote\":{\"applied\":\"0\",\"cancels\":\"2\",\"frozen\":true},\"replayed\":{\"applied\":\"0\",\"duplicates\":\"0\",\"remaining\":\"1\",\"stopped\":\"deadline_exceeded\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "857",
+              "bytes": "106",
+              "direction": "sent",
+              "offset": "1348",
+              "sha256": "bea4fd3c11b507795ef366ea7ebf366c20f38e6041e41ceae508473693a6c693",
+              "text": "{\"id\":\"cut-bravo\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.machine\",\"params\":{\"action\":\"cut\",\"machine\":\"bravo\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "858",
+              "bytes": "490",
+              "direction": "received",
+              "offset": "4067",
+              "sha256": "e9e3e202c170cfd1fb33fe128b6c67a6f0e7194715f11e09e68b0184271c9125",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"cut-bravo\",\"result\":{\"health\":{\"deadline_exceeded\":\"2\",\"in_flight\":\"0\",\"inbound_dropped\":\"0\",\"last_failure\":{\"at_ms\":\"1793504493645\",\"kind\":\"transport_failed\"},\"last_seen_seq\":null,\"line_epoch\":\"1\",\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"revision\":\"6\",\"state\":\"unreachable\"},\"outbox\":[\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\"],\"remote\":{\"applied\":\"0\",\"cancels\":\"2\",\"frozen\":true}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "858",
+              "bytes": "80",
+              "direction": "sent",
+              "offset": "1454",
+              "sha256": "4cc79bd73131c5141395ca4c3e1f58632bdc3210c0219ccc0537deb833eb912f",
+              "text": "{\"id\":\"roster-unreachable\",\"jsonrpc\":\"2.0\",\"method\":\"machine.list\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "859",
+              "bytes": "500",
+              "direction": "received",
+              "offset": "4557",
+              "sha256": "7defbb25f78d4dce5c76fe2ad3602c154a7c5894280343e9513dda607deede4d",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"roster-unreachable\",\"result\":{\"machines\":[{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000a1\",\"name\":\"alpha\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"4\",\"state\":\"connected\",\"version\":\"1.0.0\"},{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"name\":\"bravo\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"7\",\"state\":\"unreachable\",\"version\":\"1.0.0\"}]}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "860",
+              "bytes": "118",
+              "direction": "sent",
+              "offset": "1534",
+              "sha256": "fc323e0cbec46fafe31d0ecf8ce2f9dfeccfc67fd51ff96585e9e27a904ffee6",
+              "text": "{\"id\":\"reconnect-bravo\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.machine\",\"params\":{\"action\":\"reconnect\",\"machine\":\"bravo\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "865",
+              "bytes": "466",
+              "direction": "received",
+              "offset": "5057",
+              "sha256": "6d73eb1bef64254bc8f9db3347a143370d6541f950ef950318601fbfc1959f29",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"reconnect-bravo\",\"result\":{\"health\":{\"deadline_exceeded\":\"2\",\"in_flight\":\"0\",\"inbound_dropped\":\"0\",\"last_failure\":{\"at_ms\":\"1793504493645\",\"kind\":\"transport_failed\"},\"last_seen_seq\":null,\"line_epoch\":\"2\",\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"revision\":\"9\",\"state\":\"connected\"},\"outbox\":[],\"remote\":{\"applied\":\"1\",\"cancels\":\"2\",\"frozen\":false},\"replayed\":{\"applied\":\"1\",\"duplicates\":\"0\",\"remaining\":\"0\",\"stopped\":null}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "866",
+              "bytes": "278",
+              "direction": "sent",
+              "offset": "1652",
+              "sha256": "d51fa1255245dc9db25b671f6224f9fe155af562260bd39388f9c405037670c8",
+              "text": "{\"id\":\"ack-replayed\",\"jsonrpc\":\"2.0\",\"method\":\"$/orphanedAck\",\"params\":{\"notification_id\":\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\",\"parent_incarnation\":\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "867",
+              "bytes": "194",
+              "direction": "received",
+              "offset": "5523",
+              "sha256": "a385380f193d273c24068e2057f84a189d4da78cf6848104858b5e29e8cc7253",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"ack-replayed\",\"result\":{\"notification_id\":\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\",\"outcome\":\"duplicate\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "868",
+              "bytes": "74",
+              "direction": "sent",
+              "offset": "1930",
+              "sha256": "2dfeeddcd384683b1fe663d20548bcd6527e5e7e9a2506c38983691664a8ce1e",
+              "text": "{\"id\":\"roster-after\",\"jsonrpc\":\"2.0\",\"method\":\"machine.list\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "869",
+              "bytes": "493",
+              "direction": "received",
+              "offset": "5717",
+              "sha256": "82ca3eb8ba608528bda1c82c16dd2a1d5bf9f12a99140a86f9d1a655296e27eb",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"roster-after\",\"result\":{\"machines\":[{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000a1\",\"name\":\"alpha\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"4\",\"state\":\"connected\",\"version\":\"1.0.0\"},{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"name\":\"bravo\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"10\",\"state\":\"connected\",\"version\":\"1.0.0\"}]}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "13"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-108",
+          "GAP-109",
+          "GAP-119",
+          "GAP-120"
+        ],
+        "delivers": [
+          "IDEAL-080",
+          "IDEAL-082",
+          "IDEAL-083",
+          "IDEAL-092"
+        ],
+        "excludes": [
+          "EXCL-015",
+          "EXCL-020",
+          "EXCL-021",
+          "EXCL-026"
+        ],
+        "title": "Each machine has its own actor: a stalled or lost machine blocks no other, stays listed, and gets its orphan notice once it returns",
+        "todo": "44"
+      },
+      "descriptors": [],
+      "elapsed_ms": "1240",
+      "failure": null,
+      "fixture": {
+        "accepted": "1",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "target/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "3354296",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "/home/devswha/workspace/ovis-terminal-wt/lane-t44/target/debug/conformance",
+            "fixture",
+            "--root",
+            "/tmp/ovc-3351390-0"
+          ],
+          "exit_code": 0,
+          "pid": "3354087",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "remote/isolation",
+      "summary": "Through the bridge: alpha and bravo are listed connected. A local parent incarnation 1 has a child on bravo. bravo is frozen: a call to it ends deadline_exceeded while a call to alpha and machine.list answer and both stay listed. The parent exits; delivering its orphan notice to frozen bravo stops at its deadline and the notice stays in the outbox. bravo's line is cut and machine.list keeps it as unreachable; reconnecting replays the notice once (applied 1, outbox empty, line epoch 2) and a repeated $/orphanedAck of it is a duplicate."
+    },
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[run-parent]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[run-parent]/result/process_incarnation",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "terminal:6",
+          "check": "reply[run-parent]/result/terminal_id",
+          "expected": "terminal:6",
+          "passed": true
+        },
+        {
+          "actual": [
+            "run-parent"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "run-parent"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[child-on-bravo]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "reply[child-on-bravo]/result/linked",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": [
+            "child-on-bravo"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "child-on-bravo"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[parent-exits]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "recorded",
+          "check": "reply[parent-exits]/result/finished",
+          "expected": "recorded",
+          "passed": true
+        },
+        {
+          "actual": [
+            "parent-exits"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "parent-exits"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[cut-bravo]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "unreachable",
+          "check": "reply[cut-bravo]/result/health/state",
+          "expected": "unreachable",
+          "passed": true
+        },
+        {
+          "actual": [
+            "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+          ],
+          "check": "reply[cut-bravo]/result/outbox",
+          "expected": [
+            "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+          ],
+          "passed": true
+        },
+        {
+          "actual": [
+            "cut-bravo"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "cut-bravo"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "inject-0",
+          "check": "inject[0]/id",
+          "expected": "inject-0",
+          "passed": true
+        },
+        {
+          "actual": "not_found",
+          "check": "inject[0]/error/data/kind",
+          "expected": "not_found",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "inject[0]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "inject-1",
+          "check": "inject[1]/id",
+          "expected": "inject-1",
+          "passed": true
+        },
+        {
+          "actual": "stale_target",
+          "check": "inject[1]/error/data/kind",
+          "expected": "stale_target",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "inject[1]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "inject-2",
+          "check": "inject[2]/id",
+          "expected": "inject-2",
+          "passed": true
+        },
+        {
+          "actual": "stale_target",
+          "check": "inject[2]/error/data/kind",
+          "expected": "stale_target",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "inject[2]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "inject-3",
+          "check": "inject[3]/id",
+          "expected": "inject-3",
+          "passed": true
+        },
+        {
+          "actual": "invalid_params",
+          "check": "inject[3]/error/data/kind",
+          "expected": "invalid_params",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "inject[3]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[outbox-retained]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "unreachable",
+          "check": "reply[outbox-retained]/result/health/state",
+          "expected": "unreachable",
+          "passed": true
+        },
+        {
+          "actual": [
+            "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+          ],
+          "check": "reply[outbox-retained]/result/outbox",
+          "expected": [
+            "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "reply[outbox-retained]/result/remote/applied",
+          "expected": "0",
+          "passed": true
+        },
+        {
+          "actual": [
+            "outbox-retained"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "outbox-retained"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "machine_unreachable",
+          "check": "reply[no-local-fallback]/error/data/kind",
+          "expected": "machine_unreachable",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[no-local-fallback]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[roster-keeps-bravo]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000a1",
+          "check": "reply[roster-keeps-bravo]/result/machines/0/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000a1",
+          "passed": true
+        },
+        {
+          "actual": "connected",
+          "check": "reply[roster-keeps-bravo]/result/machines/0/state",
+          "expected": "connected",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+          "check": "reply[roster-keeps-bravo]/result/machines/1/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+          "passed": true
+        },
+        {
+          "actual": "unreachable",
+          "check": "reply[roster-keeps-bravo]/result/machines/1/state",
+          "expected": "unreachable",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[roster-keeps-bravo]/result/machines/2",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "no-local-fallback",
+            "roster-keeps-bravo"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "no-local-fallback",
+            "roster-keeps-bravo"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "4369",
+          "check": "connection[bridge]/bytes_received=bytes_decoded",
+          "expected": "4369",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "failure",
+      "connections": [
+        {
+          "bytes_decoded": "4369",
+          "bytes_received": "4369",
+          "bytes_sent": "1982",
+          "name": "bridge",
+          "records_received": "12",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "d793d39aa33eee8f256a503b2d9b190fc2f72a5d815628405a04bbdd1b0ebb1f",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "1539",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "73f45633a5de49f85ee2722cd0902ef08f281dbf5123cdd6fdbf92e85c96d9a8",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.first_message\",\"terminal.keep\",\"terminal.process_info\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"template.list\",\"template.get\",\"doc.get\",\"doc.set\",\"machine.list\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793504494013\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "196",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "eb6eb8a143577ea7d3ca0d6a9445d17f7d287c093b3ea2af2b79f7b70010003b",
+              "text": "{\"id\":\"run-parent\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"geometry\":{\"cols\":80,\"rows\":24},\"name\":\"parent\",\"op_id\":\"01a19532-c1be-7775-bc76-727c7967a4c1\",\"program\":{\"argv\":[\"agent\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "16",
+              "bytes": "100",
+              "direction": "received",
+              "offset": "1539",
+              "sha256": "e21ee39139dcddff2d42bb5fcde12813f9212844b1ca3b02594808f3b8ed1152",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run-parent\",\"result\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:6\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "16",
+              "bytes": "157",
+              "direction": "sent",
+              "offset": "430",
+              "sha256": "5b2a43592f6613c880ddd60c48e88d23fc4c0fc5e818ba18b7ac030e22f1dd53",
+              "text": "{\"id\":\"child-on-bravo\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.remote_child\",\"params\":{\"machine\":\"bravo\",\"parent\":{\"incarnation\":\"1\",\"terminal_id\":\"terminal:6\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "29",
+              "bytes": "65",
+              "direction": "received",
+              "offset": "1639",
+              "sha256": "379c474127f3ee9296d3a0d84ee9e0916febb72b573c8f4e992434ba67efb1af",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"child-on-bravo\",\"result\":{\"linked\":true}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "29",
+              "bytes": "100",
+              "direction": "sent",
+              "offset": "587",
+              "sha256": "86421c9faa19ad651554ae2ca357906744c5a46122e88f2f4294f87c648f4c74",
+              "text": "{\"id\":\"parent-exits\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.exit\",\"params\":{\"target\":{\"name\":\"parent\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "33",
+              "bytes": "98",
+              "direction": "received",
+              "offset": "1704",
+              "sha256": "2a4300f405d4a6c5dc473d01cbf1632cac47d9edb5abc0a7ce8c2d75030ae23e",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"parent-exits\",\"result\":{\"end_orders\":[],\"ended\":[],\"finished\":\"recorded\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "33",
+              "bytes": "106",
+              "direction": "sent",
+              "offset": "687",
+              "sha256": "bea4fd3c11b507795ef366ea7ebf366c20f38e6041e41ceae508473693a6c693",
+              "text": "{\"id\":\"cut-bravo\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.machine\",\"params\":{\"action\":\"cut\",\"machine\":\"bravo\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "35",
+              "bytes": "491",
+              "direction": "received",
+              "offset": "1802",
+              "sha256": "155cbb4882d34c4a923f7324aa00733c2bd6492878793e192fa0769d5fc327f5",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"cut-bravo\",\"result\":{\"health\":{\"deadline_exceeded\":\"0\",\"in_flight\":\"0\",\"inbound_dropped\":\"0\",\"last_failure\":{\"at_ms\":\"1793504494045\",\"kind\":\"transport_failed\"},\"last_seen_seq\":null,\"line_epoch\":\"1\",\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"revision\":\"2\",\"state\":\"unreachable\"},\"outbox\":[\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\"],\"remote\":{\"applied\":\"0\",\"cancels\":\"0\",\"frozen\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "35",
+              "bytes": "132",
+              "direction": "sent",
+              "offset": "793",
+              "sha256": "91090512aeef4f9c3fa0677fecb53826ce4d1f0e0bc50c2df47bf8a0d38e41eb",
+              "text": "{\"id\":\"inject-0\",\"jsonrpc\":\"2.0\",\"method\":\"$/orphanedAck\",\"params\":{\"notification_id\":\"unknown\",\"parent_incarnation\":\"reused-old\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "36",
+              "bytes": "192",
+              "direction": "received",
+              "offset": "2293",
+              "sha256": "f863da8ce6cb9117539ffbedf9a7536e90dc68756b669bd642beb4fdd6f050c9",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-0\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_found\",\"hint\":\"acknowledge an id a pending orphan notice carried\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "37",
+              "bytes": "227",
+              "direction": "sent",
+              "offset": "925",
+              "sha256": "7801aed4280622ec21a96e31ce88650b6a7878408766131e4dcd1642637ee77f",
+              "text": "{\"id\":\"inject-1\",\"jsonrpc\":\"2.0\",\"method\":\"$/orphanedAck\",\"params\":{\"notification_id\":\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\",\"parent_incarnation\":\"reused-old\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "38",
+              "bytes": "225",
+              "direction": "received",
+              "offset": "2485",
+              "sha256": "667fe6f29f893f9cfaf0d38e03125699ecd7f5df08cd9715f9724a8920ab2e6d",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-1\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"stale_target\",\"hint\":\"echo the notice's parent incarnation; a reused parent address is another parent\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "39",
+              "bytes": "274",
+              "direction": "sent",
+              "offset": "1152",
+              "sha256": "b1f491e1e56916211ef932535dcb9eb2cdafb125d82d05db228eb3675829f346",
+              "text": "{\"id\":\"inject-2\",\"jsonrpc\":\"2.0\",\"method\":\"$/orphanedAck\",\"params\":{\"notification_id\":\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\",\"parent_incarnation\":\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/2\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "40",
+              "bytes": "225",
+              "direction": "received",
+              "offset": "2710",
+              "sha256": "72e6faf5aa3de5ef29f087aab2cd3573c06c9f681ecf24f711a5a7761686bbc0",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-2\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"stale_target\",\"hint\":\"echo the notice's parent incarnation; a reused parent address is another parent\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "40",
+              "bytes": "216",
+              "direction": "sent",
+              "offset": "1426",
+              "sha256": "a792b48f922be1017c37316c8184b0bee3096a54a9db6a73fbc1bc43ec516ac1",
+              "text": "{\"id\":\"inject-3\",\"jsonrpc\":\"2.0\",\"method\":\"$/orphanedAck\",\"params\":{\"notification_id\":\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\",\"parent_incarnation\":1}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "41",
+              "bytes": "226",
+              "direction": "received",
+              "offset": "2935",
+              "sha256": "81f6262b483f519f5fdf8566fd528c61cc4cea1c99d8df9b617279195bd9679c",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-3\",\"error\":{\"code\":-32602,\"message\":\"method parameters violate the closed schema\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"correct the method parameters\",\"retryable\":false,\"field_path\":\"params\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "41",
+              "bytes": "116",
+              "direction": "sent",
+              "offset": "1642",
+              "sha256": "85c186928c58a4f77540a19e584c88170a58ba7d69281e9aa81dbd7aed310672",
+              "text": "{\"id\":\"outbox-retained\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.machine\",\"params\":{\"action\":\"inspect\",\"machine\":\"bravo\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "42",
+              "bytes": "497",
+              "direction": "received",
+              "offset": "3161",
+              "sha256": "be8b74488c0b9478690b441a00d6918268eb044abb860744ac5b1bca0d964da5",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"outbox-retained\",\"result\":{\"health\":{\"deadline_exceeded\":\"0\",\"in_flight\":\"0\",\"inbound_dropped\":\"0\",\"last_failure\":{\"at_ms\":\"1793504494045\",\"kind\":\"transport_failed\"},\"last_seen_seq\":null,\"line_epoch\":\"1\",\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"revision\":\"2\",\"state\":\"unreachable\"},\"outbox\":[\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\"],\"remote\":{\"applied\":\"0\",\"cancels\":\"0\",\"frozen\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "42",
+              "bytes": "224",
+              "direction": "sent",
+              "offset": "1758",
+              "sha256": "e73834f8a4cb98ae8c744ae48227159960332fc78ec768e1f64d82400b1dd45f",
+              "text": "{\"id\":\"no-local-fallback\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.remote\",\"params\":{\"deadline_ms\":\"5000\",\"machine\":\"bravo\",\"method\":\"server.status\"}}\n{\"id\":\"roster-keeps-bravo\",\"jsonrpc\":\"2.0\",\"method\":\"machine.list\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "42",
+              "bytes": "211",
+              "direction": "received",
+              "offset": "3658",
+              "sha256": "7581919583a0efcd314a3b86c5113dda1ca496d53853aaec0be9b7c6f0edb0e9",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"no-local-fallback\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"machine_unreachable\",\"hint\":\"reconnect the machine; nothing ran locally instead\",\"retryable\":true}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "43",
+              "bytes": "500",
+              "direction": "received",
+              "offset": "3869",
+              "sha256": "1646feb267323fb1fcbdb0629bb546405bf5c4f94aff995f2fbd41989d3d4b8c",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"roster-keeps-bravo\",\"result\":{\"machines\":[{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000a1\",\"name\":\"alpha\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"1.0.0\"},{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"name\":\"bravo\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"3\",\"state\":\"unreachable\",\"version\":\"1.0.0\"}]}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "11"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-108",
+          "GAP-109",
+          "GAP-119",
+          "GAP-120"
+        ],
+        "delivers": [
+          "IDEAL-080",
+          "IDEAL-082",
+          "IDEAL-083",
+          "IDEAL-092"
+        ],
+        "excludes": [
+          "EXCL-015",
+          "EXCL-020",
+          "EXCL-021",
+          "EXCL-026"
+        ],
+        "title": "Each machine has its own actor: a stalled or lost machine blocks no other, stays listed, and gets its orphan notice once it returns",
+        "todo": "44"
+      },
+      "descriptors": [],
+      "elapsed_ms": "392",
+      "failure": null,
+      "fixture": {
+        "accepted": "1",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "target/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "3354910",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "/home/devswha/workspace/ovis-terminal-wt/lane-t44/target/debug/conformance",
+            "fixture",
+            "--root",
+            "/tmp/ovc-3351390-1"
+          ],
+          "exit_code": 0,
+          "pid": "3354764",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "remote/isolation",
+      "summary": "After the parent with a child on bravo exits and bravo's line is cut, the plan's injected $/orphanedAck {notification_id: unknown, parent_incarnation: reused-old} is not_found; the real notice id under a reused-old or later parent incarnation is stale_target and a numeric incarnation invalid_params. The notice stays in the outbox, bravo never applied it, a call to bravo is machine_unreachable with no local fallback, and machine.list keeps bravo listed as unreachable."
+    }
+  ],
+  "elapsed_ms": "6741",
+  "error": null,
+  "format": "ovis-conformance-evidence/1",
+  "host": {
+    "arch": "x86_64",
+    "family": "unix",
+    "os": "linux"
+  },
+  "inventory": null,
+  "result": "passed",
+  "runner_version": "0.1.0",
+  "scenario": "remote/isolation",
+  "totals": {
+    "assertions": "111",
+    "cases": "2",
+    "declared_only": "0",
+    "failed": "0",
+    "passed": "2",
+    "skipped": "0"
+  }
+}

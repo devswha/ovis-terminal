@@ -1,0 +1,14 @@
+## M6 root_time guard: turns.rs: `(Some(root.seq) == seq).then_some(root.since_ms)` -> `seq.is_some().then_some(root.since_ms)`
+command: cargo test -p ovis-terminal-agent -p ovis-terminal-server --lib --tests
+exit=101
+test conversation::records::qa::turns::a_later_idle_report_never_lends_its_time_to_the_turn_end ... FAILED
+thread 'conversation::records::qa::turns::a_later_idle_report_never_lends_its_time_to_the_turn_end' (715065) panicked at crates/ovis-terminal-agent/src/conversation/records/qa/turns.rs:85:5:
+test result: FAILED. 80 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 31.91s
+
+## clean run of conversation::records::qa::turns
+exit=0
+test conversation::records::qa::turns::an_ended_turn_takes_outcome_and_end_time_from_the_report_that_ended_it ... ok
+test conversation::records::qa::turns::a_later_idle_report_never_lends_its_time_to_the_turn_end ... ok
+test conversation::records::qa::turns::end_facts_overwritten_before_any_append_stay_null_instead_of_borrowing_a_later_time ... ok
+test conversation::records::qa::turns::an_append_after_the_end_keeps_the_end_facts_once_status_moves_on ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 77 filtered out; finished in 0.14s

@@ -1,0 +1,55 @@
+bun install v1.4.3 (c6da4a4d3)
+
+Done! Checked 8 packages (no changes) [3.00ms]
+$ bun scripts/generate.ts
+{"generated":"written","files":31,"changed":31}
+$ bun scripts/generate.ts --check
+{"generated":"fresh","files":31}
+$ tsc --noEmit -p tsconfig.json
+bun test v1.4.3 (c6da4a4d3)
+
+test/client.test.ts:
+(pass) happy > happy: shared wire fixtures decode as declared at every split and re-encode byte-exactly [5.54ms]
+(pass) happy > happy: the Rust runner replayed the same fixture bytes through the real binary (sha256 match) [5692.39ms]
+(pass) happy > happy: one persistent real-socket connection carries pipelined calls with exact u64 values [497.87ms]
+(pass) happy > happy: aborting a held mutation cancels it before commit on the same connection [435.69ms]
+(pass) happy > happy: framed stream offsets above 2^53, channel-bound credit and unknown output enums survive [3.39ms]
+(pass) happy > happy: input admission is separate from its later delivery update; plain credit stays exact [2.03ms]
+(pass) happy > happy: reconnect resumes after the exact retained cursor and drops a replayed duplicate [1.38ms]
+(pass) failure > failure: shared strict rejections are typed identically by the local check and the real server [423.70ms]
+(pass) failure > failure: a reply lost after durable accept leaves a draft that is never resent [448.81ms]
+(pass) failure > failure: a client deadline reports deadline_exceeded with an inspectable draft [490.89ms]
+(pass) failure > failure: lost reply after input admission is outcome_unknown, revokes input-ready, never resent [2.65ms]
+(pass) failure > failure: an old stream's ack cannot grant credit to the new stream [2.09ms]
+(pass) failure > failure: an unreplayable cursor is reported missed [1.20ms]
+(pass) failure > failure: a u64 counter sent as a JSON number is invalid_response [0.65ms]
+
+test/generate.test.ts:
+(pass) every published method lands in exactly one namespace module and in the runtime catalog [9.65ms]
+(pass) generation is deterministic and the committed output is that generation [16.70ms]
+(pass) open-enum sites, decimals and identities render as distinct nominal types [5.84ms]
+(pass) generated modules do not depend on the insertion order of components or methods [14.87ms]
+(pass) schemars component names map to deterministic PascalCase identifiers at declarations and references [0.53ms]
+(pass) a name collision after mapping fails generation with the typed name_collision error naming both components [0.15ms]
+(pass) a component name with no valid TypeScript identifier mapping is refused, never emitted [0.13ms]
+(pass) an unsupported schema or a colliding name fails generation with a typed kind [3.12ms]
+
+test/schema.test.ts:
+(pass) outputs keep added fields and added values at open-enum sites [0.19ms]
+(pass) outputs still refuse a missing required field, a numeric counter and an unknown closed value [0.11ms]
+(pass) inputs are closed: an added field or an open-enum value outside the catalog is refused [0.14ms]
+
+test/decimal.test.ts:
+(pass) u64::MAX and 2^53 + 1 round-trip exactly through decimal strings [0.32ms]
+(pass) numbers, non-canonical text and out-of-range values are refused with invalid_decimal [0.29ms]
+
+test/frames.test.ts:
+(pass) coalesced valid fixtures decode identically under 2000 seeded segmentations [50.64ms]
+(pass) every invalid fixture appended after valid frames fails with its typed kind under any split [19.21ms]
+(pass) random frames round-trip, and a CREDIT payload carries u64::MAX exactly [2.52ms]
+
+ 30 pass
+ 0 fail
+ 3365 expect() calls
+Ran 30 tests across 5 files. [8.17s]
+SDK_EXIT=0

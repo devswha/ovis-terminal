@@ -75,6 +75,7 @@ fn a_page_publishes_its_continuation_as_both_cursor_and_token() -> Result<(), se
         records: Vec::new(),
         total: 3,
         next: Some(next.clone()),
+        turns: Vec::new(),
     };
     let result = AgentConversationResult::try_from(page)?;
     let token = result

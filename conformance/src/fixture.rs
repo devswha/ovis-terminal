@@ -12,9 +12,13 @@ pub mod bridge;
 pub mod documents;
 #[cfg(unix)]
 pub mod handler;
+#[cfg(unix)]
+pub mod health;
 pub mod launch;
 #[cfg(unix)]
 pub mod launches;
+#[cfg(unix)]
+pub mod machines;
 #[cfg(unix)]
 pub mod output;
 #[cfg(unix)]

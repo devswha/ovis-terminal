@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use std::sync::mpsc::TryRecvError;
 
-use ovis_terminal_protocol::schema::ids::SubscriptionId;
+use ovis_terminal_protocol::schema::ids::{ClientId, SubscriptionId};
 use ovis_terminal_protocol::schema::methods::events::{EventsSubscribeParams, MissedReason};
 use ovis_terminal_protocol::schema::scalar::EventSeq;
 use serde::Serialize;
@@ -35,12 +35,25 @@ pub struct Request {
     pub start: Start,
     /// Event selection, replaceable later without interrupting delivery.
     pub selector: Selector,
+    /// Client the subscription's health row is reported under.
+    pub client: Option<ClientId>,
 }
 
 impl Request {
     /// Combines a start and a selection.
     pub const fn new(start: Start, selector: Selector) -> Self {
-        Self { start, selector }
+        Self {
+            start,
+            selector,
+            client: None,
+        }
+    }
+
+    /// Reports the subscription's health row under `client`.
+    #[must_use]
+    pub fn for_client(mut self, client: ClientId) -> Self {
+        self.client = Some(client);
+        self
     }
 
     /// Decodes `events.subscribe` parameters for the runtime on `machine`.
@@ -142,6 +155,8 @@ where
                 self.resume(&mut table, Resuming { entry, cursor })?
             }
         };
+        let health = self.shared.health.get().map(Arc::as_ref);
+        table.track(&id, (health, request.client.as_ref()));
         drop(table);
         Ok(Started {
             feed: Feed {

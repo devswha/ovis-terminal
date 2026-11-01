@@ -19,6 +19,7 @@ use ovis_terminal_core::registry::{
 };
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_server::authn::Revalidated;
+use ovis_terminal_server::dispatch::lanes::health::Measured;
 use ovis_terminal_server::dispatch::lanes::prompt_bridge::{Gated, PromptBridgeGate};
 use ovis_terminal_server::listen::{ServeReport, ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
@@ -27,7 +28,7 @@ use tokio::io::AsyncReadExt as _;
 
 use super::bridge::{Extension, QUEUE_LIMIT};
 use super::documents::{DocGet, DocSet};
-use super::handler::{Dispatch, FixtureHandler, Probes};
+use super::handler::{Dispatch, Event, FixtureHandler, Probes};
 use super::terminals::TerminalKeep;
 use crate::error::RunnerError;
 
@@ -69,13 +70,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     ))
     .map_err(at("bootstrap the authority"))?;
     let authority = Arc::new(authority);
-    let store = Store::open(&root.join("state.db"), StoreOptions::default())
-        .map_err(at("open the store"))?;
-    let core = Arc::new(Coordinator::new(
-        store,
-        runtime,
-        OperationProducer::new(runtime.runtime_id()),
-    ));
+    let core = open_core(root, runtime)?;
     let effects = root.join("effects");
     std::fs::create_dir(&effects).map_err(at("create the effect directory"))?;
     let mut dispatch = Dispatch::new(Arc::clone(&authority), runtime, Arc::clone(&core));
@@ -103,7 +98,10 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let template = super::template_lane::register(&mut dispatch, (runtime, root), parts)?;
     let launch = (runtime, Arc::clone(&core), template);
     let tree = super::tree::register(&mut dispatch, (&agents, &gate), launch)?;
+    let fleet = (runtime, Arc::clone(&core));
+    let machines = super::machines::register(&mut dispatch, (&agents, &gate), fleet).await?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
+    let health = super::health::register(&mut dispatch, runtime, root)?;
     let held = super::update::register(&mut dispatch, (root, &authority, issued.bearer()), runtime)
         .await?;
     let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
@@ -116,6 +114,8 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         extension: Extension::new(bridge, Arc::clone(&core)),
         sequenced,
         tree,
+        health: Arc::clone(&health),
+        machines,
         programs,
     };
     let handler = Arc::new(FixtureHandler::new(
@@ -131,17 +131,14 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let endpoint = UnixEndpoint::bind(&socket)
         .await
         .map_err(at("bind the socket"))?;
-    let revalidated = Revalidated::new(Arc::clone(&authority), gated);
+    let measured = Measured::new(Arc::clone(&health.health), Arc::new(gated));
+    let revalidated = Revalidated::new(Arc::clone(&authority), measured);
     let config = ServerConfig::new(authority, runtime);
     let server = serve_unix(endpoint, config, Arc::new(revalidated)).map_err(at("serve"))?;
     announce(&json!({"ready": {
         "socket": socket, "bearer": issued.bearer(), "observer": observer, "writer": writer,
     }}))?;
-    let mut sink = Vec::new();
-    tokio::io::stdin()
-        .read_to_end(&mut sink)
-        .await
-        .map_err(at("wait for the runner to close stdin"))?;
+    runner_closed_stdin().await?;
     let report = server
         .shutdown()
         .await
@@ -157,6 +154,30 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .map_err(at("join the store close"))?
         .map_err(at("close the store"))?;
     announce_report(&report)
+}
+
+/// Returns once the runner closes the fixture's stdin, its signal to stop serving.
+async fn runner_closed_stdin() -> Result<(), RunnerError> {
+    let mut sink = Vec::new();
+    tokio::io::stdin()
+        .read_to_end(&mut sink)
+        .await
+        .map_err(at("wait for the runner to close stdin"))?;
+    Ok(())
+}
+
+/// The coordinator over the run's SQLite store, sequencing as `runtime`.
+fn open_core(
+    root: &Path,
+    runtime: RuntimeIdentity,
+) -> Result<Arc<Coordinator<Event, OperationProducer>>, RunnerError> {
+    let store = Store::open(&root.join("state.db"), StoreOptions::default())
+        .map_err(at("open the store"))?;
+    Ok(Arc::new(Coordinator::new(
+        store,
+        runtime,
+        OperationProducer::new(runtime.runtime_id()),
+    )))
 }
 
 /// The serve report line: accepted connections, failures by kind, panics.

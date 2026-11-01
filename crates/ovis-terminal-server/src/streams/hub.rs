@@ -9,6 +9,7 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use ovis_terminal_core::health::Health;
 use ovis_terminal_core::leases::TerminalLeases;
 use ovis_terminal_core::screen::{QueryReply, ReplyBatch, Screen};
 use ovis_terminal_holder::protocol::{Exit, Output};
@@ -33,9 +34,17 @@ pub struct StreamSetup {
     pub(super) limits: StreamLimits,
     pub(super) backlog: Arc<SessionBacklog>,
     pub(super) journal: Arc<dyn LeaseJournal>,
+    pub(super) health: Option<Arc<Health>>,
 }
 
 impl StreamSetup {
+    /// Reports every stream's backlog, lag and resynchronized ranges to `health`.
+    #[must_use]
+    pub fn reporting_to(mut self, health: Arc<Health>) -> Self {
+        self.health = Some(health);
+        self
+    }
+
     /// Streams bounded by `limits` and the session `backlog`, committing leases to `journal`.
     #[must_use]
     pub fn new(
@@ -47,6 +56,7 @@ impl StreamSetup {
             limits,
             backlog,
             journal,
+            health: None,
         }
     }
 }
@@ -143,7 +153,12 @@ impl TerminalStreams {
             bytes: &output.bytes,
             answered: &answered,
         });
+        let before = state.log.end();
         state.log.append(filtered);
+        let added = state.log.end().since(before);
+        for viewer in state.viewers.values().filter(|viewer| !viewer.is_closed()) {
+            viewer.report_queued(added);
+        }
         self.rebalance(&mut state)?;
         drop(state);
         Ok(replies)
