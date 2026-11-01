@@ -1,7 +1,9 @@
 //! The stand-in remote runtime at the far end of a fixture machine's line.
 
+use std::io::Write as _;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
+use std::time::Duration;
 
 use ovis_terminal_agent::tree::{TreeError, TreeService};
 use ovis_terminal_authz::PrincipalId;
@@ -19,6 +21,7 @@ use tokio::io::{
     AsyncBufReadExt as _, AsyncWriteExt as _, BufReader, DuplexStream, ReadHalf, WriteHalf,
 };
 use tokio::task::JoinHandle;
+use uuid::{NoContext, Timestamp, Uuid};
 
 use super::Core;
 
@@ -147,9 +150,24 @@ impl Remote {
     }
 }
 
-/// A fixture failure that is no fault of the request.
-pub(crate) fn internal<E>(_: E) -> BoundaryError {
+/// A fixture failure that is no fault of the request; its cause goes to the fixture's
+/// stderr, which the runner keeps in the case evidence, as the hint promises.
+pub(crate) fn internal<E: std::fmt::Debug>(cause: E) -> BoundaryError {
+    let line = json!({"internal": format!("{cause:?}")});
+    drop(writeln!(std::io::stderr().lock(), "{line}"));
     BoundaryError::domain(ErrorKind::Internal, false).with_hint("inspect the fixture's stderr")
+}
+
+/// The operation id minted at one clock reading `since` the Unix epoch, and the
+/// acceptance clock read from that same reading.
+///
+/// Admission refuses an id minted after its clock (`invalid_params`). Reading the clock
+/// and then minting from the live clock crossed a millisecond tick now and then, and
+/// `fixture.remote_child` failed `internal`; one reading cannot.
+fn stamped(since: Duration) -> Result<(OpId, TimestampMs), BoundaryError> {
+    let now = TimestampMs::new(u64::try_from(since.as_millis()).map_err(internal)?);
+    let at = Timestamp::from_unix(NoContext, since.as_secs(), since.subsec_nanos());
+    Ok((OpId::new(Uuid::new_v7(at).to_string()), now))
 }
 
 /// Commits, as one operation, that `machine` holds a child of the live `parent`.
@@ -161,10 +179,9 @@ pub(super) fn link(
     let since = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(internal)?;
-    let now = TimestampMs::new(u64::try_from(since.as_millis()).map_err(internal)?);
+    let (op, now) = stamped(since)?;
     let owner = PrincipalId::parse("owner").map_err(internal)?;
     let operations = Operations::new(core, Context::new(owner, runtime, now));
-    let op = OpId::new(uuid::Uuid::now_v7().to_string());
     let request =
         Request::new(op, "fixture.remote_child".to_owned(), json!({})).map_err(internal)?;
     operations.accept(&request).map_err(internal)?;
@@ -185,3 +202,6 @@ pub(super) fn link(
         None => Ok(record.result.unwrap_or(Value::Null)),
     }
 }
+
+#[cfg(test)]
+mod tests;
