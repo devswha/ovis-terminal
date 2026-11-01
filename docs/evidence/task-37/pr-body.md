@@ -22,6 +22,19 @@ Closes GAP-098, GAP-100, GAP-103, GAP-105 and the contract side of GAP-104 (prov
 - **N2.** Only an append persists turn facts; reads compute turn views from the stored facts and the live status row without persisting anything. End facts survive only if an append happens while the ending report is still the status root. Otherwise they are null, never estimated.
 - **N3.** The protocol fixture does not serve `events.subscribe`, and the product dispatcher does not serve it yet (assembly is todo 31), so I did not add a stand-in. The server test `conversation_records::a_replayed_append_commits_once_and_publishes_its_receipt_as_the_event` sends a real append over the socket, subscribes to the Coordinator before sending, and asserts that the committed `agent.records_appended` payload equals the wire `result` byte for byte, and that a replay under the same op_id returns the same result. The agent-level test asserts event == receipt and that the receipt's ids and digest match what `agent.records` returns.
 
+## Round 3 (gate review R2-B1)
+
+- **R2-B1.** New agent test `conversation::records::qa::turns::a_later_idle_report_never_lends_its_time_to_the_turn_end`. The sequence is: working (seq 1, 1000), commentary append, idle (seq 2, 2000), read, idle (seq 3, 3000), user append, read. It asserts:
+  - the first read shows `ended_ms` 2000;
+  - the final read keeps the same non-null `ended_seq`, with `ended_ms: None`, never 3000.
+- **Mutant M6** (`docs/evidence/task-37/mutants-r3.log`) changes `root_time`'s guard `(Some(root.seq) == seq)` to `seq.is_some()`. `cargo test -p ovis-terminal-agent -p ovis-terminal-server --lib --tests` then exits 101, and only that test fails (at its `ended_ms` assertion). The original was restored and its sha256 checked.
+- **Digest doc.** The doc now says `RecordsAppended.digest` is `sha256:` over the stored encodings of the appended records, concatenated in order. The `agent.records` wire reply is a different serialization. Because this description is part of the schema, `schema/ovis-terminal.openrpc.json` and `packages/client-ts/src/generated` were regenerated. The generated files change only in their schema-sha256 header and that description.
+- Round 3 checks (Linux x86_64):
+  - `cargo test -p ovis-terminal-agent -p ovis-terminal-protocol -p ovis-terminal-server --all-targets`: exit 0, 488 passed, 0 failed.
+  - `cargo clippy` on the same crates with `-D warnings`: exit 0.
+  - client-ts `generate:check` reports `fresh`, 31 files; `typecheck` and `bun test` give 30 pass, 0 fail.
+  - `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh`: exit 0, `1198 tests run: 1198 passed (1 slow), 1 skipped`, hygiene `0 violation(s) in 1179 file(s) checked` (`check-r3.log`).
+
 ## After
 
 Native host: `Linux x86_64`. Binary `target/debug/ovis-terminal` sha256 `77533366ece7990fc4f37a449b80a1a0232258c4faa22e856ecc2407747822c2` (round 2 tree; recorded in the evidence JSON).

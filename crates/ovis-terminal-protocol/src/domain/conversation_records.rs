@@ -281,7 +281,8 @@ pub struct RecordsAppended {
     pub total_records: RecordCount,
     /// Stored bytes of the agent's records after the append.
     pub total_bytes: ByteCount,
-    /// Digest of the appended records exactly as `agent.records` returns them.
+    /// `sha256:` over the stored encodings of the appended records, concatenated in order;
+    /// the wire reply of `agent.records` is a different serialization.
     pub digest: RecordsDigest,
     /// Turns the appended records or metadata belong to.
     pub turns: Vec<ConversationTurn>,

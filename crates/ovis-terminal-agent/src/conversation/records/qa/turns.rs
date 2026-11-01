@@ -64,6 +64,31 @@ fn end_facts_overwritten_before_any_append_stay_null_instead_of_borrowing_a_late
 }
 
 #[test]
+fn a_later_idle_report_never_lends_its_time_to_the_turn_end() -> TestResult {
+    // Given: turn 1 ended on the idle report at 2000, as a read right then shows.
+    let h = harness()?;
+    h.register()?;
+    h.report(AgentState::Working, (1, 1_000))?;
+    h.append(&json!([text("a1", "assistant", "looking")]))?;
+    h.report(AgentState::Idle, (2, 2_000))?;
+    let ended = only_turn(&h.page()?)?.clone();
+
+    // When: a second idle report at 3000 becomes the root, then an append persists turn 1.
+    h.report(AgentState::Idle, (3, 3_000))?;
+    h.append(&json!([text("u1", "user", "later")]))?;
+    let page = h.page()?;
+
+    // Then: the end report is no longer the root, so its time is unknown, never 3000.
+    let turn = only_turn(&page)?;
+    assert_eq!(ended.ended_ms, Some(TimestampMs::new(2_000)));
+    assert_eq!(turn.turn, TurnNumber::new(1));
+    assert_eq!(turn.ended_ms, None);
+    assert_eq!(turn.ended_seq, ended.ended_seq);
+    assert!(turn.ended_seq.is_some());
+    Ok(())
+}
+
+#[test]
 fn an_append_after_the_end_keeps_the_end_facts_once_status_moves_on() -> TestResult {
     let h = harness()?;
     h.register()?;
