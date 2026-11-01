@@ -133,7 +133,11 @@ jobs:
         run: |
           set -o pipefail
           uname -a
-          cargo run --locked --manifest-path probes/Cargo.toml --bin windows-smoke -- \
+          # Each check's cargo test rebuilds the probes binaries, and Windows cannot replace a
+          # running executable, so the runner runs as a copy outside the target directory.
+          cargo build --locked --manifest-path probes/Cargo.toml --bin windows-smoke
+          cp target/debug/windows-smoke.exe "$RUNNER_TEMP/windows-smoke.exe"
+          "$RUNNER_TEMP/windows-smoke.exe" \
             --manifest probes/platform-qa/windows-smoke.json --out windows-smoke --sha "$HEAD_SHA" \
             | tee windows-smoke-summary.log
       - name: summary

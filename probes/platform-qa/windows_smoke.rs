@@ -76,7 +76,34 @@ fn write_report(report: &SmokeReport, out: &Path) -> Result<(), QaError> {
     })
 }
 
+/// Refuses to run from inside the cargo target directory the checks build into: each
+/// check's `cargo test` relinks this package's binaries, and Windows cannot replace a
+/// running executable.
+fn outside_target() -> Result<(), QaError> {
+    let io = |source| QaError::Io {
+        operation: "locate the runner and the target directory",
+        source,
+    };
+    let target =
+        std::env::var_os("CARGO_TARGET_DIR").map_or_else(|| PathBuf::from("target"), PathBuf::from);
+    let exe = std::env::current_exe()
+        .and_then(std::fs::canonicalize)
+        .map_err(io)?;
+    match std::fs::canonicalize(&target) {
+        Ok(target) if exe.starts_with(&target) => Err(QaError::Usage {
+            detail: format!(
+                "copy windows-smoke out of {} and run the copy: the checks rebuild this binary",
+                target.display()
+            ),
+        }),
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(io(error)),
+    }
+}
+
 fn smoke(cli: &Cli) -> Result<SmokeReport, QaError> {
+    outside_target()?;
     let manifest = SmokeManifest::load(&cli.manifest)?;
     std::fs::create_dir_all(&cli.out).map_err(|source| QaError::Io {
         operation: "create the output directory",

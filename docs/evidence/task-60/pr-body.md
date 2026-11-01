@@ -52,6 +52,23 @@ CI_RESULTS_PLACEHOLDER
 
 Gates: `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` exit 0 (nextest 1318/1318 passed, hygiene 0 violations, `check-sh.log`). `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exit 0, and `cargo clippy ... --target x86_64-pc-windows-gnu -- -D warnings` exit 0 (`windows-precheck.log`).
 
+## Round 2: Windows smoke harness fix
+
+On head ac81e38, `platform-qa / windows-smoke` (run 41311579837, artifact `windows-smoke`) failed three checks: `generation-refusal`, `two-clients` and `observer-denial`. Each failed check's log (`windows-smoke/<check>-0.log` in that artifact) shows the same cause:
+
+```
+error: failed to remove file `D:\a\ovis-terminal\ovis-terminal\target\debug\windows-smoke.exe`
+  Access is denied. (os error 5)
+```
+
+All three are `pipe_smoke` tests in the `ovis-terminal-probes` package. `cargo test -p ovis-terminal-probes` relinks that package's binaries, and one of them, `windows-smoke.exe`, was the running smoke runner itself. Windows cannot replace a running executable, so the test never compiled.
+
+- This was the harness, not the product or a contract: no test body ran, and every check in other packages passed on that run.
+- The checks themselves are unchanged and stay as written.
+- Fix in the runner: `windows-smoke` refuses to start from inside the cargo target directory its checks build into (typed `usage` error).
+- Fix in the workflow: it builds the runner, copies it to `$RUNNER_TEMP` and runs the copy.
+- Locally, running from the target dir exits 1 with `kind: usage`, and a copy outside it runs a real check end to end with `windows_smoke: pass`.
+
 ## Adversarial
 
 - Flaky tests: readiness is event-driven. The bounded runner completes on both pipes reaching EOF and treats the deadline only as a hang guard. The pipe tests read each reply under a 20 s bound with no sleeps. No rerun-to-green anywhere: `windows-smoke` runs each test once.
