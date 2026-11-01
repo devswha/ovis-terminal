@@ -1,0 +1,46 @@
+M1 lexical containment admits '..': KILLED (exit 101) by `cargo test -p ovis-terminal-protocol --lib boundary_policy`
+    test domain::boundary_policy::qa::a_store_reference_may_not_climb_restart_at_a_root_or_use_a_backslash ... FAILED
+    test domain::boundary_policy::qa::any_parsed_relative_path_has_only_normal_components ... FAILED
+    thread 'domain::boundary_policy::qa::a_store_reference_may_not_climb_restart_at_a_root_or_use_a_backslash' (2770914) panicked at crates/ovis-terminal-protocol/src/domain/boundary_policy/qa.rs:130:5:
+    thread 'domain::boundary_policy::qa::any_parsed_relative_path_has_only_normal_components' (2770918) panicked at crates/ovis-terminal-protocol/src/domain/boundary_policy/qa.rs:184:1:
+    test result: FAILED. 10 passed; 2 failed; 0 ignored; 0 measured; 111 filtered out; finished in 0.04s
+M2 symlink escape check removed: KILLED (exit 101) by `cargo test -p ovis-terminal-authz --lib validation`
+    test validation::qa::a_symlink_leaving_the_root_is_forbidden_and_one_inside_is_followed ... FAILED
+    thread 'validation::qa::a_symlink_leaving_the_root_is_forbidden_and_one_inside_is_followed' (2786479) panicked at crates/ovis-terminal-authz/src/validation/qa.rs:90:5:
+    test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+M3 recheck at use always passes: KILLED (exit 101) by `cargo test -p ovis-terminal-authz --lib validation`
+    test validation::qa::a_file_swapped_under_the_same_name_is_refused_at_use ... FAILED
+    test validation::qa::a_symlink_retargeted_after_authorization_is_refused_at_use ... FAILED
+    thread 'validation::qa::a_file_swapped_under_the_same_name_is_refused_at_use' (2787901) panicked at crates/ovis-terminal-authz/src/validation/qa.rs:134:5:
+    thread 'validation::qa::a_symlink_retargeted_after_authorization_is_refused_at_use' (2787905) panicked at crates/ovis-terminal-authz/src/validation/qa.rs:116:5:
+    test result: FAILED. 3 passed; 2 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+M4 rotated bearer stored in the ledger unsealed: KILLED (exit 101) by `cargo test -p ovis-terminal-server --test dispatch credential_rotation`
+    test credential_rotation::rotation_hands_out_a_working_replacement_and_a_stale_epoch_conflicts ... FAILED
+    thread 'credential_rotation::rotation_hands_out_a_working_replacement_and_a_stale_epoch_conflicts' (2825576) panicked at crates/ovis-terminal-server/tests/../src/dispatch/lanes/credential_rotation/qa.rs:118:5:
+    test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 31 filtered out; finished in 0.04s
+M5 observer precheck always admits: KILLED (exit 101) by `cargo test -p ovis-terminal-server --test dispatch boundary_policy`
+    test boundary_policy::an_interactor_holds_no_takeover_prompt_raw_plugin_report_or_admin_authority ... FAILED
+    test boundary_policy::an_observer_is_refused_every_mutation_before_the_handler_runs ... FAILED
+    thread 'boundary_policy::an_interactor_holds_no_takeover_prompt_raw_plugin_report_or_admin_authority' (2827966) panicked at crates/ovis-terminal-server/tests/../src/dispatch/lanes/boundary_policy/wire_qa.rs:173:5:
+    thread 'boundary_policy::an_observer_is_refused_every_mutation_before_the_handler_runs' (2827967) panicked at crates/ovis-terminal-server/tests/../src/dispatch/lanes/boundary_policy/wire_qa.rs:128:5:
+    test result: FAILED. 3 passed; 2 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.01s
+M6 typed input text no longer a secret field: KILLED (exit 101) by `cargo test -p ovis-terminal-server --test dispatch boundary_policy`
+    test boundary_policy::audit_records_keep_ids_and_outcomes_and_no_secret_and_only_admins_read_them ... FAILED
+    thread 'boundary_policy::audit_records_keep_ids_and_outcomes_and_no_secret_and_only_admins_read_them' (2832691) panicked at crates/ovis-terminal-server/tests/../src/dispatch/lanes/boundary_policy/wire_qa.rs:226:5:
+    test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.01s
+M7 reserved OVIS_TERMINAL_ environment accepted: KILLED (exit 101) by `cargo test -p ovis-terminal-protocol --lib boundary_policy`
+    test domain::boundary_policy::qa::runtime_variables_cannot_be_set_by_a_caller_in_any_letter_case ... FAILED
+    thread 'domain::boundary_policy::qa::runtime_variables_cannot_be_set_by_a_caller_in_any_letter_case' (2837362) panicked at crates/ovis-terminal-protocol/src/domain/boundary_policy/qa.rs:93:5:
+    test result: FAILED. 11 passed; 1 failed; 0 ignored; 0 measured; 111 filtered out; finished in 0.04s
+M8 error replies no longer redacted: KILLED (exit 101) by `cargo test -p ovis-terminal-server --test dispatch boundary_policy`
+    test boundary_policy::audit_records_keep_ids_and_outcomes_and_no_secret_and_only_admins_read_them ... FAILED
+    thread 'boundary_policy::audit_records_keep_ids_and_outcomes_and_no_secret_and_only_admins_read_them' (2845863) panicked at crates/ovis-terminal-server/tests/../src/dispatch/lanes/boundary_policy/wire_qa.rs:227:5:
+    test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.01s
+M9 audit trail readable with ordinary input authority: KILLED (exit 101) by `cargo test -p ovis-terminal-server --test dispatch boundary_policy`
+    test boundary_policy::audit_records_keep_ids_and_outcomes_and_no_secret_and_only_admins_read_them ... FAILED
+    thread 'boundary_policy::audit_records_keep_ids_and_outcomes_and_no_secret_and_only_admins_read_them' (2847912) panicked at crates/ovis-terminal-server/tests/../src/dispatch/lanes/boundary_policy/wire_qa.rs:249:5:
+    test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.01s
+M10 raw input downgraded to ordinary input in the matrix: KILLED (exit 101) by `cargo test -p ovis-terminal-server --test dispatch boundary_policy`
+    test boundary_policy::an_interactor_holds_no_takeover_prompt_raw_plugin_report_or_admin_authority ... FAILED
+    thread 'boundary_policy::an_interactor_holds_no_takeover_prompt_raw_plugin_report_or_admin_authority' (2849100) panicked at crates/ovis-terminal-server/tests/../src/dispatch/lanes/boundary_policy/wire_qa.rs:173:5:
+    test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.02s

@@ -19,6 +19,7 @@ use ovis_terminal_core::registry::{
 };
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_server::authn::Revalidated;
+use ovis_terminal_server::dispatch::lanes::boundary_policy::BoundaryPolicy;
 use ovis_terminal_server::dispatch::lanes::health::Measured;
 use ovis_terminal_server::dispatch::lanes::prompt_bridge::{Gated, PromptBridgeGate};
 use ovis_terminal_server::listen::{ServeReport, ServerConfig, UnixEndpoint, serve_unix};
@@ -104,6 +105,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let health = super::health::register(&mut dispatch, runtime, root)?;
     let held = super::update::register(&mut dispatch, (root, &authority, issued.bearer()), runtime)
         .await?;
+    let trail = super::boundary::register(&mut dispatch, root, runtime)?;
     let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
     let writer = delegate(&authority, issued.bearer(), ("writer", WRITER))?;
     let prompts = Arc::clone(&gate.prompts);
@@ -117,6 +119,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         health: Arc::clone(&health),
         machines,
         programs,
+        audit: (Arc::clone(&trail), Arc::clone(&authority)),
     };
     let handler = Arc::new(FixtureHandler::new(
         Arc::new(dispatch),
@@ -131,7 +134,8 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let endpoint = UnixEndpoint::bind(&socket)
         .await
         .map_err(at("bind the socket"))?;
-    let measured = Measured::new(Arc::clone(&health.health), Arc::new(gated));
+    let policed = BoundaryPolicy::new((Arc::clone(&authority), trail), gated);
+    let measured = Measured::new(Arc::clone(&health.health), Arc::new(policed));
     let revalidated = Revalidated::new(Arc::clone(&authority), measured);
     let config = ServerConfig::new(authority, runtime);
     let server = serve_unix(endpoint, config, Arc::new(revalidated)).map_err(at("serve"))?;

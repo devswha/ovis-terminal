@@ -1,5 +1,6 @@
 use serde_json::{Map, Value};
 
+use super::redaction::scrub;
 use super::sink::TelemetryError;
 use super::{FieldValue, TraceContext};
 
@@ -48,7 +49,8 @@ pub(super) fn serialize(
     serde_json::to_vec(&Value::Object(fields)).map_err(TelemetryError::TelemetrySerialization)
 }
 
+/// Scrubs credentials before bounding, so a cut can never leave a partial bearer behind.
 fn insert_bounded_text(fields: &mut Map<String, Value>, key: &str, text: &str) {
-    let value: String = text.chars().take(MAX_FIELD_CHARS).collect();
+    let value: String = scrub(text).chars().take(MAX_FIELD_CHARS).collect();
     fields.insert(key.to_owned(), Value::String(value));
 }

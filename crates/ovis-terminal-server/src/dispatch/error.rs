@@ -3,6 +3,7 @@
 use ovis_terminal_authz::AuthzError;
 use ovis_terminal_core::ops::OperationError;
 use ovis_terminal_core::registry::TargetResolutionError;
+use ovis_terminal_protocol::domain::boundary_policy::BoundaryViolation;
 use ovis_terminal_protocol::domain::worktrees::AffectedResource;
 use ovis_terminal_protocol::errors::{
     BoundaryError, ErrorKind, ExceededBound, LimitName, TargetCandidate,
@@ -126,6 +127,12 @@ impl DispatchError {
     pub(super) fn boundary(&self) -> BoundaryError {
         if let Self::Params(error) = self {
             return BoundaryError::invalid_params(Some(error.field_path()));
+        }
+        // A trust-boundary refusal names its parameter and, when oversized, the bound reached.
+        if let Self::Domain { source, .. } = self
+            && let Some(violation) = source.downcast_ref::<BoundaryViolation>()
+        {
+            return violation.to_boundary();
         }
         if let Self::Operation(OperationError::Settled(record)) = self
             && let Some(data) = &record.error
