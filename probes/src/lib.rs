@@ -7,6 +7,9 @@
 #[path = "../platform/platform.rs"]
 pub mod platform;
 
+#[path = "../quality/quality.rs"]
+pub mod quality;
+
 /// Cargo package name of this crate, used by the workspace layering record.
 pub const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 

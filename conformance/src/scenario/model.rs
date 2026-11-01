@@ -112,6 +112,8 @@ pub(crate) enum Step {
     ExpectFailure(ExpectFailure),
     /// Send planned requests, or only the one `--inject` names, and check each reply.
     Inject(Inject),
+    /// Run planned quality gates in-process, or only the one `--inject` names.
+    Gates(super::gates::Gates),
 }
 
 /// Fixture servers the runner can start.
