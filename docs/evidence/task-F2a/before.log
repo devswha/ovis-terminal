@@ -1,0 +1,47 @@
+# F2a before: remote/isolation happy step 8 (fixture.remote_child) answers internal
+
+## Occurrence 1: T30 local all/all (lane-t30, binary sha256 b7fc28c5...)
+Source: origin/lane/t30-prove-attach-input-and-aggre:docs/evidence/task-30/flake-remote-isolation.log
+Surviving all.json: /dev/shm/ovt-fixtures/ovc-test-2979571-all-all-all-01a198b3-1c6d-72fc-a881-806aebfb576d/all.json
+  case elapsed_ms=426 (not a slow case), fixture={"accepted":"1","failures":{},"panicked":"0"}
+  failure={"detail":"expectation reply[child-on-bravo]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"8"}
+  fixture stderr bytes=0 (the internal() mapper discarded the cause; the hint "inspect the fixture's stderr" had nothing to show)
+
+## Occurrence 2: PR #78 CI run 41349272942 attempt 1, job 124976014124 (scripts/check.sh ubuntu)
+2026-11-01T21:03:15.6466190Z     thread 'suite::every_scenario_file_is_executed_or_a_listed_declaration' (21769) panicked at conformance/src/runner_tests/suite.rs:80:5:
+2026-11-01T21:03:15.6468625Z     assertion `left == right` failed: {"case":"all","error":null,"evidence":"/tmp/ovc-test-21768-all-all-all-01a198ea-4146-77cb-b546-6a82cd50df5c/all.json","evidence_error":null,"evidence_written":true,"result":"failed","scenario":"all/all","totals":{"assertions":"5435","cases":"83","declared_only":"33","failed":"1","passed":"82","skipped":"0"}}
+2026-11-01T21:03:15.6470293Z 
+2026-11-01T21:03:15.6471042Z     "remote/isolation" "happy": {"detail":"expectation reply[child-on-bravo]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"8"}
+2026-11-01T21:03:15.6472737Z       {"actual":{"code":-32603,"data":{"hint":"inspect the fixture's stderr","kind":"internal","retryable":false},"message":"operation failed"},"check":"reply[child-on-bravo]/error","expected":{"$present":false},"passed":false}
+2026-11-01T21:03:15.6474256Z       {"actual":null,"check":"reply[child-on-bravo]/result/linked","expected":true,"passed":false}
+2026-11-01T21:03:15.6474824Z       left: Some(1)
+
+## Occurrence 3: PR #76 CI run 41352257500, job 124984812810 (test ubuntu-latest)
+2026-11-01T21:36:29.7304371Z     thread 'suite::every_scenario_file_is_executed_or_a_listed_declaration' (23125) panicked at conformance/src/runner_tests/suite.rs:73:5:
+2026-11-01T21:36:29.7308127Z     assertion `left == right` failed: {"case":"all","error":null,"evidence":"/tmp/ovc-test-23124-all-all-all-01a19909-3d07-772b-8ebc-64abf214f35a/all.json","evidence_error":null,"evidence_written":true,"result":"failed","scenario":"all/all","totals":{"assertions":"3804","cases":"82","declared_only":"34","failed":"1","passed":"81","skipped":"0"}}
+2026-11-01T21:36:29.7313998Z 
+2026-11-01T21:36:29.7315417Z     "remote/isolation" "happy": {"detail":"expectation reply[child-on-bravo]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"8"}
+2026-11-01T21:36:29.7317818Z       {"actual":{"code":-32603,"data":{"hint":"inspect the fixture's stderr","kind":"internal","retryable":false},"message":"operation failed"},"check":"reply[child-on-bravo]/error","expected":{"$present":false},"passed":false}
+2026-11-01T21:36:29.7319242Z       {"actual":null,"check":"reply[child-on-bravo]/result/linked","expected":true,"passed":false}
+2026-11-01T21:36:29.7320286Z       left: Some(1)
+
+No artifacts were uploaded by either run (gh run download: "no valid artifacts found to download").
+
+## Unloaded/loaded standalone loop with a stderr diagnostic (not committed)
+240 runs of --scenario remote/isolation --case happy, 6 parallel, pinned to cores 124-125 with
+8 nice -n 10 busy loops: 0 failures (the window is a few microseconds per run).
+
+## Root cause, proven by widening the window (diagnostic patch, not committed)
+conformance/src/fixture/machines/remote.rs::link (origin/integration 070871b) read the wall clock into
+Context.now, then minted the op id with uuid::Uuid::now_v7() from the live clock. Admission
+(crates/ovis-terminal-core/src/ops/admission.rs:93 "if request.minted_at > self.context.now { return
+Err(OperationError::InvalidParams) }") refuses an id minted after its clock. Whenever a millisecond tick
+fell between the two reads, accept() failed InvalidParams, which internal() mapped to
+{"kind":"internal","hint":"inspect the fixture's stderr"} while dropping the cause.
+Diagnostic patch: internal() eprintln!s its argument; a 2 ms busy wait between the clock read and the mint.
+Result: 3/3 runs fail at step 8 with the byte-identical reply of all three occurrences:
+  failure={"detail":"expectation reply[child-on-bravo]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"8"}
+  first failed assertion={"actual":{"code":-32603,"data":{"hint":"inspect the fixture's stderr","kind":"internal","retryable":false},"message":"operation failed"},"check":"reply[child-on-bravo]/error","expected":{"$present":false},"passed":false}
+  fixture stderr="F2A-DIAG internal: InvalidParams\n"
+So: no isolation property was violated; the scenario's expectation is right; the harness's stand-in
+for a remote launch minted its own operation inconsistently with the ledger's admission contract.
