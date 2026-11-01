@@ -84,3 +84,47 @@ NEXTEST_EXIT=100
 NEXTEST_EXIT=100
 
 === reverted; REBUILD=0
+
+# Round 4 mutants (new assertions)
+
+=== M5 checkpoint inexact reasons dropped
+--- crates/ovis-terminal-server/src/streams/records.rs
+- screen.inexact = inexact(&paint.fidelity);
++ screen.inexact = inexact(&ovis_terminal_vt::Fidelity::Exact);
+ crates/ovis-terminal-server/src/streams/records.rs | 33 ++++++++++++++++++++--
+ 1 file changed, 30 insertions(+), 3 deletions(-)
+        FAIL [   5.905s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+    "part-a/task-30" "failure": {"detail":"expectation reply[mid]/result/first_paint/inexact did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"124"}
+      {"actual":[],"check":"reply[mid]/result/first_paint/inexact","expected":["control_inside_open_sequence"],"passed":false}
+        PASS [   7.465s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+        FAIL [   5.905s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+
+=== M6 per-terminal input queue cap raised to 64 MiB
+--- crates/ovis-terminal-core/src/input/sequencer/entry.rs
+- pub const DEFAULT: Self = Self::new(16 << 20, 4096);
++ pub const DEFAULT: Self = Self::new(64 << 20, 4096);
+ crates/ovis-terminal-core/src/input/sequencer/entry.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+        FAIL [   6.095s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+    "part-a/task-30" "failure": {"detail":"expectation reply[fill6]/error/data/kind did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"88"}
+      {"actual":null,"check":"reply[fill6]/error/data/kind","expected":"input_overflow","passed":false}
+      {"actual":{"receipt":{"admitted_bytes":"3145728","mode_revision":"0","op_id":"01a19960-c291-7600-9f8f-e9db97f50126","output_cursor":{"offset":"7"},"queued_seq":"9"},"status_at_send":{"agent_id":null,"finish_generation":"0","last_turn":null,"process_incarnation":null,"records":{},"report_seq":null,"reported":false,"root":null,"session":null,"turn":"0"}},"check":"reply[fill6]/result","expected":{"$present":false},"passed":false}
+        PASS [   7.903s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+        FAIL [   6.095s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+
+=== M7 a terminal query reply is admitted twice
+--- crates/ovis-terminal-cli/src/assembly/live.rs
+- self.sequencer.admit_reply(bytes)?;
++ self.sequencer.admit_reply(bytes.clone())?;
+                self.sequencer.admit_reply(bytes)?;
+ crates/ovis-terminal-cli/src/assembly/live.rs | 41 +++++++++++++++++++++++++++
+ 1 file changed, 41 insertions(+)
+        PASS [  10.953s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+        FAIL [  12.556s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+    "part-a/task-30" "happy": {"detail":"expectation reply[next-seen]/result/outcome did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"69"}
+      {"actual":"timeout","check":"reply[next-seen]/result/outcome","expected":"matched","passed":false}
+        FAIL [  12.556s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+
+=== reverted; REBUILT_CLEAN
+ M crates/ovis-terminal-cli/src/assembly/live.rs
+ M crates/ovis-terminal-server/src/streams/records.rs

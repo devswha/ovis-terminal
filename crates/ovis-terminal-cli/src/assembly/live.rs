@@ -203,3 +203,43 @@ impl Runtime {
         live.pump(&self.holder)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::num::NonZeroUsize;
+
+    use ovis_terminal_core::screen::ScreenBounds;
+
+    use super::screen_bounds;
+
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
+    fn size(bytes: usize) -> Result<NonZeroUsize, &'static str> {
+        NonZeroUsize::new(bytes).ok_or("a positive size")
+    }
+
+    #[test]
+    fn production_screens_keep_the_default_eight_mib_ring() -> TestResult {
+        assert_eq!(screen_bounds(None)?, ScreenBounds::DEFAULT);
+        assert_eq!(
+            ScreenBounds::DEFAULT,
+            ScreenBounds::DEFAULT.with_retained_output(size(8 << 20)?)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_qa_ring_scales_checkpoints_and_slices_inside_it() -> TestResult {
+        let expected = ScreenBounds::DEFAULT
+            .with_retained_output(size(65_536)?)
+            .with_checkpoint_interval(size(32_768)?)
+            .with_work_budget(size(16_384)?);
+        assert_eq!(screen_bounds(Some(65_536))?, expected);
+        let large = ScreenBounds::DEFAULT
+            .with_retained_output(size(1 << 20)?)
+            .with_checkpoint_interval(size(1 << 19)?)
+            .with_work_budget(size(64 << 10)?);
+        assert_eq!(screen_bounds(Some(1 << 20))?, large);
+        Ok(())
+    }
+}

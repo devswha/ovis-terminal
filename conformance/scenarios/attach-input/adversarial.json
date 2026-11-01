@@ -10,7 +10,7 @@
   "cases": [
     {
       "case": "failure",
-      "summary": "Adversarial attach/input on the real binary with a 64 KiB QA output ring: an observe-only viewer naming the writer's lease is forbidden; attach.credit acknowledging u64::MAX is invalid_credit, a numeric acknowledgement invalid_params and an unknown stream stream_not_found. A program that prints fake 'state: idle' and prompt text leaves the declared status never-reported; the next command's output is fenced (its bytes at matched_at read back) and terminal.screen's head equals that fence, so every later cursor is relative to bytes this run produced. A takeover with a stale epoch is lease_epoch_mismatch; the explicit takeover revokes the writer, whose queued write on the revoked lease is no_lease. A bracketed paste the program never enabled is paste_refused. An output wait armed before 300 000 bytes overflow the ring still matches the marker printed after them; the same cursor afterwards is cursor_expired, terminal.output from it resumes at the floor with gap true, a start past the head is invalid_params and a numeric offset invalid_params at params.from_offset. Under a child that never reads its PTY (stty -echo -icanon; sleep), two 64 KiB writes are admitted at sequences 1 and 2, the barrier on 2 is not reached with bytes pending, an Escape is ordered at sequence 3, the exit wait times out and the same pid is still running. Five 3 MiB writes are then admitted at sequences 4-8, the sixth is input_overflow before the advertised 16 MiB per-terminal input queue is exceeded, and the barrier on 8 reports the pending bytes still inside that budget. An argv element over 32 KiB is too_large naming argv_element_bytes before any spawn (t3 is not_found).",
+      "summary": "Adversarial attach/input on the real binary with a 64 KiB QA output ring: an observe-only viewer naming the writer's lease is forbidden; attach.credit acknowledging u64::MAX is invalid_credit, a numeric acknowledgement invalid_params and an unknown stream stream_not_found. A program that prints fake 'state: idle' and prompt text leaves the declared status never-reported; the next command's output is fenced (its bytes at matched_at read back) and terminal.screen's head equals that fence, so every later cursor is relative to bytes this run produced. A takeover with a stale epoch is lease_epoch_mismatch; the explicit takeover revokes the writer, whose queued write on the revoked lease is no_lease. A bracketed paste the program never enabled is paste_refused. An output wait armed before 300 000 bytes overflow the ring still matches the marker printed after them; the same cursor afterwards is cursor_expired, terminal.output from it resumes at the floor with gap true, a start past the head is invalid_params and a numeric offset invalid_params at params.from_offset. Under a child that never reads its PTY (stty -echo -icanon; sleep), two 64 KiB writes are admitted at sequences 1 and 2, the barrier on 2 is not reached with bytes pending, an Escape is ordered at sequence 3, the exit wait times out and the same pid is still running. Five 3 MiB writes are then admitted at sequences 4-8, the sixth is input_overflow before the advertised 16 MiB per-terminal input queue is exceeded, and the barrier on 8 reports the pending bytes still inside that budget. An argv element over 32 KiB is too_large naming argv_element_bytes before any spawn (t3 is not_found). Two writers (owner and writer principals, no lease) then alternate four submissions into a child that does not read (stty -icanon noflsh) at sequences 1-4; nothing is delivered until ctrl+c releases it, after which the program reads exactly one-a, two-a, one-b, two-b, each submission whole and in admission order. A program that stops right after a carriage return inside an open CSI sequence gives a late observer a first paint that reports checkpoint_inexact (inexact: [control_inside_open_sequence]); once the sequence completes, the repaint is exact again.",
       "steps": [
         {
           "serve": {
@@ -1681,6 +1681,667 @@
                   "$present": false
                 },
                 "/error/data/kind": "not_found"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "drain",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:drain",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "stty -echo -icanon noflsh; trap 'exec cat' INT; printf STALLED; while :; do sleep 1; done"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "drain",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "drain": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t3"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "drain-ready",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t3"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "STALLED"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "drain-ready": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/cursor/offset": {
+                  "$capture": "drain_start"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "a1",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:a1",
+                  "target": {
+                    "address": "t3"
+                  },
+                  "expect": null,
+                  "text": "one-a",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "a1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/queued_seq": "1",
+                "/result/receipt/admitted_bytes": "6"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "writer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "b1",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:b1",
+                  "target": {
+                    "address": "t3"
+                  },
+                  "expect": null,
+                  "text": "two-a",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "writer",
+            "expect": {
+              "b1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/queued_seq": "2",
+                "/result/receipt/admitted_bytes": "6"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "a2",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:a2",
+                  "target": {
+                    "address": "t3"
+                  },
+                  "expect": null,
+                  "text": "one-b",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "a2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/queued_seq": "3",
+                "/result/receipt/admitted_bytes": "6"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "writer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "b2",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:b2",
+                  "target": {
+                    "address": "t3"
+                  },
+                  "expect": null,
+                  "text": "two-b",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "writer",
+            "expect": {
+              "b2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/queued_seq": "4",
+                "/result/receipt/admitted_bytes": "6"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "held-back",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t3"
+                  },
+                  "from_offset": "$value:drain_start",
+                  "limit_bytes": "64"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "held-back": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/data_b64": "",
+                "/result/gap": false
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "release",
+                "method": "input.keys",
+                "params": {
+                  "op_id": "$op:release",
+                  "target": {
+                    "address": "t3"
+                  },
+                  "expect": null,
+                  "keys": [
+                    "ctrl+c"
+                  ],
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "release": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/queued_seq": "5"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "drained",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t3"
+                  },
+                  "cursor": {
+                    "offset": "$value:drain_start"
+                  },
+                  "pattern": {
+                    "text": "two-b\r\n"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "drained": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": {
+                  "$capture": "last_at"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "delivered",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t3"
+                  },
+                  "from_offset": "$value:drain_start",
+                  "limit_bytes": "28"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "delivered": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/data_b64": "b25lLWENCnR3by1hDQpvbmUtYg0KdHdvLWINCg=="
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:open",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "printf 'OPEN\\033[3\\r'; read -r _; printf '1mDONE\\r\\n'; exec sleep 600"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "open",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t4"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "opened",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t4"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "OPEN\u001b[3\r"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "opened": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "opener-conn",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "opener-conn",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "opener-conn",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "opener",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:opener",
+                  "target": {
+                    "address": "t4"
+                  },
+                  "role": "interact",
+                  "client_id": "opener",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "opener-conn",
+            "expect": {
+              "opener": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/lease_id": {
+                  "$capture": "opener"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "mid",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:mid",
+                  "target": {
+                    "address": "t4"
+                  },
+                  "role": "observe",
+                  "client_id": "mid",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "mid": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/first_paint/inexact": [
+                  "control_inside_open_sequence"
+                ],
+                "/result/stream_id": {
+                  "$capture": "mid"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "opener-conn",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "go",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:go",
+                  "target": {
+                    "address": "t4"
+                  },
+                  "expect": null,
+                  "text": "go",
+                  "submit": "enter",
+                  "lease_id": "$value:opener"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "opener-conn",
+            "expect": {
+              "go": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "done",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t4"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "1mDONE"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "done": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "mid-repaint",
+                "method": "attach.repaint",
+                "params": {
+                  "stream_id": "$value:mid"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "mid-repaint": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/checkpoint/inexact": []
               }
             }
           }

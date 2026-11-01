@@ -7,7 +7,9 @@ mod stream;
 mod terminal;
 
 pub use attach::{AttachedTerminal, PaintedScreen, RetryBoundary, RetryOn};
-pub use lease::{Checkpoint, LeaseRecord, LeaseRole, Modes, ScreenCursor, TerminalMode};
+pub use lease::{
+    Checkpoint, CheckpointInexact, LeaseRecord, LeaseRole, Modes, ScreenCursor, TerminalMode,
+};
 pub use status::{
     AgentBinding, AgentState, SessionRef, StatusEntry, StatusOrigin, StatusReport, StatusSnapshot,
 };

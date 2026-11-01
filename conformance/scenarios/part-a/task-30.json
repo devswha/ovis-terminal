@@ -63,7 +63,7 @@
   "cases": [
     {
       "case": "happy",
-      "summary": "Runs attach-input/all: first-paint parity, admission-before-delivery, the exact output-wait marker, the operator lease and bounded shared storage under the 16-PTY profile.",
+      "summary": "Runs attach-input/all: first-paint parity, admission-before-delivery, the exact output-wait marker, the operator lease, bounded shared storage with an accounted overflow gap, and checkpoint/tail reconstruction (split UTF-8/CSI and a replayed DSR query) checked against an independent VT. The exact 16-PTY latency profile is the declared capacity/sixteen.",
       "steps": [
         {
           "include": {
@@ -75,7 +75,7 @@
     },
     {
       "case": "failure",
-      "summary": "Runs attach-input/adversarial: revoked queued write, impossible credit, stale epoch, fake status text, refused paste, stalled child with an ineffective Escape and an over-cap argv, each a typed rejection.",
+      "summary": "Runs attach-input/adversarial: revoked queued write, impossible credit, stale epoch, fake status text, refused paste, overflow cursor_expired and floor resume, stalled child with an ineffective Escape, the per-terminal input queue refusing input_overflow inside its budget, an over-cap argv, two writers' submissions delivered whole and in admission order, and checkpoint_inexact on a paint inside an open sequence.",
       "steps": [
         {
           "include": {

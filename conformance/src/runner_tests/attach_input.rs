@@ -4,6 +4,9 @@ use serde_json::Value;
 
 use super::support::{Ran, TestResult, assertion, conformance, field};
 
+#[path = "attach_input/oracle.rs"]
+mod oracle;
+
 /// The value the binary answered for one named check, which must have held.
 fn held<'a>(ran: &'a Ran, check: &str) -> TestResult<&'a Value> {
     let found =
@@ -37,12 +40,87 @@ fn passed(scenario: &str, case: &str) -> TestResult<Ran> {
     Ok(ran)
 }
 
+/// A split-write program's screen equals an independent VT fed its raw bytes at once; it
+/// saw one query reply, and a late paint of it is exact.
+fn reconstructs_from_raw_bytes(ran: &Ran) -> TestResult {
+    let raw = held(ran, "reply[fx-raw]/result/data_b64")?
+        .as_str()
+        .ok_or("raw output")?;
+    let (lines, cursor) = oracle::replay(raw)?;
+    let shown: Vec<String> =
+        serde_json::from_value(held(ran, "reply[fx-screen]/result/lines")?.clone())?;
+    assert_eq!(
+        lines, shown,
+        "the daemon's screen equals a VT fed the raw bytes at once"
+    );
+    assert_eq!(held(ran, "reply[fx-screen]/result/cursor")?, &cursor);
+    assert_eq!(
+        shown.get(..3),
+        Some(
+            ["utf8:\u{20ac} csi:RED", "REPLY-ONCE", "NEXT[x]"]
+                .map(String::from)
+                .as_slice()
+        ),
+        "split UTF-8 and CSI rendered whole, one query reply, then the operator's byte"
+    );
+    assert_eq!(
+        *held(ran, "reply[late]/result/first_paint/inexact")?,
+        serde_json::json!([])
+    );
+    Ok(())
+}
+
+/// The QA ring overflowed into a floor at head - ring, a resynced observer within its credit
+/// and exactly one accounted loss.
+fn overflow_is_accounted(ran: &Ran) -> TestResult {
+    let head = decimal(ran, "reply[screen]/result/output_offset")?;
+    let floor = head.checked_sub(RING).ok_or("the head is past one ring")?;
+    let newest_byte = head.checked_sub(1).ok_or("output was produced")?;
+    assert_eq!(held(ran, "reply[evicted]/result/gap")?, true);
+    assert_eq!(decimal(ran, "reply[evicted]/result/floor_offset")?, floor);
+    assert_eq!(decimal(ran, "reply[evicted]/result/from_offset")?, floor);
+    assert_eq!(held(ran, "reply[floor-read]/result/gap")?, false);
+    let resynced = decimal(ran, "reply[repaint]/result/stream_offset")?;
+    assert_eq!(
+        decimal(ran, "reply[repaint]/result/checkpoint/stream_offset")?,
+        resynced
+    );
+    assert!(
+        resynced <= decimal(ran, "hello/result/limits/credit_initial_bytes")?,
+        "a viewer that never credits is never sent more than its initial credit"
+    );
+    let lost = |end: &str| {
+        decimal(
+            ran,
+            &format!("reply[metrics]/result/consumers/0/losses/0/range/{end}"),
+        )
+    };
+    assert_eq!(
+        lost("first_offset")?,
+        decimal(
+            ran,
+            "notification[attach.control]/params/skipped/from_output_offset"
+        )?,
+        "the loss starts where the observer's gap record says its skip did"
+    );
+    assert_eq!(
+        lost("last_offset")?,
+        newest_byte,
+        "and ends at the repaint head"
+    );
+    assert_eq!(
+        *held(ran, "reply[metrics]/result/consumers/1/losses")?,
+        serde_json::json!([])
+    );
+    Ok(())
+}
+
 /// Both viewers get one first paint at the prompt's end, input is admitted there before
 /// its output, the marker wait matches exactly one echoed command line later, the
-/// operator takes the lease over by epoch, the ring overflows into an accounted gap, and
-/// every 16-PTY admission and echo sample answers within 100 ms. Offsets are relative to
-/// the run's own prompt: a program may print invisible bytes first (Darwin's bash sends
-/// the 8-byte `ESC[?1034h`).
+/// operator takes the lease over by epoch, the ring overflows into an accounted gap, a
+/// split-write program's screen equals an independent VT fed its raw bytes. Offsets are
+/// relative to the run's own prompt: a program may print invisible bytes first (Darwin's
+/// bash sends the 8-byte `ESC[?1034h`).
 #[test]
 fn happy() -> TestResult {
     let ran = passed("part-a/task-30", "happy")?;
@@ -84,59 +162,8 @@ fn happy() -> TestResult {
         held(&ran, "reply[repaint]/result/checkpoint/output_offset")?,
         held(&ran, "reply[screen]/result/output_offset")?
     );
-    let head = decimal(&ran, "reply[screen]/result/output_offset")?;
-    assert_eq!(held(&ran, "reply[evicted]/result/gap")?, true);
-    assert_eq!(
-        decimal(&ran, "reply[evicted]/result/floor_offset")?,
-        head - RING
-    );
-    assert_eq!(
-        decimal(&ran, "reply[evicted]/result/from_offset")?,
-        head - RING
-    );
-    assert_eq!(held(&ran, "reply[floor-read]/result/gap")?, false);
-    let resynced = decimal(&ran, "reply[repaint]/result/stream_offset")?;
-    assert_eq!(
-        decimal(&ran, "reply[repaint]/result/checkpoint/stream_offset")?,
-        resynced
-    );
-    assert!(
-        resynced <= decimal(&ran, "hello/result/limits/credit_initial_bytes")?,
-        "a viewer that never credits is never sent more than its initial credit"
-    );
-    let lost = |end: &str| {
-        decimal(
-            &ran,
-            &format!("reply[metrics]/result/consumers/0/losses/0/range/{end}"),
-        )
-    };
-    assert_eq!(
-        lost("first_offset")?,
-        decimal(
-            &ran,
-            "notification[attach.control]/params/skipped/from_output_offset"
-        )?,
-        "the loss starts where the observer's gap record says its skip did"
-    );
-    assert_eq!(
-        lost("last_offset")?,
-        head - 1,
-        "and ends at the repaint head"
-    );
-    assert_eq!(
-        *held(&ran, "reply[metrics]/result/consumers/1/losses")?,
-        serde_json::json!([])
-    );
-    for terminal in 2..=16 {
-        held(
-            &ran,
-            &format!("reply[admit{terminal}]/result/receipt/admitted_bytes"),
-        )?;
-        assert_eq!(
-            held(&ran, &format!("reply[echo{terminal}]/result/outcome"))?,
-            "matched"
-        );
-    }
+    reconstructs_from_raw_bytes(&ran)?;
+    overflow_is_accounted(&ran)?;
     Ok(())
 }
 
@@ -174,6 +201,22 @@ fn failure() -> TestResult {
         decimal(&ran, "reply[after-cap]/result/pending_bytes")?
             <= decimal(&ran, "hello/result/limits/input_queue_bytes")?,
         "the refused write kept the queue inside its advertised budget"
+    );
+    assert_eq!(
+        *held(&ran, "reply[mid]/result/first_paint/inexact")?,
+        serde_json::json!(["control_inside_open_sequence"])
+    );
+    assert_eq!(
+        *held(&ran, "reply[mid-repaint]/result/checkpoint/inexact")?,
+        serde_json::json!([])
+    );
+    for (writer, seq) in [("a1", "1"), ("b1", "2"), ("a2", "3"), ("b2", "4")] {
+        let check = format!("reply[{writer}]/result/receipt/queued_seq");
+        assert_eq!(held(&ran, &check)?, seq, "{check}");
+    }
+    assert_eq!(
+        held(&ran, "reply[delivered]/result/data_b64")?,
+        "b25lLWENCnR3by1hDQpvbmUtYg0KdHdvLWINCg=="
     );
     let armed = decimal(&ran, "reply[head-now]/result/output_offset")?;
     assert!(decimal(&ran, "reply[overtaken]/result/matched_at")? > armed + RING);

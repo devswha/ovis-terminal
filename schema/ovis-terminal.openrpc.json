@@ -1574,6 +1574,15 @@
             "$ref": "#/components/schemas/Count",
             "description": "Primary-screen history lines readable behind the paint: the history cursor."
           },
+          "inexact": {
+            "default": [],
+            "description": "Why the checkpoint plus the bytes after it cannot reproduce an always-live terminal\n(`checkpoint_inexact`); empty when it is exact. Absent from servers that predate it.",
+            "items": {
+              "$ref": "#/components/schemas/CheckpointInexact",
+              "x-ovis-open-enum": true
+            },
+            "type": "array"
+          },
           "modes": {
             "$ref": "#/components/schemas/Modes",
             "description": "Terminal modes."
@@ -1601,6 +1610,31 @@
           "history_lines"
         ],
         "type": "object"
+      },
+      "CheckpointInexact": {
+        "description": "Why a checkpoint is inexact.",
+        "oneOf": [
+          {
+            "const": "control_inside_open_sequence",
+            "description": "The output stopped inside a sequence after a control byte in it already acted, so\nreplaying the open sequence would repeat that action.",
+            "type": "string"
+          },
+          {
+            "const": "open_sequence_too_long",
+            "description": "A string longer than the parser bound was being discarded at the checkpoint.",
+            "type": "string"
+          },
+          {
+            "const": "primary_saved_cursor_unrepresentable",
+            "description": "The primary screen's saved cursor cannot be rebuilt while the alternate screen is up.",
+            "type": "string"
+          },
+          {
+            "const": "saved_cursor_not_paintable",
+            "description": "The paint spent the saved cursor to place a cursor outside the scroll region.",
+            "type": "string"
+          }
+        ]
       },
       "ChildPolicy": {
         "additionalProperties": false,
