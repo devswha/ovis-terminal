@@ -80,6 +80,11 @@ pub(super) struct ServeArgs {
     /// `--root` that holds a `qa-fixture` file.
     #[arg(long)]
     pub(super) qa_actor_hold: Option<std::path::PathBuf>,
+    /// QA seam: the largest graphics sequence attach streams pass whole, in bytes (the
+    /// advertised 8 MiB without it), so a test can cross the cap without writing 8 MiB
+    /// through a PTY. Accepted only with a `--root` that holds a `qa-fixture` file.
+    #[arg(long)]
+    pub(super) qa_graphics_sequence_max_bytes: Option<u64>,
     /// QA seam: raw output bytes each terminal retains for `terminal.output` and output
     /// waits (8 MiB without it, at least 4096); the checkpoint interval and parse slice
     /// shrink with it so the retention bound still holds. Accepted only with a `--root`
@@ -126,9 +131,13 @@ pub(super) struct AttachArgs {
     /// Watch only: needs no TTY and never reads or forwards input.
     #[arg(long)]
     pub(super) observe: bool,
-    /// Client label the lease is recorded under.
-    #[arg(long, default_value = "cli")]
-    pub(super) client_id: String,
+    /// Take over the interact lease, naming the epoch it holds now; a stale epoch is refused.
+    #[arg(long, value_name = "EPOCH", conflicts_with = "observe")]
+    pub(super) takeover: Option<String>,
+    /// Client label the lease is recorded under; defaults to `cli-<pid>`, so two attach
+    /// processes never share an owner and compete for the interact lease.
+    #[arg(long)]
+    pub(super) client_id: Option<String>,
 }
 
 /// Exactly one explicit way to name the attached terminal.

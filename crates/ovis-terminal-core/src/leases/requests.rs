@@ -28,7 +28,11 @@ impl<'a> Caller<'a> {
     }
 
     pub(super) fn owner(&self) -> Owner {
-        Owner::new(self.session.principal().clone(), self.client.clone())
+        Owner::new(
+            self.session.principal().clone(),
+            self.client.clone(),
+            self.session.connection(),
+        )
     }
 
     pub(super) fn claim(&self, fresh: LeaseId) -> Claim {

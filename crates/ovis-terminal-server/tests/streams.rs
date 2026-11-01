@@ -36,6 +36,24 @@ pub mod health;
 #[path = "../src/streams/qa/takeover.rs"]
 pub mod takeover;
 
+#[path = "../src/streams/graphics/qa.rs"]
+pub mod graphics;
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn graphics_three_protocols_reach_a_live_viewer_byte_identical() -> TestResult {
+    graphics::three_protocols_reach_a_live_viewer_byte_identical().await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog() -> TestResult {
+    graphics::a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog().await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn graphics_an_over_cap_series_is_replaced_by_one_typed_notice() -> TestResult {
+    graphics::an_over_cap_series_is_replaced_by_one_typed_notice().await
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_real_stalled_viewer_reports_its_backlog_and_resynced_ranges() -> TestResult {
     health::a_real_stalled_viewer_reports_its_backlog_and_resynced_ranges().await

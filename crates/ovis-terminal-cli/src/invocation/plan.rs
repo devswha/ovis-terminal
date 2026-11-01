@@ -115,6 +115,7 @@ pub(super) fn plan(cli: Cli) -> Result<Plan, CliError> {
             qa: crate::assembly::QaSeams {
                 holder_poll_ms: args.qa_holder_poll_ms,
                 actor_hold: args.qa_actor_hold,
+                graphics_sequence_max_bytes: args.qa_graphics_sequence_max_bytes,
                 output_ring_bytes: args.qa_output_ring_bytes,
             },
         }),
@@ -153,11 +154,20 @@ fn attach(args: super::args::AttachArgs) -> Result<crate::attach::AttachPlan, Cl
     )?;
     let params: ovis_terminal_protocol::schema::methods::attach::AttachLeasesParams =
         decode_params(&request).map_err(CliError::Params)?;
-    let client = serde_json::from_value(json!(args.client_id)).map_err(CliError::ParamsJson)?;
+    let label = args
+        .client_id
+        .unwrap_or_else(|| format!("cli-{}", std::process::id()));
+    let client = serde_json::from_value(json!(label)).map_err(CliError::ParamsJson)?;
+    let takeover = args
+        .takeover
+        .map(|epoch| serde_json::from_value(json!(epoch)))
+        .transpose()
+        .map_err(CliError::ParamsJson)?;
     Ok(crate::attach::AttachPlan {
         target: params.target,
         observe: args.observe,
         client,
+        takeover,
     })
 }
 

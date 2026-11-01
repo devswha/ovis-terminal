@@ -22,7 +22,7 @@ use crate::config::{AuthorityLimits, RuntimeBinding};
 use crate::endpoint::{PeerAdmission, Transport};
 use crate::error::{AuthzError, MismatchReason};
 use crate::family::IdentityFamily;
-use crate::identity::PrincipalId;
+use crate::identity::{ConnectionId, PrincipalId};
 use crate::permission::{Action, Permission};
 use crate::scope::ResolvedTarget;
 
@@ -57,6 +57,7 @@ pub struct Session {
     claim: Claim,
     principal: PrincipalId,
     transport: Transport,
+    connection: ConnectionId,
 }
 
 impl Session {
@@ -70,6 +71,13 @@ impl Session {
     #[must_use]
     pub const fn transport(&self) -> Transport {
         self.transport
+    }
+
+    /// This connection's identity; every authentication draws a new one, so a lease
+    /// acquired on it is never shared with another connection of the same principal.
+    #[must_use]
+    pub const fn connection(&self) -> ConnectionId {
+        self.connection
     }
 }
 
@@ -169,6 +177,7 @@ impl<F: IdentityFamily> Authority<F> {
             claim,
             principal,
             transport: admission.transport(),
+            connection: ConnectionId::random(),
         })
     }
 

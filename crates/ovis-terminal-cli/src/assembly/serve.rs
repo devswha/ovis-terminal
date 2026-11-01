@@ -128,6 +128,7 @@ fn restarted(generation: &Generation) -> Value {
 fn qa_seams_allowed(plan: &ServePlan) -> Result<(), AssemblyError> {
     let seams = plan.qa.holder_poll_ms.is_some()
         || plan.qa.actor_hold.is_some()
+        || plan.qa.graphics_sequence_max_bytes.is_some()
         || plan.qa.output_ring_bytes.is_some();
     let qa_root = plan
         .root
@@ -195,7 +196,13 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
     let agents = super::lanes::agents::assemble(booted.identity, &directory)?;
     let lane = AttachLane::new(Arc::clone(&directory));
     let journal = Arc::new(BootJournal::new(&state, booted.leases));
-    let limits = StreamLimits::advertised(&Limits::v1());
+    let advertised = StreamLimits::advertised(&Limits::v1());
+    let limits = plan
+        .qa
+        .graphics_sequence_max_bytes
+        .map_or(advertised, |cap| {
+            advertised.with_graphics_sequence_max_bytes(cap)
+        });
     let backlog = Arc::new(SessionBacklog::new(SESSION_BACKLOG_BYTES));
     let health = super::health::open(&state, booted.identity, recovery.recovery.clone())?;
     let setup = StreamSetup::new(limits, backlog, Arc::<BootJournal>::clone(&journal))

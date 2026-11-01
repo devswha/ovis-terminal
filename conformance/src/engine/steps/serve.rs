@@ -5,30 +5,8 @@ use crate::error::RunnerError;
 use crate::fixture::launch;
 use crate::scenario::model::{FixtureKind, Serve};
 
-/// `serve` arguments for the assembled binary in `srv`; a QA output ring marks `srv` a QA
-/// fixture root first, since the binary refuses QA seams anywhere else.
-fn assembled_args(
-    srv: &std::path::Path,
-    ring: Option<crate::ids::Decimal>,
-) -> Result<Vec<std::ffi::OsString>, RunnerError> {
-    let mut args = vec!["serve".into(), "--stdin-lifetime".into(), "--root".into()];
-    args.push(srv.into());
-    if let Some(ring) = ring {
-        std::fs::create_dir_all(srv)
-            .and_then(|()| std::fs::write(srv.join("qa-fixture"), b""))
-            .map_err(|source| RunnerError::Io {
-                operation: "mark the server root a QA fixture root",
-                source,
-            })?;
-        args.push("--qa-output-ring-bytes".into());
-        args.push(ring.0.to_string().into());
-    }
-    Ok(args)
-}
-
 impl Session<'_> {
     pub(super) async fn serve(&mut self, serve: &Serve) -> Result<(), RunnerError> {
-        let kind = serve.fixture;
         if self.fixture.is_some() {
             return Err(RunnerError::FixtureState);
         }
@@ -45,7 +23,19 @@ impl Session<'_> {
             })
         };
         let (runner, binary) = (absolute(&self.ctx.runner)?, absolute(&self.ctx.binary)?);
-        let started = match kind {
+        let started = match serve.fixture {
+            FixtureKind::Protocol if serve.qa_graphics_sequence_max_bytes.is_some() => {
+                return Err(RunnerError::ScenarioInconsistent {
+                    scenario: "serve".to_owned(),
+                    detail: "only the assembled binary takes a QA graphics cap",
+                });
+            }
+            FixtureKind::Protocol if serve.qa_output_ring_bytes.is_some() => {
+                return Err(RunnerError::ScenarioInconsistent {
+                    scenario: "serve".to_owned(),
+                    detail: "only the assembled binary takes a QA output ring",
+                });
+            }
             FixtureKind::Protocol => {
                 let args = [
                     "fixture".into(),
@@ -57,11 +47,37 @@ impl Session<'_> {
                 launch::start(&runner, &args, root).await?
             }
             FixtureKind::Assembled => {
-                let args = assembled_args(&root.join("srv"), serve.qa_output_ring_bytes)?;
+                let srv = root.join("srv");
+                let mut args: Vec<std::ffi::OsString> = vec![
+                    "serve".into(),
+                    "--stdin-lifetime".into(),
+                    "--root".into(),
+                    srv.clone().into(),
+                ];
+                if let Some(cap) = serve.qa_graphics_sequence_max_bytes {
+                    mark_qa_root(&srv)?;
+                    args.push("--qa-graphics-sequence-max-bytes".into());
+                    args.push(cap.0.to_string().into());
+                }
+                if let Some(ring) = serve.qa_output_ring_bytes {
+                    mark_qa_root(&srv)?;
+                    args.push("--qa-output-ring-bytes".into());
+                    args.push(ring.0.to_string().into());
+                }
                 launch::start(&binary, &args, root).await?
             }
         };
         self.fixture = Some(started);
         Ok(())
     }
+}
+
+/// Marks `srv` a QA fixture root, the only root on which the binary accepts QA seams.
+fn mark_qa_root(srv: &std::path::Path) -> Result<(), RunnerError> {
+    let io = |source| RunnerError::Io {
+        operation: "mark the server root a QA fixture root",
+        source,
+    };
+    std::fs::create_dir_all(srv).map_err(io)?;
+    std::fs::write(srv.join("qa-fixture"), b"").map_err(io)
 }

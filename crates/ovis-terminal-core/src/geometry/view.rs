@@ -66,7 +66,8 @@ impl GeometryController {
     }
 
     /// Records that the authenticated `session`'s `client`, holding `lease`, has focus; the
-    /// owner is derived from the session's principal, never supplied by the caller.
+    /// owner is derived from the session's principal and connection, never supplied by the
+    /// caller.
     ///
     /// # Errors
     ///
@@ -77,7 +78,11 @@ impl GeometryController {
         claim: (&Session, &ClientId, LeaseId),
     ) -> Result<Focused, GeometryError> {
         let (session, client, lease) = claim;
-        let owner = &Owner::new(session.principal().clone(), client.clone());
+        let owner = &Owner::new(
+            session.principal().clone(),
+            client.clone(),
+            session.connection(),
+        );
         let held = view
             .interact
             .iter()

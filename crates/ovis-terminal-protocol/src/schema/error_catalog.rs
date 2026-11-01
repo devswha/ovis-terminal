@@ -141,6 +141,7 @@ impl JsonSchema for ErrorData {
                 "unavailable": generator.subschema_for::<crate::domain::conversation_records::Unavailable>(),
                 "principal_epoch": generator.subschema_for::<super::scalar::PrincipalEpoch>(),
                 "last_seen_seq": generator.subschema_for::<super::scalar::EventSeq>(),
+                "current": generator.subschema_for::<super::records::LeaseRecord>(),
             },
             "required": ["kind", "hint", "retryable"],
         })

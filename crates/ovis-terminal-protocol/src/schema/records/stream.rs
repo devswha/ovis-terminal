@@ -3,6 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::graphics::GraphicsDroppedData;
 use crate::schema::events::StreamCloseReason;
 use crate::schema::ids::StreamId;
 use crate::schema::records::{Checkpoint, LeaseRecord};
@@ -23,6 +24,8 @@ pub enum ControlKind {
     InputRevoked,
     /// The stream closed; no record or byte follows.
     Close,
+    /// A whole graphics sequence over its cap was dropped where this record stands.
+    GraphicsDropped,
 }
 
 /// Raw output the stream skipped when it was resynchronized.
@@ -95,6 +98,9 @@ pub struct AttachControl {
     pub skipped: Option<SkippedOutput>,
     /// Close details, for `close`.
     pub close: Option<StreamClose>,
+    /// The dropped sequence, for `graphics_dropped`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub graphics_dropped: Option<GraphicsDroppedData>,
 }
 
 impl AttachControl {
@@ -108,6 +114,7 @@ impl AttachControl {
             checkpoint: None,
             skipped: None,
             close: None,
+            graphics_dropped: None,
         }
     }
 }

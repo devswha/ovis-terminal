@@ -1,0 +1,10 @@
+$ cargo nextest run --locked -p ovis-terminal-authz -p ovis-terminal-core -p ovis-terminal-server --no-fail-fast --no-tests=fail   (heavy gate, CARGO_INCREMENTAL=0)
+PASS [   0.012s] ( 13/583) ovis-terminal-authz identity::tests::connection_ids_are_drawn_fresh_and_round_trip_only_as_canonical_text
+PASS [   0.014s] (252/583) ovis-terminal-core::leases connections::a_second_connection_under_the_holders_label_is_refused_and_cannot_borrow_its_lease
+PASS [   0.013s] (253/583) ovis-terminal-core::leases connections::disconnecting_one_connection_never_revokes_the_other_connections_leases
+PASS [   0.012s] (255/583) ovis-terminal-core::leases connections::only_an_explicit_takeover_at_the_current_epoch_moves_the_lease_between_connections
+PASS [   0.012s] (270/583) ovis-terminal-core::leases wire::lease_events_round_trip_the_maximal_epoch_and_reject_numeric_counters
+PASS [   0.014s] (271/583) ovis-terminal-core::leases wire::takeover_epochs_are_canonical_nonzero_decimal_strings
+PASS [   0.025s] (272/583) ovis-terminal-core::leases wire::every_nonzero_epoch_and_lease_id_round_trips
+Summary [ 127.142s] 583 tests run: 583 passed (1 slow), 0 skipped
+exit=0

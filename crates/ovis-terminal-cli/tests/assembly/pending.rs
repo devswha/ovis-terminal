@@ -189,11 +189,12 @@ fn a_restart_answered_pending_is_still_handed_over_and_op_get_resolves_it() -> T
 
 #[test]
 fn a_qa_seam_is_refused_on_a_root_that_is_not_a_qa_fixture_root() -> TestResult {
-    let root = fresh_root()?;
     for seam in [
         ["--qa-holder-poll-ms", "1"],
+        ["--qa-graphics-sequence-max-bytes", "4096"],
         ["--qa-output-ring-bytes", "65536"],
     ] {
+        let root = fresh_root()?;
         let output = Command::new(env!("CARGO_BIN_EXE_ovis-terminal"))
             .args(["serve", "--root"])
             .arg(&root)
@@ -202,10 +203,13 @@ fn a_qa_seam_is_refused_on_a_root_that_is_not_a_qa_fixture_root() -> TestResult 
             .env_clear()
             .env("PATH", "/usr/bin:/bin")
             .output()?;
-        assert_ne!(output.status.code(), Some(0), "{output:?}");
+        assert_ne!(output.status.code(), Some(0), "{seam:?} {output:?}");
         let stderr = String::from_utf8_lossy(&output.stderr);
-        assert!(stderr.contains("accept the QA seams"), "{output:?}");
+        assert!(
+            stderr.contains("accept the QA seams"),
+            "{seam:?} {output:?}"
+        );
+        std::fs::remove_dir_all(root)?;
     }
-    std::fs::remove_dir_all(root)?;
     Ok(())
 }

@@ -31,7 +31,8 @@ fn typed_input_reaches_the_program_resize_follows_and_ctrl_backslash_restores_th
     );
     assert_eq!(
         served.leases()?.pointer("/interact/holder"),
-        Some(&json!("cli"))
+        Some(&json!(format!("cli-{}", outer.client.id()))),
+        "the default client label is per process"
     );
     // The inner shell's foreground job prints the size when SIGWINCH reaches it, so the
     // resize itself is the event awaited; nothing is typed again.
@@ -123,8 +124,14 @@ fn a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_termina
     )?;
     let (code, record, restored) = second.exited()?;
     assert_eq!(code, Some(11), "{record}");
-    assert_eq!(record.pointer("/error/kind"), Some(&json!("lease_held")));
-    assert_eq!(record.pointer("/error/holder/holder"), Some(&json!("cli")));
+    assert_eq!(
+        record.pointer("/error/kind"),
+        Some(&json!("lease_conflict"))
+    );
+    assert_eq!(
+        record.pointer("/error/holder/holder"),
+        Some(&json!(format!("cli-{}", first.client.id())))
+    );
     assert!(restored, "a held attach changed the outer terminal");
     let stale = Outer::attach(&served, &["--json", "terminal", "attach", "--target", "t9"])?;
     let (code, record, restored) = stale.exited()?;
@@ -169,7 +176,7 @@ fn observing_needs_no_tty_and_never_forwards_input() -> TestResult {
     );
     assert_eq!(
         leases.pointer("/interact/holder"),
-        Some(&json!("cli")),
+        Some(&json!(format!("cli-{}", interact.client.id()))),
         "{leases}"
     );
     let metrics = served.call("server.metrics", &json!({}))?;

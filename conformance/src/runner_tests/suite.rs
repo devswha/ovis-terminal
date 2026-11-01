@@ -17,6 +17,7 @@ const EXECUTABLE: &[&str] = &[
     "agent/status.json",
     "agent/tree.json",
     "all/all.json",
+    "cli/interactive-attach.json",
     "client/package.json",
     "observability/health.json",
     "part-a/task-21.json",
@@ -44,7 +45,8 @@ const EXECUTABLE: &[&str] = &[
 ];
 
 /// Executable scenarios whose server is the assembled binary itself (plan todo 31).
-const ASSEMBLED: [&str; 6] = [
+const ASSEMBLED: [&str; 7] = [
+    "graphics/passthrough.json",
     "part-a/task-22.json",
     "part-a/task-26.json",
     "part-a/task-27.json",

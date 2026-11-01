@@ -19,6 +19,8 @@ type TestResult<T = ()> = Result<T, Box<dyn Error>>;
 
 const BOUND: Duration = Duration::from_secs(5);
 
+#[path = "../src/leases/qa/connections.rs"]
+mod connections;
 #[path = "../src/leases/qa/fixture.rs"]
 pub mod fixture;
 #[path = "../src/leases/qa/geometry.rs"]
