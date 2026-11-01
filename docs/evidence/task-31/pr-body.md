@@ -285,6 +285,14 @@ The fixture keeps the round-4 registration phases and gains T52's peer role, pee
 
 **CI-only `remote/isolation` failure (6cf4cdb, ubuntu `all/all`, step 6 `reply[child-on-bravo]/error`).** CI kept no artifact. This scenario runs on the runner's protocol fixture, not the daemon composition. Reproduced the CI way (`taskset -c 104-107 cargo nextest run -p ovis-terminal-conformance -j 4`): 5/5 runs at 28/28. Unreproduced; listed as unmet. **Merge 95e45cc (T60):** Cargo.toml dependency-block union, schema and SDK unchanged; the merged gate passes.
 
+**Intermittent `recovery/e2e` step 36 (3b13522 gate, unreproduced).** `child-on-peer` came back as a fixture `internal` error (`-32603`, `linked` absent); its evidence directory was already deleted. Afterwards:
+- ten full-workspace runs at `-j 16`: 1409/1409 each;
+- three rounds of two concurrent `all/all`: all green.
+
+244aa2b fixes the evidence gap: a failing runner test now keeps its directory below `OVIS_FIXTURE_ROOT`, so the next occurrence leaves its `all.json`. Listed as unmet.
+
+**Toolchain hazard (not fixed here).** `~/.ovis-toolchain/env.sh` derives `CARGO_TARGET_DIR` from the directory it is sourced in. Sourced outside a lane worktree, it selects the shared `/dev/shm/ovt-target-main`. One round-5 gate ran there for that reason and failed when that target was removed. The gate script now `cd`s first and refuses any other target.
+
 **Unreproduced.** After the stale task-31 `layout.get` assertion was fixed, one `cargo nextest run -p ovis-terminal-conformance` failed at `conformance/src/runner_tests/suite.rs:68` (`assert_eq!(ran.output.status.code(), Some(0), "{}", ran.explain())`). Its `explain()` text was lost: the test helper deletes its evidence directory, and that log was grep-filtered. Twenty reruns were all green:
 - 4 direct `all/all` runs,
 - 8 runs with two `all/all` processes in parallel,
