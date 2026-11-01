@@ -102,12 +102,12 @@ impl Runtime {
     }
 
     /// Applies at most one holder message that already arrived and says whether the holder
-    /// link is still there. It never waits while it holds the control: a caller blocked on
-    /// the lifecycle (a status read, `update.query`, a restart) gets it between receives.
+    /// link is still there. It cannot wait while it holds the control (`try_receive_message`
+    /// takes no duration): a caller blocked on the lifecycle gets it between receives.
     pub(super) fn receive(&mut self) -> Link {
         let received = self
             .control
-            .with_terminals(|terminals, _| terminals.receive_message(Duration::ZERO));
+            .with_terminals(|terminals, _| terminals.try_receive_message());
         match received {
             Ok(Some(message)) => {
                 if let Err(error) = self.follow(&message) {

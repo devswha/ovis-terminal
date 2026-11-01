@@ -42,11 +42,35 @@ impl Terminals {
     ///
     /// The failures of [`Terminals::receive`]; a message that failed to apply is not returned.
     pub fn receive_message(&mut self, timeout: Duration) -> Result<Option<Message>, TerminalError> {
-        match self
+        let incoming = self
             .messages
             .recv_timeout(timeout)
-            .map_err(TerminalError::Notification)?
-        {
+            .map_err(TerminalError::Notification)?;
+        self.apply_message(incoming)
+    }
+
+    /// Applies one holder notification that already arrived, exactly like
+    /// [`Terminals::receive_message`], and never waits: a caller holding a lock around it
+    /// cannot keep that lock while the holder is silent. An empty queue is the same
+    /// `Notification(Timeout)` a zero-length wait reports.
+    ///
+    /// # Errors
+    ///
+    /// The failures of [`Terminals::receive_message`].
+    pub fn try_receive_message(&mut self) -> Result<Option<Message>, TerminalError> {
+        let incoming = self.messages.try_recv().map_err(|error| {
+            TerminalError::Notification(match error {
+                std::sync::mpsc::TryRecvError::Empty => std::sync::mpsc::RecvTimeoutError::Timeout,
+                std::sync::mpsc::TryRecvError::Disconnected => {
+                    std::sync::mpsc::RecvTimeoutError::Disconnected
+                }
+            })
+        })?;
+        self.apply_message(incoming)
+    }
+
+    fn apply_message(&mut self, incoming: Incoming) -> Result<Option<Message>, TerminalError> {
+        match incoming {
             Incoming::Holder(message) => {
                 let applied = message.clone();
                 self.observe(message)?;
