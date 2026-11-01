@@ -71,7 +71,7 @@ fn every_ledger_id_is_mapped_exactly_once_to_known_todos() -> TestResult {
     let sections = [
         (&map.ideals, "IDEAL", 121, "docs/design/ideal-state.md"),
         (&map.gaps, "GAP", 154, "docs/design/gap-list.md"),
-        (&map.exclusions, "EXCL", 27, "docs/design/ideal-state.md"),
+        (&map.exclusions, "EXCL", 29, "docs/design/ideal-state.md"),
     ];
     for (section, prefix, count, ledger) in sections {
         let keys: BTreeSet<String> = section.keys().cloned().collect();
