@@ -103,3 +103,33 @@ fn declared_status_drives_state_and_turn_waits_and_an_interrupt_reports_its_key(
     served.stop()?;
     Ok(())
 }
+
+#[test]
+fn a_status_report_racing_a_state_wait_settles_it_with_the_reported_seq() -> TestResult {
+    let served = Served::start()?;
+    served.run_shell("shell")?;
+    let token = spawned_token(&served)?;
+    call(
+        &served,
+        "agent.register",
+        &json!({"op_id": op_id()?, "target": t1(), "process_token": token, "label": "agent",
+            "session": null}),
+    )?;
+    let wait = json!({"target": t1(), "states": ["working"], "turn_after": null, "exit": null,
+        "cursor": null, "timeout_ms": "10000"});
+    let waited = std::thread::scope(|scope| -> TestResult<Value> {
+        let waiting =
+            scope.spawn(|| call(&served, "events.wait", &wait).map_err(|e| e.to_string()));
+        report(&served, &token, ("working", "1"))?;
+        Ok(waiting.join().map_err(|_| "the wait panicked")??)
+    })?;
+    // Either the wait was armed first (matched) or the report applied first; both carry it.
+    let outcome = waited.get("outcome").and_then(Value::as_str);
+    assert!(
+        matches!(outcome, Some("matched" | "already_satisfied")),
+        "{waited}"
+    );
+    assert_ne!(waited.get("seq"), Some(&json!("0")), "{waited}");
+    served.stop()?;
+    Ok(())
+}

@@ -50,11 +50,17 @@ impl Served {
             }
             "events.wait" => {
                 let params: EventsWaitParams = decode(&call)?;
-                let (armed, seq) = self
+                let again = params.clone();
+                let (armed, _) = self
                     .actor
                     .call(move |runtime| runtime.arm_state_wait(&params))
                     .await?;
                 let outcome = settled(armed).await?;
+                // Read after settling: a wait that matched later reports the status it matched.
+                let seq = self
+                    .actor
+                    .call(move |runtime| runtime.status_seq(&again))
+                    .await?;
                 let seq = seq.map_or_else(|| "0".to_owned(), |seq| seq.get().to_string());
                 checked::<EventsWaitResult>(
                     json!({"outcome": state_outcome(&outcome)?, "seq": seq}),

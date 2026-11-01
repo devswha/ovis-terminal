@@ -177,6 +177,14 @@ impl Runtime {
         ))
     }
 
+    /// The sequence of the last declared status applied to the wait's terminal.
+    pub(super) fn status_seq(
+        &mut self,
+        params: &EventsWaitParams,
+    ) -> Result<Option<EventSeq>, BoundaryError> {
+        Ok(live_terminal((&self.directory, &mut self.live), &params.target)?.last_status)
+    }
+
     /// Arms stop observation, then writes the interrupt key through the input path.
     pub(super) fn arm_interrupt(
         &mut self,

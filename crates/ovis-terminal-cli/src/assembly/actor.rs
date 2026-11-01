@@ -168,18 +168,19 @@ fn run(mut runtime: Runtime, jobs: &mpsc::Receiver<Job>) -> Result<(), AssemblyE
     loop {
         loop {
             match jobs.try_recv() {
-                Ok(job) => job(&mut runtime),
+                Ok(job) => applied(&mut runtime, job),
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => return runtime.close(),
             }
         }
+        // Events delivered while no job arrives still settle the waits they satisfy.
         runtime.drain_status();
         if linked {
             match runtime.receive() {
                 Link::Linked => {}
                 // Waiting happens here, on the job queue, with the control released.
                 Link::Idle | Link::Restarting => match jobs.recv_timeout(runtime.poll) {
-                    Ok(job) => job(&mut runtime),
+                    Ok(job) => applied(&mut runtime, job),
                     Err(RecvTimeoutError::Timeout) => {}
                     Err(RecvTimeoutError::Disconnected) => return runtime.close(),
                 },
@@ -188,7 +189,7 @@ fn run(mut runtime: Runtime, jobs: &mpsc::Receiver<Job>) -> Result<(), AssemblyE
             runtime.publish_census();
         } else {
             match jobs.recv() {
-                Ok(job) => job(&mut runtime),
+                Ok(job) => applied(&mut runtime, job),
                 Err(_) => return runtime.close(),
             }
         }
@@ -261,4 +262,11 @@ impl ActorThread {
             source: "the runtime thread panicked".into(),
         })?
     }
+}
+
+/// Runs `job` after applying every status event delivered so far, so a job queued behind a
+/// `status.report` observes it whatever batch the two jobs land in.
+fn applied(runtime: &mut Runtime, job: Job) {
+    runtime.drain_status();
+    job(runtime);
 }
