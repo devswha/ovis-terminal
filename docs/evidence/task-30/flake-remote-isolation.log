@@ -965,3 +965,14 @@ Standalone re-runs of remote/isolation happy on the same tree: exit 0, 0, 0 (3/3
   "summary": "After the parent with a child on bravo exits and bravo's line is cut, the plan's injected $/orphanedAck {notification_id: unknown, parent_incarnation: reused-old} is not_found; the real notice id under a reused-old or later parent incarnation is stale_target and a numeric incarnation invalid_params. The notice stays in the outbox, bravo never applied it, a call to bravo is machine_unreachable with no local fallback, and machine.list keeps bravo listed as unreachable."
  }
 ]
+
+## CI occurrence: PR #78 head cec6151, workflow ci run 41349272942, job 124976014124 (scripts/check.sh, ubuntu)
+
+https://github.com/devswha/ovis-terminal/actions/runs/41349272942/job/124976014124 - suite::every_scenario_file_is_executed_or_a_listed_declaration failed on remote/isolation happy step 8 (reply[child-on-bravo]/error did not hold), the same signature as the local attempt above. Matching job log lines:
+
+2026-11-01T21:03:15.6466190Z     [0m[31;1mthread 'suite::every_scenario_file_is_executed_or_a_listed_declaration' (21769) panicked at conformance/src/runner_tests/suite.rs:80:5:[0m
+2026-11-01T21:03:15.6468625Z     [31;1massertion `left == right` failed: {"case":"all","error":null,"evidence":"/tmp/ovc-test-21768-all-all-all-01a198ea-4146-77cb-b546-6a82cd50df5c/all.json","evidence_error":null,"evidence_written":true,"result":"failed","scenario":"all/all","totals":{"assertions":"5435","cases":"83","declared_only":"33","failed":"1","passed":"82","skipped":"0"}}[0m
+2026-11-01T21:03:15.6471042Z     "remote/isolation" "happy": {"detail":"expectation reply[child-on-bravo]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"8"}
+2026-11-01T21:03:15.6472737Z       {"actual":{"code":-32603,"data":{"hint":"inspect the fixture's stderr","kind":"internal","retryable":false},"message":"operation failed"},"check":"reply[child-on-bravo]/error","expected":{"$present":false},"passed":false}
+2026-11-01T21:03:15.6474256Z       {"actual":null,"check":"reply[child-on-bravo]/result/linked","expected":true,"passed":false}
+
