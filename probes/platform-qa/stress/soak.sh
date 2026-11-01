@@ -9,6 +9,16 @@ set -euo pipefail
 
 cargo build --locked --release -p ovis-terminal-cli --bin ovis-terminal
 cargo build --locked --release --manifest-path bench/Cargo.toml --bin soak
+run_soak() {
+  local report="$1"
+  shift
+  set +e
+  target/release/soak "$@" --evidence "$report" > /dev/null
+  local code=$?
+  set -e
+  python3 -c "$summary" "$report"
+  test "$code" = 0
+}
 summary='import json,sys; r=json.load(open(sys.argv[1])); print(json.dumps({k: r.get(k) for k in ("label", "host", "measured", "probe", "fixture", "error", "verdict")}))'
 {
   uname -a
@@ -17,16 +27,13 @@ summary='import json,sys; r=json.load(open(sys.argv[1])); print(json.dumps({k: r
   git rev-parse HEAD
   cargo nextest run --locked -p ovis-terminal-bench --no-tests=fail -E 'test(soak::)'
   printf '\nITERATION self-test\n'
-  target/release/soak --binary target/release/ovis-terminal --isolated --self-test --evidence self-test.json > /dev/null
-  python3 -c "$summary" self-test.json
+  run_soak self-test.json --binary target/release/ovis-terminal --isolated --self-test
   printf 'PASS self-test\n'
   printf '\nITERATION fixture\n'
-  target/release/soak --binary target/release/ovis-terminal --isolated --inject '{"fixture":"holder-tail-gap-and-lost-receipt"}' --evidence fixture.json > /dev/null
-  python3 -c "$summary" fixture.json
+  run_soak fixture.json --binary target/release/ovis-terminal --isolated --inject '{"fixture":"holder-tail-gap-and-lost-receipt"}'
   printf 'PASS fixture\n'
   printf '\nITERATION continuous-600s\n'
-  target/release/soak --binary target/release/ovis-terminal --isolated --terminals 50 --duration-seconds 600 --core-crashes 1 --remote-interruptions 1 --warmup-seconds 60 --window-seconds 60 --evidence continuous.json > /dev/null
-  python3 -c "$summary" continuous.json
+  run_soak continuous.json --binary target/release/ovis-terminal --isolated --terminals 50 --duration-seconds 600 --core-crashes 1 --remote-interruptions 1 --warmup-seconds 60 --window-seconds 60
   printf 'PASS continuous-600s\n'
   printf 'RESULT 3/3\n'
 } 2>&1 | tee soak-stress-macos.log

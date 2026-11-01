@@ -96,7 +96,10 @@ const fn usage(reason: &'static str) -> SoakError {
 
 /// A private root that did not exist before this run.
 fn private_root() -> PathBuf {
-    let base = std::env::var_os("OVIS_FIXTURE_ROOT").map_or_else(std::env::temp_dir, PathBuf::from);
+    // Holder sockets live below this root and must fit the Unix socket path limit; the
+    // macOS temporary directory alone is about half of it, so the default is `/tmp`.
+    let base =
+        std::env::var_os("OVIS_FIXTURE_ROOT").map_or_else(|| PathBuf::from("/tmp"), PathBuf::from);
     let micros = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |since| since.as_micros())
