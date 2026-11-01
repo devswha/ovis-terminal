@@ -41,7 +41,14 @@ const EXECUTABLE: &[&str] = &[
 ];
 
 /// Executable scenarios whose server is the assembled binary itself (plan todo 31).
-const ASSEMBLED: [&str; 2] = ["part-a/task-31.json", "recovery/restart.json"];
+const ASSEMBLED: [&str; 6] = [
+    "part-a/task-22.json",
+    "part-a/task-26.json",
+    "part-a/task-27.json",
+    "part-a/task-31.json",
+    "recovery/restart.json",
+    "services/worktrees.json",
+];
 
 /// Every executable scenario file, sorted as the inventory reports them.
 fn executable() -> Vec<String> {

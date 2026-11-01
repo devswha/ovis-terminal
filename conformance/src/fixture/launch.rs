@@ -54,8 +54,9 @@ fn search_path(root: &Path) -> String {
     format!("{}:/usr/bin:/bin", root.join("bin").display())
 }
 
-/// Starts `program <args>` (the runner's fixture mode or the binary's `serve`) below
-/// `root` and waits, bounded, for its ready line.
+/// Starts `program <args>` (the runner's fixture mode or the binary's `serve`) in `root`,
+/// so a program it launches without a working directory stays inside the isolated root,
+/// and waits, bounded, for its ready line.
 pub(crate) async fn start(
     program: &Path,
     args: &[std::ffi::OsString],
@@ -66,6 +67,7 @@ pub(crate) async fn start(
         .args(args)
         .env_clear()
         .env("PATH", search_path(root))
+        .current_dir(root)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
