@@ -1,0 +1,22 @@
+mutant ideal-bounds-any-shape: bench/terminal50/cli.rs
+- if matches!(profile, Profile::Ideal { .. }) && shape != IDEAL_SHAPE {
++ if matches!(profile, Profile::Ideal { .. }) && shape != IDEAL_SHAPE && shape.terminals == 0 {
+$ cargo nextest run --locked -p ovis-terminal-bench --no-tests=fail --no-fail-fast
+
+        PASS [   0.007s] ( 1/13) ovis-terminal-bench terminal50::tests::ps_cpu_clocks_parse_with_hours_minutes_and_fractions
+        PASS [   0.008s] ( 2/13) ovis-terminal-bench terminal50::tests::the_ideal_profile_judges_warmup_samples_too
+        PASS [   0.009s] ( 3/13) ovis-terminal-bench harness::histogram::tests::percentiles_follow_nearest_rank_and_max_stays_exact
+        PASS [   0.009s] ( 4/13) ovis-terminal-bench terminal50::tests::nearest_rank_summary_counts_every_sample_and_keeps_the_slowest
+        PASS [   0.009s] ( 5/13) ovis-terminal-bench terminal50::tests::one_slow_sample_fails_the_ideal_profile_but_not_the_capacity_p99
+        PASS [   0.010s] ( 6/13) ovis-terminal-bench terminal50::tests::missing_events_short_runs_and_footprints_fail_both_profiles
+        FAIL [   0.010s] ( 7/13) ovis-terminal-bench terminal50::tests::the_max_bounds_judge_only_the_exact_ideal_shape
+        PASS [   0.011s] ( 8/13) ovis-terminal-bench terminal50::tests::proc_stat_cpu_sums_user_and_system_ticks_after_the_command_name
+        PASS [   0.011s] ( 9/13) ovis-terminal-bench terminal50::tests::a_p99_over_budget_fails_the_capacity_profile
+        PASS [   0.012s] (10/13) ovis-terminal-bench terminal50::tests::mixed_budgets_a_shared_root_and_unknown_fixtures_are_refused
+        PASS [   0.012s] (11/13) ovis-terminal-bench harness::histogram::tests::merging_equals_recording_into_one
+        PASS [   0.226s] (12/13) ovis-terminal-bench terminal50::tests::every_committed_event_is_delivered_lost_or_undelivered_for_each_client
+        PASS [   2.293s] (13/13) ovis-terminal-bench terminal50::tests::a_delayed_control_writer_breaks_the_event_budget_with_every_sample_kept
+     Summary [   2.293s] 13 tests run: 12 passed, 1 failed, 0 skipped
+        FAIL [   0.010s] ( 7/13) ovis-terminal-bench terminal50::tests::the_max_bounds_judge_only_the_exact_ideal_shape
+error: test run failed
+NEXTEST_EXIT=100

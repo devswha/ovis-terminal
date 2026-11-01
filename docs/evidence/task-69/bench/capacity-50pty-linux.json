@@ -1,0 +1,3539 @@
+{
+  "format": "ovis-terminal50/1",
+  "label": "capacity-release-target",
+  "judged_on": "p99 of the measured samples",
+  "surface": "ovis-terminal-server scheduler actors (one per terminal, shared session budgets, disk history) fed by real PTY programs; admission times reserve+admit to receipt, events time actor commit to the line accepted by each client's Unix socket. The binary under test is hashed and versioned; it routes no input.* or events.* call to these actors before todo 31 assembles it.",
+  "budget": {
+    "profile": "capacity",
+    "admission_p99_ms": 100,
+    "event_p99_ms": 100
+  },
+  "shape": {
+    "terminals": 50,
+    "clients": 8,
+    "inflight": 16,
+    "bytes_per_second": 1048576
+  },
+  "viewers_per_terminal": 8,
+  "warmup_samples": 1000,
+  "samples_wanted": 10000,
+  "fixture": null,
+  "host": {
+    "os": "linux",
+    "arch": "x86_64",
+    "kernel": "Linux 7.0.0-38-generic x86_64",
+    "cpu_model": "AMD Ryzen Threadripper PRO 3995WX 64-Cores",
+    "available_parallelism": 122,
+    "runtime_workers": 8
+  },
+  "build": {
+    "bench_version": "0.1.0",
+    "profile": "release",
+    "debug_assertions": false
+  },
+  "binary": {
+    "path": "target/release/ovis-terminal",
+    "sha256": "756b2d6a9eeebcb759fae2690ccb14e70afb66495703f13df013f0acaf862bf3",
+    "bytes": 3284896,
+    "version": "ovis-terminal 0.1.0"
+  },
+  "admission": {
+    "warmup": {
+      "count": 1000,
+      "p50_ms": 0.003928,
+      "p95_ms": 0.006202,
+      "p99_ms": 0.008766999999999999,
+      "max_ms": 7.619339
+    },
+    "measured": {
+      "count": 10015,
+      "p50_ms": 0.003867,
+      "p95_ms": 0.006352,
+      "p99_ms": 0.009718000000000001,
+      "max_ms": 0.065964
+    }
+  },
+  "admitted": 11015,
+  "rejected": {},
+  "control": {
+    "count": 11008,
+    "p50_ms": 0.002315,
+    "p95_ms": 0.937917,
+    "p99_ms": 1.692938,
+    "max_ms": 4.10426
+  },
+  "event": {
+    "warmup": {
+      "count": 11960,
+      "p50_ms": 0.048471,
+      "p95_ms": 0.11976600000000001,
+      "p99_ms": 0.26026,
+      "max_ms": 1.857839
+    },
+    "measured": {
+      "count": 120192,
+      "p50_ms": 0.043642,
+      "p95_ms": 0.10599,
+      "p99_ms": 0.161123,
+      "max_ms": 1.002007
+    }
+  },
+  "events_committed": 16519,
+  "clients": [
+    {
+      "client": 0,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 11,
+      "write_failed": false,
+      "bytes_read": 602392,
+      "latency": {
+        "warmup": {
+          "count": 1495,
+          "p50_ms": 0.048221,
+          "p95_ms": 0.118433,
+          "p99_ms": 0.257295,
+          "max_ms": 1.849484
+        },
+        "measured": {
+          "count": 15024,
+          "p50_ms": 0.043942,
+          "p95_ms": 0.10687200000000001,
+          "p99_ms": 0.165441,
+          "max_ms": 0.912258
+        }
+      }
+    },
+    {
+      "client": 1,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 9,
+      "write_failed": false,
+      "bytes_read": 602392,
+      "latency": {
+        "warmup": {
+          "count": 1495,
+          "p50_ms": 0.049203000000000004,
+          "p95_ms": 0.118994,
+          "p99_ms": 0.26730299999999996,
+          "max_ms": 1.853992
+        },
+        "measured": {
+          "count": 15024,
+          "p50_ms": 0.043532,
+          "p95_ms": 0.10594,
+          "p99_ms": 0.16206500000000001,
+          "max_ms": 1.002007
+        }
+      }
+    },
+    {
+      "client": 2,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 12,
+      "write_failed": false,
+      "bytes_read": 602392,
+      "latency": {
+        "warmup": {
+          "count": 1495,
+          "p50_ms": 0.048512,
+          "p95_ms": 0.118132,
+          "p99_ms": 0.25537,
+          "max_ms": 1.857839
+        },
+        "measured": {
+          "count": 15024,
+          "p50_ms": 0.043502,
+          "p95_ms": 0.106461,
+          "p99_ms": 0.158739,
+          "max_ms": 0.982861
+        }
+      }
+    },
+    {
+      "client": 3,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 9,
+      "write_failed": false,
+      "bytes_read": 602392,
+      "latency": {
+        "warmup": {
+          "count": 1495,
+          "p50_ms": 0.047659,
+          "p95_ms": 0.120186,
+          "p99_ms": 0.24455100000000002,
+          "max_ms": 1.128986
+        },
+        "measured": {
+          "count": 15024,
+          "p50_ms": 0.043432,
+          "p95_ms": 0.105629,
+          "p99_ms": 0.160983,
+          "max_ms": 0.9984
+        }
+      }
+    },
+    {
+      "client": 4,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 11,
+      "write_failed": false,
+      "bytes_read": 602392,
+      "latency": {
+        "warmup": {
+          "count": 1495,
+          "p50_ms": 0.048572000000000004,
+          "p95_ms": 0.120537,
+          "p99_ms": 0.264498,
+          "max_ms": 1.581288
+        },
+        "measured": {
+          "count": 15024,
+          "p50_ms": 0.043682,
+          "p95_ms": 0.10647000000000001,
+          "p99_ms": 0.160492,
+          "max_ms": 0.900285
+        }
+      }
+    },
+    {
+      "client": 5,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 10,
+      "write_failed": false,
+      "bytes_read": 602392,
+      "latency": {
+        "warmup": {
+          "count": 1495,
+          "p50_ms": 0.048611,
+          "p95_ms": 0.121218,
+          "p99_ms": 0.266401,
+          "max_ms": 1.578743
+        },
+        "measured": {
+          "count": 15024,
+          "p50_ms": 0.043642,
+          "p95_ms": 0.104847,
+          "p99_ms": 0.162547,
+          "max_ms": 0.905986
+        }
+      }
+    },
+    {
+      "client": 6,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 10,
+      "write_failed": false,
+      "bytes_read": 602392,
+      "latency": {
+        "warmup": {
+          "count": 1495,
+          "p50_ms": 0.048732,
+          "p95_ms": 0.122581,
+          "p99_ms": 0.269848,
+          "max_ms": 1.583983
+        },
+        "measured": {
+          "count": 15024,
+          "p50_ms": 0.043572,
+          "p95_ms": 0.105489,
+          "p99_ms": 0.158168,
+          "max_ms": 0.984293
+        }
+      }
+    },
+    {
+      "client": 7,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 10,
+      "write_failed": false,
+      "bytes_read": 602392,
+      "latency": {
+        "warmup": {
+          "count": 1495,
+          "p50_ms": 0.048161,
+          "p95_ms": 0.117311,
+          "p99_ms": 0.267795,
+          "max_ms": 1.473184
+        },
+        "measured": {
+          "count": 15024,
+          "p50_ms": 0.043933,
+          "p95_ms": 0.10634,
+          "p99_ms": 0.160212,
+          "max_ms": 0.9808370000000001
+        }
+      }
+    },
+    {
+      "client": 8,
+      "reads": false,
+      "delivered": 278,
+      "lost": 12144,
+      "undelivered": 4097,
+      "deepest_queue": 4096,
+      "write_failed": true,
+      "bytes_read": 0,
+      "latency": {
+        "warmup": {
+          "count": 278,
+          "p50_ms": 0.056787,
+          "p95_ms": 0.303701,
+          "p99_ms": 1.235237,
+          "max_ms": 1.6006939999999998
+        },
+        "measured": {
+          "count": 0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0,
+          "max_ms": 0.0
+        }
+      }
+    }
+  ],
+  "viewers": [
+    {
+      "terminal": 0,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6844,
+      "events_lost": 2745,
+      "events_held": 64
+    },
+    {
+      "terminal": 0,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 0,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 0,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 0,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 0,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 0,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 0,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6844,
+      "events_lost": 2746,
+      "events_held": 64
+    },
+    {
+      "terminal": 1,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 2,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6844,
+      "events_lost": 2746,
+      "events_held": 64
+    },
+    {
+      "terminal": 2,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 2,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 2,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 2,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 2,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 2,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 2,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 3,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6844,
+      "events_lost": 2748,
+      "events_held": 64
+    },
+    {
+      "terminal": 3,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 3,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 3,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 3,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 3,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 3,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 3,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 4,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6844,
+      "events_lost": 2746,
+      "events_held": 64
+    },
+    {
+      "terminal": 4,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 4,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 4,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 4,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 4,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 4,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 4,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 5,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6844,
+      "events_lost": 2744,
+      "events_held": 64
+    },
+    {
+      "terminal": 5,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 5,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 5,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 5,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 5,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 5,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 5,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300927,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 6,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6845,
+      "events_lost": 2744,
+      "events_held": 64
+    },
+    {
+      "terminal": 6,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 6,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 6,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 6,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 6,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 6,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 6,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 7,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6845,
+      "events_lost": 2746,
+      "events_held": 64
+    },
+    {
+      "terminal": 7,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 7,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 7,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 7,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 7,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 7,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 7,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 8,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6845,
+      "events_lost": 2744,
+      "events_held": 64
+    },
+    {
+      "terminal": 8,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 8,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 8,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 8,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 8,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 8,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 8,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 9,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6845,
+      "events_lost": 2744,
+      "events_held": 64
+    },
+    {
+      "terminal": 9,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 9,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 9,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 9,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 9,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 9,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 9,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300714,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 10,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6846,
+      "events_lost": 2742,
+      "events_held": 64
+    },
+    {
+      "terminal": 10,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 10,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 10,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 10,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 10,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 10,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 10,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 11,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6846,
+      "events_lost": 2741,
+      "events_held": 64
+    },
+    {
+      "terminal": 11,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 11,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 11,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 11,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 11,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 11,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 11,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 12,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6846,
+      "events_lost": 2743,
+      "events_held": 64
+    },
+    {
+      "terminal": 12,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 12,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 12,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 12,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 12,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 12,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 12,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 13,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6846,
+      "events_lost": 2742,
+      "events_held": 64
+    },
+    {
+      "terminal": 13,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 13,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 13,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 13,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 13,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 13,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 13,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300501,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 14,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6847,
+      "events_lost": 2740,
+      "events_held": 64
+    },
+    {
+      "terminal": 14,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 14,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 14,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 14,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 14,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 14,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 14,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 15,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6633,
+      "events_lost": 2740,
+      "events_held": 64
+    },
+    {
+      "terminal": 15,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 15,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 15,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 15,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 15,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 15,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 15,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 16,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6847,
+      "events_lost": 2740,
+      "events_held": 64
+    },
+    {
+      "terminal": 16,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 16,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 16,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 16,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 16,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 16,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 16,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300288,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 17,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2735,
+      "events_held": 64
+    },
+    {
+      "terminal": 17,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 17,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 17,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 17,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 17,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 17,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 17,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 18,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2739,
+      "events_held": 64
+    },
+    {
+      "terminal": 18,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 18,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 18,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 18,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 18,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 18,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 18,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 19,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2739,
+      "events_held": 64
+    },
+    {
+      "terminal": 19,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 19,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 19,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 19,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 19,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 19,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 19,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 300075,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 20,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2733,
+      "events_held": 64
+    },
+    {
+      "terminal": 20,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 20,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 20,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 20,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 20,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 20,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 20,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 21,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2736,
+      "events_held": 64
+    },
+    {
+      "terminal": 21,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 21,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 21,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 21,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 21,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 21,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 21,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 22,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6420,
+      "events_lost": 2950,
+      "events_held": 64
+    },
+    {
+      "terminal": 22,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 22,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 22,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 22,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 22,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 22,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 22,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 299861,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 23,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2733,
+      "events_held": 64
+    },
+    {
+      "terminal": 23,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 23,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 23,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 23,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 23,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 23,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 23,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 24,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2733,
+      "events_held": 64
+    },
+    {
+      "terminal": 24,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 24,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 24,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 24,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 24,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 24,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 24,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 299647,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 25,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6634,
+      "events_lost": 2975,
+      "events_held": 64
+    },
+    {
+      "terminal": 25,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 25,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 25,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 25,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 25,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 25,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 25,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 26,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2731,
+      "events_held": 64
+    },
+    {
+      "terminal": 26,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 26,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 26,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 26,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 26,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 26,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 26,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 27,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2734,
+      "events_held": 64
+    },
+    {
+      "terminal": 27,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 27,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 27,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 27,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 27,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 27,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 27,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 299433,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 28,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2731,
+      "events_held": 64
+    },
+    {
+      "terminal": 28,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 28,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 28,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 28,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 28,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 28,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 28,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 29,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2734,
+      "events_held": 64
+    },
+    {
+      "terminal": 29,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 29,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 29,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 29,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 29,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 29,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 29,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 299219,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 30,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2727,
+      "events_held": 64
+    },
+    {
+      "terminal": 30,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 30,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 30,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 30,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 30,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 30,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 30,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 31,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2727,
+      "events_held": 64
+    },
+    {
+      "terminal": 31,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 31,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 31,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 31,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 31,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 31,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 31,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 299005,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 32,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2726,
+      "events_held": 64
+    },
+    {
+      "terminal": 32,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 32,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 32,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 32,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 32,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 32,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 32,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 33,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2724,
+      "events_held": 64
+    },
+    {
+      "terminal": 33,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 33,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 33,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 33,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 33,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 33,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 33,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 298791,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 34,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2721,
+      "events_held": 64
+    },
+    {
+      "terminal": 34,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 34,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 34,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 34,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 34,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 34,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 34,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 35,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6848,
+      "events_lost": 2724,
+      "events_held": 64
+    },
+    {
+      "terminal": 35,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 35,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 35,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 35,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 35,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 35,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 35,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 298577,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 36,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6847,
+      "events_lost": 2719,
+      "events_held": 64
+    },
+    {
+      "terminal": 36,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 36,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 36,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 36,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 36,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 36,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 36,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 37,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6847,
+      "events_lost": 2723,
+      "events_held": 64
+    },
+    {
+      "terminal": 37,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 37,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 37,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 37,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 37,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 37,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 37,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 298363,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 38,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6846,
+      "events_lost": 2722,
+      "events_held": 64
+    },
+    {
+      "terminal": 38,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 38,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 38,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 38,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 38,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 38,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 38,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 39,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6846,
+      "events_lost": 2722,
+      "events_held": 64
+    },
+    {
+      "terminal": 39,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 39,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 39,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 39,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 39,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 39,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 39,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 298149,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 40,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6845,
+      "events_lost": 2722,
+      "events_held": 64
+    },
+    {
+      "terminal": 40,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 297935,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 40,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 297935,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 40,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 297935,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 40,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 297935,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 40,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 297935,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 40,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 297935,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 40,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 297935,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 41,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6843,
+      "events_lost": 2712,
+      "events_held": 64
+    },
+    {
+      "terminal": 41,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 297507,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 41,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 297507,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 41,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 297507,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 41,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 297507,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 41,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 297507,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 41,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 297507,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 41,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 297507,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 42,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6842,
+      "events_lost": 2714,
+      "events_held": 64
+    },
+    {
+      "terminal": 42,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 297293,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 42,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 297293,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 42,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 297293,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 42,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 297293,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 42,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 297293,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 42,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 297293,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 42,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 297293,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 43,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6841,
+      "events_lost": 2728,
+      "events_held": 64
+    },
+    {
+      "terminal": 43,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 297079,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 43,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 297079,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 43,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 297079,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 43,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 297079,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 43,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 297079,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 43,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 297079,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 43,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 297079,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 44,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6840,
+      "events_lost": 2711,
+      "events_held": 64
+    },
+    {
+      "terminal": 44,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 296865,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 44,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 296865,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 44,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 296865,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 44,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 296865,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 44,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 296865,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 44,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 296865,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 44,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 296865,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 45,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6838,
+      "events_lost": 2708,
+      "events_held": 64
+    },
+    {
+      "terminal": 45,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 296437,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 45,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 296437,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 45,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 296437,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 45,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 296437,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 45,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 296437,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 45,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 296437,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 45,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 296437,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 46,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6837,
+      "events_lost": 2725,
+      "events_held": 64
+    },
+    {
+      "terminal": 46,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 296223,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 46,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 296223,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 46,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 296223,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 46,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 296223,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 46,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 296223,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 46,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 296223,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 46,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 296223,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 47,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6836,
+      "events_lost": 2705,
+      "events_held": 64
+    },
+    {
+      "terminal": 47,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 296009,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 47,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 296009,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 47,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 296009,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 47,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 296009,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 47,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 296009,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 47,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 296009,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 47,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 296009,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 48,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6834,
+      "events_lost": 2702,
+      "events_held": 64
+    },
+    {
+      "terminal": 48,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 295581,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 48,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 295581,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 48,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 295581,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 48,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 295581,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 48,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 295581,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 48,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 295581,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 48,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 295581,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 49,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6833,
+      "events_lost": 2700,
+      "events_held": 64
+    },
+    {
+      "terminal": 49,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 295367,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 49,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 295367,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 49,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 295367,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 49,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 295367,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 49,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 295367,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 49,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 295367,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 49,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 295367,
+      "events_lost": 0,
+      "events_held": 0
+    }
+  ],
+  "footprint": {
+    "rss_before_bytes": 3940352,
+    "rss_peak_bytes": 776368128,
+    "disk_bytes": 14959191,
+    "runtime_cpu_ms": 10740.0,
+    "programs_cpu_ms": 1750.0,
+    "wall_ms": 13760.530727000001,
+    "pumped_bytes": 14971368,
+    "parsed_bytes": 14959191,
+    "max_parse_turn_ms": 59.083023
+  },
+  "budgets": {
+    "rss_limit_bytes": 1073741824,
+    "disk_limit_bytes": 4294967296
+  },
+  "verdict": {
+    "passed": true,
+    "violations": []
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "scenario": "performance/terminal50",
+  "todo": 69,
+  "title": "Fifty terminals benchmarked against the published latency budgets",
+  "closes": [
+    "GAP-035",
+    "GAP-061",
+    "GAP-074",
+    "GAP-143"
+  ],
+  "delivers": [
+    "IDEAL-027",
+    "IDEAL-041",
+    "IDEAL-051",
+    "IDEAL-116"
+  ],
+  "excludes": [
+    "EXCL-019",
+    "EXCL-024",
+    "EXCL-025"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "IDEAL profile (16 PTYs, 8 writable control-event clients plus one non-reader, 16 requests in flight, 1 MiB/s aggregate output, 10000 measured samples after 1000 explicit warmup samples): every admission sample and every commit-to-written event sample, warmup included, is <= 100 ms, no event to a writable client is lost or unwritten, peak RSS <= 1 GiB and history disk <= 4 GiB. Capacity profile (50 PTYs, 400 output viewers): admission and event p99 <= 100 ms, reported separately and labelled capacity-release-target, never as the IDEAL assumption. Both report p50/p95/p99/max, counts, rejected work, CPU, RSS, disk, per-client and per-viewer lag, host and build facts and the binary hash; raw samples are kept beside the evidence.",
+      "commands": [
+        "target/release/terminal50 --binary target/release/ovis-terminal --isolated --terminals 16 --clients 8 --inflight 16 --output-bytes-per-second 1048576 --samples 10000 --admission-max-ms 100 --event-max-ms 100 --evidence <attempt>/task-69-ideal-profile.json",
+        "target/release/terminal50 --binary target/release/ovis-terminal --isolated --terminals 50 --clients 8 --inflight 16 --output-bytes-per-second 1048576 --samples 10000 --admission-p99-ms 100 --event-p99-ms 100 --evidence <attempt>/task-69-ovis-terminal-v1.json"
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "With every control-event writer delayed 150 ms the IDEAL run exits 1 with budget_exceeded: event_max_ms reports the slow samples (all >= 150 ms) against the unchanged 100 ms budget; no sample is filtered and the budget is not widened.",
+      "inject": {
+        "fixture": "control-writer-delay",
+        "delay_ms": 150
+      },
+      "commands": [
+        "target/release/terminal50 --binary target/release/ovis-terminal --isolated --terminals 16 --clients 8 --inflight 16 --output-bytes-per-second 1048576 --samples 10000 --admission-max-ms 100 --event-max-ms 100 --inject '{\"fixture\":\"control-writer-delay\",\"delay_ms\":150}' --evidence <attempt>/task-69-failure.json"
+      ]
+    }
+  ],
+  "verified_in_crate": [
+    "cargo nextest run -p ovis-terminal-bench terminal50::tests",
+    "cargo run --locked --release --manifest-path bench/Cargo.toml --bin terminal50 -- (the commands above)"
+  ]
+}

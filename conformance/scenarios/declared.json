@@ -147,6 +147,11 @@
       "reason": "The scheduler (crates/ovis-terminal-server/src/streams/scheduler/) and VT shard (crates/ovis-terminal-vt/src/shard/) are proven in-crate by scheduler::qa::{profile,failure,fanout,threads} and by bench/tuning on real PTYs; no served route feeds input.send/input.raw admission or attach output through terminal actors yet. It becomes executable when todo 31 assembles the binary over the input.* routes of todos 28-31 and the attach routes of todo 23 behind these actors."
     },
     {
+      "file": "performance/terminal50.json",
+      "owner_todo": "69",
+      "reason": "The terminal50 benchmark (bench/terminal50/, binary terminal50) measures ovis-terminal-server scheduler actors on real PTYs with real per-client Unix sockets and is verified by terminal50::tests plus the two native profile runs; no served route of the binary under test feeds input.send admission or events.subscribe delivery through those actors yet. It becomes executable when todo 31 assembles the binary over the input.* and events.* routes, at which point the runner can drive the same profiles over the real endpoint."
+    },
+    {
       "file": "platform/conpty.json",
       "owner_todo": "53",
       "reason": "The ConPTY terminal (ovis-terminal-holder windows::ConptyTerminal) and terminal.run admission (lanes::conpty::admit/spawn) exist, but no served binary routes terminal.run to them: todo 54 serves named pipes and the Windows service host that owns ConPTY holders, todo 31 assembles the served terminal.run, and the todo-21 runner's fixture serves only a Unix socket, so a windows-only case would be skipped on every runner it has. Covered meanwhile by the native Windows tests listed in the descriptor, run by ci.yml on windows-2025; todo 60 runs this scenario in Windows smoke CI."

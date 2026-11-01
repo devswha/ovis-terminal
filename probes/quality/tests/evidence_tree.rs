@@ -45,7 +45,7 @@ fn the_committed_evidence_passes_with_its_listed_exemptions() {
     assert_eq!(ran.exit, 0, "{}", ran.report);
     assert_eq!(
         field(&ran.report, "/exempted").as_array().map(Vec::len),
-        Some(22)
+        Some(28)
     );
 }
 
