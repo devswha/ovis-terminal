@@ -94,4 +94,5 @@ Holder wire generation stays 2; the checklist items are unchanged.
 - In-memory dedupe windows: `Inbox` remembers 4096 applied ids and `Acknowledgements` 1024 settled ids. Older replays fall back to todo 41's durable idempotency (`TreeService::orphaned` returns `replayed`); an ack older than the window answers `not_found`, which is typed and changes nothing.
 - A caller that leaves is detected at the actor's next activity or at its deadline (bounded by the deadline), not instantly.
 - Remote notifications the local consumer has no room for are counted in `MachineHealth.inbound_dropped`; the mirror reports the skipped seqs as a gap.
-- macOS stress: STRESS_RUN
+- macOS stress: `gh workflow run probe-stress-macos.yml --ref lane/t44-isolate-remote-actors-and-re -f probe=machine-actor` -> https://github.com/devswha/ovis-terminal/actions/runs/41256769132 conclusion `success`, `RESULT 25/25` (remote actors/mirror/orphans, protocol machine_actor, server lane machine_actor, and `remote/isolation --case all` at 111 assertions each iteration).
+- PR CI: this PR is `CONFLICTING` against `origin/integration` 8a436e1, so GitHub created no `ci` run. The local `check.sh`, the Windows pre-check and the macOS stress run above are the executed gates.
