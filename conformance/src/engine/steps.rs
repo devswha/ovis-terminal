@@ -12,13 +12,13 @@ use super::session::Session;
 use super::transport;
 use crate::error::RunnerError;
 use crate::evidence::{ConnectionReport, DescriptorRecord};
-use crate::fixture::launch;
 use crate::fixture::wire::decode;
 use crate::scenario::matcher::{Assertion, Subject};
 use crate::scenario::model::{
-    Connect, Effects, ExpectFailure, FixtureKind, Principal, Run, Send as SendStep, SendWire, Step,
-    Via,
+    Connect, Effects, ExpectFailure, Principal, Run, Send as SendStep, SendWire, Step, Via,
 };
+
+mod serve;
 
 type StepFuture<'s> = Pin<Box<dyn Future<Output = Result<(), RunnerError>> + Send + 's>>;
 
@@ -65,39 +65,6 @@ impl Session<'_> {
                 | Step::PtyExit(_) => self.pty(step).await,
             }
         })
-    }
-
-    async fn serve(&mut self, kind: FixtureKind) -> Result<(), RunnerError> {
-        if self.fixture.is_some() {
-            return Err(RunnerError::FixtureState);
-        }
-        if !cfg!(unix) {
-            return Err(RunnerError::UnsupportedPlatform);
-        }
-        let root = self.root.path();
-        let started = match kind {
-            FixtureKind::Protocol => {
-                let args = [
-                    "fixture".into(),
-                    "--root".into(),
-                    root.into(),
-                    "--binary".into(),
-                    self.ctx.binary.as_os_str().to_owned(),
-                ];
-                launch::start(&self.ctx.runner, &args, root).await?
-            }
-            FixtureKind::Assembled => {
-                let args = [
-                    "serve".into(),
-                    "--stdin-lifetime".into(),
-                    "--root".into(),
-                    root.join("srv").into(),
-                ];
-                launch::start(&self.ctx.binary, &args, root).await?
-            }
-        };
-        self.fixture = Some(started);
-        Ok(())
     }
 
     async fn connect(&mut self, connect: &Connect) -> Result<(), RunnerError> {

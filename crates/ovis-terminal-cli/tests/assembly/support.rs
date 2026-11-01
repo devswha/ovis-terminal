@@ -10,6 +10,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde_json::{Value, json};
 
+#[path = "support/rpc.rs"]
+mod rpc;
+pub use rpc::rpc;
+
 /// Result of a test step; any failure fails the test.
 pub type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
@@ -381,30 +385,5 @@ impl Served {
         let status = self.child.wait()?;
         assert_eq!(status.code(), Some(0), "serve exited {status:?}");
         Ok((serde_json::from_str(&line)?, self.root.clone()))
-    }
-}
-
-/// Sends one request on `connection` and returns its reply, skipping notifications.
-///
-/// # Errors
-///
-/// Fails when a socket step fails or the connection closes first.
-pub fn rpc(
-    connection: &mut BufReader<UnixStream>,
-    method: &str,
-    params: &Value,
-) -> TestResult<Value> {
-    let id = op_id()?;
-    let request = json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params});
-    writeln!(connection.get_mut(), "{request}")?;
-    loop {
-        let mut line = String::new();
-        if connection.read_line(&mut line)? == 0 {
-            return Err("the connection closed".into());
-        }
-        let record: Value = serde_json::from_str(&line)?;
-        if record.get("id") == Some(&json!(id)) {
-            return Ok(record);
-        }
     }
 }
