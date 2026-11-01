@@ -14,6 +14,11 @@ use rustix::termios::{self, Winsize};
 use serde_json::{Value, json};
 use support::{Drawn, Outer, Served, TestResult, WAIT};
 
+/// A foreground job that prints the terminal size once SIGWINCH reaches it, then exits;
+/// `wait` returns on the trapped signal and the sleeping child is ended with it.
+const WINCH_REPORTER: &[u8] =
+    b"sh -c 'sleep 600 & p=$!; trap \"stty size; kill $p; exit\" WINCH; echo armed-$((2+2)); wait'\r";
+
 #[test]
 fn typed_input_reaches_the_program_resize_follows_and_ctrl_backslash_restores_the_terminal()
 -> TestResult {
@@ -28,6 +33,13 @@ fn typed_input_reaches_the_program_resize_follows_and_ctrl_backslash_restores_th
         served.leases()?.pointer("/interact/holder"),
         Some(&json!("cli"))
     );
+    // The inner shell's foreground job prints the size when SIGWINCH reaches it, so the
+    // resize itself is the event awaited; nothing is typed again.
+    outer.type_bytes(WINCH_REPORTER)?;
+    assert!(
+        outer.shows("armed-4", Duration::from_secs(15)),
+        "the size reporter never armed"
+    );
     termios::tcsetwinsize(
         &outer.master,
         Winsize {
@@ -37,10 +49,10 @@ fn typed_input_reaches_the_program_resize_follows_and_ctrl_backslash_restores_th
             ws_ypixel: 0,
         },
     )?;
-    let resized = (0..20).any(|_| {
-        outer.type_bytes(b"stty size\r").is_ok() && outer.shows("40 120", Duration::from_secs(1))
-    });
-    assert!(resized, "the inner PTY never reported the new size");
+    assert!(
+        outer.shows("40 120", Duration::from_secs(15)),
+        "the inner PTY never reported the new size"
+    );
     outer.type_bytes(b"\x1c")?;
     let (code, record, restored) = outer.exited()?;
     assert_eq!(code, Some(0), "{record}");

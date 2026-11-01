@@ -204,6 +204,18 @@
           }
         },
         {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "sh -c 'sleep 600 & p=$!; trap \"stty size; kill $p; exit\" WINCH; echo armed-$((2+2)); wait'\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "armed-4"
+          }
+        },
+        {
           "pty_resize": {
             "pty": "outer",
             "cols": 120,
@@ -213,8 +225,7 @@
         {
           "pty_expect": {
             "pty": "outer",
-            "output": "40 120",
-            "retry_type": "stty size\r"
+            "output": "40 120"
           }
         },
         {

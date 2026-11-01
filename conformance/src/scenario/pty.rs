@@ -23,14 +23,12 @@ pub(crate) struct PtyType {
     pub(crate) bytes: String,
 }
 
-/// Require `output` on the outer terminal; with `retry_type`, type it again until it shows.
+/// Require `output` on the outer terminal within one bound.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct PtyExpect {
     pub(crate) pty: String,
     pub(crate) output: String,
-    #[serde(default)]
-    pub(crate) retry_type: Option<String>,
 }
 
 /// Require that `output` never appeared on the outer terminal in what it delivered so
@@ -92,17 +90,7 @@ impl PtyType {
 impl PtyExpect {
     /// What this step does, recorded in the evidence on every platform.
     pub(crate) fn planned(&self) -> Descriptors {
-        let retry = self
-            .retry_type
-            .as_deref()
-            .unwrap_or_default()
-            .escape_default()
-            .to_string();
-        planned([
-            ("pty", self.pty.clone()),
-            ("output", self.output.clone()),
-            ("retry_type", retry),
-        ])
+        planned([("pty", self.pty.clone()), ("output", self.output.clone())])
     }
 }
 

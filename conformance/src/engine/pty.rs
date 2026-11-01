@@ -59,10 +59,6 @@ mod steps {
 
     /// Bound on one expected output appearing.
     const SHOW_BOUND: Duration = Duration::from_secs(15);
-    /// Bound on one retried command's output appearing before it is typed again.
-    const RETRY_BOUND: Duration = Duration::from_secs(1);
-    /// Times a `retry_type` command is typed at most.
-    const RETRIES: usize = 20;
 
     impl Session<'_> {
         /// Records `step`'s plan, then runs it on its outer PTY.
@@ -108,20 +104,7 @@ mod steps {
 
         async fn pty_expect(&mut self, expect: &PtyExpect) -> Result<(), RunnerError> {
             let outer = self.outer(&expect.pty)?;
-            let shown = match &expect.retry_type {
-                None => outer.shows(&expect.output, SHOW_BOUND).await,
-                Some(command) => {
-                    let mut shown = false;
-                    for _ in 0..RETRIES {
-                        outer.type_bytes(command.as_bytes())?;
-                        if outer.shows(&expect.output, RETRY_BOUND).await {
-                            shown = true;
-                            break;
-                        }
-                    }
-                    shown
-                }
-            };
+            let shown = outer.shows(&expect.output, SHOW_BOUND).await;
             let check = format!("pty[{}]/shows", expect.pty);
             self.assert(vec![Assertion::equal(
                 check,
