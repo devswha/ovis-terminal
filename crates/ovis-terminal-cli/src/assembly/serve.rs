@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use ovis_terminal_protocol::schema::limits::Limits;
+use ovis_terminal_protocol::schema::limits::{Limits, TransportKind};
 use ovis_terminal_server::listen::{
     EndpointDescriptor, EndpointEnvironment, Platform, ServerConfig, UnixEndpoint, serve_unix,
 };
@@ -22,6 +22,7 @@ use super::actor::{Actor, Runtime};
 use super::boot::{LeaseLog, boot};
 use super::directory::Directory;
 use super::handler::{Assembled, Served};
+use super::lifetime::Lifetime;
 use super::{AssemblyError, ServePlan};
 
 /// Session-wide bound on bytes queued for all attach viewers.
@@ -122,57 +123,50 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
     let handler = Arc::new(Assembled {
         attach: AttachHandler::new(Arc::clone(&served), Arc::clone(&lane)),
         served,
+        transports: if plan.websocket_port.is_some() {
+            vec![TransportKind::Unix, TransportKind::Websocket]
+        } else {
+            vec![TransportKind::Unix]
+        },
     });
     let endpoint = UnixEndpoint::bind(&socket)
         .await
         .map_err(AssemblyError::Endpoint)?;
-    let config = ServerConfig::new(booted.authority, booted.identity);
+    let config = ServerConfig::new(Arc::clone(&booted.authority), booted.identity);
     let listener =
         serve_unix(endpoint, config, Arc::clone(&handler)).map_err(AssemblyError::Endpoint)?;
-    announce(&json!({"ready": {
+    let websocket = match plan.websocket_port {
+        Some(port) => Some(
+            super::websocket::start(
+                port,
+                (Arc::clone(&booted.authority), booted.identity),
+                &handler,
+            )
+            .await?,
+        ),
+        None => None,
+    };
+    let mut ready = json!({
         "socket": socket,
         "bearer": booted.bearers.owner,
         "observer": booted.bearers.observer,
-    }}))?;
+    });
+    if let (Some(listener), Value::Object(fields)) = (&websocket, &mut ready) {
+        fields.insert(
+            "websocket".to_owned(),
+            json!(listener.local_addr().to_string()),
+        );
+    }
+    announce(&json!({ "ready": ready }))?;
     let waited = stopped(plan.stdin_lifetime).await;
-    let report = listener
-        .shutdown()
-        .await
-        .map_err(AssemblyError::stop("close the endpoint"))?;
-    waited?;
-    lane.shutdown()
-        .await
-        .map_err(AssemblyError::stop("end attach deliveries"))?;
-    dispatch
-        .shutdown()
-        .await
-        .map_err(AssemblyError::stop("join dispatched operations"))?;
-    drop(dispatch);
-    drop(handler);
-    drop(lane);
-    tokio::task::spawn_blocking(move || thread.join())
-        .await
-        .map_err(AssemblyError::stop("join the runtime thread"))??;
-    let dispatch_log = Arc::try_unwrap(dispatch_log)
-        .map_err(|_| AssemblyError::stop("release the dispatch log")("still shared"))?;
-    tokio::task::spawn_blocking(move || dispatch_log.close())
-        .await
-        .map_err(AssemblyError::stop("join the dispatch log close"))?
-        .map_err(AssemblyError::stop("close the dispatch log"))?;
-    let leases = Arc::try_unwrap(booted.leases)
-        .map_err(|_| AssemblyError::stop("release the lease log")("still shared"))?;
-    tokio::task::spawn_blocking(move || leases.close())
-        .await
-        .map_err(AssemblyError::stop("join the lease log close"))?
-        .map_err(AssemblyError::stop("close the lease log"))?;
-    let failures: serde_json::Map<String, Value> = report
-        .failures()
-        .iter()
-        .map(|(kind, count)| ((*kind).to_owned(), json!(count.to_string())))
-        .collect();
-    announce(&json!({"report": {
-        "accepted": report.accepted().to_string(),
-        "failures": failures,
-        "panicked": report.panicked().to_string(),
-    }}))
+    let lifetime = Lifetime {
+        websocket,
+        listener,
+        lane,
+        dispatch,
+        handler,
+        thread,
+        logs: (dispatch_log, booted.leases),
+    };
+    announce(&lifetime.stop(waited).await?)
 }

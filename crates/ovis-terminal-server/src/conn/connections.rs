@@ -36,7 +36,8 @@ impl<H: RequestHandler> Connections<H> {
         runtime: RuntimeIdentity,
         handler: Arc<H>,
     ) -> Result<Self, EndpointError> {
-        let identity = ServerIdentity::new(runtime, &handler.methods())?;
+        let identity =
+            ServerIdentity::with_transports(runtime, &handler.methods(), &handler.transports())?;
         let max_in_flight = usize::try_from(identity.limits().max_in_flight_requests.get())
             .map_err(|_| EndpointError::Unrepresentable {
                 limit: "max_in_flight_requests",

@@ -8,6 +8,7 @@ use ovis_terminal_core::leases::Caller;
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::schema::common::NoParams;
 use ovis_terminal_protocol::schema::decode_params;
+use ovis_terminal_protocol::schema::limits::TransportKind;
 use ovis_terminal_protocol::schema::methods::attach::{
     AttachLeasesParams, AttachOpenParams, AttachResizeParams,
 };
@@ -199,11 +200,16 @@ impl Served {
 pub(super) struct Assembled {
     pub(super) attach: AttachHandler<Served, Arc<Directory>>,
     pub(super) served: Arc<Served>,
+    pub(super) transports: Vec<TransportKind>,
 }
 
 impl RequestHandler for Assembled {
     fn methods(&self) -> Vec<&'static str> {
         self.attach.methods()
+    }
+
+    fn transports(&self) -> Vec<TransportKind> {
+        self.transports.clone()
     }
 
     async fn call(&self, call: Call) -> Result<Value, BoundaryError> {

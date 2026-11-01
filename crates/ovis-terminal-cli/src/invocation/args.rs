@@ -67,6 +67,9 @@ pub(super) struct ServeArgs {
     /// Also stop when standard input reaches end of file.
     #[arg(long)]
     pub(super) stdin_lifetime: bool,
+    /// Also serve the protocol over WebSocket on this loopback port (0 picks a free one).
+    #[arg(long)]
+    pub(super) websocket_port: Option<u16>,
 }
 
 /// The two published contracts.

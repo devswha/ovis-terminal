@@ -111,6 +111,7 @@ pub(super) fn plan(cli: Cli) -> Result<Plan, CliError> {
         Command::Serve(args) => Plan::Serve(crate::assembly::ServePlan {
             root: args.root,
             stdin_lifetime: args.stdin_lifetime,
+            websocket_port: args.websocket_port,
         }),
         #[cfg(unix)]
         Command::Hold(session) => Plan::Service(crate::service::ServiceCommand::Run(

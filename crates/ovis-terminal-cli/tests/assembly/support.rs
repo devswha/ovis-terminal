@@ -55,15 +55,35 @@ pub struct Served {
     root: PathBuf,
     socket: String,
     bearer: String,
+    websocket: Option<String>,
 }
 
 impl Served {
-    /// Starts `serve --root <fresh dir> --stdin-lifetime` and reads its ready line.
+    /// Starts `serve` with no extra flags.
     ///
     /// # Errors
     ///
     /// Fails when a process, socket or file step fails.
     pub fn start() -> TestResult<Self> {
+        Self::start_with(&[])
+    }
+
+    /// The WebSocket listener address from the ready line, when one was started.
+    pub fn websocket(&self) -> Option<&str> {
+        self.websocket.as_deref()
+    }
+
+    /// The owner bearer from the ready line.
+    pub fn bearer(&self) -> &str {
+        &self.bearer
+    }
+
+    /// Starts `serve --root <fresh dir> --stdin-lifetime <extra>` and reads its ready line.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a process, socket or file step fails.
+    pub fn start_with(extra: &[&str]) -> TestResult<Self> {
         let unique = NEXT.fetch_add(1, Ordering::Relaxed);
         let root = PathBuf::from("/tmp").join(format!("ovt31a-{}-{unique}", std::process::id()));
         std::fs::create_dir_all(&root)?;
@@ -71,6 +91,7 @@ impl Served {
             .args(["serve", "--root"])
             .arg(&root)
             .arg("--stdin-lifetime")
+            .args(extra)
             .env_clear()
             .env("PATH", "/usr/bin:/bin")
             .stdin(Stdio::piped())
@@ -90,6 +111,10 @@ impl Served {
             .pointer("/ready/bearer")
             .and_then(Value::as_str)
             .ok_or("bearer")?;
+        let websocket = ready
+            .pointer("/ready/websocket")
+            .and_then(Value::as_str)
+            .map(str::to_owned);
         Ok(Self {
             child,
             stdin,
@@ -97,6 +122,7 @@ impl Served {
             root,
             socket: socket.to_owned(),
             bearer: bearer.to_owned(),
+            websocket,
         })
     }
 

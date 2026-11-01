@@ -6,6 +6,8 @@
 mod lanes;
 #[path = "assembly/support.rs"]
 pub mod support;
+#[path = "assembly/websocket.rs"]
+mod websocket;
 
 use std::collections::BTreeSet;
 use std::process::Command;

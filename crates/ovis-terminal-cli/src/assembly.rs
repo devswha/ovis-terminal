@@ -14,6 +14,7 @@ mod handler;
 mod input;
 mod inspect;
 mod lanes;
+mod lifetime;
 mod live;
 mod mutations;
 mod reads;
@@ -22,6 +23,7 @@ mod resize;
 mod routes;
 mod serve;
 mod terminal;
+mod websocket;
 
 use std::io;
 use std::path::PathBuf;
@@ -106,6 +108,8 @@ pub(crate) struct ServePlan {
     pub(crate) root: Option<PathBuf>,
     /// Stop when standard input reaches end of file, as well as on SIGINT or SIGTERM.
     pub(crate) stdin_lifetime: bool,
+    /// Also serve over WebSocket on this loopback port.
+    pub(crate) websocket_port: Option<u16>,
 }
 
 /// Serves until SIGINT, SIGTERM or (with `stdin_lifetime`) end of stdin; prints one
