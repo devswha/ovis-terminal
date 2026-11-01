@@ -95,9 +95,14 @@ fn happy() -> TestResult {
         head - RING
     );
     assert_eq!(held(&ran, "reply[floor-read]/result/gap")?, false);
+    let resynced = decimal(&ran, "reply[repaint]/result/stream_offset")?;
     assert_eq!(
-        decimal(&ran, "notification[attach.control]/params/stream_offset")?,
-        262_144
+        decimal(&ran, "reply[repaint]/result/checkpoint/stream_offset")?,
+        resynced
+    );
+    assert!(
+        resynced <= decimal(&ran, "hello/result/limits/credit_initial_bytes")?,
+        "a viewer that never credits is never sent more than its initial credit"
     );
     let lost = |end: &str| {
         decimal(
@@ -153,6 +158,7 @@ fn failure() -> TestResult {
         ("reply[paste]/error/data/kind", "paste_refused"),
         ("reply[huge]/error/data/kind", "too_large"),
         ("reply[no-spawn]/error/data/kind", "not_found"),
+        ("reply[fill6]/error/data/kind", "input_overflow"),
     ] {
         assert_eq!(held(&ran, check)?, kind, "{check}");
     }
@@ -164,6 +170,11 @@ fn failure() -> TestResult {
     assert_eq!(held(&ran, "reply[escape]/result/receipt/queued_seq")?, "3");
     assert_eq!(held(&ran, "reply[still]/result/outcome")?, "timeout");
     assert_eq!(held(&ran, "reply[alive]/result/finished")?, &Value::Null);
+    assert!(
+        decimal(&ran, "reply[after-cap]/result/pending_bytes")?
+            <= decimal(&ran, "hello/result/limits/input_queue_bytes")?,
+        "the refused write kept the queue inside its advertised budget"
+    );
     let armed = decimal(&ran, "reply[head-now]/result/output_offset")?;
     assert!(decimal(&ran, "reply[overtaken]/result/matched_at")? > armed + RING);
     assert_eq!(

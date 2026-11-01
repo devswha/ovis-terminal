@@ -110,6 +110,32 @@ Fix (scenario only, no `cfg`):
 
 A sweep left only request parameters reading from 0 and the credit-defined `stream_offset` 262144. Scratch variants of both cases whose shell first prints `ESC[?1034h` pass on Linux (412/161).
 
+### Round 4 (prepared after stress run 41354657097 at ef6b578: iterations 1-13 passed, happy iteration 14 failed)
+
+**Repaint race.** At step 42, `reply[repaint]/result/checkpoint/stream_offset` was 261555 where 262144 was expected (artifact `attach-input-happy-14.evidence.log`). The repaint arrived before the observer's stream had sent its last 589 credited bytes, and the server publishes no event a client can wait on for "stream sent up to its credit".
+- The scenario no longer pins 262144. The repaint reply's own `stream_offset` is captured, and the following `gap` record (`/params/stream_offset`) and checkpoint (`/params/checkpoint/stream_offset`) must repeat it.
+- The Rust test checks that the repaint checkpoint's offset equals it and that it is ≤ hello's `credit_initial_bytes`.
+
+**Aggregate cap (plan: "reject typed backpressure/limit_exceeded before exceeding the budget").**
+- On the stalled child, after the two 64 KiB writes and the Escape (seq 1-3), five 3 MiB writes are admitted at seq 4-8.
+- The sixth is `input_overflow`. The barrier on seq 8 reports 15 859 713 pending bytes, which the Rust test checks is ≤ hello's advertised `input_queue_bytes` 16 777 216: the refused write never let the queue pass its budget.
+- `limit_exceeded` is published only for `terminal.run`, `terminal.label`, `prompt.open` and `credential.rotate`. The per-object terminal-launch cap answers `too_large` with its `bound`, and that refusal is asserted.
+
+**`checkpoint_inexact` / `output_gap` (plan wording).** Neither is a published kind or field: `schema/ovis-terminal.openrpc.json` has no `inexact` token, and `output_gap` exists only as an internal core error. The overflow path is asserted through its published forms:
+- an attach `gap` control record whose `skipped` raw range is followed by a checkpoint;
+- `terminal.output` resuming at the floor with `gap: true`;
+- `cursor_expired` for an output wait behind retention.
+
+The plan-to-schema naming gap is reported here.
+
+### Plan-literal amendment
+
+The block's acceptance commands name `-p conformance`, but the package is `ovis-terminal-conformance` (`conformance/Cargo.toml`). The literal `cargo nextest run -p conformance` exits 101 (`nextest-literal-p-conformance.log`). The commands run and recorded are:
+- `cargo nextest run -p ovis-terminal-conformance`
+- `cargo clippy -p ovis-terminal-conformance --all-targets -- -D warnings`
+
+The QA invocations (`cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance ...`) are literal, except that `--binary` points at this lane's RAM target.
+
 ## Reported findings (not fixed here; for F4 unless noted)
 
 1. **Serialized output ingestion across PTYs (16-PTY profile).** Admissions are fast: all 15 receipts arrived 2–16 ms after the batch. Echo *delivery*, however, arrives one terminal at a time, about 30–90 ms apart. Measured from the admission batch, t2 was matched at 34 ms, t3 at 94, t4 at 125, t5 at 202, t6 at 233, t7 at 309, t8 at 403, t9 at 434, t10 at 502, and t16 about 790–807 ms. Reversing the order of the wait requests did not change the arrival order (t2 first, t16 last), so ingestion, not wait handling, is serial. Once an echo is delivered, its wait answers in 0–15 ms. The scenario therefore bounds admissions and per-terminal event answers at 100 ms. End-to-end PTY→wait delivery for the later terminals **does not meet the 100 ms bound**. It is reported here, not substituted with a percentile.

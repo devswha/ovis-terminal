@@ -10,7 +10,7 @@
   "cases": [
     {
       "case": "happy",
-      "summary": "Real ovis-terminal serve with the QA output ring seam (--qa-output-ring-bytes 65536 on a qa-fixture root): hello advertises the session-wide and per-object budgets (64 MiB output ring, 256 KiB/1 MiB credit, 16 MiB input queue, 4 GiB retained, 64 MiB input/backlog, 128 MiB VT). /bin/sh's prompt is matched and the raw bytes at its matched_at read back as \"$ \" (offsets are relative to that run's prompt: a program may emit invisible bytes first, e.g. Darwin bash's 8-byte ESC[?1034h); an interact writer and an observe-only viewer attach and get the identical first paint. The writer's input.send is admitted with the output cursor captured at the prompt's end (before delivery), the evaluated marker mark-42 is matched exactly 20 bytes (the echoed command line) later and the raw bytes at matched_at read back as mark-42, and the barrier on its queued sequence is reached with 0 pending bytes. An operator is held behind the writer with a lease_released retry boundary naming the writer's lease, takes over by the observed epoch, and the writer's stream is told checkpoint, input_ready, input_revoked, close taken_over by the operator. 300 000 bytes then overflow the 64 KiB ring while the observer never credits: the operator's marker still matches, the observer's stream stops at exactly its 262 144-byte credit, and its repaint answers a gap record (skipped raw range ending at terminal.screen's output offset) followed by a checkpoint equal to terminal.screen's offset and revision. terminal.output from 0 resumes at the retained floor with gap true (floor = head - 65 536), a read from the floor has no gap and ends at the head, and server.metrics accounts exactly one resynced byte loss to the observer and none to the operator. Fifteen more one-line /usr/bin/head -n 1 terminals make the exact 16-PTY profile: all fifteen admissions answer together within 100 ms; once each echo is delivered (default bound, every arrival time kept in the transcript), each terminal's output-wait event is a separate sample answered within 100 ms; every head then exits before the server stops.",
+      "summary": "Real ovis-terminal serve with the QA output ring seam (--qa-output-ring-bytes 65536 on a qa-fixture root): hello advertises the session-wide and per-object budgets (64 MiB output ring, 256 KiB/1 MiB credit, 16 MiB input queue, 4 GiB retained, 64 MiB input/backlog, 128 MiB VT). /bin/sh's prompt is matched and the raw bytes at its matched_at read back as \"$ \" (offsets are relative to that run's prompt: a program may emit invisible bytes first, e.g. Darwin bash's 8-byte ESC[?1034h); an interact writer and an observe-only viewer attach and get the identical first paint. The writer's input.send is admitted with the output cursor captured at the prompt's end (before delivery), the evaluated marker mark-42 is matched exactly 20 bytes (the echoed command line) later and the raw bytes at matched_at read back as mark-42, and the barrier on its queued sequence is reached with 0 pending bytes. An operator is held behind the writer with a lease_released retry boundary naming the writer's lease, takes over by the observed epoch, and the writer's stream is told checkpoint, input_ready, input_revoked, close taken_over by the operator. 300 000 bytes then overflow the 64 KiB ring while the observer never credits: the operator's marker still matches, the observer's stream never passes its 262 144-byte credit, and its repaint answers (at the repaint's own stream offset, which the gap and checkpoint records repeat) a gap record (skipped raw range ending at terminal.screen's output offset) followed by a checkpoint equal to terminal.screen's offset and revision. terminal.output from 0 resumes at the retained floor with gap true (floor = head - 65 536), a read from the floor has no gap and ends at the head, and server.metrics accounts exactly one resynced byte loss to the observer and none to the operator. Fifteen more one-line /usr/bin/head -n 1 terminals make the exact 16-PTY profile: all fifteen admissions answer together within 100 ms; once each echo is delivered (default bound, every arrival time kept in the transcript), each terminal's output-wait event is a separate sample answered within 100 ms; every head then exits before the server stops.",
       "steps": [
         {
           "serve": {
@@ -732,8 +732,12 @@
                 },
                 "/result/checkpoint/output_offset": "$value:screen_offset",
                 "/result/checkpoint/revision": "$value:screen_revision",
-                "/result/checkpoint/stream_offset": "262144",
-                "/result/stream_offset": "262144"
+                "/result/checkpoint/stream_offset": {
+                  "$capture": "repaint_cp_so"
+                },
+                "/result/stream_offset": {
+                  "$capture": "repaint_so"
+                }
               }
             }
           }
@@ -754,7 +758,7 @@
             "method": "attach.control",
             "expect": {
               "/params/kind": "gap",
-              "/params/stream_offset": "262144",
+              "/params/stream_offset": "$value:repaint_so",
               "/params/skipped/from_output_offset": {
                 "$present": true
               },
@@ -769,7 +773,8 @@
             "expect": {
               "/params/kind": "checkpoint",
               "/params/checkpoint/output_offset": "$value:screen_offset",
-              "/params/checkpoint/revision": "$value:screen_revision"
+              "/params/checkpoint/revision": "$value:screen_revision",
+              "/params/checkpoint/stream_offset": "$value:repaint_so"
             }
           }
         },
