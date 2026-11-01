@@ -76,6 +76,18 @@ After the restore, `bun run generate:check` printed `{"generated":"fresh","files
 - Lane gate: `cd packages/client-ts && bun run generate:check && bun run typecheck && bun test` gave 30 pass, 0 fail, exit 0 (`docs/evidence/task-82/qa-happy-r2.log`).
 - The trailing blank line in `adversarial-mutants.log` that `git diff --check` reported has been removed.
 
+## Round 2 merge: why the SDK was regenerated
+
+The CI run on 4e0f09f failed both `client-ts` jobs with `generate:check` reporting `stale_output` for all 31 generated files. The round-2 test change did not cause it.
+
+- On a clean checkout of 4e0f09f, `rm -rf src/generated && bun run generate` left `git status` empty, so the committed SDK was the exact output for the lane's own schema.
+- Integration moved to 723d101 when T47 (`update.*`) landed, changing `schema/ovis-terminal.openrpc.json` by +595 lines. PR CI checks out `refs/pull/65/merge` and so regenerates from the merge ref, which includes integration's schema. A scratch merge of 4e0f09f with 723d101 reproduced the same 31-file `stale_output`.
+- Because CI regenerates from the merge ref, `src/generated` must be regenerated at every merge that touches the schema. The orchestrator's union merge now does this too.
+
+Fix (authorized merge, no force-push): merged origin/integration 723d101 into the lane, then ran `bun run generate`. There were no hand edits, and the generator needed no change for the new schema. The regenerated diff is 31 files, +617/-71: mostly the T47 `update.*` methods and components, plus the new source digest in every header.
+
+- Lane gate on the merged tree, one run: `cd packages/client-ts && bun run generate:check && bun run typecheck && bun test` gave `{"generated":"fresh","files":31}`, 30 pass, 0 fail, exit 0 (`docs/evidence/task-82/qa-happy-r2-merged.log`). The fixture binaries were rebuilt from the merged code with `cargo build --locked -p ovis-terminal-cli -p ovis-terminal-conformance`.
+
 ## Gates
 
 - `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` gave exit 0: nextest ran 1110 tests, 1110 passed, 1 skipped, and workspace-hygiene reported 0 violations (`docs/evidence/task-82/check.log`).

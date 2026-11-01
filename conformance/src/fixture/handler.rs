@@ -3,8 +3,8 @@
 //! Those are the read-only protocol methods `rpc.discover` and paged `terminal.output`,
 //! the fixture-only `fixture.transcript` provider write, `fixture.pty` input byte count,
 //! `fixture.bridge` extension driver, the `fixture.exit` and `fixture.program` program
-//! lifecycle stand-ins, and `fixture.deliver`, which lets the sequenced terminal's holder
-//! stand-in write.
+//! lifecycle stand-ins, `fixture.deliver`, which lets the sequenced terminal's holder
+//! stand-in write, and the `fixture.update` release probe.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -143,6 +143,7 @@ impl RequestHandler for FixtureHandler {
                 let _: NoParams = decode_params(&call.request).map_err(BoundaryError::from)?;
                 self.probes.sequenced.deliver()
             }
+            super::update::PROBE => super::update::probe(&self.root),
             _ => self.dispatch.call(call).await,
         }
     }

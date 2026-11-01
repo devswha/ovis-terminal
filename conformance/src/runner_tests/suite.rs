@@ -29,6 +29,7 @@ const EXECUTABLE: &[&str] = &[
     "protocol/pagination.json",
     "protocol/strict-target.json",
     "security/rotation.json",
+    "services/update.json",
 ];
 
 /// Every executable file runs and passes; every other file is a listed declaration.

@@ -17,5 +17,6 @@ pub mod restart;
 pub mod session_binding;
 pub mod template_launch;
 pub mod unix_service;
+pub mod update;
 pub mod windows_service;
 pub mod worktrees;

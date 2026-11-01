@@ -104,12 +104,13 @@ fn failure() -> TestResult {
         .cursor;
     let lost_id = withheld.feed.id().clone();
     let mut committed = Vec::new();
+    let mut seen = Vec::new();
     for value in ["one", "two", "three"] {
         let seq = world.set(1, value)?.seq.get();
-        scan_to(&healthy.feed, seq)?;
+        seen.extend(scan_to(&healthy.feed, seq)?.0);
         committed.push(seq);
     }
-    let (marker_seq, marker) = until_loss_event(&healthy.feed)?;
+    let (marker_seq, marker) = until_loss_event(&healthy.feed, &seen)?;
     // When its final error is never read: the connection drops and it reconnects from
     // its last cursor after that cursor left retention.
     drop(withheld);

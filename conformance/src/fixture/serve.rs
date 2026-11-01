@@ -104,6 +104,8 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let launch = (runtime, Arc::clone(&core), template);
     let tree = super::tree::register(&mut dispatch, (&agents, &gate), launch)?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
+    let held = super::update::register(&mut dispatch, (root, &authority, issued.bearer()), runtime)
+        .await?;
     let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
     let writer = delegate(&authority, issued.bearer(), ("writer", WRITER))?;
     let prompts = Arc::clone(&gate.prompts);
@@ -146,6 +148,9 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .map_err(at("shut the server down"))?;
     handler.shutdown().await?;
     drop(handler);
+    tokio::task::spawn_blocking(move || held.shutdown())
+        .await
+        .map_err(at("join the update holder shutdown"))??;
     let core = Arc::try_unwrap(core).map_err(|_| at("release the coordinator")("still shared"))?;
     tokio::task::spawn_blocking(move || core.close())
         .await
