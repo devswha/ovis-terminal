@@ -9,6 +9,7 @@ pub mod documents_retention;
 pub mod machine_actor;
 pub mod machine_identity;
 pub mod plugins;
+pub mod process_info;
 pub mod prompt_bridge;
 pub mod prompts;
 pub mod recovery;

@@ -25,6 +25,7 @@ use super::agents::Directory;
 use super::bridge::Extension;
 use super::machines::{self, Machines};
 use super::output;
+use super::processes::Programs;
 use super::prompts::Gate;
 use super::rotation::Sequenced;
 use super::serve::at;
@@ -39,6 +40,9 @@ const DIRECT: [&str; 2] = ["rpc.discover", "terminal.output"];
 
 /// The provider-store stand-in; served but never advertised, since it is no catalog method.
 const PROVIDER_WRITE: &str = "fixture.transcript";
+
+/// The `terminal.kill` plus `terminal.recover` stand-in of the process fixture; never advertised.
+const REPLACE_PROCESS: &str = "fixture.replace_process";
 
 /// The PTY stand-in's byte count; served but never advertised.
 const PTY_READ: &str = "fixture.pty";
@@ -73,6 +77,7 @@ pub(crate) struct Probes {
     pub(crate) sequenced: Arc<Sequenced>,
     pub(crate) tree: Arc<Tree>,
     pub(crate) machines: Arc<Machines>,
+    pub(crate) programs: Arc<Programs>,
 }
 
 #[derive(Debug)]
@@ -96,7 +101,26 @@ impl FixtureHandler {
         self.dispatch
             .shutdown()
             .await
-            .map_err(at("shut the dispatcher down"))
+            .map_err(at("shut the dispatcher down"))?;
+        let programs = Arc::clone(&self.probes.programs);
+        tokio::task::spawn_blocking(move || programs.stop())
+            .await
+            .map_err(at("join the program stop"))?
+    }
+}
+
+impl FixtureHandler {
+    /// Replaces `proc`'s program; a failure is its typed fixture kind, never a fake success.
+    async fn replace(&self) -> Result<Value, BoundaryError> {
+        let programs = Arc::clone(&self.probes.programs);
+        let replaced = tokio::task::spawn_blocking(move || programs.replace()).await;
+        let outcome = replaced
+            .map_err(at("join the replacement"))
+            .and_then(|replaced| replaced);
+        outcome.map_err(|error| {
+            BoundaryError::domain(ErrorKind::from(error.kind().to_owned()), false)
+                .with_hint(error.hint())
+        })
     }
 }
 
@@ -120,6 +144,7 @@ impl RequestHandler for FixtureHandler {
             "rpc.discover" => discover(&call.request),
             "terminal.output" => output::page(&call.request),
             PROVIDER_WRITE => super::transcripts::write(&self.root, &call.request),
+            REPLACE_PROCESS => self.replace().await,
             PTY_READ => {
                 let probes = (&*self.probes.gate, &*self.probes.directory);
                 super::prompts::pty(probes, &call.request)

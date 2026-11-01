@@ -20,7 +20,7 @@ use ovis_terminal_core::registry::{
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::dispatch::lanes::prompt_bridge::{Gated, PromptBridgeGate};
-use ovis_terminal_server::listen::{ServerConfig, UnixEndpoint, serve_unix};
+use ovis_terminal_server::listen::{ServeReport, ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
 use tokio::io::AsyncReadExt as _;
@@ -93,6 +93,12 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     super::rotation::register(&mut dispatch, &authority, (runtime, Arc::clone(&sequenced)))?;
     let (status, directory) = (Arc::clone(&agents.0), Arc::clone(&agents.1));
     super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
+    let programs = super::processes::register(
+        &mut dispatch,
+        (root, runtime),
+        (&authority, issued.bearer(), &agents.0),
+    )
+    .await?;
     let parts = (&authority, &*core, agents.clone());
     let template = super::template_lane::register(&mut dispatch, (runtime, root), parts)?;
     let launch = (runtime, Arc::clone(&core), template);
@@ -111,6 +117,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         sequenced,
         tree,
         machines,
+        programs,
     };
     let handler = Arc::new(FixtureHandler::new(
         Arc::new(dispatch),
@@ -147,6 +154,11 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .await
         .map_err(at("join the store close"))?
         .map_err(at("close the store"))?;
+    announce_report(&report)
+}
+
+/// The serve report line: accepted connections, failures by kind, panics.
+fn announce_report(report: &ServeReport) -> Result<(), RunnerError> {
     let failures: serde_json::Map<String, Value> = report
         .failures()
         .iter()
