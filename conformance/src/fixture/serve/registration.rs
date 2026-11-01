@@ -11,6 +11,7 @@ use ovis_terminal_authz::Authority;
 use ovis_terminal_core::events::Coordinator;
 use ovis_terminal_core::ops::OperationProducer;
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
+use ovis_terminal_server::dispatch::lanes::boundary_policy::AuditTrail;
 
 use super::super::bridge::{Extension, QUEUE_LIMIT};
 use super::super::documents::{DocGet, DocSet};
@@ -39,6 +40,8 @@ pub(super) struct Registered {
     pub(super) prompts: Arc<PromptService>,
     /// The update lane's holder, shut down after the dispatcher.
     pub(super) held: Held,
+    /// The audit trail the boundary policy records every call in.
+    pub(super) trail: Arc<AuditTrail>,
 }
 
 /// `doc.set`, `doc.get` and `terminal.keep` over the effect directory below `root`.
@@ -87,6 +90,7 @@ pub(super) async fn register(
     super::super::transcripts::register(dispatch, agents, (runtime, root))?;
     let health = super::super::health::register(dispatch, runtime, root)?;
     let held = super::super::update::register(dispatch, (root, authority, bearer), runtime).await?;
+    let trail = super::super::boundary::register(dispatch, root, runtime)?;
     let prompts = Arc::clone(&gate.prompts);
     let bridge = PromptBridge::new(Arc::clone(&status), Arc::clone(&prompts), QUEUE_LIMIT);
     let probes = Probes {
@@ -98,11 +102,13 @@ pub(super) async fn register(
         health,
         machines,
         programs,
+        audit: (Arc::clone(&trail), Arc::clone(authority)),
     };
     Ok(Registered {
         probes,
         status,
         prompts,
         held,
+        trail,
     })
 }

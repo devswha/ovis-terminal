@@ -18,6 +18,7 @@ use ovis_terminal_core::registry::{
 };
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_server::authn::Revalidated;
+use ovis_terminal_server::dispatch::lanes::boundary_policy::BoundaryPolicy;
 use ovis_terminal_server::dispatch::lanes::health::Measured;
 use ovis_terminal_server::dispatch::lanes::prompt_bridge::{Gated, PromptBridgeGate};
 use ovis_terminal_server::listen::{ServeReport, ServerConfig, UnixEndpoint, serve_unix};
@@ -102,7 +103,8 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let endpoint = UnixEndpoint::bind(&socket)
         .await
         .map_err(at("bind the socket"))?;
-    let measured = Measured::new(health, Arc::new(gated));
+    let policed = BoundaryPolicy::new((Arc::clone(&authority), registered.trail), gated);
+    let measured = Measured::new(health, Arc::new(policed));
     let revalidated = Revalidated::new(Arc::clone(&authority), measured);
     let config = ServerConfig::new(authority, runtime);
     let server = serve_unix(endpoint, config, Arc::new(revalidated)).map_err(at("serve"))?;
