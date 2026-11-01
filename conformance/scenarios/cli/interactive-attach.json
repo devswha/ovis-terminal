@@ -219,10 +219,15 @@
           }
         },
         {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "echo mark-$((30+1))\r"
+          }
+        },
+        {
           "pty_expect": {
             "pty": "outer",
-            "output": "mark-31",
-            "retry_type": "echo mark-$((30+1))\r"
+            "output": "mark-31"
           }
         },
         {
@@ -257,6 +262,18 @@
           }
         },
         {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "sh -c 'sleep 600 & p=$!; trap \"stty size; kill $p; exit\" WINCH; echo armed-$((2+2)); wait'\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "armed-4"
+          }
+        },
+        {
           "pty_resize": {
             "pty": "outer",
             "cols": 120,
@@ -266,8 +283,7 @@
         {
           "pty_expect": {
             "pty": "outer",
-            "output": "40 120",
-            "retry_type": "stty size\r"
+            "output": "40 120"
           }
         },
         {
@@ -417,7 +433,7 @@
     },
     {
       "case": "failure",
-      "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch) and 0 (invalid_params), the plan's literal attach.takeover (method_not_found: takeover is only an epoch-bound attach.open field) a following ordinary attach.open (held with holder and retry, observe lease only), and a second connection presenting the holder's own client id cli (held naming the holder; its input.raw under lease:1 refused no_lease) never evict the holder, which detaches cleanly with the program incarnation unchanged.",
+      "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch) and 0 (invalid_params), the plan's literal attach.takeover inject (invalid_params: lease_epoch outside takeover), an attach.takeover at stale epoch 7 on the relay's held stream (lease_epoch_mismatch) and a following ordinary attach.open (held with holder and retry, observe lease only), and a second connection presenting the holder's own client id cli (held naming the holder; its input.raw under lease:1 refused no_lease) never evict the holder, which detaches cleanly with the program incarnation unchanged.",
       "steps": [
         {
           "serve": {
@@ -518,10 +534,15 @@
           }
         },
         {
+          "pty_type": {
+            "pty": "holder",
+            "bytes": "echo ready-$((2+3))\r"
+          }
+        },
+        {
           "pty_expect": {
             "pty": "holder",
-            "output": "ready-5",
-            "retry_type": "echo ready-$((2+3))\r"
+            "output": "ready-5"
           }
         },
         {
@@ -655,7 +676,7 @@
                   }
                 },
                 "expect": {
-                  "/error/data/kind": "method_not_found",
+                  "/error/data/kind": "invalid_params",
                   "/result": {
                     "$present": false
                   }
@@ -701,7 +722,46 @@
                 "/result/retry/on": "lease_released",
                 "/result/retry/event": "lease.revoked",
                 "/result/lease/role": "observe",
-                "/result/displaced": null
+                "/result/displaced": null,
+                "/result/stream_id": {
+                  "$capture": "relay_stream"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "relay",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stale_takeover",
+                "method": "attach.takeover",
+                "params": {
+                  "op_id": "$op:stale_takeover",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "stream_id": "$value:relay_stream",
+                  "takeover": {
+                    "lease_epoch": "7",
+                    "reason": "stale takeover epoch"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "relay",
+            "expect": {
+              "stale_takeover": {
+                "/error/data/kind": "lease_epoch_mismatch",
+                "/result": {
+                  "$present": false
+                }
               }
             }
           }

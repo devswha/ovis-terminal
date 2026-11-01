@@ -37,7 +37,10 @@ fn route(
             break;
         };
         if value.get("id").is_some() {
-            replies.send(value).ok();
+            // The receiver is gone only once the test stopped awaiting replies.
+            match replies.send(value) {
+                Ok(()) | Err(_) => {}
+            }
             continue;
         }
         if value.get("method").and_then(Value::as_str) != Some("attach.data") {
