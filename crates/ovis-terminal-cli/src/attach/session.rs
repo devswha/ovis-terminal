@@ -15,6 +15,8 @@ use super::tty::{self, Typed, keyboard, typed_or_never};
 use super::{AttachError, AttachPlan};
 
 #[cfg(test)]
+mod credit_tests;
+#[cfg(test)]
 mod tests;
 
 /// Bound on waiting for the stream's CLOSE after asking to detach.

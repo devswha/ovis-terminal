@@ -433,7 +433,7 @@
     },
     {
       "case": "failure",
-      "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch) and 0 (invalid_params), the plan's literal attach.takeover inject (invalid_params: lease_epoch outside takeover), an attach.takeover at stale epoch 7 on the relay's held stream (lease_epoch_mismatch) and a following ordinary attach.open (held with holder and retry, observe lease only), and a second connection presenting the holder's own client id cli (held naming the holder; its input.raw under lease:1 refused no_lease) never evict the holder, which detaches cleanly with the program incarnation unchanged.",
+      "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch with error.data.current epoch 1, holder cli) and 0 (invalid_params), the plan's literal attach.takeover inject (invalid_params: lease_epoch outside takeover), served attach.takeover on the relay's held stream at the plan's epoch 0 (invalid_params: no lease ever holds epoch 0) and at stale epoch 7 (lease_epoch_mismatch with error.data.current epoch 1, holder cli, interact) and a following ordinary attach.open (held with holder and retry, observe lease only), and a second connection presenting the holder's own client id cli (held naming the holder; its input.raw under lease:1 refused no_lease) never evict the holder, which detaches cleanly with the program incarnation unchanged.",
       "steps": [
         {
           "serve": {
@@ -648,7 +648,9 @@
                   "/error/data/kind": "lease_epoch_mismatch",
                   "/result": {
                     "$present": false
-                  }
+                  },
+                  "/error/data/current/epoch": "1",
+                  "/error/data/current/holder": "cli"
                 }
               },
               {
@@ -736,6 +738,42 @@
             "requests": [
               {
                 "jsonrpc": "2.0",
+                "id": "plan_epoch_takeover",
+                "method": "attach.takeover",
+                "params": {
+                  "op_id": "$op:plan_epoch_takeover",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "stream_id": "$value:relay_stream",
+                  "takeover": {
+                    "lease_epoch": "0",
+                    "reason": "the plan's stale epoch"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "relay",
+            "expect": {
+              "plan_epoch_takeover": {
+                "/error/data/kind": "invalid_params",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "relay",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
                 "id": "stale_takeover",
                 "method": "attach.takeover",
                 "params": {
@@ -759,6 +797,12 @@
             "expect": {
               "stale_takeover": {
                 "/error/data/kind": "lease_epoch_mismatch",
+                "/error/data/current/epoch": "1",
+                "/error/data/current/holder": "cli",
+                "/error/data/current/role": "interact",
+                "/error/data/current/lease_id": {
+                  "$present": true
+                },
                 "/result": {
                   "$present": false
                 }

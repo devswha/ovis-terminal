@@ -1,6 +1,7 @@
 //! Context that places a refusal relative to the caller's authority or a remote machine.
 
 use super::BoundaryError;
+use crate::schema::records::LeaseRecord;
 use crate::schema::scalar::{EventSeq, PrincipalEpoch};
 
 impl BoundaryError {
@@ -15,6 +16,13 @@ impl BoundaryError {
     #[must_use]
     pub fn with_last_seen_seq(mut self, seq: EventSeq) -> Self {
         self.data_mut().last_seen_seq = Some(seq);
+        self
+    }
+
+    /// Adds the lease that holds the slot now to a refusal that named a stale epoch.
+    #[must_use]
+    pub fn with_current_lease(mut self, current: LeaseRecord) -> Self {
+        self.data_mut().current = Some(Box::new(current));
         self
     }
 }

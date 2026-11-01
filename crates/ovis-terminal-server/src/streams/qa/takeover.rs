@@ -58,6 +58,11 @@ pub(crate) async fn takeover_moves_the_interact_lease_onto_the_held_stream() -> 
         .call("attach.takeover", &takeover("op-5", &stale, &json!("99")))
         .await?;
     assert_eq!(error_kind(&stale), "lease_epoch_mismatch", "{stale}");
+    assert_eq!(
+        at(&stale, "/error/data/current"),
+        at(&held.result, "/result/holder"),
+        "a stale takeover names the lease that holds the slot now"
+    );
     let stream = held.stream.clone();
     let taken = held
         .call("attach.takeover", &takeover("op-6", &stream, &epoch))

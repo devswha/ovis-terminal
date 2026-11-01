@@ -37,9 +37,9 @@ fn route(
             break;
         };
         if value.get("id").is_some() {
-            // The receiver is gone only once the test stopped awaiting replies.
-            match replies.send(value) {
-                Ok(()) | Err(_) => {}
+            // A gone receiver means the viewer was dropped: nothing awaits replies any more.
+            if replies.send(value).is_err() {
+                break;
             }
             continue;
         }

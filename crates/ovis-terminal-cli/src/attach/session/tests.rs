@@ -20,10 +20,10 @@ use super::super::client::{Client, Notice};
 use super::super::screen::Screen;
 use super::Attached;
 
-type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
-type PeerResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+pub(super) type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
+pub(super) type PeerResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-const STREAM: &str = "stream:1";
+pub(super) const STREAM: &str = "stream:1";
 
 /// What the peer does once it answered `attach.close`.
 #[derive(Debug, Clone, Copy)]
@@ -34,7 +34,8 @@ enum AfterClose {
     HangUp,
 }
 
-struct Scratch(PathBuf);
+/// A scratch directory removed when dropped.
+pub(super) struct Scratch(pub(super) PathBuf);
 
 impl Drop for Scratch {
     fn drop(&mut self) {
@@ -44,7 +45,7 @@ impl Drop for Scratch {
     }
 }
 
-fn scratch() -> TestResult<Scratch> {
+pub(super) fn scratch() -> TestResult<Scratch> {
     static NEXT: AtomicU32 = AtomicU32::new(0);
     let unique = NEXT.fetch_add(1, Ordering::Relaxed);
     let path = std::env::temp_dir().join(format!("ovt31s-{}-{unique}", std::process::id()));
@@ -52,7 +53,7 @@ fn scratch() -> TestResult<Scratch> {
     Ok(Scratch(path))
 }
 
-async fn send(stream: &mut OwnedWriteHalf, record: &Value) -> PeerResult {
+pub(super) async fn send(stream: &mut OwnedWriteHalf, record: &Value) -> PeerResult {
     let mut line = record.to_string().into_bytes();
     line.push(b'\n');
     stream.write_all(&line).await?;
@@ -146,7 +147,7 @@ fn notice(kind: ControlKind) -> TestResult<Notice> {
     Ok(("attach.control".to_owned(), params))
 }
 
-fn runtime() -> TestResult<tokio::runtime::Runtime> {
+pub(super) fn runtime() -> TestResult<tokio::runtime::Runtime> {
     Ok(tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?)
