@@ -187,4 +187,4 @@ macOS stress dispatch:
 - Round 2: https://github.com/devswha/ovis-terminal/actions/runs/41349240120 (b6fecf8) failed with no evidence kept.
 - Round 3: https://github.com/devswha/ovis-terminal/actions/runs/41352274612 (96ffc78) failed on the command fence.
 - Round 3b: https://github.com/devswha/ovis-terminal/actions/runs/41354657097 (edecd73) passed 13 iterations, then failed at happy iteration 14 on the repaint race.
-- Round 4: MACOS_RUN5.
+- Round 4: https://github.com/devswha/ovis-terminal/actions/runs/41363372326 (17415b2, the code head; the next commit changes only this body).
