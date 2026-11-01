@@ -109,11 +109,13 @@ fn cli_record(error: &CliError) -> Map<String, Value> {
             record.insert("state".to_owned(), json!(state));
         }
         #[cfg(unix)]
-        CliError::Attach(crate::attach::AttachError::Held { holder }) => {
-            record.insert("holder".to_owned(), holder.clone());
+        CliError::Attach(error) => {
+            for (field, value) in error.details() {
+                record.insert(field.to_owned(), value);
+            }
         }
         #[cfg(unix)]
-        CliError::Attach(_) | CliError::Assembly(_) => {}
+        CliError::Assembly(_) => {}
         CliError::Usage { .. }
         | CliError::MissingCommand
         | CliError::SkillWithCommand

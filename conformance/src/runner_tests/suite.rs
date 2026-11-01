@@ -28,11 +28,15 @@ const EXECUTABLE: [&str; 16] = [
 /// Executable scenarios whose server is the assembled binary itself (plan todo 31).
 const ASSEMBLED: [&str; 1] = ["part-a/task-31.json"];
 
+/// The interactive attach client's executable scenario (plan todo 62).
+const INTERACTIVE_ATTACH: [&str; 1] = ["cli/interactive-attach.json"];
+
 /// Every executable scenario file, sorted as the inventory reports them.
 fn executable() -> Vec<String> {
     let mut files: Vec<String> = EXECUTABLE
         .iter()
         .chain(&ASSEMBLED)
+        .chain(&INTERACTIVE_ATTACH)
         .map(|file| (*file).to_owned())
         .collect();
     files.sort();

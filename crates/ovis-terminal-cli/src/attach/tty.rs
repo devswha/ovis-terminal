@@ -21,6 +21,20 @@ pub(super) fn interactive() -> bool {
     termios::isatty(rustix::stdio::stdin()) && termios::isatty(rustix::stdio::stdout())
 }
 
+/// Whether stdout is a terminal, which is when drawn modes are reset on exit.
+pub(super) fn stdout_is_tty() -> bool {
+    termios::isatty(rustix::stdio::stdout())
+}
+
+/// Reports a restore step that failed on stderr as one JSON warning line; the exit
+/// record still follows.
+pub(super) fn warn(stage: &str, detail: &str) {
+    let line = serde_json::json!({"warning": {"stage": stage, "detail": detail}});
+    match io::Write::write_all(&mut io::stderr().lock(), format!("{line}\n").as_bytes()) {
+        Ok(()) | Err(_) => {}
+    }
+}
+
 /// The outer terminal's grid as columns and rows.
 pub(super) fn grid() -> Result<(u16, u16), AttachError> {
     let size = termios::tcgetwinsize(rustix::stdio::stdout())
@@ -52,10 +66,7 @@ impl Drop for RawMode {
         let restored =
             termios::tcsetattr(rustix::stdio::stdin(), OptionalActions::Now, &self.saved);
         if let Err(errno) = restored {
-            let line = serde_json::json!({"warning": {"stage": "restore terminal settings", "detail": errno.to_string()}});
-            match io::Write::write_all(&mut io::stderr().lock(), format!("{line}\n").as_bytes()) {
-                Ok(()) | Err(_) => {}
-            }
+            warn("restore terminal settings", &errno.to_string());
         }
     }
 }

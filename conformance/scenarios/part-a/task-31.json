@@ -286,7 +286,7 @@
     },
     {
       "case": "failure",
-      "summary": "A second interact attach exits 11 lease_held naming the holder and never changes its terminal; a stale target exits 3 not_found; interact without a TTY exits 2 not_a_tty; stopping the server (forced socket EOF) makes the holder exit 4 connection_lost with its outer terminal settings restored.",
+      "summary": "A second interact attach exits 11 lease_conflict naming the holder and never changes its terminal; a stale target exits 3 not_found; interact without a TTY exits 2 not_a_tty; stopping the server (forced socket EOF) makes the holder exit 4 connection_lost with its outer terminal settings restored.",
       "steps": [
         {
           "serve": {
@@ -418,7 +418,7 @@
             "pty": "second",
             "exit": 11,
             "stderr": {
-              "/error/kind": "lease_held",
+              "/error/kind": "lease_conflict",
               "/error/holder/holder": "cli",
               "/error/holder/role": "interact"
             }

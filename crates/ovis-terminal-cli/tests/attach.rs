@@ -111,7 +111,10 @@ fn a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_termina
     )?;
     let (code, record, restored) = second.exited()?;
     assert_eq!(code, Some(11), "{record}");
-    assert_eq!(record.pointer("/error/kind"), Some(&json!("lease_held")));
+    assert_eq!(
+        record.pointer("/error/kind"),
+        Some(&json!("lease_conflict"))
+    );
     assert_eq!(record.pointer("/error/holder/holder"), Some(&json!("cli")));
     assert!(restored, "a held attach changed the outer terminal");
     let stale = Outer::attach(&served, &["--json", "terminal", "attach", "--target", "t9"])?;

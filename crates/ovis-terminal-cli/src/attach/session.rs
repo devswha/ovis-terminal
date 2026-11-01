@@ -1,24 +1,25 @@
-//! Open, follow the stream, forward input, follow resizes, detach.
+//! Open, follow the stream, forward input, follow resizes, detach and release.
 
 use base64::Engine as _;
 use ovis_terminal_protocol::schema::records::{AttachControl, AttachData, ControlKind};
 use ovis_terminal_protocol::schema::scalar::OpenEnum;
 use serde_json::{Value, json};
-use tokio::io::AsyncWriteExt as _;
-use tokio::signal::unix::{Signal, SignalKind, signal};
 use tokio::sync::mpsc;
 
 use super::client::{Client, Notice};
-use super::open::{geometry_lease, open};
-use super::tty::{self, RawMode, keyboard, typed_or_never};
+use super::input::split_detach;
+use super::open::{geometry_lease, open, still_held};
+use super::screen::Screen;
+use super::signals::{Interrupt, Signals};
+use super::tty::{self, keyboard, typed_or_never};
 use super::{AttachError, AttachPlan};
 
-/// The detach key: Ctrl-\ (FS, 0x1c), read as a byte while the terminal is raw.
-const DETACH_KEY: u8 = 0x1c;
 /// Bound on waiting for the stream's CLOSE after asking to detach.
 const CLOSE_BOUND: std::time::Duration = std::time::Duration::from_secs(5);
 /// Bytes typed before the stream is input-ready that are held for it; more is refused.
 const HELD_INPUT_BYTES: usize = 64 << 10;
+
+type Notices = mpsc::UnboundedReceiver<Notice>;
 
 fn op_id() -> String {
     uuid::Uuid::now_v7().to_string()
@@ -28,13 +29,6 @@ fn unreadable(detail: &'static str) -> impl FnOnce(serde_json::Error) -> AttachE
     move |_| AttachError::Protocol { detail }
 }
 
-fn listen(kind: SignalKind) -> Result<Signal, AttachError> {
-    signal(kind).map_err(|source| AttachError::Io {
-        operation: "watch signals",
-        source,
-    })
-}
-
 /// One attached stream and what acting on it needs.
 struct Attached {
     client: Client,
@@ -42,18 +36,21 @@ struct Attached {
     stream: String,
     lease: Option<String>,
     geometry_lease: Option<String>,
+    displaced: Value,
     window: u64,
     acknowledged: u64,
     input_ready: bool,
     held: Vec<u8>,
+    screen: Screen,
 }
 
 impl Attached {
-    /// Closes the stream and waits, bounded, for its CLOSE: the server revokes and commits
-    /// this client's leases before CLOSE is sent, so none is held once this returns true.
+    /// Closes the stream, which releases every lease it holds, waits (bounded, and cut
+    /// short by a second interruption) for its CLOSE, then reads the leases back so the
+    /// record states whether any lease this client was granted is still held.
     async fn detach(
         &mut self,
-        notices: &mut mpsc::UnboundedReceiver<Notice>,
+        (notices, signals): (&mut Notices, &mut Signals),
         reason: &str,
     ) -> Value {
         let requested = self
@@ -61,18 +58,39 @@ impl Attached {
             .call("attach.close", json!({"stream_id": self.stream}))
             .await
             .is_ok();
-        let closed = requested
-            && tokio::time::timeout(CLOSE_BOUND, async {
-                while let Some(notice) = notices.recv().await {
-                    if matches!(self.notice(notice).await, Ok(Some(_)) | Err(_)) {
-                        return true;
-                    }
+        let closed = requested && self.await_close(notices, signals).await;
+        let granted: Vec<String> = self
+            .lease
+            .iter()
+            .chain(&self.geometry_lease)
+            .cloned()
+            .collect();
+        let held = still_held(&self.client, &self.plan, &granted).await.ok();
+        json!({"detached": {
+            "stream_id": self.stream, "reason": reason, "stream_closed": closed,
+            "leases_released": held.as_ref().map(Vec::is_empty), "leases_held": held,
+            "displaced": self.displaced,
+        }})
+    }
+
+    async fn await_close(&mut self, notices: &mut Notices, signals: &mut Signals) -> bool {
+        let close = async {
+            while let Some(notice) = notices.recv().await {
+                if matches!(self.notice(notice).await, Ok(Some(_)) | Err(_)) {
+                    return true;
                 }
-                false
-            })
+            }
+            false
+        };
+        let raced = async {
+            tokio::select! {
+                closed = close => closed,
+                _ = signals.stop() => false,
+            }
+        };
+        tokio::time::timeout(CLOSE_BOUND, raced)
             .await
-            .unwrap_or(false);
-        json!({"detached": {"stream_id": self.stream, "reason": reason, "stream_closed": closed}})
+            .unwrap_or(false)
     }
 
     async fn data(&mut self, data: AttachData) -> Result<(), AttachError> {
@@ -81,12 +99,7 @@ impl Attached {
             .map_err(|_| AttachError::Protocol {
                 detail: "attach.data is not base64",
             })?;
-        let mut stdout = tokio::io::stdout();
-        let written = stdout.write_all(&bytes).await.and(stdout.flush().await);
-        written.map_err(|source| AttachError::Io {
-            operation: "write the screen to stdout",
-            source,
-        })?;
+        self.screen.draw(&bytes).await?;
         let length = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
         let end = data.offset.get().saturating_add(length);
         if end.saturating_sub(self.acknowledged) >= self.window / 2 {
@@ -132,7 +145,7 @@ impl Attached {
         Ok(None)
     }
 
-    /// Writes `bytes` under the interact lease.
+    /// Writes `bytes` unchanged under the interact lease.
     async fn forward(&self, bytes: &[u8]) -> Result<(), AttachError> {
         let Some(lease) = self.lease.as_ref().filter(|_| !bytes.is_empty()) else {
             return Ok(());
@@ -148,12 +161,7 @@ impl Attached {
     /// Forwards typed bytes, holding them until the stream is input-ready; `true` once
     /// the detach key was typed.
     async fn typed(&mut self, bytes: &[u8]) -> Result<bool, AttachError> {
-        let (typed, detach) = bytes
-            .iter()
-            .position(|byte| *byte == DETACH_KEY)
-            .map_or((bytes, false), |at| {
-                (bytes.get(..at).unwrap_or_default(), true)
-            });
+        let (typed, detach) = split_detach(bytes);
         if self.input_ready {
             self.forward(typed).await?;
         } else if self.held.len().saturating_add(typed.len()) <= HELD_INPUT_BYTES {
@@ -164,6 +172,8 @@ impl Attached {
         Ok(detach)
     }
 
+    /// Resizes through `attach.resize` under the geometry lease; without one (observing,
+    /// or queued behind another owner) the outer grid never reaches the terminal.
     async fn resize(&self) -> Result<(), AttachError> {
         let Some(lease) = &self.geometry_lease else {
             return Ok(());
@@ -178,13 +188,10 @@ impl Attached {
 
     async fn follow(
         &mut self,
-        notices: &mut mpsc::UnboundedReceiver<Notice>,
+        notices: &mut Notices,
+        signals: &mut Signals,
     ) -> Result<Value, AttachError> {
         let mut keyboard = (!self.plan.observe).then(keyboard);
-        let mut winch = listen(SignalKind::window_change())?;
-        let mut terminate = listen(SignalKind::terminate())?;
-        let mut hangup = listen(SignalKind::hangup())?;
-        let mut interrupt = listen(SignalKind::interrupt())?;
         loop {
             tokio::select! {
                 notice = notices.recv() => match notice {
@@ -194,30 +201,33 @@ impl Attached {
                     },
                 },
                 typed = typed_or_never(keyboard.as_mut()) => match typed {
-                    None => return Ok(self.detach(notices, "stdin_closed").await),
+                    None => return Ok(self.detach((notices, signals), "stdin_closed").await),
                     Some(bytes) => if self.typed(&bytes).await? {
-                        return Ok(self.detach(notices, "detach_key").await);
+                        return Ok(self.detach((notices, signals), "detach_key").await);
                     },
                 },
-                _ = winch.recv() => self.resize().await?,
-                _ = terminate.recv() => return Ok(self.detach(notices, "terminated").await),
-                _ = hangup.recv() => return Ok(self.detach(notices, "hangup").await),
-                _ = interrupt.recv() => return Ok(self.detach(notices, "interrupted").await),
+                delivered = signals.next() => match delivered {
+                    Interrupt::Resize => self.resize().await?,
+                    stop => return Ok(self.detach((notices, signals), stop.reason()).await),
+                },
             }
         }
     }
 }
 
-/// Attaches with `client` and runs until detach or close; raw mode, when used, is
-/// restored before this returns, whatever the outcome.
+/// Attaches with `client` and runs until detach or close; the outer terminal's modes and
+/// settings are restored before this returns, whatever the outcome.
 pub(super) async fn run(
     plan: &AttachPlan,
-    (client, mut notices): (Client, mpsc::UnboundedReceiver<Notice>),
+    (client, mut notices): (Client, Notices),
+    signals: &mut Signals,
 ) -> Result<Value, AttachError> {
     if !plan.observe && !tty::interactive() {
         return Err(AttachError::NotATty);
     }
-    let opened = open(&client, plan).await?;
+    let opened = signals
+        .during("opening the attach", open(&client, plan))
+        .await?;
     let stream = opened
         .stream_id
         .as_ref()
@@ -228,13 +238,15 @@ pub(super) async fn run(
     let geometry_lease = if plan.observe {
         None
     } else {
-        geometry_lease(&client, plan).await?
+        let read = geometry_lease(&client, plan);
+        signals.during("reading the geometry lease", read).await?
     };
     let mut attached = Attached {
         lease: opened
             .lease
             .as_ref()
             .map(|lease| lease.lease_id.as_str().to_owned()),
+        displaced: serde_json::to_value(&opened.displaced).unwrap_or(Value::Null),
         window: opened.credit_initial.get(),
         client,
         plan: plan.clone(),
@@ -243,13 +255,9 @@ pub(super) async fn run(
         acknowledged: 0,
         input_ready: false,
         held: Vec::new(),
+        screen: Screen::open(!plan.observe)?,
     };
-    let raw = if plan.observe {
-        None
-    } else {
-        Some(RawMode::enter()?)
-    };
-    let outcome = attached.follow(&mut notices).await;
-    drop(raw);
+    let outcome = attached.follow(&mut notices, signals).await;
+    drop(attached);
     outcome
 }

@@ -148,10 +148,16 @@ fn attach(args: super::args::AttachArgs) -> Result<crate::attach::AttachPlan, Cl
     let params: ovis_terminal_protocol::schema::methods::attach::AttachLeasesParams =
         decode_params(&request).map_err(CliError::Params)?;
     let client = serde_json::from_value(json!(args.client_id)).map_err(CliError::ParamsJson)?;
+    let takeover = args
+        .takeover
+        .map(|epoch| serde_json::from_value(json!(epoch)))
+        .transpose()
+        .map_err(CliError::ParamsJson)?;
     Ok(crate::attach::AttachPlan {
         target: params.target,
         observe: args.observe,
         client,
+        takeover,
     })
 }
 

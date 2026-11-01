@@ -107,6 +107,9 @@ pub(super) struct AttachArgs {
     /// Watch only: needs no TTY and never reads or forwards input.
     #[arg(long)]
     pub(super) observe: bool,
+    /// Take over the interact lease, naming the epoch it holds now; a stale epoch is refused.
+    #[arg(long, value_name = "EPOCH", conflicts_with = "observe")]
+    pub(super) takeover: Option<String>,
     /// Client label the lease is recorded under.
     #[arg(long, default_value = "cli")]
     pub(super) client_id: String,

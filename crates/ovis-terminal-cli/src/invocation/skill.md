@@ -70,13 +70,23 @@ The bearer credential is read from `OVIS_TERMINAL_CREDENTIAL` and is never print
   attached, typed bytes go to the program only under the interact lease, window
   resizes are applied under the geometry lease, and Ctrl-\ detaches. Ctrl-C goes to
   the program. It needs a TTY on stdin and stdout (`not_a_tty`, exit 2, otherwise).
-- Another holder is never displaced: a held lease exits 11 with `lease_held` and the
-  holder's lease record in `holder`.
-- `--observe` needs no TTY, never reads stdin and never writes input.
-- The outcome record goes to stderr: `{"detached": {"reason", "stream_closed", ...}}`
-  (exit 0) for Ctrl-\, end of stdin, SIGINT, SIGTERM or SIGHUP, or the error record
-  for a refusal; a lost connection exits 4 with `connection_lost`. The outer
-  terminal's settings are restored on every one of these.
+- There is no prefix key and no client mode: every byte other than Ctrl-\, unknown
+  escape sequences and non-UTF-8 bytes included, reaches the program unchanged through
+  `input.raw`, or the server's typed refusal ends the attach.
+- Another holder is never displaced: a held lease exits 11 with `lease_conflict`, the
+  holder's lease record in `holder` and the lease change to retry after in `retry`.
+- `--takeover EPOCH` displaces the interact holder only at its current epoch and with
+  the takeover grant; a stale epoch exits 11 with `lease_epoch_mismatch`, the epoch
+  sent in `expected_epoch` and the current lease in `current`.
+- `--observe` needs no TTY, never reads stdin, never writes input and never resizes;
+  on a terminal, Ctrl-\ (SIGQUIT) detaches it.
+- The outcome record goes to stderr: `{"detached": {"reason", "stream_closed",
+  "leases_released", "leases_held", "displaced", ...}}` (exit 0) for Ctrl-\, end of
+  stdin, SIGINT, SIGTERM, SIGHUP or SIGQUIT, or the error record for a refusal; a
+  signal before the stream is attached exits 10 with `interrupted` and its `stage`; a
+  lost connection exits 4 with `connection_lost`. The outer terminal's settings, and
+  the modes the program switched on (alternate screen, mouse, bracketed paste, cursor
+  keys, keyboard protocol, hidden cursor), are restored on every one of these.
 
 ## Holder service (Unix)
 
@@ -110,8 +120,8 @@ The session holder owns every PTY and outlives the command that started it. Only
 | 4 | unavailable | unavailable, server_not_running, stale_endpoint, method_not_found, machine_unreachable, unsupported_transport, backpressure, recovering, not_ready, service_manager_unavailable, service_unsupported, connection_lost |
 | 7 | needs_target | needs_target, ambiguous_target |
 | 9 | blocked | blocked |
-| 10 | cancelled | cancelled |
-| 11 | conflict | conflict and state conflicts such as op_reused, already_running or lease_held |
+| 10 | cancelled | cancelled, interrupted |
+| 11 | conflict | conflict and state conflicts such as op_reused, already_running, lease_conflict or lease_epoch_mismatch |
 | 12 | forbidden | forbidden, unauthenticated, credential kinds and attach_refused |
 | 13 | outcome_unknown | outcome_unknown, deadline_exceeded, manager_timeout, holder_not_ready: inspect the operation or the service status |
 
