@@ -5,7 +5,8 @@ use quote::ToTokens as _;
 use syn::punctuated::Punctuated;
 use syn::visit::{self, Visit};
 use syn::{
-    Attribute, BinOp, Expr, ExprCast, File, Lit, Local, Macro, Meta, Pat, Signature, Token, Type,
+    Attribute, BinOp, Expr, ExprCast, File, Lit, Local, Macro, Meta, Pat, Signature, Stmt, Token,
+    Type,
 };
 
 use super::report::Finding;
@@ -69,6 +70,20 @@ impl<'ast> Visit<'ast> for Rules<'_> {
             self.push(("max-parameters", signature.ident.span()), detail);
         }
         visit::visit_signature(self, signature);
+    }
+
+    fn visit_stmt(&mut self, stmt: &'ast Stmt) {
+        if let Stmt::Expr(Expr::MethodCall(call), Some(semi)) = stmt
+            && call.method == "ok"
+            && call.args.is_empty()
+        {
+            let detail = format!(
+                "`{}(..).ok();` discards a Result; handle or propagate it",
+                callee(&call.receiver)
+            );
+            self.push(("dropped-result", semi.span), detail);
+        }
+        visit::visit_stmt(self, stmt);
     }
 
     fn visit_local(&mut self, local: &'ast Local) {
@@ -138,6 +153,16 @@ fn numeric_target(ty: &Type) -> Option<String> {
     };
     let ident = path.path.get_ident()?.to_string();
     (path.qself.is_none() && NUMERIC.contains(&ident.as_str())).then_some(ident)
+}
+
+/// The called function or `receiver.method` of `expr`, without whitespace.
+fn callee(expr: &Expr) -> String {
+    let compact = |text: String| text.split_whitespace().collect::<String>();
+    match expr {
+        Expr::MethodCall(call) => compact(format!("{}.{}", text(&call.receiver), call.method)),
+        Expr::Call(call) => compact(text(&call.func)),
+        _ => compact(text(expr)),
+    }
 }
 
 fn text(expr: &Expr) -> String {

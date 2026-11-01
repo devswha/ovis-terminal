@@ -92,6 +92,18 @@ pub(super) fn render(table: &Dispositions, violations: &Violations) -> String {
             cell(&rule.check)
         ));
     }
+    out.push_str(&appendix(table, violations));
+    out
+}
+
+/// The sections after the checklist table: cited V-rows, enforced exclusions, accepted
+/// discards and every rule's V-row references.
+fn appendix(table: &Dispositions, violations: &Violations) -> String {
+    let mut out = String::new();
+    let mut line = |text: &str| {
+        out.push_str(text);
+        out.push('\n');
+    };
     line("");
     line("## V-rows cited by todo 61");
     line("");
@@ -122,6 +134,23 @@ pub(super) fn render(table: &Dispositions, violations: &Violations) -> String {
             exclusion.id,
             tokens.join(", "),
             cell(&exclusion.check)
+        ));
+    }
+    line("");
+    line("## Accepted `.ok();` discards");
+    line("");
+    line(
+        "`source-check::dropped-result` rejects every other `.ok();` statement; an entry that stops matching fails the check.",
+    );
+    line("");
+    line("| file | call | reason |");
+    line("|---|---|---|");
+    for exemption in &table.dropped_result_exemptions {
+        line(&format!(
+            "| `{}` | `{}` | {} |",
+            exemption.path,
+            exemption.call,
+            cell(&exemption.reason)
         ));
     }
     line("");

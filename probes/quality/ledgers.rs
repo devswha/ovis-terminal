@@ -27,6 +27,8 @@ pub(super) struct Gap {
 pub(super) struct Exclusion {
     pub(super) id: String,
     pub(super) title: String,
+    /// Todos the row's citation assigns the exclusion to (`todo 37`).
+    pub(super) cited_todos: Vec<u16>,
 }
 
 /// Both ledgers, in ledger order.
@@ -60,6 +62,9 @@ impl Ledgers {
                 Some(Exclusion {
                     id,
                     title: (*title).to_owned(),
+                    cited_todos: row
+                        .last()
+                        .map_or_else(Vec::new, |citation| cited_todos(citation)),
                 })
             })
             .collect();
@@ -113,6 +118,20 @@ impl Ledgers {
             .map(|exclusion| exclusion.id.clone())
             .collect()
     }
+}
+
+/// Every `todo N` the citation names.
+fn cited_todos(citation: &str) -> Vec<u16> {
+    citation
+        .split("todo ")
+        .skip(1)
+        .filter_map(|rest| {
+            rest.split(|ch: char| !ch.is_ascii_digit())
+                .next()?
+                .parse()
+                .ok()
+        })
+        .collect()
 }
 
 /// `<PREFIX>-001` through `<PREFIX>-<count>`, the ids a `--require-*` count asks for.

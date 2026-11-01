@@ -26,12 +26,17 @@ pub(super) struct IdealRequirements {
     pub(super) platforms: Vec<String>,
     pub(super) windows_smoke: bool,
     pub(super) soak_seconds: u64,
+    /// Root that `$equals_file` operands in the evidence are read under.
+    pub(super) repo: std::path::PathBuf,
 }
 
 /// `(scenario, case, os)` of every passed case in audited evidence.
 type Passed = BTreeSet<(String, String, String)>;
 
-fn collect(runs: &[(String, Value)], verdict: &mut Verdict) -> (Passed, u64) {
+fn collect(
+    runs: &[(String, Value)],
+    (verdict, wanted): (&mut Verdict, &IdealRequirements),
+) -> (Passed, u64) {
     let mut passed = Passed::new();
     let mut soak = 0_u64;
     for (label, run) in runs {
@@ -43,7 +48,7 @@ fn collect(runs: &[(String, Value)], verdict: &mut Verdict) -> (Passed, u64) {
             soak = soak.max(seconds.unwrap_or(0));
             continue;
         }
-        let problems = audit_value(label, run);
+        let problems = audit_value(label, run, &wanted.repo);
         if !problems.is_empty() {
             for problem in problems {
                 verdict.findings.push(Finding::new(
@@ -100,7 +105,7 @@ pub(super) fn audit(
 ) -> Verdict {
     let (runs, wanted) = evidence;
     let mut verdict = Verdict::new("ideal-audit", IDEAL_UNPROVED);
-    let (passed, soak) = collect(runs, &mut verdict);
+    let (passed, soak) = collect(runs, (&mut verdict, wanted));
     let mut missing = Vec::new();
     let mut proved = 0_usize;
     for id in required("IDEAL", wanted.rows) {

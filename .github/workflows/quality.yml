@@ -47,10 +47,10 @@ jobs:
             test "$got" -eq "$want"
           }
           status=0
-          for seed in oversized-file fourth-parameter dropped-result allow-attribute numeric-cast tautological-assert checklist-missing-rule; do
+          for seed in oversized-file fourth-parameter dropped-result ok-discard allow-attribute numeric-cast tautological-assert checklist-missing-rule; do
             expect 1 source-check -- --fixture "$seed" || status=1
           done
-          for seed in missing-receipt-and-pass-banner prose-pass-banner fake-exit-zero forged-assertion skipped-as-pass; do
+          for seed in missing-receipt-and-pass-banner prose-pass-banner fake-exit-zero forged-assertion skipped-as-pass forged-matcher present-on-null forged-gate-report; do
             expect 1 evidence-audit -- --fixture "$seed" || status=1
           done
           for seed in missing-qa unresolved-reference uncovered-gap overlapping-writes; do
@@ -64,8 +64,12 @@ jobs:
           expect 0 plan-audit -- --fixture clean-plan || status=1
           expect 0 ideal-audit -- --fixture clean-proof || status=1
           exit "$status"
-      - name: matrices cover every ledger row and the schema keeps their contract
+      - name: matrices own every ledger row and record exactly the schema's contract
         run: cargo run --locked --manifest-path probes/Cargo.toml --bin quality-matrix -- --mode verify
+      - name: committed evidence passes evidence-audit (tested exemptions)
+        run: >-
+          cargo run --locked --manifest-path probes/Cargo.toml --bin evidence-audit --
+          --tree docs/evidence --exemptions probes/quality/evidence-exemptions.json
       - name: quality/gates scenario, then audit its own evidence
         shell: bash
         run: |

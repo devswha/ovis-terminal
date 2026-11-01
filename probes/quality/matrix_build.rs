@@ -2,17 +2,17 @@
 
 use std::collections::BTreeMap;
 
-use serde_json::Value;
 use sha2::{Digest as _, Sha256};
 
+use super::contract::contract;
 use super::ledgers::Ledgers;
 use super::matrix::{
-    Contract, ExclusionEntry, GapEntry, IDEAL_MAP_FORMAT, IdealEntry, IdealMap, Owners, Sources,
-    TRACEABILITY_FORMAT, Traceability, catalogs,
+    ExclusionEntry, GapEntry, IDEAL_MAP_FORMAT, IdealEntry, IdealMap, Owners, Sources,
+    TRACEABILITY_FORMAT, Traceability,
 };
 use super::plan::{Plan, Todo};
 
-const DERIVATION: &str = "todos: every plan todo whose Delivers names the IDEAL, whose Closes names the GAP, or whose block text names the EXCL; scenarios: the --scenario ids those todos name, in todo order (all/all excluded)";
+const DERIVATION: &str = "todos: every plan todo whose Delivers names the IDEAL, whose Closes names the GAP, or whose block text names the EXCL or that the EXCL row's ledger citation names (`todo N`); scenarios: the --scenario ids those todos name, in todo order (all/all excluded)";
 const PLATFORMS: &[&str] = &["linux", "macos"];
 const WINDOWS: &str = "contract_smoke";
 
@@ -52,20 +52,6 @@ fn owners(plan: &Plan, owns: impl Fn(&Todo) -> bool) -> Owners {
     owners
 }
 
-fn contract(inputs: &Inputs<'_>) -> Result<Contract, serde_json::Error> {
-    let schema: Value = serde_json::from_str(inputs.schema_text)?;
-    let (generation, [methods, error_kinds, events, notifications]) = catalogs(&schema);
-    Ok(Contract {
-        schema: inputs.schema_path.to_owned(),
-        sha256: sha256_hex(inputs.schema_text.as_bytes()),
-        generation,
-        methods,
-        error_kinds,
-        events,
-        notifications,
-    })
-}
-
 fn traceability(inputs: &Inputs<'_>) -> Traceability {
     let (plan, ledgers) = (inputs.plan, inputs.ledgers);
     let section =
@@ -83,7 +69,17 @@ fn traceability(inputs: &Inputs<'_>) -> Traceability {
         derivation: DERIVATION.to_owned(),
         ideals: section(ledgers.ideal_ids(), |todo| &todo.delivers),
         gaps: section(ledgers.gap_ids(), |todo| &todo.closes),
-        exclusions: section(ledgers.exclusion_ids(), |todo| &todo.excludes),
+        exclusions: ledgers
+            .exclusions
+            .iter()
+            .map(|exclusion| {
+                let named = |todo: &Todo| {
+                    todo.excludes.contains(&exclusion.id)
+                        || exclusion.cited_todos.contains(&todo.number)
+                };
+                (exclusion.id.clone(), owners(plan, named))
+            })
+            .collect(),
     }
 }
 
@@ -143,7 +139,7 @@ pub(super) fn build(inputs: &Inputs<'_>) -> Result<(Traceability, IdealMap), ser
     let map = IdealMap {
         format: IDEAL_MAP_FORMAT.to_owned(),
         source: inputs.sources.clone(),
-        contract: contract(inputs)?,
+        contract: contract(inputs.schema_path, inputs.schema_text)?,
         ideals,
         gaps,
         exclusions,

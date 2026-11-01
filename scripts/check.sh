@@ -36,5 +36,7 @@ step bash scripts/hygiene/json.sh
 step cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin source-check -- \
     --roots crates packages/client-ts conformance bench probes --max-pure-loc 250 --max-params 3 \
     --violations docs/research/violations.md --checklist docs/quality-checklist.md
+step cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin evidence-audit -- \
+    --tree docs/evidence --exemptions probes/quality/evidence-exemptions.json
 
 printf '\ncheck.sh: all steps passed\n'

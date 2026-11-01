@@ -158,9 +158,20 @@ pub(super) fn audit(plan: &Plan, ledgers: &Ledgers, requirements: &Requirements)
         required("GAP", requirements.gaps),
         todos.iter().flat_map(|todo| &todo.closes),
     );
+    let cited: Vec<String> = ledgers
+        .exclusions
+        .iter()
+        .filter(|exclusion| {
+            exclusion
+                .cited_todos
+                .iter()
+                .any(|number| plan.todo(*number).is_some())
+        })
+        .map(|exclusion| exclusion.id.clone())
+        .collect();
     let excluded = uncovered(
         required("EXCL", requirements.exclusions),
-        todos.iter().flat_map(|todo| &todo.excludes),
+        todos.iter().flat_map(|todo| &todo.excludes).chain(&cited),
     );
     let (first, last) = requirements.todos;
     let missing_todos: Vec<String> = (first..=last)

@@ -43,8 +43,17 @@ pub(super) struct SourceCheckArgs {
 )]
 pub(super) struct EvidenceAuditArgs {
     /// Evidence documents written by the conformance runner.
-    #[arg(long = "input", num_args = 1.., required_unless_present = "fixture")]
+    #[arg(long = "input", num_args = 1.., required_unless_present_any = ["fixture", "tree"])]
     pub(super) inputs: Vec<PathBuf>,
+    /// Audit every `.json` file under this directory, relative to --repo.
+    #[arg(long)]
+    pub(super) tree: Option<PathBuf>,
+    /// Files under --tree that are known not to be evidence; each must still fail the audit.
+    #[arg(long)]
+    pub(super) exemptions: Option<PathBuf>,
+    /// Root that `$equals_file` operands and exemption paths are read under.
+    #[arg(long, default_value = ".")]
+    pub(super) repo: PathBuf,
     #[arg(long)]
     pub(super) fixture: Option<String>,
     #[arg(long)]
@@ -71,11 +80,11 @@ pub(super) struct PlanAuditArgs {
     /// Inclusive todo range such as `1-70`.
     #[arg(long, default_value = "1-70")]
     pub(super) require_todos: String,
-    #[arg(long, default_value_t = 117)]
+    #[arg(long, default_value_t = 121)]
     pub(super) require_ideals: u16,
-    #[arg(long, default_value_t = 150)]
+    #[arg(long, default_value_t = 154)]
     pub(super) require_gaps: u16,
-    #[arg(long, default_value_t = 27)]
+    #[arg(long, default_value_t = 29)]
     pub(super) require_exclusions: u16,
     /// Fail on unresolved references instead of only listing them.
     #[arg(long)]
@@ -130,6 +139,9 @@ pub(super) struct IdealAuditArgs {
     /// Append this run's report to this file.
     #[arg(long)]
     pub(super) report: Option<PathBuf>,
+    /// Root that `$equals_file` operands in the evidence are read under.
+    #[arg(long, default_value = ".")]
+    pub(super) repo: PathBuf,
     #[arg(long)]
     pub(super) fixture: Option<String>,
 }
@@ -140,8 +152,10 @@ pub(super) enum MatrixMode {
     Write,
     /// Regenerate in memory and fail on any difference.
     Check,
-    /// Structural check without the plan: ledger coverage, predicates, schema contract.
+    /// Structural check without the plan: ledger coverage, ownership, predicates, contract.
     Verify,
+    /// Rewrite only the recorded contract from the schema, then verify; needs no plan.
+    Contract,
 }
 
 /// `quality-matrix`: the traceability matrix and the IDEAL map.

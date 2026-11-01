@@ -44,6 +44,12 @@ fn only_values_worth_handling_are_dropped_results() {
         rules_of("fn t(v: V) { let _ = v; let _guard = v.lock(); }"),
         Vec::<&str>::new()
     );
+    assert_eq!(
+        rules_of("fn t(r: R) { r.send(1).ok(); }"),
+        ["dropped-result"]
+    );
+    let kept = "fn t(r: R) -> Option<u8> { let _kept = r.recv().ok(); r.send(1).ok() }";
+    assert_eq!(rules_of(kept), Vec::<&str>::new());
 }
 
 #[test]
@@ -64,10 +70,14 @@ fn allow_is_found_directly_and_inside_cfg_attr() {
 
 #[test]
 fn only_numeric_cast_targets_are_reported() {
-    assert_eq!(
-        rules_of("fn t(v: u64) -> f64 { v as f64 }"),
-        ["numeric-cast"]
-    );
+    let targets = [
+        "u8", "u16", "u32", "u64", "u128", "usize", "i8", "i16", "i32", "i64", "i128", "isize",
+        "f32", "f64",
+    ];
+    for target in targets {
+        let source = format!("fn t(v: u64) -> {target} {{ v as {target} }}");
+        assert_eq!(rules_of(&source), ["numeric-cast"], "{target}");
+    }
     assert_eq!(
         rules_of("fn t(v: &u8) -> *const u8 { v as *const u8 }"),
         Vec::<&str>::new()

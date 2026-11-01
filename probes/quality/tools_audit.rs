@@ -14,7 +14,8 @@ use super::matrix::IdealMap;
 use super::plan::parse;
 use super::plan_audit::{self, Requirements};
 use super::report::{Finding, Verdict, count};
-use super::seeds;
+use super::scan::shown;
+use super::{exemptions, seeds};
 
 fn parsed<T: clap::Parser>(command_line: &[String]) -> Result<T, QualityError> {
     T::try_parse_from(command_line).map_err(|error| QualityError::from_clap(&error))
@@ -28,24 +29,58 @@ fn absolute(path: &Path) -> Result<PathBuf, QualityError> {
     std::path::absolute(path).map_err(QualityError::io(path))
 }
 
+fn documents(args: &EvidenceAuditArgs) -> Result<Vec<(String, String)>, QualityError> {
+    if let Some(name) = &args.fixture {
+        return Ok(vec![seeds::evidence(name)?]);
+    }
+    let mut labelled: Vec<(String, PathBuf)> = Vec::new();
+    for path in &args.inputs {
+        labelled.push((path.to_string_lossy().into_owned(), path.clone()));
+    }
+    if let Some(tree) = &args.tree {
+        let mut found = Vec::new();
+        evidence_files(&args.repo.join(tree), &mut found)?;
+        found.sort();
+        labelled.extend(
+            found
+                .into_iter()
+                .map(|path| (shown(&args.repo, &path), path)),
+        );
+    }
+    labelled
+        .into_iter()
+        .map(|(label, path)| Ok((label, read(&path)?)))
+        .collect()
+}
+
 pub(super) fn evidence(command_line: &[String]) -> Result<Outcome, QualityError> {
     let args: EvidenceAuditArgs = parsed(command_line)?;
     let mut verdict = Verdict::new("evidence-audit", EVIDENCE_INVALID);
-    let documents: Vec<(String, String)> = match &args.fixture {
-        Some(name) => vec![seeds::evidence(name)?],
-        None => args
-            .inputs
-            .iter()
-            .map(|path| Ok((path.to_string_lossy().into_owned(), read(path)?)))
-            .collect::<Result<_, QualityError>>()?,
+    let documents = documents(&args)?;
+    let exempt = match &args.exemptions {
+        Some(path) => exemptions::load(&args.repo.join(path))?,
+        None => Vec::new(),
     };
     let mut audited = 0_usize;
+    let mut rejected = Vec::new();
     for (label, text) in &documents {
         audited = audited.saturating_add(runs(text).map_or(0, |runs| runs.len()));
-        verdict.findings.extend(audit_text(label, text));
+        let problems = audit_text(label, text, &args.repo);
+        if !problems.is_empty() {
+            rejected.push(label.clone());
+        }
+        if !exempt.iter().any(|entry| &entry.path == label) {
+            verdict.findings.extend(problems);
+        }
     }
-    let labels: Vec<&String> = documents.iter().map(|(label, _)| label).collect();
-    verdict.fact("inputs", json!(labels));
+    verdict
+        .findings
+        .extend(exemptions::stale(&exempt, &rejected));
+    verdict.fact("inputs", count(documents.len()));
+    verdict.fact(
+        "exempted",
+        json!(exempt.iter().map(|entry| &entry.path).collect::<Vec<_>>()),
+    );
     verdict.fact("runs", count(audited));
     Ok(Outcome {
         verdict,
@@ -166,6 +201,7 @@ pub(super) fn ideal(command_line: &[String]) -> Result<Outcome, QualityError> {
                 .collect(),
             windows_smoke: args.windows_contract_smoke,
             soak_seconds: args.require_continuous_soak_seconds,
+            repo: args.repo.clone(),
         };
         (
             map,

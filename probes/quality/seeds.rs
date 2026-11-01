@@ -26,6 +26,7 @@ pub(super) const SOURCE_FIXTURES: &[&str] = &[
     "allow-attribute",
     "numeric-cast",
     "tautological-assert",
+    "ok-discard",
     "checklist-missing-rule",
 ];
 
@@ -55,6 +56,10 @@ fn source_text(name: &str) -> Option<String> {
         }
         "allow-attribute" => "#[allow(dead_code)]\nfn unused() {}\n".to_owned(),
         "numeric-cast" => "fn narrow(value: u64) -> u32 {\n    value as u32\n}\n".to_owned(),
+        "ok-discard" => {
+            "fn tidy(path: &std::path::Path) {\n    std::fs::remove_file(path).ok();\n}\n"
+                .to_owned()
+        }
         "tautological-assert" => {
             "#[test]\nfn status_moves() {\n    let since = 3;\n    assert!(since >= since);\n}\n"
                 .to_owned()
@@ -95,6 +100,9 @@ pub(super) const EVIDENCE_FIXTURES: &[&str] = &[
     "fake-exit-zero",
     "forged-assertion",
     "skipped-as-pass",
+    "forged-matcher",
+    "present-on-null",
+    "forged-gate-report",
 ];
 
 /// The seeded evidence document's label and text.
@@ -108,6 +116,9 @@ pub(super) fn evidence(name: &str) -> Result<(String, String), QualityError> {
         "fake-exit-zero" => include_str!("fixtures/evidence/fake-exit-zero.json"),
         "forged-assertion" => include_str!("fixtures/evidence/forged-assertion.json"),
         "skipped-as-pass" => include_str!("fixtures/evidence/skipped-as-pass.json"),
+        "forged-matcher" => include_str!("fixtures/evidence/forged-matcher.json"),
+        "present-on-null" => include_str!("fixtures/evidence/present-on-null.json"),
+        "forged-gate-report" => include_str!("fixtures/evidence/forged-gate-report.json"),
         _ => return Err(unknown(name, EVIDENCE_FIXTURES)),
     };
     Ok((format!("seed/{name}"), text.to_owned()))
@@ -230,6 +241,7 @@ pub(super) fn ideal(name: &str) -> Result<IdealSeed, QualityError> {
         platforms: vec!["linux".to_owned()],
         windows_smoke: false,
         soak_seconds: 0,
+        repo: PathBuf::from("."),
     };
     Ok((map, ledgers, runs, requirements))
 }

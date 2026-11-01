@@ -1,10 +1,14 @@
 //! Auditing conformance evidence: a pass is accepted only when the document proves it.
 
+use std::path::Path;
+
 use serde_json::Value;
 
-use super::matchers::holds;
+use super::gate_report;
+use super::matchers::{Judgement, holds};
 use super::report::{FailureKind, Finding};
 
+/// Conformance runs and quality-gate reports are the two evidence entries accepted.
 pub(super) const EVIDENCE_INVALID: FailureKind = FailureKind {
     kind: "evidence_invalid",
     hint: "rerun the conformance runner; a pass needs parsed exits, recomputable assertions and a binary hash",
@@ -16,6 +20,7 @@ const OUTCOMES: &[&str] = &["passed", "failed", "skipped"];
 struct Audit<'run> {
     label: String,
     run: &'run Value,
+    repo: &'run Path,
     found: Vec<Finding>,
 }
 
@@ -134,11 +139,20 @@ fn audit_case(audit: &mut Audit<'_>, case: &Value) {
             );
             continue;
         };
-        if holds(check, expected, actual).is_some_and(|recomputed| recomputed != held) {
-            audit.flag(
+        match holds(check, (expected, actual), audit.repo) {
+            Judgement::Holds(recomputed) if recomputed != held => audit.flag(
                 "assertion-forged",
                 format!("{name} {check}: passed={held} but expected {expected} vs actual {actual}"),
-            );
+            ),
+            Judgement::Holds(_) => {}
+            Judgement::UnknownMatcher(operator) => audit.flag(
+                "unknown-matcher",
+                format!("{name} {check}: {operator} is not a runner matcher, so the assertion proves nothing"),
+            ),
+            Judgement::Unjudgeable(why) => audit.flag(
+                "unjudgeable-assertion",
+                format!("{name} {check}: {why}"),
+            ),
         }
         if passed && !held {
             audit.flag(
@@ -187,10 +201,14 @@ fn audit_totals(audit: &mut Audit<'_>, cases: &[Value]) {
     }
 }
 
-fn audit_run(label: String, run: &Value) -> Vec<Finding> {
+fn audit_run(label: String, run: &Value, repo: &Path) -> Vec<Finding> {
+    if run.get("gate").is_some() {
+        return gate_report::audit(&label, run);
+    }
     let mut audit = Audit {
         label,
         run,
+        repo,
         found: Vec::new(),
     };
     audit.header();
@@ -214,8 +232,9 @@ pub(super) fn runs(text: &str) -> Option<Vec<Value>> {
     }
 }
 
-/// Every finding about one evidence document, reported under `label`.
-pub(super) fn audit_text(label: &str, text: &str) -> Vec<Finding> {
+/// Every finding about one evidence document, reported under `label`; `$equals_file`
+/// operands are read under `repo`.
+pub(super) fn audit_text(label: &str, text: &str, repo: &Path) -> Vec<Finding> {
     let Some(runs) = runs(text) else {
         let detail = "not a JSON evidence document; a printed PASS banner is not evidence";
         return vec![Finding::new("manifest-schema", label, detail)];
@@ -229,11 +248,11 @@ pub(super) fn audit_text(label: &str, text: &str) -> Vec<Finding> {
     }
     runs.iter()
         .enumerate()
-        .flat_map(|(index, run)| audit_run(format!("{label}#{index}"), run))
+        .flat_map(|(index, run)| audit_run(format!("{label}#{index}"), run, repo))
         .collect()
 }
 
 /// Every finding about one parsed run, for callers that already split a document.
-pub(super) fn audit_value(label: &str, run: &Value) -> Vec<Finding> {
-    audit_run(label.to_owned(), run)
+pub(super) fn audit_value(label: &str, run: &Value, repo: &Path) -> Vec<Finding> {
+    audit_run(label.to_owned(), run, repo)
 }

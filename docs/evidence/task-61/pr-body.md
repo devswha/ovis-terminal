@@ -94,8 +94,62 @@ Plan findings for F1/F4, reported and not fixed here because the plan is not in 
 - `plan-audit` on the live plan exits 1 (`plan-audit-live.log`).
 - Todos 1, 71-76 and 80-82 lack a happy+failure QA line or a `--scenario` for the rows they claim.
 - 13 same-wave write-scope overlaps: todo 77/79 `dispatch/` against the lanes, and 83/84/85/86 `graphics.rs`.
-- EXCL-029 has no owning todo.
 - `ideal-audit` on this attempt directory proves 0 of 117 rows (`ideal-audit-live.log`), as designed. Only quality/gates evidence is there, with no Windows smoke and no soak receipt.
+
+
+## Round 2 (gate review and adversarial findings)
+
+Base unchanged at edfdb58. These are new commits on top of 0670a42; nothing was force-pushed.
+
+- **B1, evidence-audit accepted assertions it could not judge.** `matchers::holds` now returns a typed `Judgement`.
+  - An unknown operator is a `unknown-matcher` finding (exit 1).
+  - `$present` and `$capture` are judged from the recorded `null`: `{"$present": true}` with `actual: null` is `assertion-forged`.
+  - `$equals_file` is recomputed against `--repo`. An unreadable operand is `unjudgeable-assertion`.
+  - The unit test that pinned the old behaviour is replaced by `presence_is_judged_from_the_recorded_null` and `an_unknown_or_unreadable_operator_is_never_accepted`.
+  - New seeds `forged-matcher` (`{"$bogus":"never"}`) and `present-on-null` fail with exit 1 in `quality_gates` and in the `quality/gates` failure case.
+- **B2, the contract was names-only.** `conformance/ideal-map.json` `contract` now records:
+  - every method verbatim (params, result, errors, `x-effect`, `x-targeting`, `x-params`, summary, `paramStructure`);
+  - every error kind, event and notification entry;
+  - `x-capabilities`, `x-compatibility`, `x-error-data`, `x-limits` and `x-stream`;
+  - a sha256 per component schema (428).
+
+  `quality-matrix --mode verify` regenerates the contract from `schema/ovis-terminal.openrpc.json` and diffs it in both directions: `contract-missing`, `contract-removed`, `contract-drift`, `contract-stale`. Tests:
+  - `a_method_missing_from_the_recorded_contract_fails_verify` deletes `worktree.remove` from the record and gets exit 1 with `contract-missing methods/worktree.remove`.
+  - `a_removed_or_changed_contract_entry_and_a_weakened_predicate_fail_verify` gets `contract-drift methods/doc.set`, `contract-removed` and `predicate-drift`.
+  - `quality-matrix --mode contract` rewrites only the contract from the schema, without the plan. A lane that changes the schema runs it, the same way the SDK is regenerated.
+- **N1, ownership.** `verify` fails on any row whose todos or scenarios are empty (`matrix-unowned`). `an_emptied_owner_or_scenario_fails_verify` empties GAP-014's todos and EXCL-029's scenarios and gets two findings and exit 1.
+  - EXCL-029 is now owned through its ledger citation (`owner decision 2026-10-31; todo 37`): todo 37 / `agent/records`. Both the matrix derivation and plan-audit count a `todo N` named in an EXCL row's citation.
+  - plan-audit defaults and the documented command now use `--require-ideals 121 --require-gaps 154 --require-exclusions 29`. On the live plan `excluded_features` is `[]` (`plan-audit-live.log`).
+- **N2, `.ok();` discards.** `dropped-result` now also flags every `<expr>.ok();` statement (`ok-discard` seed, unit tests). The tree has 13 such statements. Each one is classified in `probes/quality/dispositions.json` `dropped_result_exemptions`, rendered under "Accepted `.ok();` discards" in the checklist.
+  - 5 production `reply.send(..).ok()` sites in `streams/scheduler/{actor/serve.rs,db.rs}`: a oneshot reply fails only when the requester dropped its receiver. No product change is needed.
+  - 8 test-harness sites: barrier callbacks that cannot return, bounded hang guards, and cleanup in `Drop`.
+  - An exemption that stops matching is a `stale-exemption` finding.
+- **N3, committed evidence.** `evidence-audit --tree docs/evidence --exemptions probes/quality/evidence-exemptions.json` runs in check.sh and in the quality workflow. It audits 84 files and exits 0.
+  - The 22 exemptions each give a reason: 11 pre-runner files (todos 7-19), 7 task-56 tuning files, and 4 all/all runs whose `$equals_file` compared the schema of their commit.
+  - `without_exemptions_exactly_the_exempted_files_are_rejected` proves the list equals the rejected set. `an_exemption_for_valid_evidence_is_stale` proves a stale entry fails.
+  - Quality-gate reports appended to an evidence file are now audited as gate reports, so `docs/evidence/task-61/acceptance-evidence.json` passes (`evidence-audit --input` exit 0). Their verdict, exit, kind, `finding_count` and findings must agree; seed `forged-gate-report` fails.
+- **Also:** the numeric-cast unit test covers all 14 numeric targets (the adversarial `usize` mutant).
+
+Round-2 results (`docs/evidence/task-61/*.log`, regenerated):
+- conformance `quality/gates --case all` exit 0, 2 cases, 129 assertions, `failed: 0`, `skipped: 0`;
+- `--case happy` exit 0 (65 assertions);
+- `--case failure --inject '{"fixture":"missing-receipt-and-pass-banner"}' --append` exit 0 (7 assertions), with the gate process exit 1 `evidence_invalid`;
+- source-check exit 0;
+- the seeded negative exit 1;
+- `evidence-audit --fixture forged-matcher` exit 1 (`unknown-matcher`);
+- matrix verify exit 0;
+- matrix check against the live plan exit 0;
+- evidence tree exit 0;
+- `cargo nextest run -p ovis-terminal-probes`: 28 run, 28 passed.
+
+Round-2 mutants (`mutants.log`, 5 to 9), each killed by a shipped test:
+- unknown matcher treated as holding;
+- reverse contract comparison removed;
+- ownership needing both lists empty;
+- stale-exemption check disabled;
+- `.ok()` rule disabled.
+
+Not changed by round 2: the three deferred flake items in Risks.
 
 ## Seams (files outside the write scope)
 

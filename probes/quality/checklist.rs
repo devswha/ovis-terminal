@@ -24,6 +24,7 @@ pub(super) struct Dispositions {
     pub(super) precedence: String,
     pub(super) rules: Vec<Disposition>,
     pub(super) exclusions: Vec<ExclusionCheck>,
+    pub(super) dropped_result_exemptions: Vec<super::discards::DroppedResultExemption>,
 }
 
 /// An EXCL row of `ideal-state.md` this todo must not reproduce, and what enforces it.

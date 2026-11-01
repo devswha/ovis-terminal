@@ -9,6 +9,7 @@ use serde_json::{Value, json};
 
 use super::args::{MatrixArgs, MatrixMode};
 use super::cli::Outcome;
+use super::contract::contract;
 use super::error::QualityError;
 use super::ledgers::Ledgers;
 use super::matrix::{IdealMap, Sources, Traceability, verify};
@@ -101,6 +102,16 @@ pub(super) fn run(command_line: &[String]) -> Result<Outcome, QualityError> {
         .map_err(|error| QualityError::from_clap(&error))?;
     let ledgers = Ledgers::read(&args.ideals, &args.gaps)?;
     let mut verdict = Verdict::new("quality-matrix", MATRIX_STALE);
+    if args.mode == MatrixMode::Contract {
+        let mut map: IdealMap = load(&args.ideal_map)?;
+        let text = read(&args.schema)?;
+        map.contract =
+            contract(&map.contract.schema, &text).map_err(|source| QualityError::Json {
+                path: args.schema.clone(),
+                source,
+            })?;
+        store(&args.ideal_map, &map)?;
+    }
     if args.mode == MatrixMode::Write {
         let (trace, map) = generated(&args, &ledgers)?;
         store(&args.traceability, &trace)?;
@@ -125,10 +136,10 @@ pub(super) fn run(command_line: &[String]) -> Result<Outcome, QualityError> {
             ));
         }
     }
-    let schema: Value = load(&args.schema)?;
+    let schema_text = read(&args.schema)?;
     verdict
         .findings
-        .extend(verify((&trace, &map), &ledgers, &schema));
+        .extend(verify((&trace, &map), &ledgers, &schema_text));
     verdict.fact("ideals", count(map.ideals.len()));
     verdict.fact("gaps", count(map.gaps.len()));
     verdict.fact("exclusions", count(map.exclusions.len()));

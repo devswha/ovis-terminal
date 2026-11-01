@@ -47,6 +47,12 @@ const SEEDED_DEFECTS: &[(Tool, &str, &str, &str)] = &[
     ),
     (
         Tool::SourceCheck,
+        "ok-discard",
+        "quality_violation",
+        "dropped-result",
+    ),
+    (
+        Tool::SourceCheck,
         "checklist-missing-rule",
         "quality_violation",
         "checklist-disposition",
@@ -80,6 +86,24 @@ const SEEDED_DEFECTS: &[(Tool, &str, &str, &str)] = &[
         "skipped-as-pass",
         "evidence_invalid",
         "pass-claim-unsupported",
+    ),
+    (
+        Tool::EvidenceAudit,
+        "forged-matcher",
+        "evidence_invalid",
+        "unknown-matcher",
+    ),
+    (
+        Tool::EvidenceAudit,
+        "present-on-null",
+        "evidence_invalid",
+        "assertion-forged",
+    ),
+    (
+        Tool::EvidenceAudit,
+        "forged-gate-report",
+        "evidence_invalid",
+        "gate-report-forged",
     ),
     (
         Tool::PlanAudit,

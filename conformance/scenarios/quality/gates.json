@@ -33,13 +33,17 @@
     },
     {
       "case": "failure",
-      "summary": "Every seeded defect fails its gate with exit 1 and a typed kind: evidence with a PASS banner and no receipts, a prose banner, a forged exit or assertion and a skipped case claimed as a pass are evidence_invalid; an #[allow], an `as` cast, a self-comparing assertion and an undisposed Rule totals id are quality_violation; an unresolved reference, an uncovered GAP and overlapping same-wave writes are plan_invalid; unproved and forged IDEAL proofs are ideal_unproved. With --inject only the named fixture runs.",
+      "summary": "Every seeded defect fails its gate with exit 1 and a typed kind: evidence with a PASS banner and no receipts, a prose banner, a forged exit or assertion, an unknown matcher, a $present claim on a missing value, a self-contradicting gate report and a skipped case claimed as a pass are evidence_invalid; an `.ok();` discard, an #[allow], an `as` cast, a self-comparing assertion and an undisposed Rule totals id are quality_violation; an unresolved reference, an uncovered GAP and overlapping same-wave writes are plan_invalid; unproved and forged IDEAL proofs are ideal_unproved. With --inject only the named fixture runs.",
       "steps": [
         {"gates": {"planned": [
           {"request": {"fixture": "missing-receipt-and-pass-banner"}, "tool": "evidence-audit", "exit": 1, "report": {"/verdict": "fail", "/kind": "evidence_invalid", "/finding_count": "2", "/findings/0/rule": "binary-hash", "/findings/1/rule": "receipt-missing"}},
           {"request": {"fixture": "prose-pass-banner"}, "tool": "evidence-audit", "exit": 1, "report": {"/kind": "evidence_invalid", "/finding_count": "1", "/findings/0/rule": "manifest-schema"}},
           {"request": {"fixture": "forged-assertion"}, "tool": "evidence-audit", "exit": 1, "report": {"/kind": "evidence_invalid", "/finding_count": "1", "/findings/0/rule": "assertion-forged"}},
           {"request": {"fixture": "skipped-as-pass"}, "tool": "evidence-audit", "exit": 1, "report": {"/kind": "evidence_invalid", "/finding_count": "1", "/findings/0/rule": "pass-claim-unsupported"}},
+          {"request": {"fixture": "forged-matcher"}, "tool": "evidence-audit", "exit": 1, "report": {"/kind": "evidence_invalid", "/finding_count": "1", "/findings/0/rule": "unknown-matcher"}},
+          {"request": {"fixture": "present-on-null"}, "tool": "evidence-audit", "exit": 1, "report": {"/kind": "evidence_invalid", "/finding_count": "1", "/findings/0/rule": "assertion-forged"}},
+          {"request": {"fixture": "forged-gate-report"}, "tool": "evidence-audit", "exit": 1, "report": {"/kind": "evidence_invalid", "/findings/0/rule": "gate-report-forged"}},
+          {"request": {"fixture": "ok-discard"}, "tool": "source-check", "exit": 1, "report": {"/kind": "quality_violation", "/finding_count": "1", "/findings/0/rule": "dropped-result", "/findings/0/location": "seed/ok-discard.rs:2"}},
           {"request": {"fixture": "allow-attribute"}, "tool": "source-check", "exit": 1, "report": {"/kind": "quality_violation", "/findings/0/rule": "allow-attribute"}},
           {"request": {"fixture": "numeric-cast"}, "tool": "source-check", "exit": 1, "report": {"/kind": "quality_violation", "/findings/0/rule": "numeric-cast"}},
           {"request": {"fixture": "tautological-assert"}, "tool": "source-check", "exit": 1, "report": {"/kind": "quality_violation", "/findings/0/rule": "tautological-assert"}},

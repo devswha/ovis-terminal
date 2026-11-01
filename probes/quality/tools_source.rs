@@ -8,6 +8,7 @@ use super::args::SourceCheckArgs;
 use super::cargo_rules::{CARGO_RULES, check_members, check_workspace};
 use super::checklist::{RepoFacts, dispositions, validate};
 use super::cli::Outcome;
+use super::discards::apply_exemptions;
 use super::error::QualityError;
 use super::matrix_build::sha256_hex;
 use super::render::{REGENERATE, render};
@@ -89,7 +90,15 @@ pub(super) fn run(command_line: &[String]) -> Result<Outcome, QualityError> {
         });
     }
     let scanned = scan_roots(&args.repo, &args.roots, limits)?;
-    verdict.findings.extend(scanned.findings.iter().cloned());
+    match dispositions() {
+        Ok(table) => verdict
+            .findings
+            .extend(apply_exemptions(&table, scanned.findings.clone())),
+        Err(finding) => {
+            verdict.findings.extend(scanned.findings.iter().cloned());
+            verdict.findings.push(finding);
+        }
+    }
     verdict.fact("sources", scanned.facts());
     verdict.findings.extend(check_workspace(&args.repo)?);
     verdict

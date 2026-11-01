@@ -43,3 +43,64 @@ $ cargo nextest run -p ovis-terminal-server --lib -E 'test(route::)'
         FAIL [   0.014s] (1/1) ovis-terminal-server dispatch::remote::route::tests::a_remote_control_call_needs_the_observing_permission_not_a_read
 
 
+
+## mutant 5 (round 2): probes/quality/matchers.rs
+- unknown => Judgement::UnknownMatcher(unknown.to_owned()),
++ _ => Judgement::Holds(true),
+$ cargo nextest run -p ovis-terminal-probes --lib --test quality_gates -E 'test(matchers::) | test(every_seeded)'
+[exit 0]
+        FAIL [   0.008s] (4/5) ovis-terminal-probes quality::matchers::tests::an_unknown_or_unreadable_operator_is_never_accepted
+        FAIL [   0.029s] (5/5) ovis-terminal-probes::quality_gates every_seeded_defect_fails_its_gate_with_exit_one_and_its_rule
+     Summary [   0.029s] 5 tests run: 3 passed, 2 failed, 14 skipped
+        FAIL [   0.008s] (4/5) ovis-terminal-probes quality::matchers::tests::an_unknown_or_unreadable_operator_is_never_accepted
+        FAIL [   0.029s] (5/5) ovis-terminal-probes::quality_gates every_seeded_defect_fails_its_gate_with_exit_one_and_its_rule
+
+
+
+## mutant 6 (round 2): probes/quality/contract.rs
+- for (name, value) in current {
++ for (name, value) in recorded {
+$ cargo nextest run -p ovis-terminal-probes --test quality_repository
+[exit 0]
+        FAIL [   0.136s] (1/5) ovis-terminal-probes::quality_repository a_method_missing_from_the_recorded_contract_fails_verify
+        FAIL [   0.140s] (3/5) ovis-terminal-probes::quality_repository a_removed_or_changed_contract_entry_and_a_weakened_predicate_fail_verify
+     Summary [  10.334s] 5 tests run: 3 passed, 2 failed, 0 skipped
+        FAIL [   0.136s] (1/5) ovis-terminal-probes::quality_repository a_method_missing_from_the_recorded_contract_fails_verify
+        FAIL [   0.140s] (3/5) ovis-terminal-probes::quality_repository a_removed_or_changed_contract_entry_and_a_weakened_predicate_fail_verify
+
+
+
+## mutant 7 (round 2): probes/quality/matrix.rs
+- if todos.is_empty() || scenarios.is_empty() {
++ if todos.is_empty() && scenarios.is_empty() {
+$ cargo nextest run -p ovis-terminal-probes --test quality_repository
+[exit 0]
+        FAIL [   0.142s] (3/5) ovis-terminal-probes::quality_repository an_emptied_owner_or_scenario_fails_verify
+     Summary [   9.423s] 5 tests run: 4 passed, 1 failed, 0 skipped
+        FAIL [   0.142s] (3/5) ovis-terminal-probes::quality_repository an_emptied_owner_or_scenario_fails_verify
+
+
+
+## mutant 8 (round 2): probes/quality/exemptions.rs
+- .filter(|entry| !rejected.contains(&entry.path))
++ .filter(|entry| entry.path.is_empty() && !rejected.contains(&entry.path))
+$ cargo nextest run -p ovis-terminal-probes --test quality_evidence
+[exit 0]
+        FAIL [   0.009s] (1/4) ovis-terminal-probes::quality_evidence an_exemption_for_valid_evidence_is_stale
+     Summary [   1.410s] 4 tests run: 3 passed, 1 failed, 0 skipped
+        FAIL [   0.009s] (1/4) ovis-terminal-probes::quality_evidence an_exemption_for_valid_evidence_is_stale
+
+
+
+## mutant 9 (round 2): probes/quality/rules.rs
+- && call.method == "ok"
++ && call.method == "ok_never"
+$ cargo nextest run -p ovis-terminal-probes --lib --test quality_gates -E 'test(rules::) | test(every_seeded)'
+[exit 0]
+        FAIL [   0.008s] (4/7) ovis-terminal-probes quality::rules::tests::only_values_worth_handling_are_dropped_results
+        FAIL [   0.027s] (7/7) ovis-terminal-probes::quality_gates every_seeded_defect_fails_its_gate_with_exit_one_and_its_rule
+     Summary [   0.027s] 7 tests run: 5 passed, 2 failed, 12 skipped
+        FAIL [   0.008s] (4/7) ovis-terminal-probes quality::rules::tests::only_values_worth_handling_are_dropped_results
+        FAIL [   0.027s] (7/7) ovis-terminal-probes::quality_gates every_seeded_defect_fails_its_gate_with_exit_one_and_its_rule
+
+

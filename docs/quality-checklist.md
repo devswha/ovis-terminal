@@ -24,7 +24,7 @@ Gate tokens: `clippy::<lint>` and `rust::<lint>` are workspace lint-table entrie
 | PROG-SMELL-2 | 312 | medium | applicable | `source-check::max-parameters`, `clippy.toml::too-many-arguments-threshold`, `clippy-group::pedantic` | At most three parameters and no boolean mode flags; use an options struct or an enum. | At most three parameters per signature, receiver included; no boolean mode flags (pedantic fn_params_excessive_bools). |
 | SLOP-10 | 242 | high | applicable | `source-check::max-pure-loc`, `file::scripts/check.sh` | Split files at 250 pure LOC along a responsibility seam. | Every .rs file under the roots stays at or below 250 pure lines of code; an oversized file is split along a responsibility seam. |
 | PROG-A1 | 224 | high | applicable | `review` | Closed sets are enums end to end, including at the API boundary. | Closed sets are enums from the wire to storage; reviewer rejects string-typed states or kinds. |
-| RUST-HR-1 | 223 | high | applicable | `source-check::dropped-result`, `clippy::let_underscore_must_use`, `rust::unused_must_use` | Never drop errors or send Null on failure; partial results carry an explicit error signal. | No `let _ =` over a call, await, `?` or macro; failures propagate or are reported, never turned into Null or success. |
+| RUST-HR-1 | 223 | high | applicable | `source-check::dropped-result`, `clippy::let_underscore_must_use`, `rust::unused_must_use` | Never drop errors or send Null on failure; partial results carry an explicit error signal. | No `let _ =` over a call, await, `?` or macro and no `.ok();` statement discard; failures propagate or are reported, never turned into Null or success. The few accepted `.ok();` discards are listed below with their reason, and an exemption that no longer matches fails source-check. |
 | SLOP-2 | 217 | high | applicable | `review` | Keep each failure cause distinct (spawn vs exit vs HTTP) and surface it; never collapse causes into one message. | Spawn, exit, I/O and protocol failures stay distinct variants; reviewer rejects one catch-all message for several causes. |
 | RUST-HR-2 | 204 | high | applicable | `clippy::undocumented_unsafe_blocks`, `clippy::multiple_unsafe_ops_per_block`, `rust::unsafe_op_in_unsafe_fn` | Minimize unsafe; each block has a SAFETY comment and a Miri or test proof, behind a safe wrapper. | Every unsafe block carries a SAFETY comment, one operation, and sits behind a safe wrapper with native or Miri evidence. |
 | PROG-A2 | 147 | high | applicable | `review`, `scenario::protocol/strict-target` | Parse, do not validate: boundary input becomes a typed value once and is never re-checked. | Boundary input is parsed once into a typed value with deny_unknown_fields; nothing re-validates a parsed value. |
@@ -102,6 +102,23 @@ These legacy defects must never be reproduced; each is enforced by the gate of i
 | EXCL-006 | `scenario::protocol/strict-target`, `scenario::quality/gates` | A misspelled target field or flag is a typed error before dispatch, never data about a focused pane: quality/gates asserts `ovis-terminal --json schema openrpc --target focused` exits 2 with kind usage on stderr and nothing on stdout. |
 | EXCL-020 | `gate::evidence-audit`, `scenario::quality/gates`, `scenario::services/plugins` | Every managed invocation keeps an identity, bounded output and an exit outcome: each gate run is recorded with its argv, exit status and full JSON report, and plugin runs keep bounded output and exit results (todo 46). |
 | EXCL-021 | `gate::evidence-audit`, `scenario::observability/health` | Failure state stays queryable instead of expiring as a banner: every gate verdict is a JSON report appended to the evidence file, and evidence-audit rejects a printed PASS banner as evidence. |
+
+## Accepted `.ok();` discards
+
+`source-check::dropped-result` rejects every other `.ok();` statement; an entry that stops matching fails the check.
+
+| file | call | reason |
+|---|---|---|
+| `crates/ovis-terminal-server/src/streams/scheduler/actor/serve.rs` | `reply.send` | A tokio oneshot reply fails only when the requester has dropped its receiver (it cancelled or timed out); the scheduler has nobody to tell, and the work's own effects are already recorded where the requester can query them. |
+| `crates/ovis-terminal-server/src/streams/scheduler/db.rs` | `reply.send` | A tokio oneshot reply fails only when the requester has dropped its receiver (it cancelled or timed out); the scheduler has nobody to tell, and the work's own effects are already recorded where the requester can query them. |
+| `crates/ovis-terminal-core/src/commit/qa/install.rs` | `applied.try_send` | Test barrier callback inside the store writer: it cannot return an error; a full or closed signal channel means the test already stopped waiting, and the test's own bounded receive fails it. |
+| `crates/ovis-terminal-core/src/commit/qa/install.rs` | `held.recv_timeout` | Test barrier hold inside the store writer, bounded by BOUND as a hang guard; the test asserts the commit order through its own receivers, not through this wait. |
+| `crates/ovis-terminal-core/src/commit/qa/sources.rs` | `applied.try_send` | Test barrier callback inside the store writer: it cannot return an error; a full or closed signal channel means the test already stopped waiting, and the test's own bounded receive fails it. |
+| `crates/ovis-terminal-core/src/commit/qa/sources.rs` | `held.recv_timeout` | Test barrier hold inside the store writer, bounded by BOUND as a hang guard; the test asserts the commit order through its own receivers, not through this wait. |
+| `crates/ovis-terminal-server/src/dispatch/qa/admission.rs` | `dropped.send` | Test watcher thread: a closed observer means the bounded wait in the test already failed it (the code comment states this). |
+| `crates/ovis-terminal-server/src/dispatch/lanes/machine_actor/qa.rs` | `std::fs::remove_dir_all` | Test fixture cleanup in Drop, which cannot return an error; a leftover scratch directory does not change any assertion. |
+| `crates/ovis-terminal-server/src/streams/scheduler/history/tests.rs` | `std::fs::remove_dir_all` | Test fixture cleanup in Drop, which cannot return an error; a leftover scratch directory does not change any assertion. |
+| `crates/ovis-terminal-server/src/streams/scheduler/qa/history.rs` | `std::fs::remove_dir_all` | Test scratch cleanup after the assertions ran; a leftover directory does not change the verdict. |
 
 ## V-row references
 
