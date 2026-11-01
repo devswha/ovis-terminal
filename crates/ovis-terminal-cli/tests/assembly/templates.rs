@@ -1,5 +1,5 @@
-//! `template.list` and `template.get` read `<state>/templates` on the real binary; an
-//! unknown template is refused.
+//! `template.list` and `template.get` read `<state>/templates` on the real binary (an
+//! unknown template is refused), and `machine.list` reads the machine actor roster.
 
 use serde_json::json;
 
@@ -40,6 +40,15 @@ fn templates_in_the_state_directory_are_listed_and_read_by_name() -> TestResult 
         Some(&json!("template_not_found")),
         "{missing}"
     );
+    served.stop()?;
+    Ok(())
+}
+
+#[test]
+fn machine_list_reads_the_actor_roster_which_starts_empty() -> TestResult {
+    let served = Served::start()?;
+    let listed = served.ok(&["call", "machine.list", "--params", "{}"])?;
+    assert_eq!(listed.get("machines"), Some(&json!([])), "{listed}");
     served.stop()?;
     Ok(())
 }

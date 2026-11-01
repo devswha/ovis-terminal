@@ -22,6 +22,7 @@ use ovis_terminal_server::conn::{Call, RequestHandler};
 use ovis_terminal_server::dispatch::lanes::boundary_policy::BoundaryPolicy;
 use ovis_terminal_server::dispatch::lanes::health::Measured;
 use ovis_terminal_server::dispatch::lanes::prompt_bridge::Gated;
+use ovis_terminal_server::dispatch::remote::RemoteDispatch;
 use ovis_terminal_server::streams::{AttachHandler, AttachLane};
 use ovis_terminal_store::OpId as StoreOpId;
 use serde::de::DeserializeOwned;
@@ -279,9 +280,18 @@ impl Served {
 /// The connection handler: credentials are revalidated first, then every call's latency is
 /// measured around the boundary policy, which audits it and enforces payload and path
 /// bounds; the prompt bridge gate then keeps a program token to its own terminal before
-/// the routes see the call.
-pub(super) type Handler =
-    Revalidated<Measured<BoundaryPolicy<Gated<Assembled, Arc<super::directory::Directory>>>>>;
+/// the routes see the call. A call naming another machine is forwarded to that machine's
+/// actor; every other call reaches [`Assembled`].
+pub(super) type Handler = Revalidated<
+    Measured<
+        BoundaryPolicy<
+            Gated<
+                RemoteDispatch<ovis_terminal_remote::transport::Link, Assembled>,
+                Arc<super::directory::Directory>,
+            >,
+        >,
+    >,
+>;
 
 /// The attach stream methods in front of [`Served`], with the geometry claim on open.
 #[derive(Debug)]

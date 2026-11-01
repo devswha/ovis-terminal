@@ -18,6 +18,7 @@ use ovis_terminal_protocol::schema::limits::TransportKind;
 use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::dispatch::lanes::boundary_policy::{AuditTrail, BoundaryPolicy};
 use ovis_terminal_server::dispatch::lanes::health::Measured;
+use ovis_terminal_server::dispatch::remote::RemoteDispatch;
 use ovis_terminal_server::listen::{
     ServeReport, ServerConfig, ServerHandle, UnixEndpoint, serve_unix,
 };
@@ -119,7 +120,7 @@ impl Generation {
         shared: &Shared,
         (identity, health, endpoint): (RuntimeIdentity, Arc<Health>, Option<UnixEndpoint>),
     ) -> Result<Self, AssemblyError> {
-        let (dispatch, log) = host(&Hosting {
+        let (dispatch, log, routes) = host(&Hosting {
             state: &shared.state,
             identity,
             authority: Arc::clone(&shared.authority),
@@ -157,7 +158,8 @@ impl Generation {
             served,
             transports,
         };
-        let gated = shared.agents.gate(Arc::new(assembled));
+        let remote = RemoteDispatch::new(routes, Arc::new(assembled));
+        let gated = shared.agents.gate(Arc::new(remote));
         let policed = BoundaryPolicy::new((Arc::clone(&shared.authority), audit(identity)?), gated);
         let measured = Measured::new(health, Arc::new(policed));
         let handler = Arc::new(Revalidated::new(Arc::clone(&shared.authority), measured));

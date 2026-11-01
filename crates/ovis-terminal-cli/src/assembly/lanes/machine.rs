@@ -1,23 +1,16 @@
-//! Machine-scoped lanes: credentials, `server.stop`, documents, plugins, machine
-//! identity and the holder service description.
+//! Machine-scoped lanes: credentials, `server.stop`, documents, plugins and the holder
+//! service description.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use ovis_terminal_server::dispatch::lanes::credential_rotation::{
     CredentialLane, RevokeCredential, RotateCredential,
-};
-use ovis_terminal_server::dispatch::lanes::machine_identity::{
-    MachineAdd, MachineGet, MachineLane, MachineRename,
 };
 use ovis_terminal_server::dispatch::lanes::{documents_retention, plugins};
 use ovis_terminal_services::plugins::Plugins;
 
 use super::{Dispatch, Hosting, stage};
 use crate::assembly::AssemblyError;
-
-/// Bound on one remote machine handshake.
-const HANDSHAKE_BOUND: Duration = Duration::from_secs(10);
 
 /// Registers the machine-scoped lanes.
 pub(super) fn register(
@@ -53,15 +46,5 @@ pub(super) fn register(
     dispatch
         .register(run)
         .map_err(stage("register plugin.run_get"))?;
-    let machines = MachineLane::new(machine, HANDSHAKE_BOUND);
-    dispatch
-        .register(MachineGet::new(&machines))
-        .map_err(stage("register machine.get"))?;
-    dispatch
-        .register(MachineRename::new(&machines))
-        .map_err(stage("register machine.rename"))?;
-    dispatch
-        .register(MachineAdd::new(&machines))
-        .map_err(stage("register machine.add"))?;
     super::service::register(dispatch, machine)
 }

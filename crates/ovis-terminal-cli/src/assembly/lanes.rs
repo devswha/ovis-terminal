@@ -5,6 +5,7 @@
 
 pub(super) mod agents;
 mod machine;
+pub(super) mod remote;
 mod service;
 mod templates;
 mod update;
@@ -127,7 +128,9 @@ fn stage<E: Into<super::StageSource>>(stage: &'static str) -> impl FnOnce(E) -> 
 }
 
 /// Builds the dispatcher with every hosted lane registered and prompt routes recovered.
-pub(super) fn host(hosting: &Hosting<'_>) -> Result<(Dispatch, Arc<DispatchLog>), AssemblyError> {
+pub(super) fn host(
+    hosting: &Hosting<'_>,
+) -> Result<(Dispatch, Arc<DispatchLog>, remote::Routes), AssemblyError> {
     let store = Store::open(&hosting.state.join("dispatch.db"), StoreOptions::default())
         .map_err(stage("open the dispatch store"))?;
     let identity = hosting.identity;
@@ -148,5 +151,6 @@ pub(super) fn host(hosting: &Hosting<'_>) -> Result<(Dispatch, Arc<DispatchLog>)
     templates::register(&mut dispatch, hosting)?;
     update::register(&mut dispatch, hosting)?;
     worktrees::register(&mut dispatch, hosting, &log)?;
-    Ok((dispatch, log))
+    let routes = remote::register(&mut dispatch, hosting, &log)?;
+    Ok((dispatch, log, routes))
 }
