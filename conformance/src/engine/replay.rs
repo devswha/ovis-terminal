@@ -11,9 +11,12 @@ use ovis_terminal_replay::{
 };
 use serde_json::{Value, json};
 
+use super::conn::Wait;
+use super::exchange::RECORD_BOUND_MS;
 use super::root::IsolatedRoot;
 use super::session::Session;
 use crate::error::RunnerError;
+use crate::ids::ConnName;
 use crate::scenario::matcher::Assertion;
 use crate::scenario::model::{FORMAT, FixtureKind, Replay, Serve};
 
@@ -90,6 +93,16 @@ impl Session<'_> {
         Ok(())
     }
 
+    /// Half-closes `name` and decodes every record until the peer ends the stream, so the
+    /// byte accounting of `finish_conn` never races a notification still in flight.
+    async fn drain_conn(&mut self, name: &ConnName) -> Result<(), RunnerError> {
+        let conn = self.conn(name)?;
+        conn.hangup().await?;
+        let wait = Wait::within(RECORD_BOUND_MS, "a replay connection to end");
+        while conn.next(wait).await?.is_some() {}
+        Ok(())
+    }
+
     /// One case: a fresh root and server, its connections, then teardown of both.
     async fn replay_case(
         &mut self,
@@ -122,6 +135,7 @@ impl Session<'_> {
             let outcome = ovis_terminal_replay::replay(case, &mut wire, options).await;
             let opened = wire.opened();
             for conn in opened {
+                self.drain_conn(&conn).await?;
                 self.finish_conn(&conn).await?;
             }
             outcome.map_err(|e| replay_failure(&e))
