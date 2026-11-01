@@ -125,10 +125,11 @@ pub(crate) async fn an_on_screen_image_is_replayed_byte_identical_after_a_reatta
 pub(crate) async fn a_scrolled_off_image_is_not_replayed() -> TestResult {
     let mut fx = Fixture::new(StreamLimits::advertised(&Limits::v1()), SESSION).await?;
     fx.issue("phone", &[Permission::Observe])?;
-    // Given an image followed by more lines than the 8-row screen holds,
+    // Given an image followed by more lines than the 8-row screen holds, in one read so
+    // the image is already scrolled off when its bytes reach the store,
     let kitty = kitty_series(5);
-    fx.publish(&[kitty.as_slice(), b"\r\n"].concat())?;
-    fx.publish("line\r\n".repeat(12).as_bytes())?;
+    let lines = "line\r\n".repeat(12);
+    fx.publish(&[kitty.as_slice(), b"\r\n", lines.as_bytes()].concat())?;
     // When a viewer attaches,
     let late = reattach(&mut fx, "replay-2", b" after").await?;
     // Then the image is not re-sent, and the record names it scrolled out.

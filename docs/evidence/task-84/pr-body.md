@@ -68,6 +68,24 @@ Owned seams from T83:
 
 macOS stress: lane `graphics-replay` (`probes/platform-qa/stress/graphics-replay.{json,sh}`, 25 iterations of the image/replay tests plus `graphics/replay --case all`). The run URL is in the PR comment and the DoneClaim.
 
+## Round 2: CI fix for `graphics/replay` failure inside `all/all`
+
+**What failed.** On PR #81 at `fe06883`, ubuntu `scripts/check.sh` failed in `suite::every_scenario_file_is_executed_or_a_listed_declaration` (`all/all`). The failure was `graphics/replay` case `failure`, step 20: `expectation graphics/controls did not hold`. Step 20 is the second viewer's transcript, which expects exactly `checkpoint, graphics_replayed, input_ready`.
+
+**Cause, reproduced deterministically.** The store admitted a released unit only while the VT engine still retained its image. When the PTY hands over the image and the lines that scroll it off in one read (which a loaded runner does), the engine has already released the image by the time the gate releases its bytes. The store never saw it, so nothing was listed as released and no `graphics_replayed` record was sent. What a reattach reported therefore depended on how output was split into reads. `replay_a_scrolled_off_image_is_not_replayed` now publishes the image and the 12 lines in one read. Before the fix it fails with `Error: "no graphics_replayed record"` (`r2-before.log`).
+
+**Fix (structural, no waits).** `ImageStore::admit` records, once per key, the engine's release reason for a unit whose image the engine already released. A sequence the engine never retained (for example Kitty `a=q`) is still not listed. New core test: `an_image_released_before_its_bytes_arrive_is_still_reported_once`.
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo nextest run -p ovis-terminal-core -p ovis-terminal-server --locked --no-fail-fast images replay` | 0 | 31 run, 31 passed (`r2-after.log`) |
+| 8 `nice -n 10` busy loops (pids captured, killed after), then 10 × `conformance --scenario graphics/replay --isolated --case failure --inject '{"graphics":{"scroll_rows":"200"}}'` | 0 | 10/10 passed |
+| under the same load: `with-slot.sh cargo nextest run -p ovis-terminal-conformance --locked suite::every_scenario_file_is_executed_or_a_listed_declaration` | 0 | 1 passed, 95.7 s (`r2-suite-under-load.log`) |
+| `with-slot.sh bash scripts/check.sh` (attempt 2) | 0 | 1525 run, 1525 passed, 2 skipped; hygiene 0 violations in 1525 files (`r2-check.log`). Attempt 1 failed only on the unrelated known flake below |
+| `RUSTFLAGS=-Dwarnings cargo check … x86_64-pc-windows-gnu` / `cargo clippy …` | 0 | `r2-windows-check.log` |
+
+Unrelated known flake: round 2 check.sh attempt 1 failed only in `recovery/e2e` happy, step 36 (`reply[child-on-peer]/error`: `internal`, "operation failed"). In that same run `graphics/replay` passed both cases, and 83 of 84 cases passed (`r2-check-attempt1-recovery-flake.log`). Step 36 is the runner fixture's `fixture.remote_child`, the two-clock-read race that F2a root-caused and fixed in PR #80 (`conformance/src/fixture/machines/remote.rs` `stamped()`, merge pending). It is not a task-84 defect.
+
 ## Seams
 
 Files outside the write scope, and why:

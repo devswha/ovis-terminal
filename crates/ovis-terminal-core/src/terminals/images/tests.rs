@@ -155,6 +155,29 @@ fn a_sync_forgets_what_the_engine_released_with_its_reason() {
 }
 
 #[test]
+fn an_image_released_before_its_bytes_arrive_is_still_reported_once() {
+    let (mut vt, keys) = drawn(1);
+    drop(vt.feed("\r\n".repeat(8).as_bytes()));
+    let key = keys.first().copied().expect("drawn");
+    let mut store = store(1024);
+    for _ in 0..2 {
+        assert_eq!(store.admit(unit(key, 1), &vt.images()), None);
+    }
+    assert!(store.pieces(key).is_none());
+    assert_eq!(
+        released(&store),
+        [(key.get(), GraphicsReleaseReason::ScrolledOut)]
+    );
+    let stray = OutputOffset::new(999);
+    drop(store.admit(unit(stray, 9), &vt.images()));
+    assert_eq!(
+        released(&store).len(),
+        1,
+        "a sequence the engine never retained is not listed"
+    );
+}
+
+#[test]
 fn the_released_list_is_bounded() {
     let (vt, keys) = drawn(1);
     let key = keys.first().copied().expect("drawn");

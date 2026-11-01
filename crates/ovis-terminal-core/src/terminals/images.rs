@@ -95,8 +95,19 @@ impl ImageStore {
     /// Keeps `unit` when `shown` retains its image, appending a later run of a series to
     /// its first; then evicts the oldest entries while the store is over its cap.
     /// Returns the eviction notice, if anything was evicted.
+    ///
+    /// When the engine already released the image (output that arrived in the same read
+    /// scrolled it off or erased it), the release is recorded as if the store had held
+    /// it, so what a reattach reports never depends on how output was split into reads.
     pub fn admit(&mut self, unit: ReleasedUnit, shown: &ImageSet) -> Option<GraphicsEvictedData> {
         if !shown.retains(unit.key) {
+            let key = ByteOffset::new(unit.key.get());
+            let noted = self.released.iter().any(|item| item.output_offset == key);
+            if let Some(release) = shown.release_of(unit.key)
+                && !noted
+            {
+                self.note(unit.key, reason(Some(release)));
+            }
             return None;
         }
         let size = width(&unit.bytes);
