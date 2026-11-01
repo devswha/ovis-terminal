@@ -96,3 +96,23 @@ Holder wire generation stays 2; the checklist items are unchanged.
 - Remote notifications the local consumer has no room for are counted in `MachineHealth.inbound_dropped`; the mirror reports the skipped seqs as a gap.
 - macOS stress: `gh workflow run probe-stress-macos.yml --ref lane/t44-isolate-remote-actors-and-re -f probe=machine-actor` -> https://github.com/devswha/ovis-terminal/actions/runs/41256769132 conclusion `success`, `RESULT 25/25` (remote actors/mirror/orphans, protocol machine_actor, server lane machine_actor, and `remote/isolation --case all` at 111 assertions each iteration).
 - PR CI: this PR is `CONFLICTING` against `origin/integration` 8a436e1, so GitHub created no `ci` run. The local `check.sh`, the Windows pre-check and the macOS stress run above are the executed gates.
+
+
+## Addendum - merge round (integration 8a436e1)
+
+Merge commit `aceba79` merges `origin/integration` 8a436e1 (T29 + T57).
+- **Conflicts resolved:**
+  - `conformance/src/fixture/handler.rs`: kept both T57's `fixture.deliver` and this lane's `fixture.remote`, `fixture.machine`, `fixture.remote_child` and `$/orphanedAck` routes. T57's `Revalidated` wrapper, writer principal and the T49/T29 parts in `serve.rs`/`fixture.rs` auto-merged, alongside the `machines` module.
+  - `conformance/src/runner_tests/suite.rs`: integration's slice form, sorted, with both `remote/isolation.json` and `security/rotation.json`.
+  - `probe-stress-macos.yml`: integration's file plus the `machine-actor` option and job last; it parses with 29 jobs and 29 options.
+- **Cargo.lock:** `git checkout --theirs` + `cargo generate-lockfile --offline`; `cargo metadata --locked` passes; the diff against integration is +3 lines (this lane's edges).
+- **OpenRPC:** `openrpc write schema/ovis-terminal.openrpc.json` is byte-identical (no catalog change); `openrpc compat schema/released.openrpc.json` exits 0. Pre-existing on integration, not touched here: `packages/client-ts/src/generated/*` is stale against the schema (T57's credential methods are missing; `bun scripts/generate.ts --check` reports `stale_output`).
+- **Gates on the merged tree** (Linux x86_64, binary sha256 `adf9228658d5ce7f26bf1012d14aa80a99be91acbcdf9cb35cb48fabb6a6c84d`):
+  - `cargo +nightly fmt --all`.
+  - Windows `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exit 0, and `cargo clippy` for that target `-D warnings` exit 0.
+  - Hygiene: `0 violation(s) in 1114 file(s)`.
+  - `bash scripts/check.sh` exit 0 (`1110 tests run: 1110 passed (1 slow), 1 skipped`).
+  - `remote/isolation --case all` exit 0 (111 assertions, failed 0, skipped 0).
+  - `all/all` exit 0 (42 passed, 37 declared-only, failed 0, skipped 0).
+  - Logs are in `docs/evidence/task-44/m-*`.
+- **CI:** none. While the gate ran, `origin/integration` moved again to 8cab061 (T55, PR #47). That merge conflicts with this lane in `conformance/src/fixture/handler.rs` and `conformance/src/fixture/serve.rs`, so the PR is `CONFLICTING` again and GitHub created no `ci` run for aceba79 (checked once). No second merge was made, because this round named 8a436e1.
