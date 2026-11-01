@@ -57,6 +57,25 @@ What the new tests assert (`test/generate.test.ts`):
 
 The existing tests still pass unchanged: committed output equals the generation, generation is deterministic, and the T29 `name_collision` case (`ControlKindValues`) still holds.
 
+## Round 2 (verification fix)
+
+Verification rejected round 1 on one surviving mutant: deleting the `.sort()` from the `components.schemas` enumeration left `test/generate.test.ts` green (7/7). That test file only ever fed the generator one key order.
+
+- New test `generated modules do not depend on the insertion order of components or methods`. It generates from the real schema and from the same document with `components.schemas` and `methods` in reversed insertion order. It asserts that the reordered key order really differs, and that every generated `.ts` file is byte-identical once the source-digest header line is removed. Only the digest header and the verbatim `openrpc.json` copy depend on the input bytes.
+- Mutants, each applied alone, then the file restored byte-exactly, each run once with `cd packages/client-ts && bun test test/generate.test.ts` (`docs/evidence/task-82/adversarial-mutants-r2.log`):
+
+| Mutant | Result |
+|---|---|
+| collision check dropped (`if (false && earlier !== undefined)`) | exit 1, 6 pass, 2 fail: KILLED |
+| component `.sort()` dropped | exit 1, 7 pass, 1 fail (the new insertion-order test): KILLED |
+| identifier validation skipped (`if (false && !IDENTIFIER.test(name))`) | exit 1, 7 pass, 1 fail: KILLED |
+| method sort dropped (extra) | exit 1, 6 pass, 2 fail: KILLED |
+
+After the restore, `bun run generate:check` printed `{"generated":"fresh","files":31}`.
+
+- Lane gate: `cd packages/client-ts && bun run generate:check && bun run typecheck && bun test` gave 30 pass, 0 fail, exit 0 (`docs/evidence/task-82/qa-happy-r2.log`).
+- The trailing blank line in `adversarial-mutants.log` that `git diff --check` reported has been removed.
+
 ## Gates
 
 - `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` gave exit 0: nextest ran 1110 tests, 1110 passed, 1 skipped, and workspace-hygiene reported 0 violations (`docs/evidence/task-82/check.log`).
