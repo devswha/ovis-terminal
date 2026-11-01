@@ -107,6 +107,9 @@ impl Session<'_> {
                 },
                 self.ctx.repo.root(),
             ));
+            if let Some(name) = replies.keep_bearer.get(&id) {
+                checked.push(self.keep_bearer((&scope, &record), name));
+            }
             arrivals.push(Value::String(id));
         }
         let conn = self.conn(&replies.conn)?;

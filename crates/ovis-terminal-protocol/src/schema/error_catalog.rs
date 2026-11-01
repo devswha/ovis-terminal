@@ -138,6 +138,7 @@ impl JsonSchema for ErrorData {
                 "history": generator.subschema_for::<crate::domain::session_binding::HistoryHead>(),
                 "current_version": generator.subschema_for::<super::scalar::RecordVersion>(),
                 "prompt_ids": generator.subschema_for::<Vec<super::ids::PromptId>>(),
+                "principal_epoch": generator.subschema_for::<super::scalar::PrincipalEpoch>(),
             },
             "required": ["kind", "hint", "retryable"],
         })
