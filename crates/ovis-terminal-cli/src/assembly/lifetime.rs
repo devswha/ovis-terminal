@@ -76,8 +76,9 @@ impl Lifetime {
             thread,
             mut reports,
         } = self;
-        let (report, log) = generation.end(Ending::Shutdown).await?;
-        reports.push(report);
+        let ended = generation.end(Ending::Shutdown).await?;
+        let log = ended.log;
+        reports.push(ended.report);
         waited?;
         shared
             .lane

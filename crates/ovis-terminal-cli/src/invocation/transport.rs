@@ -146,6 +146,7 @@ impl Wire {
 
     async fn settle(&mut self, id: &RequestId) -> Result<Value, Failure> {
         let limit = u64::try_from(MAX_FRAME_PAYLOAD).map_err(|_| CliError::Closed)?;
+        let mut restarting = false;
         loop {
             let mut line = String::new();
             let read = (&mut self.reader)
@@ -157,11 +158,19 @@ impl Wire {
                     source,
                 })?;
             if read == 0 || !line.ends_with('\n') {
-                return Err(CliError::Closed.into());
+                let closed = if restarting {
+                    CliError::Restarted
+                } else {
+                    CliError::Closed
+                };
+                return Err(closed.into());
             }
             let value: Value = serde_json::from_str(&line)
                 .map_err(|source| CliError::Reply(BoundaryError::invalid_response_json(source)))?;
             if value.get("id").is_none() {
+                restarting |= value.get("method").and_then(Value::as_str) == Some("$/closing")
+                    && value.pointer("/params/reason").and_then(Value::as_str)
+                        == Some("server_restart");
                 continue;
             }
             return match parse_reply(&line).map_err(CliError::Reply)? {

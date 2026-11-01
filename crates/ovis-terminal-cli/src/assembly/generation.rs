@@ -62,6 +62,14 @@ fn audit(identity: RuntimeIdentity) -> Result<Arc<AuditTrail>, AssemblyError> {
     Ok(Arc::new(AuditTrail::new(identity, policy)))
 }
 
+/// What ending a generation leaves: its listener's report, its dispatch log, and after a
+/// planned restart the endpoint, still bound, for the successor.
+pub(super) struct Ended {
+    pub(super) report: ServeReport,
+    pub(super) log: Arc<DispatchLog>,
+    pub(super) endpoint: Option<UnixEndpoint>,
+}
+
 /// How a generation's listeners end.
 #[derive(Debug, Clone, Copy)]
 pub(super) enum Ending {
@@ -86,7 +94,7 @@ impl Generation {
     /// endpoint and, when the lifetime has one, the WebSocket port.
     pub(super) async fn open(
         shared: &Shared,
-        (identity, health): (RuntimeIdentity, Arc<Health>),
+        (identity, health, endpoint): (RuntimeIdentity, Arc<Health>, Option<UnixEndpoint>),
     ) -> Result<Self, AssemblyError> {
         let (dispatch, log) = host(&Hosting {
             state: &shared.state,
@@ -119,9 +127,12 @@ impl Generation {
         let policed = BoundaryPolicy::new((Arc::clone(&shared.authority), audit(identity)?), gated);
         let measured = Measured::new(health, Arc::new(policed));
         let handler = Arc::new(Revalidated::new(Arc::clone(&shared.authority), measured));
-        let endpoint = UnixEndpoint::bind(&shared.socket)
-            .await
-            .map_err(AssemblyError::Endpoint)?;
+        let endpoint = match endpoint {
+            Some(endpoint) => endpoint,
+            None => UnixEndpoint::bind(&shared.socket)
+                .await
+                .map_err(AssemblyError::Endpoint)?,
+        };
         let config = ServerConfig::new(Arc::clone(&shared.authority), identity);
         let listener =
             serve_unix(endpoint, config, Arc::clone(&handler)).map_err(AssemblyError::Endpoint)?;
@@ -150,11 +161,9 @@ impl Generation {
     }
 
     /// Ends both listeners as `ending` says and joins the dispatcher; its log is returned
-    /// for the caller to close once nothing else holds it.
-    pub(super) async fn end(
-        self,
-        ending: Ending,
-    ) -> Result<(ServeReport, Arc<DispatchLog>), AssemblyError> {
+    /// for the caller to close once nothing else holds it, and after a planned restart the
+    /// still-bound endpoint for the successor.
+    pub(super) async fn end(self, ending: Ending) -> Result<Ended, AssemblyError> {
         if let Some(websocket) = self.websocket {
             websocket
                 .shutdown()
@@ -162,16 +171,20 @@ impl Generation {
                 .map_err(AssemblyError::stop("close the WebSocket listener"))?;
         }
         let ended = match ending {
-            Ending::Shutdown => self.listener.shutdown().await,
-            Ending::Restart => self.listener.restart().await,
+            Ending::Shutdown => self.listener.shutdown().await.map(|report| (report, None)),
+            Ending::Restart => self.listener.hand_over().await,
         };
-        let report = ended.map_err(AssemblyError::stop("close the endpoint"))?;
+        let (report, endpoint) = ended.map_err(AssemblyError::stop("close the endpoint"))?;
         self.dispatch
             .shutdown()
             .await
             .map_err(AssemblyError::stop("join dispatched operations"))?;
         drop((self.dispatch, self.handler));
-        Ok((report, self.log))
+        Ok(Ended {
+            report,
+            log: self.log,
+            endpoint,
+        })
     }
 
     /// Follows a call that may have restarted control under `op`. When control serves a
@@ -195,7 +208,11 @@ impl Generation {
             .call(move |runtime| runtime.restarting(&op))
             .await
             .map_err(AssemblyError::stop("close attach streams for the restart"))?;
-        let (report, log) = self.end(Ending::Restart).await?;
+        let Ended {
+            report,
+            log,
+            endpoint,
+        } = self.end(Ending::Restart).await?;
         super::lifetime::close(log, "close the dispatch log of the old boot").await?;
         let journal = Arc::clone(&shared.journal);
         tokio::task::spawn_blocking(move || journal.reopen(successor))
@@ -208,6 +225,7 @@ impl Generation {
             .call(move |runtime| runtime.recovered((successor, &state, measured)))
             .await
             .map_err(AssemblyError::start("serve the successor boot"))?;
-        Ok((Self::open(shared, (successor, health)).await?, Some(report)))
+        let next = Self::open(shared, (successor, health, endpoint)).await?;
+        Ok((next, Some(report)))
     }
 }

@@ -24,6 +24,9 @@ use super::error::refusal;
 /// Bound on waiting for the holder's spawn evidence before answering `pending`.
 const SPAWN_BOUND: Duration = Duration::from_secs(10);
 
+/// How long the spawn wait pauses, with the control released, between receives.
+const SPAWN_POLL: Duration = Duration::from_millis(5);
+
 /// The typed refusal of a lifecycle failure.
 pub(super) fn terminal_refusal(error: &TerminalError) -> BoundaryError {
     refusal(error.kind(), error.hint())
@@ -114,8 +117,11 @@ impl Runtime {
         while matches!(record.spawn, LaunchState::Admitted | LaunchState::Pending)
             && deadline.is_some_and(|deadline| Instant::now() < deadline)
         {
-            if self.receive(Duration::from_millis(50)) != Link::Linked {
-                break;
+            match self.receive() {
+                Link::Linked => {}
+                // The holder has not reported yet; wait with the control released.
+                Link::Idle | Link::Restarting => std::thread::sleep(SPAWN_POLL),
+                Link::Gone => break,
             }
             record = self.lifecycle(|terminals| terminals.get(session, id))?;
         }

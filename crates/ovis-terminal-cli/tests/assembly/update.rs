@@ -1,10 +1,13 @@
 //! `update.*` against a real `serve`: a release published below the state directory is
 //! staged by digest, verified by its readiness probe and activated, which restarts control
-//! onto it; the successor boot serves the same program.
+//! onto it; the successor boot serves the same program. A query sent while a planned
+//! restart happens is answered by the old boot or, sent again by the client, the next.
 
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc;
 
 use serde_json::{Value, json};
 
@@ -12,6 +15,9 @@ use super::restart::{closing, pid};
 use super::support::{Served, TestResult, op_id};
 
 const VERSION: &str = "9.9.9";
+
+/// Planned restarts the racing-query test drives: one activation, then `server.restart`.
+const ROUNDS: usize = 20;
 
 fn call(served: &Served, method: &str, params: &Value) -> TestResult<Value> {
     served.ok(&["call", method, "--params", &params.to_string()])
@@ -110,6 +116,72 @@ fn an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_prog
         Some(&json!(VERSION)),
         "{query}"
     );
+    let report = served.stop()?;
+    assert_eq!(report.pointer("/report/panicked"), Some(&json!("0")));
+    Ok(())
+}
+
+/// Sends `update.query` until `restarted` is set and returns every exit code; `started`
+/// is told once the first query was answered, so the restart races queries that follow.
+fn queries(
+    served: &Served,
+    (started, restarted): (&mpsc::Sender<()>, &AtomicBool),
+) -> Result<Vec<Option<i32>>, String> {
+    let mut codes = Vec::new();
+    loop {
+        let output = served
+            .cli(&["call", "update.query", "--params", "{}"])
+            .map_err(|error| error.to_string())?;
+        assert_eq!(output.status.code(), Some(0), "{output:?}");
+        codes.push(output.status.code());
+        if codes.len() == 1 {
+            started.send(()).map_err(|error| error.to_string())?;
+        }
+        if restarted.load(Ordering::Acquire) {
+            return Ok(codes);
+        }
+    }
+}
+
+#[test]
+fn a_query_racing_a_planned_restart_is_answered_by_one_boot_or_the_next() -> TestResult {
+    let mut served = Served::start()?;
+    served.run_shell("shell")?;
+    let sha256 = publish(&served.root().join("state").join("updates").join("releases"))?;
+    let staged = call(
+        &served,
+        "update.stage",
+        &json!({"op_id": op_id()?, "version": VERSION, "target": null, "sha256": sha256}),
+    )?;
+    let update = staged.get("update_id").cloned().ok_or("update_id")?;
+    call(
+        &served,
+        "update.verify",
+        &json!({"op_id": op_id()?, "update_id": update}),
+    )?;
+    for round in 0..ROUNDS {
+        let restarted = AtomicBool::new(false);
+        let (started, first) = mpsc::channel();
+        let answered = std::thread::scope(|scope| -> TestResult<Vec<Option<i32>>> {
+            let reader = scope.spawn(|| queries(&served, (&started, &restarted)));
+            first.recv()?;
+            let (method, params) = if round == 0 {
+                (
+                    "update.activate",
+                    json!({"op_id": op_id()?, "update_id": update}),
+                )
+            } else {
+                ("server.restart", json!({"op_id": op_id()?}))
+            };
+            call(&served, method, &params)?;
+            restarted.store(true, Ordering::Release);
+            let codes = reader.join().map_err(|_| "the query thread panicked")?;
+            Ok(codes?)
+        })?;
+        assert!(!answered.is_empty(), "round {round}: {answered:?}");
+        let announced = served.announcement()?;
+        assert!(announced.get("restarted").is_some(), "{announced}");
+    }
     let report = served.stop()?;
     assert_eq!(report.pointer("/report/panicked"), Some(&json!("0")));
     Ok(())

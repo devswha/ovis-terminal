@@ -167,6 +167,7 @@ impl ExitStatus {
             ],
             Self::OutcomeUnknown => &[
                 "outcome_unknown",
+                "server_restart",
                 "deadline_exceeded",
                 "manager_timeout",
                 "holder_not_ready",

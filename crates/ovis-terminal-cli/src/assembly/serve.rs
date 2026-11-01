@@ -173,7 +173,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         stop: StopSignal::default(),
         restart: RestartSignal::default(),
     };
-    let mut generation = Generation::open(&shared, (booted.identity, health)).await?;
+    let mut generation = Generation::open(&shared, (booted.identity, health, None)).await?;
     shared.websocket_port = generation.websocket_port();
     let websocket = generation.websocket.as_ref();
     announce(&ready(

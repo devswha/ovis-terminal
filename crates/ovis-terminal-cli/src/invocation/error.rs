@@ -77,6 +77,9 @@ pub(super) enum CliError {
     /// The server closed the connection before answering.
     #[error("the server closed the connection before answering")]
     Closed,
+    /// The server ended the connection for a planned restart before answering.
+    #[error("the server restarted before answering")]
+    Restarted,
     /// The server sent something that is not a JSON-RPC reply to this request.
     #[error("the server reply is not a JSON-RPC reply")]
     Reply(#[source] BoundaryError),
@@ -126,6 +129,7 @@ impl CliError {
             Self::NotRunning { .. } => "server_not_running",
             Self::Io { .. } => "transport_failed",
             Self::Closed => "connection_closed",
+            Self::Restarted => "server_restart",
             Self::Reply(_) | Self::Result(_) => "invalid_response",
             Self::Timeout { .. } => "deadline_exceeded",
             Self::UnsupportedTransport => "unsupported_transport",
@@ -158,6 +162,9 @@ impl CliError {
             Self::NotRunning { .. } => "start the server explicitly; inspection never starts one",
             Self::Io { .. } => "check the endpoint path and its permissions",
             Self::Closed => "check the server log; the connection ended early",
+            Self::Restarted => {
+                "reconnect to the same endpoint; ask op.get whether a mutation committed"
+            }
             Self::Reply(_) | Self::Result(_) => {
                 "check that the endpoint belongs to an ovis-terminal server of this generation"
             }

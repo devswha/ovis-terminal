@@ -26,14 +26,17 @@ use super::error::worker_gone;
 use super::live::Live;
 use super::{AssemblyError, StageSource};
 
-/// How long one wait for a holder message lasts before queued jobs run again.
+/// How long the actor waits for a job, with the control released, before it looks for
+/// holder messages again.
 const POLL: Duration = Duration::from_millis(5);
 
 /// The holder link as one receive found it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Link {
-    /// Messages arrive from the current lifecycle.
+    /// A message from the current lifecycle was applied; more may be waiting.
     Linked,
+    /// No message is waiting; the link is intact.
+    Idle,
     /// A planned restart owns the lifecycle; the successor's messages follow it.
     Restarting,
     /// Control stopped or the holder went away; no message will follow.
@@ -93,11 +96,13 @@ impl Runtime {
             })
     }
 
-    /// Applies at most one holder message and says whether the holder link is still there.
-    pub(super) fn receive(&mut self, wait: Duration) -> Link {
+    /// Applies at most one holder message that already arrived and says whether the holder
+    /// link is still there. It never waits while it holds the control: a caller blocked on
+    /// the lifecycle (a status read, `update.query`, a restart) gets it between receives.
+    pub(super) fn receive(&mut self) -> Link {
         let received = self
             .control
-            .with_terminals(|terminals, _| terminals.receive_message(wait));
+            .with_terminals(|terminals, _| terminals.receive_message(Duration::ZERO));
         match received {
             Ok(Some(message)) => {
                 if let Err(error) = self.follow(&message) {
@@ -105,9 +110,9 @@ impl Runtime {
                 }
                 Link::Linked
             }
-            Ok(None)
-            | Err(RestartError::Terminal(TerminalError::Notification(RecvTimeoutError::Timeout))) => {
-                Link::Linked
+            Ok(None) => Link::Linked,
+            Err(RestartError::Terminal(TerminalError::Notification(RecvTimeoutError::Timeout))) => {
+                Link::Idle
             }
             Err(RestartError::Restarting { .. }) => Link::Restarting,
             Err(
@@ -161,9 +166,10 @@ fn run(mut runtime: Runtime, jobs: &mpsc::Receiver<Job>) -> Result<(), AssemblyE
             }
         }
         if linked {
-            match runtime.receive(POLL) {
+            match runtime.receive() {
                 Link::Linked => {}
-                Link::Restarting => match jobs.recv_timeout(POLL) {
+                // Waiting happens here, on the job queue, with the control released.
+                Link::Idle | Link::Restarting => match jobs.recv_timeout(POLL) {
                     Ok(job) => job(&mut runtime),
                     Err(RecvTimeoutError::Timeout) => {}
                     Err(RecvTimeoutError::Disconnected) => return runtime.close(),

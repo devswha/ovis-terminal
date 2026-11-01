@@ -146,6 +146,15 @@ debug = true
 incremental = true
 codegen-units = 256
 
+# The update service hashes whole builds (SHA-256) on every query, stage and
+# activation; unoptimized, hashing a debug build takes seconds per call. Optimize
+# only the hash so dev and test builds pay what release builds pay.
+[profile.dev.package.sha2]
+opt-level = 3
+
+[profile.test.package.sha2]
+opt-level = 3
+
 [profile.miri]
 inherits = "test"
 opt-level = 1
