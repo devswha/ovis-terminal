@@ -4,6 +4,7 @@
 //! dispatcher and serves a new generation under the successor identity on the same
 //! endpoint, then says so on stdout.
 
+use std::io::Write as _;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -68,6 +69,29 @@ pub(super) struct Ended {
     pub(super) report: ServeReport,
     pub(super) log: Arc<DispatchLog>,
     pub(super) endpoint: Option<UnixEndpoint>,
+}
+
+/// Bound on handing every stream's restart close to its connection; a client that never
+/// reads cannot hold a planned restart longer than the listener's own shutdown grace.
+const DELIVERY_GRACE: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// Waits until every stream closed `server_restart` has queued its close on its
+/// connection: each delivery task ends once it did, so every close precedes the
+/// connection's `$/closing`. Past the bound the restart proceeds and says so.
+async fn delivered(lane: &AttachLane<Arc<Directory>>) -> Result<(), AssemblyError> {
+    match tokio::time::timeout(DELIVERY_GRACE, lane.shutdown()).await {
+        Ok(joined) => joined.map_err(AssemblyError::stop("deliver the restart closes")),
+        Err(_) => {
+            let line = serde_json::json!({"warning": {
+                "stage": "deliver the restart closes",
+                "detail": "a stream did not take its close within the grace",
+            }});
+            let mut stderr = std::io::stderr().lock();
+            match writeln!(stderr, "{line}") {
+                Ok(()) | Err(_) => Ok(()),
+            }
+        }
+    }
 }
 
 /// How a generation's listeners end.
@@ -208,6 +232,7 @@ impl Generation {
             .call(move |runtime| runtime.restarting(&op))
             .await
             .map_err(AssemblyError::stop("close attach streams for the restart"))?;
+        delivered(&shared.lane).await?;
         let Ended {
             report,
             log,

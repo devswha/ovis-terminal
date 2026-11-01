@@ -6,7 +6,7 @@ use std::os::unix::net::UnixStream;
 
 use serde_json::{Value, json};
 
-use super::support::{Served, TestResult, op_id};
+use super::support::{Served, TestResult, op_id, rpc};
 
 fn stop_params(scope: Option<&str>) -> TestResult<String> {
     let mut params = json!({"op_id": op_id()?});
@@ -218,5 +218,55 @@ fn a_planned_restart_keeps_the_program_and_its_lifetime_and_serves_the_successor
     assert_eq!(waited.get("outcome"), Some(&json!("matched")), "{waited}");
     let report = served.stop()?;
     assert_eq!(report.pointer("/report/panicked"), Some(&json!("0")));
+    Ok(())
+}
+
+#[test]
+fn an_attached_stream_is_closed_server_restart_before_the_connection_closes() -> TestResult {
+    let mut served = Served::start()?;
+    served.run_shell("shell")?;
+    let mut attached = served.connected()?;
+    let opened = rpc(
+        &mut attached,
+        "attach.open",
+        &json!({"op_id": op_id()?, "target": {"address": "t1"}, "role": "interact",
+            "client_id": "pane", "geometry": null, "stream_mode": "plain", "takeover": null}),
+    )?;
+    let stream = opened
+        .pointer("/result/stream_id")
+        .cloned()
+        .ok_or_else(|| opened.to_string())?;
+    served.ok(&[
+        "call",
+        "server.restart",
+        "--params",
+        &json!({"op_id": op_id()?}).to_string(),
+    ])?;
+    let mut records = Vec::new();
+    loop {
+        let mut line = String::new();
+        if attached.read_line(&mut line)? == 0 {
+            break;
+        }
+        records.push(serde_json::from_str::<Value>(&line)?);
+    }
+    let position = |found: &dyn Fn(&Value) -> bool| records.iter().position(found);
+    let revoked = position(&|record| {
+        record.pointer("/params/stream_id") == Some(&stream)
+            && record.pointer("/params/kind") == Some(&json!("input_revoked"))
+    });
+    let closed = position(&|record| {
+        record.pointer("/params/stream_id") == Some(&stream)
+            && record.pointer("/params/kind") == Some(&json!("close"))
+            && record.pointer("/params/close/reason") == Some(&json!("server_restart"))
+    });
+    let closing = position(&|record| record.get("method") == Some(&json!("$/closing")));
+    assert!(
+        matches!((revoked, closed, closing), (Some(r), Some(c), Some(z)) if r < c && c < z),
+        "input_revoked {revoked:?}, close {closed:?}, $/closing {closing:?}: {records:?}"
+    );
+    let announced = served.announcement()?;
+    assert!(announced.get("restarted").is_some(), "{announced}");
+    served.stop()?;
     Ok(())
 }
