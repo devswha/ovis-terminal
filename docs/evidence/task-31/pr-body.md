@@ -133,6 +133,75 @@ Fix: the post-exit settings are read through a freshly opened slave (`O_NOCTTY`)
 
 Proof on Linux (`docs/evidence/task-31/darwin-revoke-fix.log`): the attach suite passes 5/5 under `script -q -e -c ... /dev/null` (stdio is a pty) and 5/5 with stdin `</dev/null`. Conformance `part-a/task-31 --case all --require-no-skips` passes with 49 assertions and exit 0. The runner suite passes 25/25. A scratch merge with integration (not merged into the lane) passes workspace clippy and 53/53 CLI and conformance tests. The macOS outcome itself is verified only by this PR's CI run.
 
+## Round 3 (resumed after the host crash): restart control, crash recovery, agent tree
+
+Lane head before this round: `188ee72` (credential rotation, 47 methods). Commits this round:
+- `670b165` **feat(assembly): server.stop, durable boot identity, crash recovery at start-up.**
+  - Boot opens the planned-restart `Control` (todo 48). Every lifecycle call goes through `Control::with_terminals`.
+  - `server.stop` is routed. A committed stop ends serving: the report line is written and the exit code is 0.
+  - Each start takes the next server boot id from `<state>/identity.json`, keeping the machine id. Counters are decimal strings: a numeric counter is refused, `u64::MAX` round-trips, and a spent counter is refused. Before this, every boot reused server boot id 1, so the lifecycle's `CoreRestart` transition could never fire.
+  - Before adopting the holder, boot reads the terminals the previous boot recorded as `running`. An unplanned boot that inherited any runs core recovery (todo 49) and reports it on the ready line as `ready.recovery` (`cause`, `terminals`, `incidents`). Otherwise the OS boot is stamped.
+  - Boot and recovery run off the async runtime, because the stores block (`Ticket::wait`).
+- `ecbede7` Merge `origin/integration` `da5b456` (authorized). The TypeScript SDK was regenerated: `bun run generate:check` reports fresh, and `typecheck` exits 0.
+- `c54a2c3` **feat(assembly): agent.children, plus hosted-lane registration split into `assembly/lanes/{machine,agents}.rs`** (one call per phase, under the 100-line cap).
+
+hello now advertises **49** methods. That is the round-2 set plus `server.stop` and `agent.children`.
+
+### Verification (round 3, Linux 7.0.0-38-generic x86_64)
+
+- `cargo nextest run -p ovis-terminal-cli`: **39 tests run: 39 passed**. `cargo clippy -p ovis-terminal-cli --all-targets -- -D warnings`: exit 0.
+- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh`: **EXIT=0**, `1193 tests run: 1193 passed (1 slow), 1 skipped`, `workspace-hygiene: 0 violation(s) in 1203 file(s) checked` (`check-r3.log`).
+- Windows pre-check: see `windows-precheck-r3.log`.
+- Conformance with the real binary (`qa-r3.log`):
+  - `--scenario part-a/task-31 --isolated --case happy`: EXIT=0, `assertions 23`.
+  - `--case failure`: EXIT=0, `assertions 26`.
+  - `--case all --require-no-skips`: EXIT=0, `assertions 49, cases 2, skipped 0`.
+- `--scenario all/all --isolated --case all --require-no-skips`: **EXIT=1**. All 48 executable cases pass with 2009 assertions and 0 failures. The run exits 1 with `declared_only_present`, because `37 declaration files are not executed`; the list is below.
+- New real-socket tests:
+  - `restart::server_stop_names_its_scope_ends_the_programs_and_the_server_stops_by_itself`: an unscoped stop gives `invalid_params`, one ended incarnation, a self-stop with exit 0 and `panicked: "0"`.
+  - `restart::a_boot_after_a_crash_reports_only_the_programs_it_inherited`: a crash with no programs gives no report. A crash with one shell gives `cause: core_crash`, one terminal and at least one incident.
+  - `lanes::hosted_lanes_...`: `agent.children` of `t1` is `[]`, and `t9` exits 3 with `not_found`.
+  - Unit tests: `identity::tests` (3).
+- Mutants, each killed by a shipped test (`mutants-r3.log`):
+  1. Boot counter not incremented: `each_start_takes_the_next_boot_and_keeps_the_machine` fails.
+  2. The inherited filter inverted: `a_boot_after_a_crash_reports_only_the_programs_it_inherited` fails.
+  3. `agent.children` registration removed: the hello set test and the hosted-lanes smoke test fail.
+  4. `serve` keeps a second `Arc<Control>`: `server_stop_...` fails with `stop_failed` (the control cannot be released).
+
+### Declared scenarios still not executable (exact missing route or runner capability)
+
+None of the 37 is in `ovis-conformance/1` format; each is a free-form descriptor. Rewriting one needs both of the following:
+- every route it calls, served by the binary;
+- the runner steps it describes.
+
+| Scenario | What is missing |
+|---|---|
+| part-a/task-1..20 (except 21), task-3..9, task-32 | Free-form descriptors owned by those todos, with no executable steps. They need descriptor rewrites by their owners. |
+| part-a/task-22 | `events.subscribe`/`update`/`unsubscribe` are unrouted. The core hub exists, but `serve` keeps four separate event logs (terminals inside `Control`, leases, geometry, dispatch), each with its own sequence. One `events.*` domain needs the coordinator unification of todo 42. |
+| part-a/task-23 | Routes are served (attach.open/credit/close/repaint). The runner has no `holder_output` injection, principal fixtures (`operator`/`phone`/`bridge`) or never-acknowledging viewer step. |
+| part-a/task-24, task-25 | `input.interrupt` and `input.barrier` are unrouted (no dispatch lane exists). |
+| part-a/task-26 | `attach.resize` and the geometry events are served. The descriptor's geometry-lease steps have no runner step vocabulary. |
+| part-a/task-27 | `turn.wait`, `events.wait` and `input.interrupt` are unrouted. |
+| part-a/task-28 | The WebSocket transport is served (`serve --websocket-port`). The runner has no ws transport, `ws_ping` or expired-credential principal steps. |
+| performance/fairness | The todo-56 scheduler actor is not in the output path of `serve`. |
+| platform/conpty, platform/windows-service | Windows-only. `serve` is Unix-only in this PR. |
+| recovery/crash | Recovery now runs at start-up (above). The runner has no step that SIGKILLs the assembled server and restarts it on the same root. |
+| recovery/restart | `server.restart` is unrouted. An in-process restart moves the control to a successor boot identity, but the listener, lease log and dispatch log keep the old one. `ServerHandle::restart` plus `TerminalStreams::restarting` must be sequenced with a listener rebind first. |
+| remote/identity | `machine.add` is unrouted. |
+| services/docs-retention | `doc.get`/`doc.set` are served. The retention sweep, its virtual clock and `retention.floor_advanced` are not served. |
+| services/plugins | `plugin.*` is served. The runner has no plugin fixture files or principal fixtures. |
+| services/worktrees | `worktree.*` is unrouted: no layout `Workspaces` owner or repository configuration exists in `serve`. |
+
+### Not delivered in round 3 (justified)
+
+- **`update.*` (47):** `UpdateLane::register` is all-or-nothing, and `update.activate`/`rollback` restart the control. It has the same listener-rebind blocker as `server.restart`.
+- **`service.describe` (51):** the lane implements `Method<OperationEvent, OperationProducer>` only, not the hosted `ServedEvent` dispatcher's event type.
+- **Templates through the Sequencer with the fence handshake (35):**
+  - The run path still decodes `program` only; template launches are refused `unsupported_field`.
+  - **Agent tree events:** the agent tree read is served, but without template/parent launches no `agent.*` tree events are produced yet.
+- **Scheduler actor in the output path (56), machine_actor `machine.list` (44), process-info through the todo-55 lane:** not wired. `terminal.process_info` is still served by the lifecycle's own process sample.
+- **Not wired, because no handler lane exists to register:** `events.*` (22), `layout.*` (18), `terminal.history`/`search`, `input.interrupt`/`barrier` (24/25).
+
 ## Round 3: merge-ref compile break
 
 CI on `1a86051` failed to compile `ovis-terminal-cli` at `assembly/terminal.rs:33` with E0308, expecting `Option<LaunchProgram>`. That type exists only on integration: T35 made `TerminalRunParams.program` optional beside `template`. The lane itself built at its base, so the failure came from CI's PR merge ref.
