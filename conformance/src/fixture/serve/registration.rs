@@ -10,7 +10,9 @@ use ovis_terminal_core::events::Coordinator;
 use ovis_terminal_core::ops::OperationProducer;
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
 use ovis_terminal_server::dispatch::lanes::boundary_policy::AuditTrail;
+use ovis_terminal_server::dispatch::remote::RemoteRoutes;
 
+use super::super::Role;
 use super::super::bridge::{Extension, QUEUE_LIMIT};
 use super::super::documents::{DocGet, DocSet};
 use super::super::handler::{Dispatch, Event, Probes};
@@ -38,6 +40,10 @@ pub(super) struct Registered {
     pub(super) held: Held,
     /// The audit trail the boundary policy records every call in.
     pub(super) trail: Arc<AuditTrail>,
+    /// The peer runtime this fixture serves beside, stopped after the server.
+    pub(super) peer: Option<Arc<super::super::peer::PeerSide>>,
+    /// Routes that forward a machine-targeted call to its attached peer.
+    pub(super) routes: RemoteRoutes<super::super::machines::FixtureLine>,
 }
 
 /// `doc.set`, `doc.get` and `terminal.keep` over the effect directory below `root`.
@@ -62,7 +68,7 @@ fn documents(
 /// Registers every fixture lane on `dispatch`, one phase per lane family.
 pub(super) async fn register(
     dispatch: &mut Dispatch,
-    (root, runtime): (&Path, RuntimeIdentity),
+    (root, role, runtime): (&Path, &Role, RuntimeIdentity),
     (authority, bearer, core): Shared<'_>,
 ) -> Result<Registered, RunnerError> {
     documents(dispatch, root, runtime)?;
@@ -82,6 +88,8 @@ pub(super) async fn register(
     let tree = super::super::tree::register(dispatch, (&agents, &gate), launch)?;
     let fleet = (runtime, Arc::clone(core));
     let machines = super::super::machines::register(dispatch, (&agents, &gate), fleet).await?;
+    let (peer, routes, worktrees) =
+        super::super::peer::compose(dispatch, (root, role), (&machines, authority, runtime))?;
     let health = super::super::health::register(dispatch, runtime, root)?;
     let held = super::super::update::register(dispatch, (root, authority, bearer), runtime).await?;
     let trail = super::super::boundary::register(dispatch, root, runtime)?;
@@ -95,6 +103,8 @@ pub(super) async fn register(
         tree,
         health,
         machines,
+        peer: peer.clone(),
+        worktrees,
         programs,
         audit: (Arc::clone(&trail), Arc::clone(authority)),
     };
@@ -103,5 +113,7 @@ pub(super) async fn register(
         assembly,
         held,
         trail,
+        peer,
+        routes,
     })
 }

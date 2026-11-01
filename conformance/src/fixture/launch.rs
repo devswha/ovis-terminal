@@ -48,16 +48,24 @@ pub(crate) struct FixtureProcess {
     pub(crate) ready: Ready,
 }
 
-/// Starts `program <args>` (the runner's fixture mode or the binary's `serve`) and waits,
-/// bounded, for its ready line.
+/// The fixture's executable search path: its own `bin` directory, where the SSH loopback
+/// shim lives, before the system directories.
+fn search_path(root: &Path) -> String {
+    format!("{}:/usr/bin:/bin", root.join("bin").display())
+}
+
+/// Starts `program <args>` (the runner's fixture mode or the binary's `serve`) below
+/// `root` and waits, bounded, for its ready line.
 pub(crate) async fn start(
     program: &Path,
     args: &[std::ffi::OsString],
+    root: &Path,
 ) -> Result<FixtureProcess, RunnerError> {
     let mut command = tokio::process::Command::new(program);
     command
         .args(args)
         .env_clear()
+        .env("PATH", search_path(root))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

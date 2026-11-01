@@ -33,7 +33,10 @@ impl Held {
         })
     }
 
-    fn record(mut self, connected: Connected<Link>) -> Result<MachineRecord, DispatchError> {
+    fn record(
+        mut self,
+        connected: Connected<Option<Link>>,
+    ) -> Result<MachineRecord, DispatchError> {
         let hold = self.hold.take().ok_or(DispatchError::Registration)?;
         Ok(self.lane.machines()?.insert(hold, connected)?)
     }
@@ -131,7 +134,7 @@ where
         execution
             .commit(move || {
                 let (trusted, link) = connected.ok_or(DispatchError::Closed)?;
-                held.record(Connected::new(trusted, link))
+                held.record(Connected::new(trusted, Some(link)))
             })
             .await
     }

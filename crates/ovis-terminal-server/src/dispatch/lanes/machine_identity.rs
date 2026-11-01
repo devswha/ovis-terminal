@@ -14,7 +14,10 @@ use ovis_terminal_authz::{Action, ResolvedTarget, Session, TargetResource};
 use ovis_terminal_core::events::{EventData, SnapshotProducer};
 use ovis_terminal_core::ops::{OperationEvent, OperationSnapshot};
 use ovis_terminal_core::registry::MachineId;
-use ovis_terminal_protocol::schema::methods::machine::{MachineRefParams, MachineRenameParams};
+use ovis_terminal_protocol::schema::common::MachineRef;
+use ovis_terminal_protocol::schema::methods::machine::{
+    MachineRecord, MachineRefParams, MachineRenameParams,
+};
 use ovis_terminal_remote::identity::{IdentityError, Machines, Name};
 use ovis_terminal_remote::transport::{Link, TransportError};
 use serde::Serialize;
@@ -46,7 +49,7 @@ impl From<TransportError> for DispatchError {
 #[derive(Debug)]
 pub struct MachineLane {
     local: MachineId,
-    machines: Mutex<Machines<Link>>,
+    machines: Mutex<Machines<Option<Link>>>,
     handshake_bound: Duration,
 }
 
@@ -68,10 +71,26 @@ impl MachineLane {
         )
     }
 
-    fn machines(&self) -> Result<MutexGuard<'_, Machines<Link>>, DispatchError> {
+    fn machines(&self) -> Result<MutexGuard<'_, Machines<Option<Link>>>, DispatchError> {
         self.machines
             .lock()
             .map_err(|_| std::io::Error::other("the machine registry is poisoned").into())
+    }
+
+    /// The record of an added machine and its link, which leaves the registry so that the
+    /// machine's actor can own it; `None` once it was taken.
+    ///
+    /// # Errors
+    ///
+    /// The registry failure, such as `not_found` for a machine never added.
+    pub fn take_link(
+        &self,
+        machine: &MachineRef,
+    ) -> Result<(MachineRecord, Option<Link>), DispatchError> {
+        let mut machines = self.machines()?;
+        let binding = machines.bind(machine)?;
+        let record = machines.get(&binding)?;
+        Ok((record, machines.link_mut(&binding)?.take()))
     }
 }
 

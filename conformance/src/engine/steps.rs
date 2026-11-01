@@ -77,11 +77,14 @@ impl Session<'_> {
         let root = self.root.path();
         let started = match kind {
             FixtureKind::Protocol => {
-                launch::start(
-                    &self.ctx.runner,
-                    &["fixture".into(), "--root".into(), root.into()],
-                )
-                .await?
+                let args = [
+                    "fixture".into(),
+                    "--root".into(),
+                    root.into(),
+                    "--binary".into(),
+                    self.ctx.binary.as_os_str().to_owned(),
+                ];
+                launch::start(&self.ctx.runner, &args, root).await?
             }
             FixtureKind::Assembled => {
                 let args = [
@@ -90,7 +93,7 @@ impl Session<'_> {
                     "--root".into(),
                     root.join("srv").into(),
                 ];
-                launch::start(&self.ctx.binary, &args).await?
+                launch::start(&self.ctx.binary, &args, root).await?
             }
         };
         self.fixture = Some(started);

@@ -20,6 +20,7 @@ use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::dispatch::lanes::boundary_policy::BoundaryPolicy;
 use ovis_terminal_server::dispatch::lanes::health::Measured;
+use ovis_terminal_server::dispatch::remote::RemoteDispatch;
 use ovis_terminal_server::listen::{ServeReport, ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
@@ -30,7 +31,7 @@ use crate::error::RunnerError;
 
 mod registration;
 
-/// Machine identity every fixture reports in hello.
+/// Machine identity the runtime under test reports in hello.
 pub(crate) const MACHINE: &str = "machine:0191f1a2-0000-7000-8000-000000000021";
 
 /// Maps a failure at `stage` into the fixture error, keeping it as the source.
@@ -46,13 +47,20 @@ where
 
 /// The runtime identity of every fixture run.
 pub(crate) fn identity() -> Result<RuntimeIdentity, RunnerError> {
-    let machine: MachineId = MACHINE.parse().map_err(at("parse the machine id"))?;
+    let machine: MachineId = super::peer::machine()
+        .parse()
+        .map_err(at("parse the machine id"))?;
+    let runtime = if machine.to_string() == MACHINE {
+        21
+    } else {
+        22
+    };
     Ok(RuntimeIdentity::new(
         HostIdentity::new(
             machine,
             HostBootId::try_from(1).map_err(at("build the host boot id"))?,
         ),
-        RuntimeId::try_from(21).map_err(at("build the runtime id"))?,
+        RuntimeId::try_from(runtime).map_err(at("build the runtime id"))?,
         ServerBootId::try_from(1).map_err(at("build the server boot id"))?,
     ))
 }
@@ -78,13 +86,14 @@ fn bootstrap(
 }
 
 /// Serves until stdin reaches end of file, then prints the serve report and returns.
-pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
+pub(crate) async fn serve(root: &Path, role: super::Role) -> Result<(), RunnerError> {
+    super::peer::assume(&role);
     let runtime = identity()?;
     let (authority, issued) = bootstrap(runtime)?;
     let core = open_core(root, runtime)?;
     let mut dispatch = Dispatch::new(Arc::clone(&authority), runtime, Arc::clone(&core));
     let lanes = (&authority, issued.bearer(), &core);
-    let registered = registration::register(&mut dispatch, (root, runtime), lanes).await?;
+    let registered = registration::register(&mut dispatch, (root, &role, runtime), lanes).await?;
     let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
     let writer = delegate(&authority, issued.bearer(), ("writer", WRITER))?;
     let health = Arc::clone(&registered.probes.health.health);
@@ -93,7 +102,8 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         root.to_path_buf(),
         registered.probes,
     ));
-    let gated = registered.assembly.gate(Arc::clone(&handler));
+    let remote = RemoteDispatch::new(registered.routes, Arc::clone(&handler));
+    let gated = registered.assembly.gate(Arc::new(remote));
     let socket = root.join("run").join("s.sock");
     let endpoint = UnixEndpoint::bind(&socket)
         .await
@@ -111,9 +121,18 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .shutdown()
         .await
         .map_err(at("shut the server down"))?;
+    super::peer::stop(registered.peer).await?;
     handler.shutdown().await?;
     drop(handler);
-    let held = registered.held;
+    release(registered.held, core).await?;
+    announce_report(&report)
+}
+
+/// Ends the update holder, then closes the store once nothing else shares it.
+async fn release(
+    held: super::update::Held,
+    core: Arc<Coordinator<Event, OperationProducer>>,
+) -> Result<(), RunnerError> {
     tokio::task::spawn_blocking(move || held.shutdown())
         .await
         .map_err(at("join the update holder shutdown"))??;
@@ -121,8 +140,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     tokio::task::spawn_blocking(move || core.close())
         .await
         .map_err(at("join the store close"))?
-        .map_err(at("close the store"))?;
-    announce_report(&report)
+        .map_err(at("close the store"))
 }
 
 /// Returns once the runner closes the fixture's stdin, its signal to stop serving.

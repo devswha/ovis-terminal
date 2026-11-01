@@ -10,7 +10,7 @@ use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind};
 use ovis_terminal_protocol::rpc::{InFlightRequests, RequestId, RpcFailure, RpcReply, RpcSuccess};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite};
 use tokio::sync::{Semaphore, mpsc, watch};
-use tokio::task::{self, JoinError, JoinSet};
+use tokio::task::{self, JoinSet};
 
 use super::budget::Budget;
 use super::cause::resolve_connection;
@@ -19,6 +19,8 @@ use super::outbound::{Closing, NotifyError, OUTBOUND_CAPACITY, Outbound, Outlet}
 use super::writer::write_loop;
 use super::{Call, ConnectionError, Ending, Notifier, RequestHandler};
 use crate::peer_gone;
+
+mod settle;
 
 const READ_CHUNK: usize = 64 * 1024;
 
@@ -42,6 +44,7 @@ struct Requests<H> {
     outlet: Outlet,
     tasks: JoinSet<RpcReply>,
     ids: HashMap<task::Id, RequestId>,
+    reply_tasks: HashMap<RequestId, task::AbortHandle>,
     in_flight: InFlightRequests,
     permits: Arc<Semaphore>,
 }
@@ -70,6 +73,7 @@ where
         },
         tasks: JoinSet::new(),
         ids: HashMap::new(),
+        reply_tasks: HashMap::new(),
         in_flight: InFlightRequests::default(),
         permits: Arc::new(Semaphore::new(context.max_in_flight)),
     };
@@ -139,6 +143,12 @@ impl<H: RequestHandler> Requests<H> {
                     })
                     .await
                 }
+                Step::Cancel(id) => {
+                    if let Some(task) = self.reply_tasks.get(&id) {
+                        task.abort();
+                    }
+                    Ok(())
+                }
                 Step::Close(error) => return Some(End::Failed(error)),
             };
             if let Err(error) = queued {
@@ -172,32 +182,9 @@ impl<H: RequestHandler> Requests<H> {
             drop(permit);
             reply
         });
-        self.ids.insert(task.id(), id);
+        self.ids.insert(task.id(), id.clone());
+        self.reply_tasks.insert(id, task);
         Ok(())
-    }
-
-    async fn settle(
-        &mut self,
-        joined: Result<(task::Id, RpcReply), JoinError>,
-    ) -> Result<(), ConnectionError> {
-        let (task, reply) = match joined {
-            Ok((task, reply)) => (task, Some(reply)),
-            Err(error) => (error.id(), None),
-        };
-        let id = self.ids.remove(&task).ok_or_else(|| {
-            ConnectionError::Correlation(BoundaryError::unknown_or_settled_request_id())
-        })?;
-        let reply = reply.unwrap_or_else(|| {
-            failure(
-                id.clone(),
-                &BoundaryError::domain(ErrorKind::Internal, false),
-            )
-        });
-        let settled = self
-            .in_flight
-            .complete(&id, reply)
-            .map_err(ConnectionError::Correlation)?;
-        self.reply(&settled).await
     }
 
     async fn finish(

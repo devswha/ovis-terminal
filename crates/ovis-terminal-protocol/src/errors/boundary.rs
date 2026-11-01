@@ -6,7 +6,7 @@ use super::{ErrorData, ErrorKind, ExceededBound, FieldPath, JsonRpcCode, OpId, T
 use crate::domain::conversation_records::Unavailable;
 use crate::domain::session_binding::HistoryHead;
 use crate::schema::ids::PromptId;
-use crate::schema::scalar::{PrincipalEpoch, QueuePosition, RecordVersion, ReportSeq};
+use crate::schema::scalar::{QueuePosition, RecordVersion, ReportSeq};
 
 /// Error raised while parsing, validating or correlating protocol records.
 #[derive(Debug, Error)]
@@ -253,13 +253,6 @@ impl BoundaryError {
         self
     }
 
-    /// Adds the principal's current authority epoch to a credential refusal.
-    #[must_use]
-    pub fn with_principal_epoch(mut self, epoch: PrincipalEpoch) -> Self {
-        self.data_mut().principal_epoch = Some(epoch);
-        self
-    }
-
     /// Adds an operation identity when effects may have begun.
     #[must_use]
     pub fn with_op_id(mut self, op_id: OpId) -> Self {
@@ -335,3 +328,5 @@ impl From<&BoundaryError> for JsonRpcCode {
         error.json_rpc_code()
     }
 }
+
+mod context;

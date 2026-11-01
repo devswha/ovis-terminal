@@ -1,0 +1,67 @@
+# Round 2 mutants, each applied alone and reverted (git diff clean after each)
+## Server crate: cargo test -p ovis-terminal-server --lib -- dispatch::remote:: conn::core::
+== M1 epoch > to >= (attach.rs) (crates/ovis-terminal-server/src/dispatch/remote/attach.rs)
+test dispatch::remote::qa::attach::an_attach_returns_only_after_the_busy_actor_took_the_new_line ... FAILED
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.21s
+
+== M2 alias lookup removed (route.rs) (crates/ovis-terminal-server/src/dispatch/remote/route.rs)
+test dispatch::remote::qa::alias::an_alias_reaches_the_machine_it_names_and_only_that_machine ... FAILED
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.21s
+
+== M5 local fallback for unknown machine (crates/ovis-terminal-server/src/dispatch/remote/route.rs)
+test dispatch::remote::qa::an_unknown_machine_is_refused_and_nothing_runs_locally ... FAILED
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.21s
+
+== M6 lost mutation reported unreachable (crates/ovis-terminal-server/src/dispatch/remote.rs)
+test dispatch::remote::qa::a_mutation_lost_in_flight_is_outcome_unknown_and_a_lost_read_is_unreachable ... FAILED
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.21s
+
+== M7 last_seen_seq dropped (crates/ovis-terminal-server/src/dispatch/remote/refusal.rs)
+test dispatch::remote::qa::an_unreachable_machine_refuses_with_its_last_seen_seq_and_sends_nothing ... FAILED
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.21s
+
+== M8 cancel notification not recognised (crates/ovis-terminal-server/src/conn/core.rs)
+test conn::core::tests::a_cancel_notification_names_its_request_and_any_other_notification_closes ... FAILED
+test dispatch::remote::qa::a_cancel_request_ends_only_the_named_call_and_the_connection_keeps_serving ... FAILED
+test result: FAILED. 15 passed; 2 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.21s
+
+== M9 remote input authorized as a read (crates/ovis-terminal-server/src/dispatch/remote/route.rs)
+test dispatch::remote::qa::an_observer_may_read_a_machine_but_never_send_it_input ... FAILED
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.21s
+
+== M10 cancelled reply task not aborted (crates/ovis-terminal-server/src/conn/driver.rs)
+test dispatch::remote::qa::a_cancel_request_ends_only_the_named_call_and_the_connection_keeps_serving ... FAILED
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 112 filtered out; finished in 20.00s
+
+== M11 cancelled task answered internal (crates/ovis-terminal-server/src/conn/driver/settle.rs)
+test dispatch::remote::qa::a_cancel_request_ends_only_the_named_call_and_the_connection_keeps_serving ... FAILED
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.21s
+
+
+## Scenario level: rebuilt runner + binary, real binary run
+== F1 served runtime does not route $/orphaned (conformance/src/fixture/handler.rs) -> recovery/e2e --case happy: exit 1 
+recovery/e2e happy: {"detail":"expectation reply[restart]/result/outbox did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"44"} [{"actual":["machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000c3"],"check":"reply[restart]/result/outbox","expected":[],"passed":false},{"actual":"0","check":"reply
+== F2 SSH transport drops BatchMode=yes (crates/ovis-terminal-remote/src/transport/spec.rs) -> remote/e2e --case failure: exit 1 
+remote/e2e failure: {"detail":"expectation reply[ssh-wrong-credential]/error/data/kind did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"12"} [{"actual":"transport_failed","check":"reply[ssh-wrong-credential]/error/data/kind","expected":"auth_failed","passed":false}]
+== F3 remote dispatch forwards params.machine (crates/ovis-terminal-server/src/dispatch/remote/route.rs) -> recovery/e2e --case failure: exit 1 
+recovery/e2e failure: {"detail":"expectation reply[run-peer]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"13"} [{"actual":{"code":-32000,"data":{"field_path":"params.machine","hint":"list machines to find a live name; nothing ran locally instead","kind":"not_found","retryable":false},"message":"operation failed"},"check":"reply[r
+== M3 MachineAdd::restricted ignores its allowlist (add.rs)
+[exit 0]
+test dispatch::lanes::boundary_policy::qa::machine_add_admits_only_allowlisted_endpoints_before_any_connection ... FAILED
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 128 filtered out; finished in 0.00s
+
+
+## Load-only
+== M4 fixture pause() returns right after SIGSTOP (process.rs), remote/e2e happy x8 under taskset -c 0-1 + 8 busy loops: [exit 0]
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.65s
+ PASS=5 FAIL=3
+
+## Loaded flake found and root-caused during round 2
+recovery/e2e failure failed once in 35 loaded runs at local-crash: screen/exact true, no gap.
+Cause (fixture drill): the checkpoint took whatever bytes had arrived when MARK was seen; under load the chunk with MARK
+could already extend past the holder's retained start (8312), so no gap existed. Fix: the writer blocks on a FIFO right
+after MARK and the drill releases it only after checkpointing, so the checkpoint is exactly 1244 and the gap 1244->8312,
+both now pinned literally.
+
+## Clean control after the fix, same load (taskset -c 0-1, 8 busy loops)
+recovery/e2e x25 + remote/e2e x25 --case all: PASS=50 FAIL=0
