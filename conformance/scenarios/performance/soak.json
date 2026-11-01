@@ -1,0 +1,59 @@
+{
+  "scenario": "performance/soak",
+  "todo": 70,
+  "title": "Fifty terminals run continuously through signalled control crashes, planned restarts, observer interruptions and stalled viewers in the holders of the binary under test",
+  "closes": [
+    "GAP-061",
+    "GAP-119",
+    "GAP-121",
+    "GAP-122",
+    "GAP-123",
+    "GAP-124",
+    "GAP-143"
+  ],
+  "delivers": [
+    "IDEAL-041",
+    "IDEAL-043",
+    "IDEAL-092",
+    "IDEAL-093",
+    "IDEAL-094",
+    "IDEAL-095",
+    "IDEAL-096",
+    "IDEAL-116",
+    "IDEAL-117"
+  ],
+  "excludes": [
+    "EXCL-019",
+    "EXCL-021",
+    "EXCL-025",
+    "EXCL-026"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "50 programs run in the holders of the binary under test (`ovis-terminal --json service run --manager detached`: one shared holder, one dedicated holder for the last terminal) for one continuous 1800 s run. A control process that adopts those holders, owns every screen and checkpoints them is killed with SIGKILL twice and recovered by the core's crash recovery, handed over once, its observer connection cut and resumed twice, and a viewer that never reads is attached. Every recovery reports every program survived under its first PID and start token with a screen record; output offsets never move backwards; no sequence is skipped without a gap record; every viewer queue stays within 256 KiB (the stalled one is cut with a viewer_cut record); every control ping is answered within 1000 ms; runtime RSS (control plus holders) stays <= 1 GiB with post-warmup median growth <= 16 MiB + 1% of the baseline median; retained disk <= 4 GiB. After the run, killing the dedicated holder alone leaves its terminal unknown/holder_unreachable while all 49 shared terminals survive unchanged. Raw per-second samples and minute checkpoints are kept beside the evidence.",
+      "commands": [
+        "cargo run --locked --release --manifest-path bench/Cargo.toml --bin soak -- --binary target/release/ovis-terminal --isolated --terminals 50 --duration-seconds 1800 --core-crashes 2 --rss-limit-mib 1024 --disk-limit-mib 4096 --evidence <attempt>/task-70-ovis-terminal-v1.json"
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "With {\"fixture\":\"holder-tail-gap-and-lost-receipt\"} terminal 0 keeps one stale checkpoint while its holder's 1 MiB tail rolls past it, an input.send is journalled as running with its write intent and its receipt is never committed, and the control process is killed with SIGKILL. The run exits 0 only when crash recovery reports screen exact:false with a gap, the input is outcome_unknown, the holder's input sequence stays 1 through the crash boot and a later handover boot (no automatic resend), and the report never claims exact recovery.",
+      "inject": {
+        "fixture": "holder-tail-gap-and-lost-receipt"
+      },
+      "commands": [
+        "cargo run --locked --release --manifest-path bench/Cargo.toml --bin soak -- --binary target/release/ovis-terminal --isolated --inject '{\"fixture\":\"holder-tail-gap-and-lost-receipt\"}' --evidence <attempt>/task-70-failure.json"
+      ]
+    }
+  ],
+  "scheduled": ".github/workflows/soak.yml runs the 259200 s profile (20 control crashes) on existing self-hosted Linux and macOS runners; its result is reported when it lands and is never claimed by todo 70.",
+  "verified_in_crate": [
+    "cargo nextest run -p ovis-terminal-bench soak::",
+    "cargo run --locked --release --manifest-path bench/Cargo.toml --bin soak -- (the commands above)"
+  ]
+}
