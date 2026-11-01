@@ -1,0 +1,12 @@
+mutant M-c-verdict-rss-zero: bench/terminal50/account.rs
+- rss_peak_bytes: load.rss_peak,
+        disk_bytes: load.disk,
+        requested
++ rss_peak_bytes: 0,
+        disk_bytes: load.disk,
+        requested
+$ cargo nextest run --locked -p ovis-terminal-bench --no-tests=fail --no-fail-fast
+
+FAIL terminal50::tests::bound::footprint_limits_below_the_measured_footprint_fail_the_run
+Summary [   2.292s] 17 tests run: 16 passed, 1 failed, 0 skipped
+NEXTEST_EXIT=100

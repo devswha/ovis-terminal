@@ -1,0 +1,490 @@
+{
+  "format": "ovis-terminal50/1",
+  "label": "capacity-release-target",
+  "judged_on": "p99 of the measured samples",
+  "surface": "ovis-terminal-server scheduler actors (one per terminal, shared session budgets, disk history) fed by real PTY programs; admission times reserve+admit to receipt, events time actor commit to the line accepted by each client's Unix socket. The binary under test is hashed and versioned; it routes no input.* or events.* call to these actors before todo 31 assembles it.",
+  "budget": {
+    "profile": "capacity",
+    "admission_p99_ms": 100,
+    "event_p99_ms": 100
+  },
+  "shape": {
+    "terminals": 50,
+    "clients": 8,
+    "inflight": 16,
+    "bytes_per_second": 1048576
+  },
+  "viewers_per_terminal": 8,
+  "warmup_samples": 1000,
+  "samples_wanted": 10000,
+  "fixture": null,
+  "host": {
+    "os": "linux",
+    "arch": "x86_64",
+    "kernel": "Linux 7.0.0-38-generic x86_64",
+    "cpu_model": "AMD Ryzen Threadripper PRO 3995WX 64-Cores",
+    "available_parallelism": 122,
+    "runtime_workers": 8
+  },
+  "build": {
+    "bench_version": "0.1.0",
+    "profile": "release",
+    "debug_assertions": false
+  },
+  "binary": {
+    "path": "target/release/ovis-terminal",
+    "sha256": "de70674c12b023ad71908dba5340c1f78ebbb4832072e34718ef19a8a1286211",
+    "bytes": 3284896,
+    "version": "ovis-terminal 0.1.0"
+  },
+  "admission": {
+    "warmup": {
+      "count": 1000,
+      "p50_ms": 0.0012619999999999999,
+      "p95_ms": 0.049472999999999996,
+      "p99_ms": 0.54698,
+      "max_ms": 1.729197
+    },
+    "measured": {
+      "count": 10015,
+      "p50_ms": 0.001252,
+      "p95_ms": 0.020879,
+      "p99_ms": 0.06928100000000001,
+      "max_ms": 0.11270200000000001
+    }
+  },
+  "admitted": 11015,
+  "rejected": {},
+  "control": {
+    "count": 11008,
+    "p50_ms": 0.20223100000000002,
+    "p95_ms": 1.118567,
+    "p99_ms": 1.3683269999999998,
+    "max_ms": 2.616138
+  },
+  "event": {
+    "warmup": {
+      "count": 11968,
+      "p50_ms": 0.058019,
+      "p95_ms": 0.112583,
+      "p99_ms": 0.130155,
+      "max_ms": 0.16106399999999998
+    },
+    "measured": {
+      "count": 120184,
+      "p50_ms": 0.049954000000000005,
+      "p95_ms": 0.099277,
+      "p99_ms": 0.122571,
+      "max_ms": 0.187994
+    }
+  },
+  "events_committed": 16519,
+  "requested": {
+    "terminals": 50,
+    "viewers": 400,
+    "clients": 8,
+    "lanes": 16
+  },
+  "realized": {
+    "terminals": 2,
+    "viewers": 16,
+    "clients": 8,
+    "lanes": 16
+  },
+  "clients": [
+    {
+      "client": 0,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 16,
+      "write_failed": false,
+      "bytes_read": 589180,
+      "latency": {
+        "warmup": {
+          "count": 1496,
+          "p50_ms": 0.055635,
+          "p95_ms": 0.111009,
+          "p99_ms": 0.126338,
+          "max_ms": 0.147899
+        },
+        "measured": {
+          "count": 15023,
+          "p50_ms": 0.049172,
+          "p95_ms": 0.098094,
+          "p99_ms": 0.123412,
+          "max_ms": 0.18767299999999998
+        }
+      }
+    },
+    {
+      "client": 1,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 16,
+      "write_failed": false,
+      "bytes_read": 589180,
+      "latency": {
+        "warmup": {
+          "count": 1496,
+          "p50_ms": 0.055375,
+          "p95_ms": 0.112733,
+          "p99_ms": 0.13042600000000001,
+          "max_ms": 0.14886000000000002
+        },
+        "measured": {
+          "count": 15023,
+          "p50_ms": 0.050365,
+          "p95_ms": 0.09963799999999999,
+          "p99_ms": 0.124034,
+          "max_ms": 0.15393
+        }
+      }
+    },
+    {
+      "client": 2,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 16,
+      "write_failed": false,
+      "bytes_read": 589180,
+      "latency": {
+        "warmup": {
+          "count": 1496,
+          "p50_ms": 0.057859,
+          "p95_ms": 0.104066,
+          "p99_ms": 0.1219,
+          "max_ms": 0.151736
+        },
+        "measured": {
+          "count": 15023,
+          "p50_ms": 0.050275,
+          "p95_ms": 0.10051900000000001,
+          "p99_ms": 0.123292,
+          "max_ms": 0.158369
+        }
+      }
+    },
+    {
+      "client": 3,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 16,
+      "write_failed": false,
+      "bytes_read": 589180,
+      "latency": {
+        "warmup": {
+          "count": 1496,
+          "p50_ms": 0.06131500000000001,
+          "p95_ms": 0.116158,
+          "p99_ms": 0.129775,
+          "max_ms": 0.16106399999999998
+        },
+        "measured": {
+          "count": 15023,
+          "p50_ms": 0.049784,
+          "p95_ms": 0.09872600000000001,
+          "p99_ms": 0.121069,
+          "max_ms": 0.151044
+        }
+      }
+    },
+    {
+      "client": 4,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 16,
+      "write_failed": false,
+      "bytes_read": 589180,
+      "latency": {
+        "warmup": {
+          "count": 1496,
+          "p50_ms": 0.056467,
+          "p95_ms": 0.113434,
+          "p99_ms": 0.126418,
+          "max_ms": 0.158188
+        },
+        "measured": {
+          "count": 15023,
+          "p50_ms": 0.050846,
+          "p95_ms": 0.097413,
+          "p99_ms": 0.121299,
+          "max_ms": 0.15649500000000002
+        }
+      }
+    },
+    {
+      "client": 5,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 16,
+      "write_failed": false,
+      "bytes_read": 589180,
+      "latency": {
+        "warmup": {
+          "count": 1496,
+          "p50_ms": 0.058119,
+          "p95_ms": 0.11587800000000001,
+          "p99_ms": 0.128381,
+          "max_ms": 0.14865
+        },
+        "measured": {
+          "count": 15023,
+          "p50_ms": 0.050735,
+          "p95_ms": 0.10200200000000001,
+          "p99_ms": 0.12704900000000002,
+          "max_ms": 0.168978
+        }
+      }
+    },
+    {
+      "client": 6,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 16,
+      "write_failed": false,
+      "bytes_read": 589180,
+      "latency": {
+        "warmup": {
+          "count": 1496,
+          "p50_ms": 0.061495999999999995,
+          "p95_ms": 0.116339,
+          "p99_ms": 0.135245,
+          "max_ms": 0.15699600000000002
+        },
+        "measured": {
+          "count": 15023,
+          "p50_ms": 0.050105000000000004,
+          "p95_ms": 0.097985,
+          "p99_ms": 0.117923,
+          "max_ms": 0.187994
+        }
+      }
+    },
+    {
+      "client": 7,
+      "reads": true,
+      "delivered": 16519,
+      "lost": 0,
+      "undelivered": 0,
+      "deepest_queue": 16,
+      "write_failed": false,
+      "bytes_read": 589180,
+      "latency": {
+        "warmup": {
+          "count": 1496,
+          "p50_ms": 0.05837,
+          "p95_ms": 0.11210200000000001,
+          "p99_ms": 0.13166799999999998,
+          "max_ms": 0.153339
+        },
+        "measured": {
+          "count": 15023,
+          "p50_ms": 0.048541,
+          "p95_ms": 0.099377,
+          "p99_ms": 0.121879,
+          "max_ms": 0.15924
+        }
+      }
+    },
+    {
+      "client": 8,
+      "reads": false,
+      "delivered": 278,
+      "lost": 12144,
+      "undelivered": 4097,
+      "deepest_queue": 4096,
+      "write_failed": true,
+      "bytes_read": 0,
+      "latency": {
+        "warmup": {
+          "count": 278,
+          "p50_ms": 0.059691999999999995,
+          "p95_ms": 0.11696000000000001,
+          "p99_ms": 0.123673,
+          "max_ms": 0.124344
+        },
+        "measured": {
+          "count": 0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.0,
+          "p99_ms": 0.0,
+          "max_ms": 0.0
+        }
+      }
+    }
+  ],
+  "viewers": [
+    {
+      "terminal": 0,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6830,
+      "events_lost": 2696,
+      "events_held": 64
+    },
+    {
+      "terminal": 0,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 0,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 0,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 0,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 0,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 0,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 0,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 0,
+      "reads": false,
+      "bytes": 6830,
+      "events_lost": 2690,
+      "events_held": 64
+    },
+    {
+      "terminal": 1,
+      "viewer": 1,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 2,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 3,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 4,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 5,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 6,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    },
+    {
+      "terminal": 1,
+      "viewer": 7,
+      "reads": true,
+      "bytes": 294297,
+      "events_lost": 0,
+      "events_held": 0
+    }
+  ],
+  "footprint": {
+    "rss_before_bytes": 4124672,
+    "rss_peak_bytes": 57929728,
+    "disk_bytes": 588594,
+    "runtime_cpu_ms": 2050.0,
+    "programs_cpu_ms": 100.0,
+    "wall_ms": 13761.208503,
+    "pumped_bytes": 588594,
+    "parsed_bytes": 588594,
+    "max_parse_turn_ms": 3.719057
+  },
+  "budgets": {
+    "rss_limit_bytes": 1073741824,
+    "disk_limit_bytes": 4294967296
+  },
+  "verdict": {
+    "passed": false,
+    "violations": [
+      {
+        "check": "terminals_realized",
+        "limit": 50,
+        "observed": 2
+      },
+      {
+        "check": "viewers_realized",
+        "limit": 400,
+        "observed": 16
+      }
+    ]
+  }
+}

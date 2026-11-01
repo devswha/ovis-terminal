@@ -1,0 +1,8 @@
+mutant ideal-ignores-warmup: bench/terminal50/verdict.rs
+- let all: Vec<Duration> = warmup.iter().chain(measured).copied().collect();
++ let all: Vec<Duration> = measured.iter().chain(warmup.iter().take(0)).copied().collect();
+$ cargo nextest run --locked -p ovis-terminal-bench --no-tests=fail --no-fail-fast
+
+FAIL terminal50::tests::the_ideal_profile_judges_warmup_samples_too
+Summary [   2.293s] 17 tests run: 16 passed, 1 failed, 0 skipped
+NEXTEST_EXIT=100
