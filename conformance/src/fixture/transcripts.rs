@@ -9,26 +9,14 @@
 
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
-use ovis_terminal_agent::conversation::binding::{BindingService, Stores};
-use ovis_terminal_agent::conversation::records::RecordsService;
-use ovis_terminal_agent::status::StatusService;
-use ovis_terminal_core::registry::RuntimeIdentity;
+use ovis_terminal_agent::conversation::binding::Stores;
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::rpc::RpcRequest;
 use ovis_terminal_protocol::schema::decode_params;
-use ovis_terminal_server::dispatch::lanes::conversation_records::{
-    AppendRecords, ConversationRecordsLane, Records,
-};
-use ovis_terminal_server::dispatch::lanes::session_binding::{
-    Conversation, SessionBindingLane, UpdateSession,
-};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use super::agents::Directory;
-use super::handler::Dispatch;
 use super::serve::at;
 use crate::error::RunnerError;
 
@@ -40,35 +28,11 @@ pub(crate) fn store(root: &Path) -> PathBuf {
     root.join("transcripts")
 }
 
-/// Registers `agent.update_session`, `agent.conversation`, `agent.append_records` and
-/// `agent.records` over the agent terminals.
-pub(crate) fn register(
-    dispatch: &mut Dispatch,
-    (status, directory): (Arc<StatusService>, Arc<Directory>),
-    (runtime, root): (RuntimeIdentity, &Path),
-) -> Result<(), RunnerError> {
+/// Creates the transcript store and authorizes it as `fixture-store`.
+pub(crate) fn authorize(root: &Path) -> Result<Stores, RunnerError> {
     let dir = store(root);
     std::fs::create_dir(&dir).map_err(at("create the transcript store"))?;
-    let stores = Stores::new(&[(STORE, dir)]).map_err(at("authorize the transcript store"))?;
-    let records = Arc::new(RecordsService::new(
-        runtime.runtime_id(),
-        Arc::clone(&status),
-    ));
-    let reported = ConversationRecordsLane::new(Arc::clone(&directory), records);
-    dispatch
-        .register(AppendRecords::new(&reported))
-        .map_err(at("register agent.append_records"))?;
-    dispatch
-        .register_read(Records::new(&reported))
-        .map_err(at("register agent.records"))?;
-    let service = Arc::new(BindingService::new(runtime.runtime_id(), status, stores));
-    let lane = SessionBindingLane::new(directory, service);
-    dispatch
-        .register(UpdateSession::new(&lane))
-        .map_err(at("register agent.update_session"))?;
-    dispatch
-        .register(Conversation::new(&lane))
-        .map_err(at("register agent.conversation"))
+    Stores::new(&[(STORE, dir)]).map_err(at("authorize the transcript store"))
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]

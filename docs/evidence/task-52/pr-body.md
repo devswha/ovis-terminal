@@ -149,3 +149,22 @@ DEFERRED VERIFICATION: none for the scenarios in this PR. The runner executes bo
 CI failed only on `test (windows-latest)`: `dispatch::services::tests::configured_services_register_exactly_their_methods_and_a_second_time_is_refused` returned `Os { code: 32 }` ("being used by another process") from `remove_dir_all`. The test dropped the dispatcher but never closed the SQLite store, and Windows cannot delete an open database file; Unix can, which is why ubuntu and macOS passed. The defect was in the test's cleanup, not in the product. The test now keeps the coordinator and calls `Coordinator::close()` before removing its directory, on every platform. There is no cfg and no skip. Local: the test passes; server clippy `-D warnings` exits 0; fmt and hygiene (0 violations) pass; `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exits 0; the matching `cargo clippy ... -D warnings` exits 0.
 
 macOS stress probe (dispatched once on c23c4a3): https://github.com/devswha/ovis-terminal/actions/runs/41292367994
+
+## Round 3 (CI on 5c1a55f): recovery/e2e happy step 12, `line_epoch`
+
+CI on ubuntu failed `suite::every_scenario_file_is_executed_or_a_listed_declaration`, because `all/all` failed at recovery/e2e happy step 12: `reply[restart]/result/health/line_epoch` expected `"2"`, and `/state` expected `connected`. Both failed together.
+
+**Verdict: product, not expectation.** After a restart the peer's actor has taken exactly one more line, so `connected` with epoch `"2"` is the correct contract. The defect: `MachineActorLane::attach` only queues the new line on the actor's mailbox and returns. So `reconnect()` (and `machine.add`) could report before the actor had applied the line, and a health read then still showed the old, lost line (`unreachable`, epoch 1). Fix (`dispatch/remote/attach.rs`): `attach_applied` subscribes to the machine's health before attaching and returns only once `line_epoch` has advanced. It is bounded, and a timeout is `unavailable` (actor stopped). Both `reconnect` and `MachineAddAttached` use it. The scenario expectation is unchanged.
+
+The same repeat test exposed a second race, in the fixture's fault injector rather than the product: `fixture.peer stop` replied "stopped" as soon as `kill -STOP` returned. SIGSTOP takes effect asynchronously, so under load the peer still answered `peer-stalls` (remote/e2e, 4 failures in 15 runs). A temporary probe of `ps -o stat=` showed the peer in `T` once the stop had landed. The injector now sends SIGSTOP and SIGCONT with `rustix::process::kill_process` to the pid captured at spawn (above 1, never a group), and replies only after `waitpid(pid, WUNTRACED)` reports the child stopped. This is the kernel's own event: no polling, and `/bin/kill` is no longer used. `conformance/Cargo.toml` gains a unix-only `rustix 1.1.6` dependency with the `process` feature. It is already in Cargo.lock for the holder; one edge was added.
+
+Evidence: `stress-round3.log`. Under `taskset -c 0-1` with 8 busy loops, 15 runs each of recovery/e2e and remote/e2e: PASS=30 FAIL=0. Before the injector fix, the same recipe gave remote/e2e 4 failures out of 15. Lane tests: `dispatch::` and `conn::core::` 59 passed; the conformance crate (`all/all`) passed.
+
+## Merge of origin/integration a896a7d
+
+One merge commit after the round-3 fix.
+
+- **Conflicts:** `conformance/src/fixture/serve.rs` was resolved as a union. Integration's agent `assembly.gate(..)` now wraps `RemoteDispatch`, and the transcripts registration integration moved into the assembly was taken from integration. `.github/workflows/probe-stress-macos.yml` was resolved as a union of the options and jobs, with `commit-barrier` and then `service-integration` last.
+- **Inventory:** `suite.rs` auto-merged into a sorted union of 31 entries.
+- **Lock, schema, SDK:** Cargo.lock is unchanged by the merge (`cargo metadata --offline`, then `--locked`, OK). The OpenRPC schema was rewritten and is byte-identical (`check` and `compat` exit 0). The SDK `generate:check` is fresh and `typecheck` exits 0.
+- **Merged tree:** fmt check OK, hygiene 0 violations, clippy `-D warnings` on server, services, remote, protocol and conformance exit 0. `cargo test -p ovis-terminal-server -p ovis-terminal-services -p ovis-terminal-remote --all-targets`: 306 passed, 0 failed. `cargo test -p ovis-terminal-conformance` (all/all, including integration's agent/e2e): passed. The full `check.sh` and Windows legs are left to CI as the gate for this push.

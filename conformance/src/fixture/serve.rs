@@ -21,7 +21,6 @@ use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::dispatch::lanes::boundary_policy::BoundaryPolicy;
 use ovis_terminal_server::dispatch::lanes::health::Measured;
-use ovis_terminal_server::dispatch::lanes::prompt_bridge::{Gated, PromptBridgeGate};
 use ovis_terminal_server::dispatch::remote::RemoteDispatch;
 use ovis_terminal_server::listen::{ServeReport, ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
@@ -93,11 +92,13 @@ pub(crate) async fn serve(root: &Path, role: super::Role) -> Result<(), RunnerEr
     dispatch
         .register(TerminalKeep::new(&effects, runtime)?)
         .map_err(at("register terminal.keep"))?;
-    let (agents, gate, sequenced) =
-        super::agents::register(&mut dispatch, (runtime, Arc::clone(&core)), &authority)?;
+    let (agents, gate, sequenced, assembly) = super::agents::register(
+        &mut dispatch,
+        (runtime, Arc::clone(&core), root),
+        &authority,
+    )?;
     super::rotation::register(&mut dispatch, &authority, (runtime, Arc::clone(&sequenced)))?;
     let (status, directory) = (Arc::clone(&agents.0), Arc::clone(&agents.1));
-    super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
     let programs = super::processes::register(
         &mut dispatch,
         (root, runtime),
@@ -115,7 +116,6 @@ pub(crate) async fn serve(root: &Path, role: super::Role) -> Result<(), RunnerEr
         (root, &role),
         (&machines, &authority, runtime),
     )?;
-    super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
     let health = super::health::register(&mut dispatch, runtime, root)?;
     let held = super::update::register(&mut dispatch, (root, &authority, issued.bearer()), runtime)
         .await?;
@@ -141,10 +141,7 @@ pub(crate) async fn serve(root: &Path, role: super::Role) -> Result<(), RunnerEr
         root.to_path_buf(),
         probes,
     ));
-    let gated = Gated::new(
-        PromptBridgeGate::new(directory, (status, prompts)),
-        Arc::new(RemoteDispatch::new(routes, Arc::clone(&handler))),
-    );
+    let gated = assembly.gate(Arc::new(RemoteDispatch::new(routes, Arc::clone(&handler))));
     let socket = root.join("run").join("s.sock");
     let endpoint = UnixEndpoint::bind(&socket)
         .await

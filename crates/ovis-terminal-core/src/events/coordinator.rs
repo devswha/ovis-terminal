@@ -113,6 +113,11 @@ impl<D, P> Coordinator<D, P> {
         Ok(self)
     }
 
+    /// The bounds this coordinator admits under.
+    pub const fn limits(&self) -> &Limits {
+        &self.limits
+    }
+
     /// The pinned-snapshot slots and the FIFO of requests waiting for one.
     pub const fn snapshot_queue(&self) -> &Arc<SnapshotQueue> {
         &self.pins

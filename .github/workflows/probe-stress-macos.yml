@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart, template-launch, agent-tree, credential-rotation, process-info, waits, client-ts, prompt-bridge, recovery, update, machine-actor, conversation-records, health, boundary-policy, graphics-caps, service-integration]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart, template-launch, agent-tree, credential-rotation, process-info, waits, client-ts, prompt-bridge, recovery, update, machine-actor, conversation-records, health, boundary-policy, graphics-caps, commit-barrier, service-integration]
 
 permissions:
   contents: read
@@ -1356,6 +1356,40 @@ jobs:
         with:
           name: graphics-caps-stress-macos-${{ github.run_id }}
           path: graphics-caps-stress-macos.log
+          if-no-files-found: error
+
+  commit-barrier:
+    if: inputs.probe == 'commit-barrier'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat commit boundary tests and agent e2e scenario 25 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              cargo nextest run -p ovis-terminal-core --test commit --locked --no-tests=fail
+              cargo nextest run -p ovis-terminal-server --test dispatch --locked --no-tests=fail -E 'test(agent_assembly::)'
+              cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario agent/e2e --isolated --case all --evidence "commit-barrier-$iteration.json"
+              printf 'PASS %s/25\n' "$iteration"
+            done
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee commit-barrier-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: commit-barrier-stress-macos-${{ github.run_id }}
+          path: commit-barrier-stress-macos.log
           if-no-files-found: error
 
   service-integration:
