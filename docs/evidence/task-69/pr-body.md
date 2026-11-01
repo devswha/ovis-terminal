@@ -122,7 +122,15 @@ In both failures the budget field still reads `admission_max_ms: 100, event_max_
 
 **Gates:** `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` exits 0 (`docs/evidence/task-69/check.log`). The Windows pre-check (`RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` and `cargo clippy ... -D warnings`) exits 0 for both (`windows-precheck.log`).
 
-**macOS native:** stress lane `terminal50` runs, three times on macos-latest, the crate tests, both profiles, both failures and the 49-terminal refusal. It was re-dispatched on the round-2 head: MACOS_RUN_URL. Result: MACOS_RUN_RESULT.
+**macOS native:** stress lane `terminal50` runs, three times on macos-latest, the crate tests, both profiles, both failures and the 49-terminal refusal. It was re-dispatched on the round-2 head: https://github.com/devswha/ovis-terminal/actions/runs/41332637305 (head 97fabf1; the round-1 run 41327470005, stuck in the old unbounded teardown, was cancelled). Result: **success, `RESULT 3/3`** on macOS 26.6.2 arm64 (Apple M1, virtual), rustc 1.99.1, with crate tests 16/16 (`docs/evidence/task-69/macos/terminal50-stress-macos-41332637305.log`):
+
+| iteration | IDEAL 16 PTY: admission max / event max | capacity 50 PTY: admission p99 / event p99 | writer delay | admission delay | 49 terminals |
+|---|---|---|---|---|---|
+| 1 | 12.43 / 30.66 ms, passed | 3.70 / 9.34 ms, passed | exit 1 budget_exceeded | exit 1 budget_exceeded | exit 2 usage |
+| 2 | 4.50 / 9.44 ms, passed | 1.65 / 2.74 ms, passed | exit 1 | exit 1 | exit 2 |
+| 3 | 3.77 / 8.99 ms, passed | 1.01 / 1.89 ms, passed | exit 1 | exit 1 | exit 2 |
+
+Realized equalled requested in every passing run (16/128/8/16 and 50/400/8/16). Peak RSS was about 0.29 GB at 16 PTYs and about 0.76 GB at 50 PTYs.
 
 ## DEFERRED VERIFICATION
 
