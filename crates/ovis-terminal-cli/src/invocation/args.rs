@@ -45,6 +45,9 @@ pub(super) enum Command {
     Op(OpCommand),
     /// Send one published method with JSON params.
     Call(CallArgs),
+    /// Agents, status, prompts, turns and templates as typed verbs.
+    #[command(flatten)]
+    Domain(crate::agent::DomainCommand),
     /// The session holder's OS service: status, install, uninstall, start, stop.
     #[cfg(any(unix, windows))]
     #[command(subcommand)]
@@ -87,13 +90,15 @@ pub(super) struct ServeArgs {
     pub(super) qa_graphics_sequence_max_bytes: Option<u64>,
 }
 
-/// The two published contracts.
+/// The three published contracts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub(super) enum SchemaPart {
     /// The protocol's OpenRPC document.
     Openrpc,
     /// Commands, flags, environment and exit codes of this binary.
     Cli,
+    /// The runtime contract reference, generated from this build's types.
+    Contract,
 }
 
 /// `ovis-terminal server ...`.
@@ -101,6 +106,12 @@ pub(super) enum SchemaPart {
 pub(super) enum ServerCommand {
     /// Report running, stopped, unreachable or `stale_endpoint`; never starts a server.
     Status,
+    /// Read stream, queue, lag and latency metrics; a read-only query.
+    Metrics(crate::commands::Plain),
+    /// Stop the running server as an explicit mutation; `--params` names the scope.
+    Stop(crate::commands::MutatePlain),
+    /// Restart the control server; programs keep their incarnations.
+    Restart(crate::commands::MutatePlain),
 }
 
 /// `ovis-terminal terminal ...`.

@@ -113,6 +113,27 @@ async fn failure() -> TestResult {
         &["--json", "terminal", "get", "--name", "a", "--unknown-flag"],
         &["--json", "call", "terminal.list", "--params", "[1]"],
         &["--json", "call", "hello"],
+        &["agent", "get", "--unknown-flag", "--json"],
+        &[
+            "--json",
+            "agent",
+            "get",
+            "--address",
+            "t1",
+            "--params",
+            "{\"bogus\":1}",
+        ],
+        &[
+            "--json",
+            "status",
+            "report",
+            "--address",
+            "t1",
+            "--op-id",
+            "x",
+            "--params",
+            "{\"process_token\":\"t\",\"seq\":1,\"record\":{\"state\":\"idle\"}}",
+        ],
     ] {
         let refused = dir.run(args, &idle_env).await?;
         let refused = refused.exit(2)?;

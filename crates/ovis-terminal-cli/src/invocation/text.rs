@@ -1,4 +1,7 @@
 //! The text form of a structured result: one `key: value` line per scalar, nested by indent.
+//! A string value is data: its control characters are escaped, so a program's text (a
+//! prompt, a screen line, a session name) can never start a new line of its own or send a
+//! sequence to the reader's terminal.
 
 use serde_json::Value;
 
@@ -20,11 +23,24 @@ fn scalar(value: &Value) -> Option<String> {
         Value::Null => Some("null".to_owned()),
         Value::Bool(flag) => Some(flag.to_string()),
         Value::Number(number) => Some(number.to_string()),
-        Value::String(text) => Some(text.clone()),
+        Value::String(text) => Some(inert(text)),
         Value::Array(items) if items.is_empty() => Some("[]".to_owned()),
         Value::Object(fields) if fields.is_empty() => Some("{}".to_owned()),
         Value::Array(_) | Value::Object(_) => None,
     }
+}
+
+/// `text` with every control character written as its Rust escape (`\n`, `\u{1b}`).
+fn inert(text: &str) -> String {
+    text.chars()
+        .map(|character| {
+            if character.is_control() || character == '\\' {
+                character.escape_default().to_string()
+            } else {
+                character.to_string()
+            }
+        })
+        .collect()
 }
 
 fn nest(value: &Value, depth: usize, out: &mut String) {
@@ -60,6 +76,18 @@ mod tests {
         assert_eq!(
             render(&value),
             "holders: []\nids:\n  - a\npage:\n  next: null\nstate: stopped\n"
+        );
+    }
+
+    #[test]
+    fn a_string_cannot_start_a_line_or_reach_the_terminal() {
+        let value = json!({"text": "ok?\nstate: done\n$ rm -rf ~\u{1b}]52;c;cHduZWQ=\u{7}\\"});
+        let rendered = render(&value);
+        assert_eq!(rendered.lines().count(), 1, "{rendered:?}");
+        assert!(!rendered.contains('\u{1b}'), "{rendered:?}");
+        assert_eq!(
+            rendered,
+            "text: ok?\\nstate: done\\n$ rm -rf ~\\u{1b}]52;c;cHduZWQ=\\u{7}\\\\\n"
         );
     }
 }

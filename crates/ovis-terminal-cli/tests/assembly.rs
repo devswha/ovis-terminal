@@ -14,6 +14,8 @@ mod layout;
 mod leases;
 #[path = "assembly/pending.rs"]
 pub mod pending;
+#[path = "assembly/producer.rs"]
+mod producer;
 #[path = "assembly/prompts.rs"]
 pub mod prompts;
 #[path = "assembly/records.rs"]

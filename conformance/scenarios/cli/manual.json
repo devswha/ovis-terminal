@@ -1,0 +1,886 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "cli/manual",
+  "title": "Single binary, embedded manual and typed agent verbs",
+  "todo": 66,
+  "closes": [
+    "GAP-137",
+    "GAP-138",
+    "GAP-141",
+    "GAP-145",
+    "GAP-146",
+    "GAP-147",
+    "GAP-148",
+    "GAP-149"
+  ],
+  "delivers": [
+    "IDEAL-014",
+    "IDEAL-064",
+    "IDEAL-089",
+    "IDEAL-110",
+    "IDEAL-111",
+    "IDEAL-114"
+  ],
+  "excludes": [
+    "EXCL-001",
+    "EXCL-002",
+    "EXCL-003",
+    "EXCL-009",
+    "EXCL-011",
+    "EXCL-012",
+    "EXCL-013",
+    "EXCL-017",
+    "EXCL-027"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Offline --skill, schema and schema contract report one embedded version with no endpoint and server status stays stopped; then on the real served binary a synthetic producer (a shell printing its own spawn token) registers and reports with its token, a second terminal's token is refused as not_owner for the first terminal, ovis-terminal agent get --json returns the same JSON channels through a pipe and under a PTY, a prompt whose text carries a newline and an escape sequence comes back as one inert JSON string, and a targetless agent get exits 7 with needs_target and both live candidates.",
+      "steps": [
+        {
+          "run": {
+            "args": [
+              "--json",
+              "--skill"
+            ],
+            "exit": 0,
+            "stdout": {
+              "/version": {
+                "$capture": "skill_version"
+              },
+              "/generation": {
+                "$capture": "skill_generation"
+              },
+              "/manual": {
+                "$present": true
+              }
+            },
+            "stderr": {
+              "": null
+            }
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--json",
+              "schema"
+            ],
+            "exit": 0,
+            "stdout": {
+              "": {
+                "$equals_file": "schema/ovis-terminal.openrpc.json"
+              },
+              "/info/version": "$value:skill_version",
+              "/info/x-generation": "$value:skill_generation"
+            },
+            "stderr": {
+              "": null
+            }
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--json",
+              "schema",
+              "contract"
+            ],
+            "exit": 0,
+            "stdout": {
+              "/version": "$value:skill_version",
+              "/generation": "$value:skill_generation",
+              "/contract": {
+                "$present": true
+              }
+            },
+            "stderr": {
+              "": null
+            }
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--json",
+              "server",
+              "status"
+            ],
+            "exit": 0,
+            "stdout": {
+              "/state": "stopped",
+              "/census": "not_reported"
+            },
+            "stderr": {
+              "": null
+            }
+          }
+        },
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "agent.register",
+                  "agent.get",
+                  "status.report",
+                  "status.get",
+                  "prompt.open",
+                  "prompt.get"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run1",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run1",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "printf '%s\\nREADY\\n' \"$OVIS_TERMINAL_PROCESS_TOKEN\"; exec cat"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "producer",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "run2",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run2",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "printf '%s\\nREADY\\n' \"$OVIS_TERMINAL_PROCESS_TOKEN\"; exec cat"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "foreign",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": "t1",
+                "/result/terminal/terminal_id": {
+                  "$capture": "t1_id"
+                }
+              },
+              "run2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": "t2",
+                "/result/terminal/terminal_id": {
+                  "$capture": "t2_id"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "ready1",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "READY"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "ready2",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "READY"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "ready1": {
+                "/result/outcome": "matched"
+              },
+              "ready2": {
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "screen1",
+                "method": "terminal.screen",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "format": "text"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "screen2",
+                "method": "terminal.screen",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "format": "text"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "screen1": {
+                "/result/lines/0": {
+                  "$capture": "token1"
+                },
+                "/result/lines/1": "READY"
+              },
+              "screen2": {
+                "/result/lines/0": {
+                  "$capture": "token2"
+                },
+                "/result/lines/1": "READY"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "register",
+                "method": "agent.register",
+                "params": {
+                  "op_id": "$op:register",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "process_token": "$value:token1",
+                  "label": "synthetic-producer",
+                  "session": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "register": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/agent/label": "synthetic-producer"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "report",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:report",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "process_token": "$value:token1",
+                  "seq": "1",
+                  "record": {
+                    "state": "working",
+                    "msg": "reading"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "report": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "foreign",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:foreign",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "process_token": "$value:token2",
+                  "seq": "2",
+                  "record": {
+                    "state": "idle"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "foreign": {
+                "/error/data/kind": "not_owner"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "after",
+                "method": "status.get",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "after": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/status/report_seq": "1",
+                "/result/status/root/report/state": "working",
+                "/result/status/root/report/msg": "reading"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "prompt",
+                "method": "prompt.open",
+                "params": {
+                  "op_id": "$op:prompt",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "process_token": "$value:token1",
+                  "prompt_id": "inj",
+                  "prompt": {
+                    "kind": "permission",
+                    "text": "Apply?\n$ touch pwned\u001b]0;owned\u0007",
+                    "choices": [
+                      {
+                        "id": "yes",
+                        "label": "Yes"
+                      }
+                    ],
+                    "mechanism": "rpc"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "prompt": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/state": "open"
+              }
+            }
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--json",
+              "agent",
+              "get",
+              "--address",
+              "t1"
+            ],
+            "endpoint": true,
+            "exit": 0,
+            "stdout": {
+              "/agent/label": "synthetic-producer"
+            },
+            "stderr": {
+              "": null
+            }
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "tty",
+            "args": [
+              "--json",
+              "agent",
+              "get",
+              "--address",
+              "t1"
+            ],
+            "cols": 120,
+            "rows": 24
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "tty",
+            "output": "\"label\":\"synthetic-producer\""
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "tty",
+            "exit": 0,
+            "stderr": {
+              "": null
+            }
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--json",
+              "prompt",
+              "get",
+              "--params",
+              "{\"prompt_id\":\"inj\"}"
+            ],
+            "endpoint": true,
+            "exit": 0,
+            "stdout": {
+              "/text": "Apply?\n$ touch pwned\u001b]0;owned\u0007",
+              "/prompt_id": "inj"
+            },
+            "stderr": {
+              "": null
+            }
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--json",
+              "agent",
+              "get"
+            ],
+            "endpoint": true,
+            "exit": 7,
+            "stdout": {
+              "": null
+            },
+            "stderr": {
+              "/error/kind": "needs_target",
+              "/error/origin": "cli",
+              "/error/exit_code": 7,
+              "/error/candidates_listed": true,
+              "/error/candidates/0/terminal_id": "$value:t1_id",
+              "/error/candidates/1/terminal_id": "$value:t2_id"
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "With no server running, malformed invocations exit 2 with a structured usage error before any connection (a well-formed agent get against the same absent endpoint exits 4, so an attempted connection would have shown): an unknown flag, an unknown params field, a numeric u64 seq and --skill combined with a command. Against the real served binary a targetless agent get exits 7 with needs_target and the live candidate, a plain shell answers agent null and a missing terminal is not_found.",
+      "steps": [
+        {
+          "commands": {
+            "planned": [
+              {
+                "args": [
+                  "agent",
+                  "get",
+                  "--unknown-flag",
+                  "--json"
+                ],
+                "exit": 2,
+                "stdout": {
+                  "": null
+                },
+                "stderr": {
+                  "/error/kind": "usage",
+                  "/error/origin": "cli",
+                  "/error/exit_code": 2
+                }
+              },
+              {
+                "args": [
+                  "--json",
+                  "agent",
+                  "get",
+                  "--address",
+                  "t1",
+                  "--params",
+                  "{\"bogus\":1}"
+                ],
+                "exit": 2,
+                "stdout": {
+                  "": null
+                },
+                "stderr": {
+                  "/error/kind": "invalid_params",
+                  "/error/origin": "cli",
+                  "/error/exit_code": 2,
+                  "/error/field_path": {
+                    "$present": true
+                  }
+                }
+              },
+              {
+                "args": [
+                  "--json",
+                  "status",
+                  "report",
+                  "--address",
+                  "t1",
+                  "--op-id",
+                  "01900000-0000-7000-8000-000000000001",
+                  "--params",
+                  "{\"process_token\":\"x\",\"seq\":1,\"record\":{\"state\":\"working\"}}"
+                ],
+                "exit": 2,
+                "stdout": {
+                  "": null
+                },
+                "stderr": {
+                  "/error/kind": "invalid_params",
+                  "/error/origin": "cli",
+                  "/error/exit_code": 2,
+                  "/error/field_path": "params.seq"
+                }
+              },
+              {
+                "args": [
+                  "--json",
+                  "--skill",
+                  "agent",
+                  "list"
+                ],
+                "exit": 2,
+                "stdout": {
+                  "": null
+                },
+                "stderr": {
+                  "/error/kind": "usage",
+                  "/error/origin": "cli",
+                  "/error/exit_code": 2
+                }
+              }
+            ]
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--json",
+              "agent",
+              "get",
+              "--address",
+              "t1"
+            ],
+            "exit": 4,
+            "stdout": {
+              "": null
+            },
+            "stderr": {
+              "/error/kind": "server_not_running"
+            }
+          }
+        },
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "agent.register",
+                  "agent.get",
+                  "status.report",
+                  "status.get",
+                  "prompt.open",
+                  "prompt.get"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run1",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run1",
+                  "program": {
+                    "argv": [
+                      "/bin/sh"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "shell",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": "t1",
+                "/result/terminal/terminal_id": {
+                  "$capture": "t1_id"
+                }
+              }
+            }
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--json",
+              "agent",
+              "get"
+            ],
+            "endpoint": true,
+            "exit": 7,
+            "stdout": {
+              "": null
+            },
+            "stderr": {
+              "/error/kind": "needs_target",
+              "/error/exit_code": 7,
+              "/error/candidates_listed": true,
+              "/error/candidates/0/terminal_id": "$value:t1_id"
+            }
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--json",
+              "agent",
+              "get",
+              "--address",
+              "t1"
+            ],
+            "endpoint": true,
+            "exit": 0,
+            "stdout": {
+              "/agent": null
+            },
+            "stderr": {
+              "": null
+            }
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--json",
+              "agent",
+              "get",
+              "--address",
+              "t9"
+            ],
+            "endpoint": true,
+            "exit": 3,
+            "stdout": {
+              "": null
+            },
+            "stderr": {
+              "/error/kind": "not_found",
+              "/error/origin": "server"
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

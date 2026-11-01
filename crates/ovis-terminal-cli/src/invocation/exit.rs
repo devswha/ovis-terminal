@@ -164,6 +164,7 @@ impl ExitStatus {
                 "raw_not_authorized",
                 "takeover_not_authorized",
                 "attach_refused",
+                "not_owner",
             ],
             Self::OutcomeUnknown => &[
                 "outcome_unknown",

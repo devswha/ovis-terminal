@@ -121,6 +121,7 @@ fn cli_record(error: &CliError) -> Map<String, Value> {
         | CliError::SkillWithCommand
         | CliError::JsonSwitch { .. }
         | CliError::ParamsJson(_)
+        | CliError::Command(_)
         | CliError::UnknownMethod { .. }
         | CliError::Endpoint(_)
         | CliError::Io { .. }

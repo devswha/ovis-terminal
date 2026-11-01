@@ -39,6 +39,7 @@ impl Session<'_> {
                 Step::Hangup(hangup) => self.conn(&hangup.conn)?.hangup().await,
                 Step::Rejections(rejections) => self.rejections(rejections).await,
                 Step::Run(run) => self.run_binary(run).await,
+                Step::Commands(commands) => self.commands(commands).await,
                 Step::Effects(effects) => self.effects(effects),
                 Step::Pages(pages) => self.pages(pages).await,
                 Step::Stop(stopping) => {
@@ -152,9 +153,22 @@ impl Session<'_> {
             .await
     }
 
-    async fn run_binary(&mut self, run: &Run) -> Result<(), RunnerError> {
+    /// Runs the binary once; `$op:`/`$value:` labels in its arguments and expectations
+    /// resolve, and `$capture` matchers keep values from its stdout and stderr.
+    pub(crate) async fn run_binary(&mut self, planned: &Run) -> Result<(), RunnerError> {
+        let mut run = planned.clone();
+        run.args = planned
+            .args
+            .iter()
+            .map(
+                |arg| match self.labels.resolve(&Value::String(arg.clone())) {
+                    Value::String(text) => text,
+                    other => other.to_string(),
+                },
+            )
+            .collect();
         let bearer = self.bearer().map(str::to_owned);
-        let ran = process::run(&self.endpoint(), run, bearer.as_deref()).await?;
+        let ran = process::run(&self.endpoint(), &run, bearer.as_deref()).await?;
         self.processes.push(ran.report);
         let repo = self.ctx.repo.root().to_path_buf();
         let mut checked = vec![Assertion::equal(
@@ -162,22 +176,23 @@ impl Session<'_> {
             json!(run.exit),
             json!(ran.exit),
         )];
-        let stdout = document(&ran.stdout);
-        checked.extend(run.stdout.check(
-            Subject {
-                scope: "binary/stdout",
-                value: &stdout,
-            },
-            &repo,
-        ));
-        let stderr = document(&ran.stderr);
-        checked.extend(run.stderr.check(
-            Subject {
-                scope: "binary/stderr",
-                value: &stderr,
-            },
-            &repo,
-        ));
+        for (scope, expect, bytes) in [
+            ("binary/stdout", &run.stdout, &ran.stdout),
+            ("binary/stderr", &run.stderr, &ran.stderr),
+        ] {
+            let value = document(bytes);
+            let expect = expect.resolved(&mut self.labels);
+            checked.extend(expect.check(
+                Subject {
+                    scope,
+                    value: &value,
+                },
+                &repo,
+            ));
+            for (name, captured) in expect.captures(&value) {
+                self.labels.capture(name, captured);
+            }
+        }
         self.assert(checked)
     }
 

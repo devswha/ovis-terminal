@@ -1,0 +1,57 @@
+## M1 targetless verb sends instead of needs_target
+$ (mutated crates/ovis-terminal-cli/src/commands.rs) cargo test --locked -p ovis-terminal-cli --lib commands::
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test commands::tests::a_field_named_twice_or_non_object_params_are_refused ... ok
+test commands::tests::a_missing_required_target_plans_needs_target_and_never_a_guess ... FAILED
+test commands::tests::an_explicit_token_in_params_wins_over_the_inherited_one ... ok
+test commands::tests::flags_and_the_process_token_fill_the_params_object ... ok
+thread 'commands::tests::a_missing_required_target_plans_needs_target_and_never_a_guess' (4063007) panicked at crates/ovis-terminal-cli/src/commands/tests.rs:56:5:
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.00s
+error: test failed, to rerun pass `-p ovis-terminal-cli --lib`
+EXIT=101
+
+
+
+## M2 text mode prints control characters raw
+$ (mutated crates/ovis-terminal-cli/src/invocation/text.rs) cargo test --locked -p ovis-terminal-cli --lib text::
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test invocation::context::tests::a_credential_never_prints_its_bearer_text ... ok
+test invocation::context::tests::an_unrecognized_switch_value_is_refused_in_the_requested_form ... ok
+test invocation::context::tests::json_comes_from_the_flag_or_the_switch_and_never_from_the_terminal ... ok
+test invocation::text::tests::a_string_cannot_start_a_line_or_reach_the_terminal ... FAILED
+test invocation::text::tests::nested_records_become_indented_lines ... ok
+thread 'invocation::text::tests::a_string_cannot_start_a_line_or_reach_the_terminal' (4069906) panicked at crates/ovis-terminal-cli/src/invocation/text.rs:86:9:
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 42 filtered out; finished in 0.00s
+error: test failed, to rerun pass `-p ovis-terminal-cli --lib`
+EXIT=101
+
+
+
+## M3 not_owner no longer maps to exit 12
+$ (mutated crates/ovis-terminal-cli/src/invocation/exit.rs) cargo test --locked -p ovis-terminal-cli --test assembly producer
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test producer::a_producer_reports_with_its_inherited_token_and_a_foreign_token_is_refused ... FAILED
+thread 'producer::a_producer_reports_with_its_inherited_token_and_a_foreign_token_is_refused' (4076094) panicked at crates/ovis-terminal-cli/tests/assembly/producer.rs:121:5:
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 42 filtered out; finished in 0.38s
+error: test failed, to rerun pass `-p ovis-terminal-cli --test assembly`
+EXIT=101
+
+
+
+## M4 inherited token overrides an explicit params token
+$ (mutated crates/ovis-terminal-cli/src/commands.rs) cargo test --locked -p ovis-terminal-cli --lib commands::
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test commands::tests::a_field_named_twice_or_non_object_params_are_refused ... ok
+test commands::tests::a_missing_required_target_plans_needs_target_and_never_a_guess ... ok
+test commands::tests::an_explicit_token_in_params_wins_over_the_inherited_one ... FAILED
+test commands::tests::flags_and_the_process_token_fill_the_params_object ... ok
+thread 'commands::tests::an_explicit_token_in_params_wins_over_the_inherited_one' (4089333) panicked at crates/ovis-terminal-cli/src/commands/tests.rs:50:5:
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.00s
+error: test failed, to rerun pass `-p ovis-terminal-cli --lib`
+EXIT=101
+
+

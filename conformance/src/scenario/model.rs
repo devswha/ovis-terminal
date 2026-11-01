@@ -101,6 +101,8 @@ pub(crate) enum Step {
     Rejections(Rejections),
     /// Run the binary once in the isolated root.
     Run(Run),
+    /// Run planned command lines: all of them, or only the one `--inject` names.
+    Commands(Commands),
     /// Compare the fixture's effect directory with the expected files.
     Effects(Effects),
     /// Read a logical result page by page and check every byte.
@@ -273,6 +275,23 @@ pub(crate) struct Run {
     pub(crate) stdout: Expect,
     #[serde(default)]
     pub(crate) stderr: Expect,
+}
+
+/// Planned runs of the binary; a run's command line is `ovis-terminal <args>`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Commands {
+    pub(crate) planned: Vec<Run>,
+}
+
+impl Run {
+    /// The command line `--inject` names this run by.
+    pub(crate) fn command_line(&self) -> String {
+        std::iter::once("ovis-terminal")
+            .chain(self.args.iter().map(String::as_str))
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
