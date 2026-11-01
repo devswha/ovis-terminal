@@ -123,6 +123,19 @@ impl Machines {
         &self.lane
     }
 
+    /// A stand-in machine, or any machine the actors serve under `name`.
+    fn named(&self, name: &str) -> Result<MachineId, BoundaryError> {
+        if let Ok(remote) = self.remote(name) {
+            return Ok(remote.id().clone());
+        }
+        let served = self.lane.actors().list().into_iter();
+        let mut named = served.filter(|record| record.name.as_str() == name);
+        named
+            .next()
+            .map(|record| record.machine_id)
+            .ok_or_else(|| BoundaryError::invalid_params(Some("params.machine")))
+    }
+
     fn remote(&self, name: &str) -> Result<&Arc<Remote>, BoundaryError> {
         self.remotes
             .get(name)
@@ -254,7 +267,7 @@ pub(crate) async fn remote_child(
     request: &RpcRequest,
 ) -> Result<Value, BoundaryError> {
     let params: RemoteChild = decode_params(request).map_err(BoundaryError::from)?;
-    let machine = machines.remote(&params.machine)?.id().clone();
+    let machine = machines.named(&params.machine)?;
     let fixture = Arc::clone(machines);
     tokio::task::spawn_blocking(move || {
         remote::link(

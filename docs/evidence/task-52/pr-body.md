@@ -168,3 +168,79 @@ One merge commit after the round-3 fix.
 - **Inventory:** `suite.rs` auto-merged into a sorted union of 31 entries.
 - **Lock, schema, SDK:** Cargo.lock is unchanged by the merge (`cargo metadata --offline`, then `--locked`, OK). The OpenRPC schema was rewritten and is byte-identical (`check` and `compat` exit 0). The SDK `generate:check` is fresh and `typecheck` exits 0.
 - **Merged tree:** fmt check OK, hygiene 0 violations, clippy `-D warnings` on server, services, remote, protocol and conformance exit 0. `cargo test -p ovis-terminal-server -p ovis-terminal-services -p ovis-terminal-remote --all-targets`: 306 passed, 0 failed. `cargo test -p ovis-terminal-conformance` (all/all, including integration's agent/e2e): passed. The full `check.sh` and Windows legs are left to CI as the gate for this push.
+
+## Round 2 (gate review on 01ecbfc: B1-B4)
+
+All twelve GAPs of todo 52 now have executable steps on the real binary. No GAP was reassigned, so `docs/design/traceability.json` is unchanged by this round. `recovery/e2e` now declares GAP-106/108/109/114/118/119/121/122/123/124/127/128 and IDEAL-080/082/083/087/091/092/093/094/095/096/100/101/117.
+
+| GAP | Executed in | What runs |
+|---|---|---|
+| GAP-106 | remote/e2e | `machine.add` over stdio argv **and over SSH**: auth_failed for a foreign credential, invalid_params for `-oProxyCommand=id` before any spawn, then the peer added over SSH |
+| GAP-108 | recovery/e2e failure | lost machine: `machine_unreachable` + `last_seen_seq "41"`; crashed peer kept in the roster; no local fallback |
+| GAP-109 | remote/e2e happy | stalled (SIGSTOP) peer: `deadline_exceeded` while the roster and local calls answer |
+| GAP-114 | recovery/e2e failure | dirty worktree on each runtime: `checkout_dirty` naming the checkout, checkout kept and listed dirty (real Git repository) |
+| GAP-118 | recovery/e2e failure | failed plugin run (exit 3, durable `run_get`, committed receipt), missing program `action_unavailable` |
+| GAP-119 | recovery/e2e happy | orphan **ack loss** with a queued notice: the parent exits while the peer is stopped; delivery stops at its deadline with the notice owed (`remaining "1"`); restart replays it once (`applied "1"`, `remaining "0"`); re-ack is `duplicate` |
+| GAP-121 | recovery/e2e | programs in shared and dedicated holders keep running through core loss and a planned control restart (`running: true`, preserved incarnations); a lost dedicated holder affects only its terminal |
+| GAP-122 | recovery/e2e happy | `server.restart` on each runtime over the real restartable control: `preserved_incarnations` equals the live set, `ended` and `interrupted_ops` empty, receipt committed |
+| GAP-123 | recovery/e2e failure | core lost after its checkpoint: `survived`, `exact: false`, one gap `1244`→`8312` (4 KiB holder tail), on each runtime |
+| GAP-124 | recovery/e2e happy | another boot identity: `host_reboot`, `restored_metadata`, nothing adopted, program still running, on each runtime |
+| GAP-127 | recovery/e2e failure | update rollback across both runtimes: 3.0.0 fails readiness on the peer and rolls back there (receipt readable only through the peer); local updates stay empty |
+| GAP-128 | recovery/e2e failure | a visible retention floor: a plugin run printing 10 000 bytes keeps its 4 KiB tail with `truncated: true`, `output_floor "5904"` |
+
+**How each is reached.**
+- **SSH loopback** (`conformance/src/fixture/peer/ssh.rs`): no sshd is needed. The runner puts `<root>/bin` first on the fixture's search path, and the `ssh` there accepts **only** the exact vector `TransportSpec::Ssh` builds (`-T -e none -o BatchMode=yes -o StrictHostKeyChecking=yes -- peer.loopback ovis-terminal connect`). It then bridges stdio to the peer through the binary under test. The real argument vector, handshake and credential check therefore run end to end. Mutant F2 (drop `BatchMode=yes`) is refused by the shim, so the add fails.
+- **Orphan routing:** `$/orphaned` was not routed on a served runtime at all, so a real peer could never receive a notice. It is now answered by the machine-actor lane's `orphaned()` (`fixture/peer/orphans.rs`). `fixture.remote_child` can name the real peer, and `fixture.peer deliver` reports what is still owed.
+- **Holders (B2), `fixture.holders`:** real `Holder` + `HolderService` on Unix sockets.
+  - `exit` runs one program in a **shared** holder and one in a **dedicated** holder on each runtime. Each asserts its final bytes (`LAST-shared`, `LAST-dedicated`) arrived before the holder's Exit message, with `bytes_before_exit` equal to the holder's `final_offset` (17 and 20).
+  - `crash`, `reboot` and `unplug` run the core's own `recover()` (todo 49) over those holder groups.
+- **Planned restart:** `server.restart` is served from the update lane's real `Control`. `server.stop` stays unserved because `protocol/discovery` pins it.
+- **Worktrees:** `worktree.*` is served by a fixture dispatcher whose event domain is operation + worktree events, over its own store and a real Git repository. No production workspace owner exists yet, so opened workspaces are recorded by a fixture owner (`fixture/worktrees.rs`).
+- **Remote services:** requests reach the peer through remote dispatch using `params.machine`, which is removed before forwarding (mutant F3: forwarding it fails the peer request).
+
+**B3 (epoch fix pinned).** `dispatch::remote::qa::attach::an_attach_returns_only_after_the_busy_actor_took_the_new_line`:
+- A test line whose `send` waits for a permit keeps the actor busy writing an earlier call.
+- One poll of `attach_applied` (with a no-op waker) must be **Pending**. Under the `>`→`>=` mutant it is Ready on that same poll, so the test fails deterministically without load.
+- After the permit is released, the epoch is 2 and the state is `connected`.
+- `attach_applied` now takes the actor table and a lazy attach future, so it is testable without a full machine-actor lane.
+
+**B4 (alias).** Harness machines carry an alias `<name>-old`. `dispatch::remote::qa::alias::an_alias_reaches_the_machine_it_names_and_only_that_machine` routes `box-old/t1` and `machine: {name: box-old}` to `box` only.
+
+**Mutants** (`mutants-r2.log`, every one run here, each reverted):
+- Server crate, each failing a named test: M1 (`>`→`>=`), M2 (alias lookup removed), local fallback, lost mutation reported as unreachable, `last_seen_seq` dropped, cancel not recognised, input authorized as a read, cancelled reply not aborted, cancelled answered `internal`.
+- Scenario level, on the real binary:
+  - F1: no `$/orphaned` route, so the notice stays owed after restart.
+  - F2: the SSH argv changed, so `transport_failed` appears instead of `auth_failed`.
+  - F3: `machine` forwarded, so the peer request is refused.
+- Gate mutant M3 (`MachineAdd::restricted` ignores its allowlist): killed by todo 58's `machine_add_admits_only_allowlisted_endpoints_before_any_connection`.
+- Gate mutant M4 (`pause()` returns right after SIGSTOP): killed under load, 3 of 8 runs failed.
+
+**Flake found and fixed in round 2 (root-caused, not retried).** Under load, `recovery/e2e` failed once in 35 runs at `local-crash` (`exact: true`, no gap). Cause: the drill checkpointed whatever bytes had arrived when `MARK` was seen. Under load that chunk could already reach past the holder's retained start, so there was legitimately no gap. Fix: the writer blocks on a FIFO right after `MARK`, and the drill releases it only after checkpointing. The checkpoint is now exactly `1244` and the gap `1244`→`8312`, both pinned literally. Clean control under `taskset -c 0-1` + 8 busy loops: **50/50** (25 each of recovery/e2e and remote/e2e, `stress-round-r2.log`).
+
+**Verification on the round-2 tree** (Linux 7.0.0-38-generic x86_64):
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo build --locked -p ovis-terminal-cli --bin ovis-terminal` | 0 | |
+| `cargo test -p ovis-terminal-server -p ovis-terminal-services -p ovis-terminal-remote --all-targets` | 0 | 308 passed, 0 failed; 13 lane tests |
+| `cargo clippy ... --all-targets -- -D warnings` (server, services, remote, protocol, conformance) | 0 | |
+| fmt `--check`, workspace-hygiene, manifests.sh, json.sh | 0 | 0 violations |
+| `cargo test -p ovis-terminal-conformance` (`all/all` inventory and traceability) | 0 | |
+| conformance `recovery/e2e --case all` | 0 | failed 0, skipped 0, 369 assertions |
+| conformance `recovery/e2e --case happy` | 0 | 146 assertions |
+| conformance `recovery/e2e --case failure --inject '{"method":"input.send","params":{"target":{"address":"disconnected/t1"}}}' --append` | 0 | 220 assertions |
+| conformance `remote/e2e --case all` | 0 | 101 assertions |
+
+The full `scripts/check.sh` and the Windows cross-check are left to CI for this push. The schema, SDK and Cargo.lock are unchanged in round 2.
+
+**Seams (round 2).**
+- `conformance/src/fixture/{holders.rs, holders/drills.rs, worktrees.rs, peer/ssh.rs, peer/orphans.rs}` (new).
+- `fixture/{peer.rs, peer/process.rs, launch.rs (search path), handler.rs (routes), machines.rs (remote_child names any served machine), serve.rs, services.rs (flooding plugin), update.rs (server.restart on its Control), fixture.rs (mod lines)}`.
+- `conformance/scenarios/declared.json`: reasons updated for recovery/crash, recovery/restart, services/worktrees, services/docs-retention and remote/identity. Those files remain todo-owned free-form descriptors; their behaviour now executes in recovery/e2e and remote/e2e.
+- Server crate: `dispatch/remote/attach.rs` (`attach_applied` signature) and the new `dispatch/remote/qa/{attach,alias}.rs`.
+
+**Stated plainly.**
+- `RemoteDispatch`, `MachineAddAttached`, `ServiceLanes` and `reconnect` are constructed **only in the conformance fixture** until todo 66 assembles the single served binary. The CLI binary starts no server today. Todo 66 must construct them, including `MachineAdd::restricted`, in the real server.
+- `MachineAdd::restricted` (the todo-58 endpoint allowlist) **still has no production caller.** The fixture uses `MachineAdd::new`, because its stdio peer uses an argv transport, which a host allowlist refuses by design.
+- Document retention floors (`doc.*`) stay with todo 50's lane tests until assembly. The shared fixture's `doc.*` names belong to the todo-21 stubs that protocol scenarios pin.
+- Still not done: a planned restart of the *local core's listener* (only the control boot is restarted). The `x-effect: control` methods are still classed as reads locally by remote dispatch; this is a todo-61 note from the gate.

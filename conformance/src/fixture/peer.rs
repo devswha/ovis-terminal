@@ -8,7 +8,9 @@
 //! `fixture.lost_machine` adds a machine whose line delivered events and then ended.
 
 pub mod lost;
+pub mod orphans;
 mod process;
+pub mod ssh;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -24,6 +26,7 @@ use ovis_terminal_protocol::schema::ids::MachineId;
 use ovis_terminal_protocol::schema::methods::machine::MachineState;
 use ovis_terminal_protocol::schema::scalar::OpenEnum;
 use ovis_terminal_remote::identity::{Credential, Trust};
+use ovis_terminal_remote::orphans::{OrphanError, Replayed};
 use ovis_terminal_remote::transport::TransportSpec;
 use ovis_terminal_server::dispatch::lanes::machine_identity::{
     MachineAdd, MachineGet, MachineLane, MachineRename,
@@ -68,7 +71,7 @@ pub(crate) const CONTROL: &str = "fixture.peer";
 const BOUND: Duration = Duration::from_secs(20);
 
 /// Bound on one remote call; a stalled machine fails its call at this deadline.
-const REMOTE_DEADLINE: Duration = Duration::from_secs(3);
+const REMOTE_DEADLINE: Duration = Duration::from_secs(10);
 
 /// The peer process, started on first use, and what reaches it.
 #[derive(Debug)]
@@ -91,17 +94,25 @@ pub(crate) fn compose(
         &Arc<Authority<RegistryIdentities>>,
         RuntimeIdentity,
     ),
-) -> Result<(Option<Arc<PeerSide>>, RemoteRoutes<FixtureLine>), RunnerError> {
+) -> Result<Composed, RunnerError> {
     let peer = register(dispatch, (root, role), (machines, runtime))?;
     super::services::register(dispatch, root, runtime)?;
+    let worktrees = super::worktrees::serve(root, authority, runtime)?;
     let actors = Arc::clone(machines.lane().actors());
     let routes = RemoteRoutes::new(
         (actors, Arc::clone(authority)),
         runtime.machine_id(),
         REMOTE_DEADLINE,
     );
-    Ok((peer, routes))
+    Ok((peer, routes, worktrees))
 }
+
+/// The peer side, the remote routes and the worktree lane a fixture runtime serves.
+pub(crate) type Composed = (
+    Option<Arc<PeerSide>>,
+    RemoteRoutes<FixtureLine>,
+    Arc<super::worktrees::WorktreeSide>,
+);
 
 /// Stops the peer process, if this fixture started one.
 pub(crate) async fn stop(peer: Option<Arc<PeerSide>>) -> Result<(), RunnerError> {
@@ -161,6 +172,7 @@ enum Action {
     Resume,
     Crash,
     Restart,
+    Deliver,
 }
 
 impl PeerSide {
@@ -181,7 +193,10 @@ impl PeerSide {
     async fn spawn(&self) -> Result<Process, BoundaryError> {
         let index = self.started.fetch_add(1, Ordering::SeqCst);
         let dir = self.root.join(format!("peer-{index}"));
-        Process::spawn(&self.runner, &dir).await.map_err(internal)
+        let process = Process::spawn(&self.runner, &dir).await.map_err(internal)?;
+        let shim = (self.binary.as_path(), process.socket.as_path());
+        ssh::install(&self.root.join("bin"), shim).map_err(internal)?;
+        Ok(process)
     }
 
     fn health(&self) -> Result<Value, BoundaryError> {
@@ -226,10 +241,16 @@ impl PeerSide {
             BoundaryError::domain(error.kind().to_owned().into(), false).with_hint(error.hint())
         })?;
         *slot = Some(process);
-        Ok(
-            json!({"replayed": {"applied": replayed.applied, "remaining": replayed.remaining},
-            "health": self.health()?}),
-        )
+        self.owed(Ok(replayed)).await
+    }
+
+    /// The replay outcome, the notices still owed to the peer and its health.
+    async fn owed(&self, replayed: Result<Replayed, OrphanError>) -> Result<Value, BoundaryError> {
+        let mut owed = orphans::report(&self.lane, &Self::machine(), replayed).await?;
+        if let Some(object) = owed.as_object_mut() {
+            object.insert("health".to_owned(), self.health()?);
+        }
+        Ok(owed)
     }
 
     async fn control(&self, action: Action) -> Result<Value, BoundaryError> {
@@ -240,7 +261,7 @@ impl PeerSide {
         let process = slot.as_mut();
         let result = match (action, process) {
             (Action::Describe, Some(process)) => Ok(json!({
-                "machine_id": MACHINE, "argv": self.transport(process),
+                "machine_id": MACHINE, "argv": self.transport(process), "ssh": ssh::DESTINATION,
                 "credential": process.bearer,
             })),
             (Action::Stop, Some(process)) => {
@@ -249,6 +270,10 @@ impl PeerSide {
             (Action::Resume, Some(process)) => process.resume().map(|()| json!({"stopped": false})),
             (Action::Crash, Some(process)) => self.crash(process).await,
             (Action::Restart, _) => self.restart(&mut slot).await,
+            (Action::Deliver, Some(_)) => {
+                let replayed = self.lane.deliver(&Self::machine()).await;
+                self.owed(replayed).await
+            }
             (_, None) => Err(internal("the peer runtime is not running")),
         };
         drop(slot);

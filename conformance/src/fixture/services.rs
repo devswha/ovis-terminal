@@ -34,6 +34,12 @@ pub(crate) fn register(
     let broken = json!({"plugin_id": "broken", "version": "1.0.0", "enabled": true,
         "actions": [{"action_id": "run", "argv": [plugins.join("broken").join("missing")],
             "contexts": ["machine"]}]});
+    let flood = plugins.join("chatty").join("flood.sh");
+    let chatty = json!({"plugin_id": "chatty", "version": "1.0.0", "enabled": true,
+        "actions": [{"action_id": "flood", "argv": ["/bin/sh", flood], "contexts": ["machine"]}]});
+    install(&plugins, ("chatty", &chatty))?;
+    std::fs::write(&flood, "head -c 10000 /dev/zero | tr '\\000' x\n")
+        .map_err(at("write the flooding plugin"))?;
     install(&plugins, ("failing", &failing))?;
     install(&plugins, ("broken", &broken))?;
     std::fs::write(&script, "printf 'boom\\n'\nexit 3\n")

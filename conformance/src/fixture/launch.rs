@@ -48,6 +48,12 @@ pub(crate) struct FixtureProcess {
     pub(crate) ready: Ready,
 }
 
+/// The fixture's executable search path: its own `bin` directory, where the SSH loopback
+/// shim lives, before the system directories.
+fn search_path(root: &Path) -> String {
+    format!("{}:/usr/bin:/bin", root.join("bin").display())
+}
+
 /// Starts `runner fixture --root <root> --binary <binary>` and waits, bounded, for its
 /// ready line.
 pub(crate) async fn start(
@@ -63,6 +69,7 @@ pub(crate) async fn start(
         .arg("--binary")
         .arg(binary)
         .env_clear()
+        .env("PATH", search_path(root))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

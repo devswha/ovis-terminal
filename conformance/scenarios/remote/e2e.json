@@ -489,7 +489,7 @@
     },
     {
       "case": "failure",
-      "summary": "machine.add with a credential the peer never issued is auth_failed and with another expected machine id is trust_mismatch; neither records a machine. After the peer is added, an address qualified by an unknown machine is not_found at params.target.address and nothing runs locally, and an observe-only principal's input.send to peer/parent is forbidden before anything is sent to the peer.",
+      "summary": "machine.add with a credential the peer never issued is auth_failed and with another expected machine id is trust_mismatch; neither records a machine. machine.add over SSH (the runtime's fixed `ssh -T -e none -o BatchMode=yes -o StrictHostKeyChecking=yes -- peer.loopback ovis-terminal connect` argument vector, carried by an sshd-free loopback `ssh` on the fixture's search path that accepts only that vector) refuses a foreign credential as auth_failed and a destination that ssh would reinterpret (`-oProxyCommand=id`) as invalid_params before anything is spawned, then adds the peer over the same SSH path. After the peer is added over SSH, an address qualified by an unknown machine is not_found at params.target.address and nothing runs locally, and an observe-only principal's input.send to peer/parent is forbidden before anything is sent to the peer.",
       "steps": [
         {
           "serve": {
@@ -541,7 +541,8 @@
                 },
                 "/result/credential": {
                   "$capture": "peer_credential"
-                }
+                },
+                "/result/ssh": "peer.loopback"
               }
             }
           }
@@ -648,13 +649,81 @@
             "requests": [
               {
                 "jsonrpc": "2.0",
+                "id": "ssh-wrong-credential",
+                "method": "machine.add",
+                "params": {
+                  "op_id": "$op:ssh-wrong-credential",
+                  "name": "peer",
+                  "transport": {
+                    "ssh": "peer.loopback"
+                  },
+                  "credential": "not-the-peer-credential",
+                  "expected_machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "ssh-wrong-credential": {
+                "/error/data/kind": "auth_failed",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "ssh-hostile-destination",
+                "method": "machine.add",
+                "params": {
+                  "op_id": "$op:ssh-hostile-destination",
+                  "name": "peer",
+                  "transport": {
+                    "ssh": "-oProxyCommand=id"
+                  },
+                  "credential": "$value:peer_credential",
+                  "expected_machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "ssh-hostile-destination": {
+                "/error/data/kind": "invalid_params",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
                 "id": "add-peer",
                 "method": "machine.add",
                 "params": {
                   "op_id": "$op:add-peer",
                   "name": "peer",
                   "transport": {
-                    "argv": "$value:peer_argv"
+                    "ssh": "peer.loopback"
                   },
                   "credential": "$value:peer_credential",
                   "expected_machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3"
@@ -674,6 +743,36 @@
                 "/result/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3",
                 "/result/name": "peer",
                 "/result/state": "connected"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "roster-ssh",
+                "method": "machine.list",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "roster-ssh": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/machines/2/machine_id": "machine:0191f1a2-0000-7000-8000-0000000000c3",
+                "/result/machines/2/state": "connected",
+                "/result/machines/3": {
+                  "$present": false
+                }
               }
             }
           }

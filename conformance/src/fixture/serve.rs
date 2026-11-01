@@ -111,7 +111,7 @@ pub(crate) async fn serve(root: &Path, role: super::Role) -> Result<(), RunnerEr
     let tree = super::tree::register(&mut dispatch, (&agents, &gate), launch)?;
     let fleet = (runtime, Arc::clone(&core));
     let machines = super::machines::register(&mut dispatch, (&agents, &gate), fleet).await?;
-    let (peer, routes) = super::peer::compose(
+    let (peer, routes, worktrees) = super::peer::compose(
         &mut dispatch,
         (root, &role),
         (&machines, &authority, runtime),
@@ -133,6 +133,7 @@ pub(crate) async fn serve(root: &Path, role: super::Role) -> Result<(), RunnerEr
         health: Arc::clone(&health),
         machines,
         peer: peer.clone(),
+        worktrees,
         programs,
         audit: (Arc::clone(&trail), Arc::clone(&authority)),
     };

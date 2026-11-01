@@ -111,7 +111,8 @@ impl Harness {
     /// Adds machine `name` and attaches a line served by a peer in `mode`.
     pub(super) async fn machine(&self, (name, last): (&str, u8), mode: Mode) -> TestResult<Peer> {
         let record = serde_json::from_value(json!({
-            "machine_id": remote_id(last), "name": name, "aliases": [], "state": "connecting",
+            "machine_id": remote_id(last), "name": name, "aliases": [format!("{name}-old")],
+            "state": "connecting",
             "remote_lifetime": "runtime:7", "remote_boot_id": "1", "last_seen_seq": null,
             "version": "1.0.0", "revision": "1",
         }))?;

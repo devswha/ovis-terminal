@@ -1,6 +1,8 @@
 //! Remote dispatch over a real socket to scripted machines: routing, no local fallback,
 //! unreachable and lost-in-flight outcomes, pass-through refusals and local authorization.
 
+mod alias;
+mod attach;
 mod harness;
 mod peer;
 
@@ -18,7 +20,7 @@ pub(super) type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send 
 /// Bound on waiting for any one event; never a pacing delay.
 pub(super) const HANG: Duration = Duration::from_secs(20);
 
-const DEADLINE: Duration = Duration::from_secs(20);
+pub(super) const DEADLINE: Duration = Duration::from_secs(20);
 
 fn data<'a>(reply: &'a Value, field: &str) -> Option<&'a Value> {
     reply.pointer(&format!("/error/data/{field}"))

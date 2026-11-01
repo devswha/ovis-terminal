@@ -18,6 +18,8 @@ pub mod documents;
 pub mod handler;
 #[cfg(unix)]
 pub mod health;
+#[cfg(unix)]
+pub mod holders;
 pub mod launch;
 #[cfg(unix)]
 pub mod launches;
@@ -48,6 +50,8 @@ pub mod tree;
 #[cfg(unix)]
 pub mod update;
 pub mod wire;
+#[cfg(unix)]
+pub mod worktrees;
 
 #[cfg(unix)]
 pub(crate) use serve::serve;
