@@ -143,6 +143,36 @@ Verified before pushing:
 - **Lane:** `cargo build -p ovis-terminal-cli` and `cargo clippy -p ovis-terminal-cli --all-targets -- -D warnings` pass, CLI tests pass 28/28, and `bash scripts/check.sh` exits 0 (931 passed, 0 hygiene violations).
 - **Scratch merge with `origin/integration` `804e508`** (built from `git merge-tree`/`commit-tree` in a throwaway worktree; the lane was not merged): workspace clippy `-D warnings` is clean, and CLI plus conformance pass 53/53.
 
+## Round 2: served lanes
+
+Pushed on top of `f95159c` without merging integration. Six commits: `a6a8d67`, `18b446c`, `2488b58`, `6cc1fef`, `61d9341`, `b276c50`, then `5e149d7`. Each batch was gated by `bash scripts/check.sh` exiting 0 (last: 936 passed, 0 hygiene violations) plus Windows-target clippy `-D warnings` exiting 0.
+
+hello now advertises 45 methods, each routed to a landed implementation:
+- **Lifecycle (core `Terminals`):** `terminal.kill`, `rm`, `keep`, `rename`, `label`, `recover`, `process_info`. Kill waits on the lifecycle's own receive path, so afterwards the live screen and streams are reconciled from the committed record: output is replayed from the holder's tail, then the exit.
+- **Reads:** `terminal.screen`, `terminal.output`, `terminal.wait_output`. Waits run on a per-incarnation core `Waits` hub fed in holder order. They are armed on the actor and awaited off it. A cursor behind retention at arming gives `cursor_expired`; a gap after arming gives outcome `gap`; cancellation gives `cancelled`.
+- **Input:** `input.send`, `input.keys`, `input.paste` through the todo-25 sequencer, with geometry `input_ready()` checked first and the lease or the unleased write grant enforced.
+- **Hosted dispatcher** (one `ServedEvent` coordinator):
+  - `doc.get`/`doc.set` (T50);
+  - `plugin.list`/`invoke`/`run_get` (T46);
+  - `machine.get`/`rename` (T43);
+  - `agent.register`/`get` and `status.report`/`get`/`clear` (T33);
+  - `prompt.open`/`answer`/`close`/`get`/`list` (T34), with `PromptService::recover` run at startup;
+  - `agent.update_session`/`conversation` (T36);
+  - `op.cancel`.
+- **WebSocket (T28):** `serve --websocket-port P` serves the same handler on loopback, and hello advertises `transports: ["unix","websocket"]`. Server seam: defaulted `RequestHandler::transports()` plus `ServerIdentity::with_transports`; existing handlers are unchanged.
+
+Tests: one real-socket smoke test per wired lane (`tests/assembly/lanes.rs`, `tests/assembly/websocket.rs`). The CLI suite passes 33/33.
+
+**Not delivered in round 2:**
+- **Blocked on code absent from this lane's base (`15432bb`), which only exists on integration:** T35 template launch, T40 prompt bridge, T41 agent tree, T48 planned restart, T56 scheduler, T4 amendments, and T57 and T55 (not present in this base either). Wiring them needs integration merged into the lane, which the brief forbids. I asked how to proceed and got no answer.
+- **No handler exists in the base for these; each needs new code:** `events.*` (core `Subscriptions` exists without routes), layout (`layout.*`, `selection.set`), `terminal.history`/`search`, `input.interrupt`/`barrier`, `turn.wait`/state waits.
+- **Geometry catalog:** `geometry.changed`/`checkpoint`/`input_ready` events and `stale_geometry` are not yet added to the protocol catalogs.
+- **Worktrees:** the lane needs a layout `Workspaces` owner and registered repositories, and `serve` has no configuration surface for either.
+- **Prompt answers:** they are not typed into the sequencer, because `AnswerKeys` carries no authenticated `Session` and `Sequencer::admit` requires one. That is a seam gap between T34 and T25.
+- **OSC status ingestion:** not wired; no process-token provisioning contract exists in the base.
+- **Session binding:** routed with no authorized provider stores, so every session source is refused with `invalid_session`.
+- **Scenario flips:** declared scenarios were not flipped. Their routes (`events.*` for task-22; restart, fairness, services and platform for the others) are among the items above, and task-23/26/27/28 still need their free-form descriptors rewritten as executable steps.
+
 ## Risks and not delivered
 
 - `serve` owns an in-process holder, so programs end with the server. `hold` runs a standalone holder that `serve` does not adopt; out-of-process adoption is todo 48.
