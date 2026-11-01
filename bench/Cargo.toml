@@ -25,10 +25,18 @@ path = "tuning/main.rs"
 name = "terminal50"
 path = "terminal50/main.rs"
 
+[[bin]]
+name = "soak"
+path = "soak/main.rs"
+# main.rs only dispatches to the library, whose tests cover it; no empty test harness.
+test = false
+
 [dependencies]
 # The terminal50 command line (todo 69).
 clap = { workspace = true }
 ovis-terminal-core = { workspace = true }
+# The soak adopts the holders the binary under test serves (todo 70).
+ovis-terminal-holder = { workspace = true }
 ovis-terminal-probes = { workspace = true }
 ovis-terminal-protocol = { workspace = true }
 ovis-terminal-server = { workspace = true }
