@@ -5,10 +5,9 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
-
-use super::*;
 use std::sync::mpsc::RecvTimeoutError;
 
+use super::*;
 use crate::restart::RestartError;
 use crate::terminals::TerminalError;
 
