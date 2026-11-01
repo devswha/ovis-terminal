@@ -178,15 +178,23 @@ impl Runtime {
 }
 
 impl Runtime {
-    /// QA seam: opens the hold FIFO for reading while holding the control, once, so the
-    /// runtime and the control wait until the test opens the FIFO for writing.
+    /// QA seam: holds the control on the FIFO, once. It first writes `held` to the FIFO,
+    /// which completes the test's read exactly when the hold is engaged, then opens it for
+    /// reading, which returns when the test releases the hold by opening it for writing.
     fn qa_hold(&mut self) -> Result<(), BoundaryError> {
         let Some(fifo) = self.qa_hold.take() else {
             return Ok(());
         };
         self.control
-            .with_terminals(|_, _| Ok(std::fs::File::open(&fifo).map(drop)))
+            .with_terminals(|_, _| {
+                let held = std::fs::OpenOptions::new()
+                    .write(true)
+                    .open(&fifo)
+                    .and_then(|mut writer| std::io::Write::write_all(&mut writer, b"held\n"))
+                    .and_then(|()| std::fs::File::open(&fifo).map(drop));
+                Ok(held)
+            })
             .map_err(|error| refusal(error.kind(), error.hint()))?
-            .map_err(|_| refusal("internal", "the QA hold FIFO could not be opened"))
+            .map_err(|_| refusal("internal", "the QA hold FIFO could not be used"))
     }
 }

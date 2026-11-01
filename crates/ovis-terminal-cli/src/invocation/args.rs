@@ -75,9 +75,9 @@ pub(super) struct ServeArgs {
     /// only with a `--root` that holds a `qa-fixture` file.
     #[arg(long)]
     pub(super) qa_holder_poll_ms: Option<u64>,
-    /// QA seam: before the next `terminal.run`, the runtime opens this FIFO for reading
-    /// while it holds the control, so it waits until a writer opens it. Accepted only with
-    /// a `--root` that holds a `qa-fixture` file.
+    /// QA seam: before the next `terminal.run`, the runtime, holding the control, writes
+    /// `held` to this FIFO, then waits until a writer opens it again. Accepted only with a
+    /// `--root` that holds a `qa-fixture` file.
     #[arg(long)]
     pub(super) qa_actor_hold: Option<std::path::PathBuf>,
 }
