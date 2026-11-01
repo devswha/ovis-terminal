@@ -48,7 +48,7 @@ What the scenarios assert:
 - **task-31 failure:** an RPC interact attach is ready under its own lease; an observe-only principal is refused for its permission (`forbidden` from the boundary policy's precheck for `input.raw` and `input.send`) and the owner naming the writer's lease gets `no_lease`. An operator held behind the writer takes the interact lease over with `attach.takeover`; the writer's stream is told `input_revoked` and closes `taken_over` naming the operator, and the writer's revoked lease then admits nothing (`no_lease`). The operator's `attach.close` is confirmed by its CLOSE, after which one `attach.leases` read shows no holder. A PTY holder then attaches; a PTY observer follows output and its typed bytes are never evaluated (absent after a fence); a second interact attach exits 11 `lease_held` naming `cli`; `t9` exits 3 `not_found`; interact without a TTY exits 2 `not_a_tty`. Stopping the server sends `$/closing` first, and both PTY clients exit 4 `connection_lost` naming `closing.reason=server_shutdown`, with their outer terminal settings restored.
 - **recovery/restart happy:** `server.restart` answers both boots, no ended and one preserved incarnation; the old connection gets `$/closing{server_restart, incarnations_preserved:true}` then end of stream; the server announces the successor boot on stdout; a new connection sees the same `runtime_lifetime`, the new `server_boot_id` (in hello and `server.status`) and the same program pid and start token. **failure:** `server.stop` with an unknown scope is `invalid_params` at `params.scope`, and the program keeps its pid and start token under the same boot.
 
-Gate: `bash scripts/check.sh` exits 0 at the round-4 head (`1328 tests run: 1328 passed (3 slow), 1 skipped`, `workspace-hygiene: 0 violation(s) in 1312 file(s) checked`), and the Windows pre-check (`cargo check` and `cargo clippy` for `x86_64-pc-windows-gnu` with `-D warnings`) exits 0; details under Verification below.
+Gate: `bash scripts/check.sh` exits 0 at the round-4 head (`1330 tests run: 1330 passed (2 slow), 1 skipped`, `workspace-hygiene: 0 violation(s) in 1313 file(s) checked`), and the Windows pre-check (`cargo check` and `cargo clippy` for `x86_64-pc-windows-gnu` with `-D warnings`) exits 0; details under Verification below.
 
 ## What ships
 
@@ -85,6 +85,44 @@ Commits, each lane-tested and the batches gated before their push:
 - `1eda49a`, `69ef2dd`: the planned-restart race fix (below).
 - T42 assembly commit: `AgentAssembly` and its prompt bridge gate in the daemon; `prompts::a_prompt_opened_*` now asserts the gate's `forbidden` (exit 12) for a forged token, where the prompt lane alone answered `not_owner`.
 
+### Linux CI finding at a035a51: `update.query` stalled past 10 s (six defects, all fixed)
+
+`test (ubuntu-latest)` failed `update::an_activated_update_*`: the first `update.query`, before any staging, got no answer within the CLI's 10 s deadline (`{"kind":"deadline_exceeded","exit_code":13}`). Thread stacks were taken from a server running under gdb, interrupted while a query was over its bound (symbolized binary; harness `docs/evidence/task-31/r4-loaded/gdblat.py`).
+
+1. **Per-call hashing at opt-level 0.** Under load the query thread was still hashing:
+   ```
+   tokio-rt-worker: sha2::sha256::x86::compress (x86.rs:107)
+     <- ovis_terminal_services::update::digest::hash_file (digest.rs:96)
+     <- Updates::query (service.rs:115)
+   ```
+   `Updates::query` re-hashes the active build (124 MB in a debug build) on every call. Fix: the workspace `Cargo.toml` builds `sha2` at `opt-level = 3` in the dev and test profiles (`[profile.dev.package.sha2]`, `[profile.test.package.sha2]`), so they pay what release pays.
+2. **Starvation on the control mutex.** On idle cores the query thread was waiting for the lock while the runtime's actor held it during its wait for holder messages:
+   ```
+   tokio-rt-worker: Mutex::lock_contended (futex.rs:61) <- Control::lock (control.rs:262)
+     <- Control::with_terminals (control.rs:175) <- ControlRestart::live_incarnations (control.rs:40)
+     <- Updates::query (service.rs:127)
+   ovis-terminal-r (actor): Receiver::recv_timeout <- Terminals::receive_message (observe.rs:47)
+     <- Control::with_terminals (control.rs:183) <- Runtime::receive (actor.rs:100) <- actor::run (actor.rs:164)
+   ```
+   The actor blocked for up to 5 ms inside `with_terminals`, released the mutex for microseconds and took it again; `std::sync::Mutex` makes no fairness promise, so any other lifecycle caller (`update.*`, `server.restart`, status reads) could wait seconds. Fix (`assembly/actor.rs`, `assembly/terminal.rs`): the actor drains holder messages under the lock without waiting (`receive_message(Duration::ZERO)`, `Link::Idle` when none) and waits on its own job queue, with the control released.
+3. **A restart could discard the reply of the call that asked for it.** In `conn/driver.rs` (seam), a server ending aborted every unjoined request task before sending `$/closing`; a `server.restart`/`update.activate` handler that had already returned lost its reply, so the caller saw `$/closing` with no result (outcome unknown). Fix: `close_for` first writes the reply of every request whose handler already returned (`JoinSet::try_join_next_with_id`), then cancels the rest, then sends `$/closing`. New test `listen::server::restart_reply::the_reply_of_the_call_that_restarted_precedes_closing_and_a_running_call_gets_none` (20 rounds, a never-finishing request in flight): failed on the unfixed driver (round 0 received only `$/closing`), passes fixed.
+
+4. **The endpoint vanished during the hand-over.** A new regression (`update::a_query_racing_a_planned_restart_is_answered_by_one_boot_or_the_next`: `update.query` sent back-to-back while one `update.activate` and 19 `server.restart` calls each restart control) failed in its first round with `server_not_running` (exit 4): the old accept loop removed the socket file before the successor bound a new one. Fix (`listen/server.rs`, seam): `ServerHandle::hand_over` ends serving for a planned restart but keeps the endpoint bound and returns it; the successor generation serves that same socket, so a client connecting meanwhile waits in the listen backlog. `ServerHandle::restart` is `hand_over` plus removal, unchanged for its other callers.
+5. **A read met the restart.** With the endpoint kept, the same test next got `restarting` (a read that reached the old boot while control was between boots) and, by construction, could also lose its connection to `$/closing{server_restart}`. Fix (`invocation/transport.rs`, `invocation/execute.rs`): the CLI recognises `$/closing{server_restart}` before end of stream (`CliError::Restarted`, kind `server_restart`, exit 13 for a mutation, whose hint names `op.get`), and a method whose catalogued effect is `Query` that meets a planned restart (that loss, or a `restarting` refusal) is sent again on a new connection until a boot answers, within the same 10 s deadline. Mutations are never re-sent.
+
+6. **The server exited at the hand-over when a read was in flight.** Under load the racing-query test still failed every run with `deadline_exceeded`; the server's stderr in those runs (`r4-loaded/finalbt-*.log`, and earlier `load-2.log`) reads `ovis-terminal: stopping the server failed at: close the dispatch log of the old boot [stop_failed]`. A read runs in `spawn_blocking` holding the dispatch log; cancelling its connection at the restart does not stop the blocking closure, `Dispatcher::shutdown` did not wait for it, so `Arc::try_unwrap` of the log failed, the server exited, and the CLI's read retry met a socket nobody served until its deadline. Fix (`dispatch/execution.rs`, `dispatch/read.rs`, `dispatch/runtime.rs`, seam): every read holds a permit of a read gate in the dispatcher state for as long as its blocking closure holds the log; `Dispatcher::shutdown` acquires every permit after joining operations, then closes the gate (a later read is refused `unavailable`).
+
+`final-8.log` (the 1/25 failure after fixes 1-3) is kept in `r4-loaded/`; the full update flow under gdb (`gflow.py`, 25 servers, query before and after activation) never stalled (`gflow-calls.log`: every query at most 0.55 s, exit 0), and 400 consecutive queries under the same load peaked at 0.515 s. A test that issues the query concurrently with the restarts (finding 4 and 5) is what exposed the remaining failures.
+
+`update.query` latency (2 pinned cores, exit codes checked):
+
+| | before | sha2 override only | all fixes |
+|---|---|---|---|
+| unloaded | 5.45-6.37 s | 0.5-7.69 s (lock waits) | 0.05-0.06 s |
+| 8 busy loops | 3/3 `deadline_exceeded` at 10 s | 0.40-0.77 s | 0.19-0.31 s |
+
+The assembly tests sped up accordingly: the planned-restart test 0.53 s and the update test 0.69 s (previously 10-17 s and 9.4 s), because every lifecycle caller had been waiting for the actor's lock. An earlier note in this PR claimed hashing was not the cause; that measurement did not check exit codes and is withdrawn.
+
 ### Linux CI finding at 4e4519f: a planned restart could silently unlink the runtime from the holder
 
 `test (ubuntu-latest)` failed `restart::a_planned_restart_keeps_the_program_and_its_lifetime_and_serves_the_successor_boot`: after the restart, `input.send` was admitted but `terminal.wait_output` never matched (macOS and Windows passed). Root cause, a product defect in core (`crates/ovis-terminal-core/src/restart/control.rs`, seam): `Control::with_terminals` (and `Control::stop`) checked readiness before taking the control lock. The runtime's actor thread could pass that check just as `server.restart` (on a dispatch task) took the lock, wait through the hand-over, and enter after `release()` dropped the old lifecycle and before `finish()` booted the successor. It then got `control_stopped`, which the actor rightly reads as "no holder message will follow" and stopped applying holder output for the rest of the server's life, silently (no warning, matching the empty stderr in the CI log). `Control::restart` itself already re-checked readiness under the lock.
@@ -94,7 +132,7 @@ Fix: `with_terminals` and `stop` re-check readiness under the lock, so a caller 
 Evidence:
 - New core test `restart::qa::readiness::a_caller_racing_a_planned_restart_is_told_restarting_never_control_stopped`: a reader holds the lifecycle while it waits for holder messages (as the actor does) across 20 planned restarts; every refusal must be `restarting`. On the unfixed core it failed 2 of 5 runs (`refusals during planned restarts: {"control_stopped", "restarting"}`); fixed, 5 of 5 pass, and the whole `restart::` QA module passes 20/20.
 - Planned-restart test 25× under load (`taskset -c 0-1`, 8 busy loops, heavy gate): **25/25 passed** (max 334 s). Cores 0-1 were also carrying another lane's identical load at the time, so this was heavier than the recipe. Details: `docs/evidence/task-31/r4-loaded/README.md`.
-- Update test (`update::an_activated_update_*`, batch B), routed to todo 61 as a finding: in the same loop it passed 23/25 (max 228 s). Alone on idle cores 124-125 with exactly 8 busy loops it passed 23/25: both failures are the first `update.query` exceeding the CLI's 10 s deadline (`r4-loaded/before-7.log`, `before-12.log`). That step does not legitimately take that long: timed alone under the same load on 25 fresh servers, the first `update.query` (which re-hashes the active 124 MB debug binary) took 0.16-0.37 s every time. So hashing is not the cause; no SHA-256 profile override and no wider bound were applied. The stall was not caught under gdb; one unverified hypothesis is unfair contention on `Control`'s mutex, which the runtime's actor holds while it waits up to 5 ms for each holder message.
+- Update test (`update::an_activated_update_*`): no longer routed. It failed on CI ubuntu at a035a51 (first `update.query` past the CLI's 10 s deadline, `deadline_exceeded`, update.rs:62), and the cause is below. After all fixes, 25 runs under `taskset -c 124-125` (idle cores) with 8 busy loops, through the heavy gate: `restart` 25/25 passed, max 1.56 s; `update` 25/25 passed, max 13.97 s; `update` 25/25 passed, max 1.69 s (`docs/evidence/task-31/r4-loaded/final25/`).
 
 ### The planned restart boundary
 
@@ -141,6 +179,10 @@ Output waits are armed under the control's `ArmedWaits`, so a restart ends them 
 
 ### Seams (outside the write scope, disclosed)
 
+- `crates/ovis-terminal-server/src/conn/driver.rs` (`close_for`) and the test `listen/server/restart_reply.rs` (registered in `listen/server.rs`): replies of finished requests are written before `$/closing` (defect 3 above).
+- `Cargo.toml`: `sha2` at `opt-level = 3` in the dev and test profiles (defect 1 above).
+- `crates/ovis-terminal-server/src/listen/server.rs`: `ServerHandle::hand_over` keeps the endpoint for the successor (defect 4 above).
+- `crates/ovis-terminal-server/src/dispatch/{execution,read,runtime}.rs`: the read gate `Dispatcher::shutdown` waits on (defect 6 above).
 - `crates/ovis-terminal-core/src/restart/control.rs`: `with_terminals` and `stop` re-check readiness under the control lock (the race above); new test `restart/qa/readiness.rs` registered in `restart/qa.rs`.
 - `crates/ovis-terminal-server/src/dispatch/lanes/health.rs`, `lanes/boundary_policy/gate.rs` and `lanes/prompt_bridge.rs`: `Measured`, `BoundaryPolicy` and `Gated` delegate `RequestHandler::transports`. Without it, hello over WebSocket advertised only `unix` (caught by `tests/assembly/websocket.rs`).
 - `crates/ovis-terminal-server/src/streams/`: `takeover.rs` (new) serves `attach.takeover` onto the caller's held stream; `handler.rs` routes it with the same op-id replay table as `attach.open`; `open.rs` `displace` returns the displaced lease; `journal.rs` `LeaseJournal::record` returns the committed sequence (`Option<EventSeq>`), which the takeover result reports (implementors in `ws/qa/seams.rs` and `streams/qa/recorder.rs` updated). New `streams/qa/takeover.rs` test registered in `tests/streams.rs`.
@@ -149,9 +191,9 @@ Output waits are armed under the control's `ArmedWaits`, so a restart ends them 
 
 ### Verification (Linux 7.0.0-38-generic x86_64)
 
-- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` at the round-4 head (after the T42 merge and the restart fix): **exit 0**, `1328 tests run: 1328 passed (3 slow), 1 skipped`, `workspace-hygiene: 0 violation(s) in 1312 file(s) checked`, `check.sh: all steps passed` (`docs/evidence/task-31/check-r4.log`). Earlier batch gates: batch C 1199/1199, batch A1 1232/1232, both exit 0.
+- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` at the round-4 head (after the T42 merge and every round-4 fix): **exit 0**, `1330 tests run: 1330 passed (2 slow), 1 skipped`, `workspace-hygiene: 0 violation(s) in 1313 file(s) checked`, `check.sh: all steps passed` (`docs/evidence/task-31/check-r4.log`). Earlier batch gates: batch C 1199/1199, batch A1 1232/1232, both exit 0.
 - Windows pre-check: `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exit 0 and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` exit 0 (`docs/evidence/task-31/windows-precheck-r4.log`).
-- `cargo nextest run -p ovis-terminal-cli`: 54/54. `cargo nextest run -p ovis-terminal-server --test streams`: 7/7 (with the new takeover test). `cargo nextest run -p ovis-terminal-conformance` with the real binary: 28/28 (the suite runs every executable scenario, `recovery/restart` included). `cargo clippy -p ovis-terminal-server -p ovis-terminal-cli -p ovis-terminal-conformance --all-targets -- -D warnings`: exit 0.
+- `cargo nextest run -p ovis-terminal-cli`: 55/55. `cargo nextest run -p ovis-terminal-server`: 204/204. `cargo nextest run -p ovis-terminal-server --test streams`: 7/7 (with the new takeover test). `cargo nextest run -p ovis-terminal-conformance` with the real binary: 28/28 (the suite runs every executable scenario, `recovery/restart` included). `cargo clippy -p ovis-terminal-server -p ovis-terminal-cli -p ovis-terminal-conformance --all-targets -- -D warnings`: exit 0.
 - SDK after each merge: `bun install --frozen-lockfile && bun run generate && bun run generate:check && bun run typecheck && bun test`: 30 pass, 0 fail (the real-socket case runs against this build's binaries through `OVIS_CONFORMANCE_BIN`/`OVIS_TERMINAL_BIN`).
 - What the new tests assert:
   - `hello_advertises_every_schema_method_but_the_unimplemented_which_are_method_not_found`: hello minus the committed OpenRPC methods is empty; the OpenRPC methods minus hello equal the 36 names above; each answers `method_not_found`.
