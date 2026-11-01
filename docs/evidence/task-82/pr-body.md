@@ -63,6 +63,14 @@ The existing tests still pass unchanged: committed output equals the generation,
 - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` followed by the matching `cargo clippy ... -- -D warnings` gave exit 0 (`docs/evidence/task-82/windows-check.log`).
 - macOS stress: the `client-ts` probe of `probe-stress-macos.yml` landed on integration in dda248a, after this lane's base 8cab061. Per the lane rules this lane does not merge integration, so a dispatch with `--ref lane/t82-client-ts-freshness` cannot select it. The attempt is recorded below. The per-PR `client-ts (macos-15)` job covers macOS for this PR.
 
+```
+$ gh workflow run probe-stress-macos.yml -f probe=client-ts --ref lane/t82-client-ts-freshness
+could not create workflow dispatch event: HTTP 422: Provided value 'client-ts' for input 'probe' not in the list of allowed values (https://api.github.com/repos/devswha/ovis-terminal/actions/workflows/402301532/dispatches)
+exit 1
+```
+
+DEFERRED VERIFICATION: after the orchestrator union-merges this PR with integration, run `gh workflow run probe-stress-macos.yml -f probe=client-ts --ref integration`, which runs the 25x Bun suite on macOS.
+
 ## Adversarial
 
 - Generator mutants, each reverted after the run. All 5 were killed by `bun test test/generate.test.ts`: identifier validation removed (1 fail), collision check removed (2 fail), no capitalisation (2 fail), references keep the raw name (2 fail), collision check claims the raw component name instead of the mapped one (1 fail). Log: `docs/evidence/task-82/adversarial-mutants.log`.
