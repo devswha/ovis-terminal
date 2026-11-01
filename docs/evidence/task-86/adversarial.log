@@ -1,0 +1,22 @@
+Adversarial pass, todo 86 (performed by the executor; the requested terra reviewer could not be spawned:
+model id chatgpt-subscription/gpt-5.6-terra did not resolve and subagent nesting is capped at depth 1).
+
+1. reachability / stream backlog: graphics_sequence_max_bytes 8 MiB > stream_backlog_bytes 4 MiB
+   (crates/ovis-terminal-protocol/src/schema/limits.rs Limits::v1; crates/ovis-terminal-server/src/streams/hub.rs:264
+   closes/gaps a viewer whose backlog exceeds backlog_bytes). A whole held sequence released at once would gap a live
+   viewer and fall back to an image-free checkpoint. Not changed here (no stream code in this lane); recorded as a
+   binding requirement on todo 83 in docs/design/graphics.md "Layer budget".
+2. reachability / boundary hold: streams/filter.rs HOLD_LIMIT = 4096 releases longer incomplete sequences unfiltered.
+   Recorded for todo 83 (hold graphics sequences up to the sequence cap).
+3. store / ledger: 8 MiB > StoreLimits::max_value_bytes 1 MiB and > 16 KiB ledger receipt; the contract routes image
+   bytes through the image store's own entries only, notices carry counts (proven small: no image field in either type).
+4. frame: plain-mode base64 of a whole 8 MiB sequence is 11,184,812 bytes < max_frame_bytes 16 MiB
+   (test every_layer_that_carries_a_sequence_can_hold_the_cap).
+5. off-by-one: admit() keeps exactly the cap, drops cap+1 (test + mutant-admit-off-by-one).
+6. wire encoding: both caps are ByteCount decimal strings; u64::MAX round-trips; numbers refused for each cap
+   (graphics_caps_round_trip_u64_max_and_refuse_numbers).
+7. QA failure inject honesty: the plan's injected hello {"params":{"limits":{...numeric}}} is refused invalid_params at
+   field_path params.limits because HelloParams is a closed schema without limits; the scenario asserts that field path
+   and states it. The numeric-refusal of the cap itself is proven by the unit test above, not by this inject.
+8. compat: openrpc compat against schema/released.openrpc.json exit 0 (additive: two new Limits properties, two events,
+   five component schemas); no BASELINE-AMENDMENTS entry needed.

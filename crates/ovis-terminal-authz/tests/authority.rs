@@ -7,6 +7,8 @@
 mod issuance;
 #[path = "authority/operations.rs"]
 mod operations;
+#[path = "authority/precheck.rs"]
+mod precheck;
 #[path = "authority/reclamation.rs"]
 mod reclamation;
 #[path = "authority/revocation.rs"]

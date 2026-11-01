@@ -12,7 +12,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use ovis_terminal_agent::status::AgentStatusEvent;
+use ovis_terminal_authz::Authority;
 use ovis_terminal_core::ops::OperationProducer;
+use ovis_terminal_core::registry::RegistryIdentities;
 use ovis_terminal_protocol::domain::machine_actor::ORPHANED_ACK;
 use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind};
 use ovis_terminal_protocol::rpc::RpcRequest;
@@ -20,6 +22,7 @@ use ovis_terminal_protocol::schema::common::NoParams;
 use ovis_terminal_protocol::schema::{decode_params, openrpc_document};
 use ovis_terminal_server::conn::{Call, RequestHandler};
 use ovis_terminal_server::dispatch::Dispatcher;
+use ovis_terminal_server::dispatch::lanes::boundary_policy::AuditTrail;
 use serde_json::Value;
 
 use super::agents::Directory;
@@ -80,6 +83,7 @@ pub(crate) struct Probes {
     pub(crate) health: Arc<super::health::Probe>,
     pub(crate) machines: Arc<Machines>,
     pub(crate) programs: Arc<Programs>,
+    pub(crate) audit: (Arc<AuditTrail>, Arc<Authority<RegistryIdentities>>),
 }
 
 #[derive(Debug)]
@@ -165,6 +169,10 @@ impl RequestHandler for FixtureHandler {
             REMOTE_CALL => machines::call(&self.probes.machines, &call.request).await,
             MACHINE_CONTROL => machines::control(&self.probes.machines, &call.request).await,
             REMOTE_CHILD => machines::remote_child(&self.probes.machines, &call.request).await,
+            super::boundary::AUDIT => {
+                let (trail, authority) = &self.probes.audit;
+                super::boundary::audit((trail, authority), (&call.session, &call.request))
+            }
             ORPHANED_ACK => machines::acknowledge(&self.probes.machines, &call.request).await,
             _ => self.dispatch.call(call).await,
         }

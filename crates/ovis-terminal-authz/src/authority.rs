@@ -23,7 +23,7 @@ use crate::endpoint::{PeerAdmission, Transport};
 use crate::error::{AuthzError, MismatchReason};
 use crate::family::IdentityFamily;
 use crate::identity::{ConnectionId, PrincipalId};
-use crate::permission::Action;
+use crate::permission::{Action, Permission};
 use crate::scope::ResolvedTarget;
 
 /// Identity of one authority instance; a decision from another instance never commits.
@@ -223,6 +223,29 @@ impl<F: IdentityFamily> Authority<F> {
         self.read()?
             .check_claim(&decision.claim, commit.at)
             .map(|_| ())
+    }
+
+    /// Whether any grant of `session`'s live credential confers `permission`, at any scope.
+    ///
+    /// This is an admission precheck, never a decision: `false` refuses requests that no
+    /// target could allow, while `true` still leaves the scoped [`Authority::authorize`].
+    ///
+    /// # Errors
+    ///
+    /// The credential errors of [`Authority::authenticate`] when the credential lapsed.
+    pub fn confers(
+        &self,
+        session: &Session,
+        (permission, at): (Permission, TimestampMs),
+    ) -> Result<bool, AuthzError> {
+        self.own(session)?;
+        let conferred = self
+            .read()?
+            .check_claim(&session.claim, at)?
+            .grants
+            .iter()
+            .any(|grant| grant.permission() == permission);
+        Ok(conferred)
     }
 
     fn own(&self, session: &Session) -> Result<(), AuthzError> {

@@ -1,0 +1,1 @@
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario security/validation --isolated --case happy --evidence /home/devswha/workspace/ovis-terminal-wt/lane-t58/.omo/evidence/ovis-terminal-v1/attempt.QZJjq0/task-58-ovis-terminal-v1.json

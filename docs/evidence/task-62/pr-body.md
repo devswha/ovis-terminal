@@ -202,6 +202,20 @@ Round 2 (8f1e5d0) was CI-green and awaits the gate. Integration then moved to 26
   - Conformance `--case all`: `cli/interactive-attach` 94, `part-a/task-31` 49 and `observability/health` 96 assertions, each exit 0.
   - `check.sh` through the heavy gate: exit 0 (`1256 tests run: 1256 passed (3 slow), 1 skipped`; hygiene, manifests and json pass; `docs/evidence/task-62/check-summary.log`). The first attempt stopped in the test build with rustc `Disk quota exceeded (os error 122)`: `/dev/shm` is a tmpfs with a per-user quota that every lane shares. After freeing this lane's 7.3 GB incremental cache, the rerun used `CARGO_INCREMENTAL=0`; this is a cache setting only and matches CI's rust-cache, with no change to code or gate steps.
 
+## Merge addendum 2: origin/integration 167c0a7 (authorized; merge-only)
+
+Integration moved to 167c0a7, which brings T86's graphics caps (#68) and T58's boundary policy, and PR #67 became CONFLICTING on round-3 head c34080d. This is one merge commit on top of c34080d. The lane is still stacked on #57, merged and not rebased.
+
+- **Textual conflict:** only `crates/ovis-terminal-authz/src/authority.rs`, in the import block. Both imports are kept: `ConnectionId` (round 3) and T58's `Permission`. The auto-merged rest of the file keeps both sides: `Session.connection`, its accessor and `authenticate` drawing a fresh `ConnectionId`, plus T58's code. T58's `BoundaryPolicy` does not touch lease ownership. The merged file differs from integration's only by the round-3 connection hunks.
+- **Generated outputs:** not regenerated, because the merge changes nothing of this lane's in them. The schema and the generated SDK in the merge are integration's own (T86's regeneration) and byte-identical to 167c0a7. `openrpc check schema/ovis-terminal.openrpc.json` reports fresh (645575 bytes), and `openrpc compat schema/released.openrpc.json` reports compatible.
+- **`Cargo.lock`:** integration's plus the same 8 lane-dependency lines as before.
+- **Verified locally** on a cold RAM target (`CARGO_INCREMENTAL=0`, line-tables-only, lane-scoped):
+  - `cargo +nightly fmt --all -- --check`: exit 0.
+  - `cargo clippy --locked -p ovis-terminal-authz -p ovis-terminal-core -p ovis-terminal-server -p ovis-terminal-cli --all-targets -- -D warnings`: exit 0, including the round-3 CLI test files.
+  - `cargo nextest run --locked -p ovis-terminal-authz -p ovis-terminal-core -p ovis-terminal-server -p ovis-terminal-cli` through the heavy gate: **664/664**. This includes the round-3 tests: the core `leases::connections` tests, `interactive_connections`, `interactive_owners` (default label, shared id, test 2) and `interactive_transparency`. This is their first local run; round 3 itself was gated by CI.
+  - Conformance `--case all`: `cli/interactive-attach` 106 assertions (94 before the twin-connection steps) and `part-a/task-31` 49 assertions, each exit 0 (`docs/evidence/task-62/merge2-lane-tests.log`).
+- **CI is the gate for the rest:** `check.sh` (the full workspace), the Windows pre-check, client-ts and the other workspace crates. The round-3 mutants are being run by the Opus gate and were not started here.
+
 ## Round 3: B1 at the root (gate round 2)
 
 **Finding.** Round 2 fixed only the CLI default label. The gate's socket probe showed two live connections presenting the same `client_id` both answered `ready` on `lease:1`, with `holder:null` and `retry:null`. The second connection's `input.raw` was admitted and its marker reached the program, and the first stream was never told. The cause was the core rule `held.owner == claim.owner => granted(held)` with an owner of principal + label only.
