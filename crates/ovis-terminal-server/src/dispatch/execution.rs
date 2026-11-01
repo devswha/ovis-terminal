@@ -17,7 +17,7 @@ use ovis_terminal_store::Snapshot;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
-use tokio::sync::watch;
+use tokio::sync::{Semaphore, watch};
 
 use super::DispatchError;
 use crate::conn::Notifier;
@@ -53,6 +53,9 @@ pub(super) struct State<D, P> {
     pub authority: Arc<Authority<RegistryIdentities>>,
     pub identity: RuntimeIdentity,
     pub core: Arc<Coordinator<D, P>>,
+    /// One permit per read answering off the executor; it holds `core` until it returns,
+    /// even when the request that started it was cancelled.
+    pub reads: Arc<Semaphore>,
 }
 
 /// One accepted operation's single-use commit permission.

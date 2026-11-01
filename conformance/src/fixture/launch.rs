@@ -54,28 +54,26 @@ fn search_path(root: &Path) -> String {
     format!("{}:/usr/bin:/bin", root.join("bin").display())
 }
 
-/// Starts `runner fixture --root <root> --binary <binary>` and waits, bounded, for its
-/// ready line.
+/// Starts `program <args>` (the runner's fixture mode or the binary's `serve`) in `root`,
+/// so a program it launches without a working directory stays inside the isolated root,
+/// and waits, bounded, for its ready line.
 pub(crate) async fn start(
-    runner: &Path,
+    program: &Path,
+    args: &[std::ffi::OsString],
     root: &Path,
-    binary: &Path,
 ) -> Result<FixtureProcess, RunnerError> {
-    let mut command = tokio::process::Command::new(runner);
+    let mut command = tokio::process::Command::new(program);
     command
-        .arg("fixture")
-        .arg("--root")
-        .arg(root)
-        .arg("--binary")
-        .arg(binary)
+        .args(args)
         .env_clear()
         .env("PATH", search_path(root))
+        .current_dir(root)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true);
     let mut child = command.spawn().map_err(|source| RunnerError::Spawn {
-        program: runner.to_path_buf(),
+        program: program.to_path_buf(),
         source,
     })?;
     let not_piped = RunnerError::FixtureReport {
@@ -98,19 +96,26 @@ pub(crate) async fn start(
         stdin,
         stdout,
         stderr,
-        argv: vec![
-            runner.display().to_string(),
-            "fixture".to_owned(),
-            "--root".to_owned(),
-            root.display().to_string(),
-            "--binary".to_owned(),
-            binary.display().to_string(),
-        ],
+        argv: std::iter::once(program.display().to_string())
+            .chain(args.iter().map(|arg| arg.to_string_lossy().into_owned()))
+            .collect(),
         ready: ready.ready,
     })
 }
 
 impl FixtureProcess {
+    /// The next line the fixture announced on stdout, awaited within the ready bound.
+    pub(crate) async fn announcement(&mut self) -> Result<Value, RunnerError> {
+        let line = tokio::time::timeout(READY_BOUND, self.stdout.next_line()).await;
+        let missing = RunnerError::FixtureReport {
+            expected: "an announcement line",
+        };
+        let Ok(Ok(Some(line))) = line else {
+            return Err(missing);
+        };
+        serde_json::from_str(&line).map_err(|_| missing)
+    }
+
     /// Closes stdin, reads the serve report and reaps the process.
     pub(crate) async fn stop(mut self) -> (Result<Value, RunnerError>, ProcessReport) {
         drop(self.stdin.take());

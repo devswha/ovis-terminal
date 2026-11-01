@@ -2,8 +2,13 @@
 //!
 //! An invocation is parsed and planned completely before anything outside the process is
 //! touched, writes one schema-defined result to stdout or one structured error to stderr,
-//! and exits with a published code. No command starts, installs or restarts a server.
+//! and exits with a published code. No inspection command starts, installs or restarts a
+//! server; only the explicit `serve` and `hold` verbs run one, in the foreground.
 
+#[cfg(unix)]
+pub mod assembly;
+#[cfg(unix)]
+pub mod attach;
 mod invocation;
 pub mod service;
 

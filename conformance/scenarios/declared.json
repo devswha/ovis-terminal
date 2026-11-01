@@ -67,11 +67,6 @@
       "reason": "Free-form descriptor written by todo 20 before the runner existed; it runs once its steps are rewritten as ovis-conformance/1 over RPC routes wired by todos 23, 25 and 28-31 (real-binary serving lands with todo 31)."
     },
     {
-      "file": "part-a/task-22.json",
-      "owner_todo": "22",
-      "reason": "events.subscribe/update/unsubscribe are implemented in ovis-terminal-core (crates/ovis-terminal-core/src/subscriptions/) and proven by tests/subscriptions.rs; no serving fixture or binary routes events.* yet. The scenario runs once todo 31 wires the subscription hub into the served dispatcher and the connection notifier."
-    },
-    {
       "file": "part-a/task-23.json",
       "owner_todo": "23",
       "reason": "attach.open/credit/close/repaint are served by ovis_terminal_server::streams::AttachHandler and proven over a real socket by crates/ovis-terminal-server/tests/streams.rs; the todo-21 fixture registers no attach routes and no served binary feeds holder output into TerminalStreams until todo 31 assembles them."
@@ -85,16 +80,6 @@
       "file": "part-a/task-25.json",
       "owner_todo": "25",
       "reason": "Free-form descriptor written by todo 25 before the runner existed; it runs once its steps are rewritten as ovis-conformance/1 over RPC routes wired by todos 23, 25 and 28-31 (real-binary serving lands with todo 31)."
-    },
-    {
-      "file": "part-a/task-26.json",
-      "owner_todo": "26",
-      "reason": "ovis_terminal_core::geometry (resize admission under the geometry lease, ordered geometry.changed/checkpoint/input_ready commits, coalescing, repaint, focus) is a core seam no RPC route serves yet: attach.resize/release_geometry/focus/repaint reach it when todo 31 assembles the attach routes with the holder link (todo 31 is blocked by this todo). Until then the behavior runs as cargo nextest run -p ovis-terminal-core --test geometry (happy on a real holder PTY running unmodified bash; failure on the real authority, lease table and coordinator)."
-    },
-    {
-      "file": "part-a/task-27.json",
-      "owner_todo": "27",
-      "reason": "ovis_terminal_core::waits is a core seam that no RPC route serves yet: terminal.wait_output, turn.wait, events.wait and input.interrupt are wired to it by todos 28-31 (real-binary serving lands with todo 31). Until then the behavior runs as cargo nextest run -p ovis-terminal-core --test waits (happy/failure on a real holder PTY)."
     },
     {
       "file": "part-a/task-28.json",
@@ -167,11 +152,6 @@
       "reason": "Free-form todo-49 descriptor (its terminal.run isolation step is not a served route). Its behaviour executes in recovery/e2e (todo 52) through fixture.holders over real shared and dedicated holders on both runtimes: a core lost after its checkpoint survives with a non-exact screen and one gap, a dedicated holder lost is unknown/holder_unreachable while the shared one survives, another boot identity is restored_metadata with nothing adopted, and no program is relaunched. Covered meanwhile in-crate by recovery::qa."
     },
     {
-      "file": "recovery/restart.json",
-      "owner_todo": "48",
-      "reason": "Free-form todo-48 descriptor. server.restart is served by the fixture over the update lane's real restartable control (todo 52) and executes in recovery/e2e on both runtimes (preserved incarnations equal the live set, receipt committed); server.stop stays unserved because protocol/discovery pins it as unadvertised until the served binary (todo 66)."
-    },
-    {
       "file": "remote/identity.json",
       "owner_todo": "43",
       "reason": "Free-form todo-43 descriptor. machine.add over a real argv (stdio) transport and over SSH (an sshd-free loopback accepting only the runtime's fixed SSH argument vector) to a second private runtime, auth_failed, trust_mismatch and invalid destinations execute in remote/e2e (todo 52); rename-while-waiting stays covered by the todo-43 lane tests."
@@ -185,11 +165,6 @@
       "file": "services/plugins.json",
       "owner_todo": "46",
       "reason": "plugin.* is now served by the fixture through dispatch::services::ServiceLanes (todo 52) and its failed-run and missing-program outcomes run in recovery/e2e; this file stays a free-form todo-46 descriptor whose principal_fixture and cancel steps the runner does not model. Covered meanwhile by the real-socket tests in lanes::plugins."
-    },
-    {
-      "file": "services/worktrees.json",
-      "owner_todo": "45",
-      "reason": "Free-form todo-45 descriptor. worktree.* is served by the fixture over a real Git repository on its own operation+worktree event domain (todo 52) and the dirty-checkout refusal executes in recovery/e2e on both runtimes; no production workspace owner exists before assembly (todo 66), so opened workspaces are recorded by a fixture owner."
     }
   ]
 }

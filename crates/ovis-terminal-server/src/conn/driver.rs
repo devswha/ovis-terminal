@@ -197,12 +197,7 @@ impl<H: RequestHandler> Requests<H> {
                 Ok(()) => return Ok(()),
                 Err(error) => error,
             },
-            End::Shutdown => {
-                self.tasks.shutdown().await;
-                return self
-                    .send(Outbound::Closing(Closing::ending(shutdown)))
-                    .await;
-            }
+            End::Shutdown => return self.close_for(shutdown).await,
             End::Failed(error) => error,
         };
         self.tasks.shutdown().await;
@@ -214,6 +209,21 @@ impl<H: RequestHandler> Requests<H> {
         }
     }
 
+    /// Ends the connection for a server ending: every request whose handler already
+    /// returned is answered first, so a call that asked for a planned restart receives its
+    /// reply before `$/closing`; requests still running are cancelled without one.
+    async fn close_for(
+        &mut self,
+        shutdown: &watch::Receiver<Option<Ending>>,
+    ) -> Result<(), ConnectionError> {
+        while let Some(joined) = self.tasks.try_join_next_with_id() {
+            self.settle(joined).await?;
+        }
+        self.tasks.shutdown().await;
+        self.send(Outbound::Closing(Closing::ending(shutdown)))
+            .await
+    }
+
     /// The peer stopped sending but may still read: settle what it already asked for.
     async fn drain_after_eof(
         &mut self,
@@ -222,10 +232,7 @@ impl<H: RequestHandler> Requests<H> {
         while !self.tasks.is_empty() {
             tokio::select! {
                 biased;
-                _ = shutdown.changed() => {
-                    self.tasks.shutdown().await;
-                    return self.send(Outbound::Closing(Closing::ending(shutdown))).await;
-                }
+                _ = shutdown.changed() => return self.close_for(shutdown).await,
                 Some(joined) = self.tasks.join_next_with_id() => self.settle(joined).await?,
             }
         }

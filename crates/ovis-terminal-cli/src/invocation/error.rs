@@ -89,6 +89,9 @@ pub(super) enum CliError {
     /// The server closed the connection before answering.
     #[error("the server closed the connection before answering")]
     Closed,
+    /// The server ended the connection for a planned restart before answering.
+    #[error("the server restarted before answering")]
+    Restarted,
     /// The server sent something that is not a JSON-RPC reply to this request.
     #[error("the server reply is not a JSON-RPC reply")]
     Reply(#[source] BoundaryError),
@@ -114,6 +117,14 @@ pub(super) enum CliError {
     /// A request or result could not be encoded.
     #[error("a JSON value could not be encoded")]
     Encode(#[source] serde_json::Error),
+    /// The assembled server could not start, serve or stop.
+    #[cfg(unix)]
+    #[error(transparent)]
+    Assembly(crate::assembly::AssemblyError),
+    /// The attach ended without a detach.
+    #[cfg(unix)]
+    #[error(transparent)]
+    Attach(crate::attach::AttachError),
 }
 
 impl CliError {
@@ -132,12 +143,17 @@ impl CliError {
             #[cfg(windows)]
             Self::PipeBusy { .. } => "pipe_busy_timeout",
             Self::Closed => "connection_closed",
+            Self::Restarted => "server_restart",
             Self::Reply(_) | Self::Result(_) => "invalid_response",
             Self::Timeout { .. } => "deadline_exceeded",
             Self::UnsupportedTransport => "unsupported_transport",
             Self::Schema(_) | Self::Encode(_) => "internal",
             #[cfg(any(unix, windows))]
             Self::Service(error) => error.kind(),
+            #[cfg(unix)]
+            Self::Assembly(error) => error.kind(),
+            #[cfg(unix)]
+            Self::Attach(error) => error.kind(),
         }
     }
 
@@ -164,6 +180,9 @@ impl CliError {
                 "every pipe instance stayed taken; retry, and check the server's accept loop keeps serving"
             }
             Self::Closed => "check the server log; the connection ended early",
+            Self::Restarted => {
+                "reconnect to the same endpoint; ask op.get whether a mutation committed"
+            }
             Self::Reply(_) | Self::Result(_) => {
                 "check that the endpoint belongs to an ovis-terminal server of this generation"
             }
@@ -172,6 +191,10 @@ impl CliError {
             Self::Schema(_) | Self::Encode(_) => "report the build; a value could not be encoded",
             #[cfg(any(unix, windows))]
             Self::Service(error) => error.hint(),
+            #[cfg(unix)]
+            Self::Assembly(error) => error.hint(),
+            #[cfg(unix)]
+            Self::Attach(error) => error.hint(),
         }
     }
 }

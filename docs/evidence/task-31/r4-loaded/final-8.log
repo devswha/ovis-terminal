@@ -1,0 +1,30 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+────────────
+ Nextest run ID 27d95b0b-9bcc-4502-b7b8-00484e65f82c with nextest profile: default
+    Starting 2 tests across 1 binary (20 tests skipped)
+        PASS [   0.693s] (1/2) ovis-terminal-cli::assembly restart::a_planned_restart_keeps_the_program_and_its_lifetime_and_serves_the_successor_boot
+        FAIL [  11.353s] (2/2) ovis-terminal-cli::assembly update::an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program
+  stdout ───
+
+    running 1 test
+    test update::an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program ... FAILED
+
+    failures:
+
+    failures:
+        update::an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 21 filtered out; finished in 11.30s
+
+  stderr ───
+
+    thread 'update::an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program' (617560) panicked at crates/ovis-terminal-cli/tests/assembly/support.rs:229:9:
+    assertion `left == right` failed: ["call", "update.query", "--params", "{}"]: Output { status: ExitStatus(unix_wait_status(3328)), stdout: "", stderr: "{\"error\":{\"exit_code\":13,\"hint\":\"inspect the operation; it may still be running\",\"kind\":\"deadline_exceeded\",\"message\":\"the server did not answer within 10000 ms\",\"origin\":\"cli\"}}\n" }
+      left: Some(13)
+     right: Some(0)
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [  11.354s] 2 tests run: 1 passed, 1 failed, 20 skipped
+        FAIL [  11.353s] (2/2) ovis-terminal-cli::assembly update::an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_program
+error: test run failed

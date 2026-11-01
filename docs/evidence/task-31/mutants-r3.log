@@ -1,0 +1,28 @@
+MUTANT crates/ovis-terminal-cli/src/assembly/identity.rs: '.checked_add(1)' -> '.checked_add(0)'
+filter test(each_start_takes_the_next_boot)
+[exit 0]
+        FAIL [   0.007s] (1/1) ovis-terminal-cli assembly::identity::tests::each_start_takes_the_next_boot_and_keeps_the_machine
+     Summary [   0.009s] 1 test run: 0 passed, 1 failed, 38 skipped
+        FAIL [   0.007s] (1/1) ovis-terminal-cli assembly::identity::tests::each_start_takes_the_next_boot_and_keeps_the_machine
+MUTANT crates/ovis-terminal-cli/src/assembly/recovery.rs: '.filter(|record| record.lifecycle.state() == TerminalState::Running)' -> '.filter(|record| record.lifecycle.state() != TerminalState::Running)'
+filter test(a_boot_after_a_crash)
+[exit 0]
+        FAIL [   0.249s] (1/1) ovis-terminal-cli::assembly restart::a_boot_after_a_crash_reports_only_the_programs_it_inherited
+     Summary [   0.251s] 1 test run: 0 passed, 1 failed, 38 skipped
+        FAIL [   0.249s] (1/1) ovis-terminal-cli::assembly restart::a_boot_after_a_crash_reports_only_the_programs_it_inherited
+MUTANT crates/ovis-terminal-cli/src/assembly/serve.rs: 'let control = booted.control;' -> 'let control = Arc::clone(&booted.control);'
+filter test(server_stop_names)
+[exit 0]
+        FAIL [   0.679s] (1/1) ovis-terminal-cli::assembly restart::server_stop_names_its_scope_ends_the_programs_and_the_server_stops_by_itself
+     Summary [   0.681s] 1 test run: 0 passed, 1 failed, 38 skipped
+        FAIL [   0.679s] (1/1) ovis-terminal-cli::assembly restart::server_stop_names_its_scope_ends_the_programs_and_the_server_stops_by_itself
+MUTANT crates/ovis-terminal-cli/src/assembly/lanes/agents.rs: remove the agent.children registration
+filter test(hello_advertises) | test(hosted_lanes)
+[exit 0]
+        FAIL [   0.206s] (1/2) ovis-terminal-cli::assembly lanes::hosted_lanes_answer_documents_plugins_prompts_and_status_over_the_socket
+    assertion `left == right` failed: ["call", "agent.children", "--params", "{\"target\":{\"address\":\"t1\"}}"]: Output { status: ExitStatus(unix_wait_status(1024)), stdout: "", stderr: "{\"error\":{\"code\":-32601,\"exit_code\":4,\"field_path\":\"method\",\"hint\":\"consult rpc.discover for supported methods\",\"kind\":\"method_not_found\",\"message\":\"no such JSON-RPC method\",\"origin\":\"server\",\"retryable\":false}}\n" }
+        FAIL [   0.266s] (2/2) ovis-terminal-cli::assembly hello_advertises_exactly_the_routed_methods_and_the_rest_is_method_not_found
+     Summary [   0.267s] 2 tests run: 0 passed, 2 failed, 37 skipped
+        FAIL [   0.206s] (1/2) ovis-terminal-cli::assembly lanes::hosted_lanes_answer_documents_plugins_prompts_and_status_over_the_socket
+        FAIL [   0.266s] (2/2) ovis-terminal-cli::assembly hello_advertises_exactly_the_routed_methods_and_the_rest_is_method_not_found
+error: test run failed

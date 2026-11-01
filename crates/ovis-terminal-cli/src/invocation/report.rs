@@ -108,6 +108,18 @@ fn cli_record(error: &CliError) -> Map<String, Value> {
         CliError::NotRunning { state, .. } => {
             record.insert("state".to_owned(), json!(state));
         }
+        #[cfg(unix)]
+        CliError::Attach(crate::attach::AttachError::Held { holder }) => {
+            record.insert("holder".to_owned(), holder.clone());
+        }
+        #[cfg(unix)]
+        CliError::Attach(crate::attach::AttachError::ConnectionLost {
+            closing: Some(closing),
+        }) => {
+            record.insert("closing".to_owned(), closing.clone());
+        }
+        #[cfg(unix)]
+        CliError::Attach(_) | CliError::Assembly(_) => {}
         CliError::Usage { .. }
         | CliError::MissingCommand
         | CliError::SkillWithCommand
@@ -117,6 +129,7 @@ fn cli_record(error: &CliError) -> Map<String, Value> {
         | CliError::Endpoint(_)
         | CliError::Io { .. }
         | CliError::Closed
+        | CliError::Restarted
         | CliError::Reply(_)
         | CliError::Result(_)
         | CliError::Timeout { .. }
@@ -196,6 +209,16 @@ impl Report {
         Self {
             stdout: text.into_bytes(),
             stderr: Vec::new(),
+            status: ExitStatus::Success,
+        }
+    }
+
+    /// A success whose stdout was the attached screen: the outcome record goes to stderr.
+    #[cfg(unix)]
+    pub(super) fn detached(record: &Value) -> Self {
+        Self {
+            stdout: Vec::new(),
+            stderr: format!("{record}\n").into_bytes(),
             status: ExitStatus::Success,
         }
     }

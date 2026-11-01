@@ -28,6 +28,19 @@ impl ServerIdentity {
     /// [`EndpointError::Methods`] for a method outside the published catalog and
     /// [`EndpointError::Identity`] when the identity does not form a hello result.
     pub fn new(runtime: RuntimeIdentity, methods: &[&str]) -> Result<Self, EndpointError> {
+        Self::with_transports(runtime, methods, &[TransportKind::Unix])
+    }
+
+    /// Like [`ServerIdentity::new`], advertising `transports` as the listeners served.
+    ///
+    /// # Errors
+    ///
+    /// The errors of [`ServerIdentity::new`].
+    pub fn with_transports(
+        runtime: RuntimeIdentity,
+        methods: &[&str],
+        transports: &[TransportKind],
+    ) -> Result<Self, EndpointError> {
         let methods =
             advertised_methods(methods.iter().copied()).map_err(EndpointError::Methods)?;
         let template = serde_json::from_value(json!({
@@ -38,7 +51,7 @@ impl ServerIdentity {
             "version": env!("CARGO_PKG_VERSION"),
             "methods": methods,
             "capabilities": {
-                "transports": [TransportKind::Unix],
+                "transports": transports,
                 "stream_modes": [],
                 "framed": true,
             },

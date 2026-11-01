@@ -97,9 +97,15 @@ where
         .authority
         .authorize(&call.session, &access.at(at))
         .map_err(|error| DispatchError::from(error).boundary())?;
+    let permit = Arc::clone(&state.reads)
+        .acquire_owned()
+        .await
+        .map_err(|_| DispatchError::Closed.boundary())?;
     let core = Arc::clone(&state.core);
     let answered = tokio::task::spawn_blocking(move || {
-        core.read_view(|snapshot| Ok::<_, EventError>(answer(snapshot)))
+        let answered = core.read_view(|snapshot| Ok::<_, EventError>(answer(snapshot)));
+        drop((core, permit));
+        answered
     })
     .await
     .map_err(|error| DispatchError::from(error).boundary())?;

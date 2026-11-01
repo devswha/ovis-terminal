@@ -9,7 +9,7 @@
   },
   "contract": {
     "schema": "schema/ovis-terminal.openrpc.json",
-    "sha256": "a998a8d9a1f6c179dda47515122461a2d548b0f98c7a3a3f62442006284b6c2d",
+    "sha256": "b2ecfb0dd8474675bd0eb5d3170fa0ada136f899953679cb2875086768a73004",
     "generation": "1",
     "methods": {
       "agent.append_records": {
@@ -11162,6 +11162,10 @@
         "code": -32000,
         "description": "The endpoint descriptor names a runtime that is gone."
       },
+      "stale_geometry": {
+        "code": -32000,
+        "description": "A geometry request names an epoch a newer transition superseded."
+      },
       "stale_seq": {
         "code": -32000,
         "description": "The report sequence is not newer than the current one."
@@ -11297,6 +11301,24 @@
           "$ref": "#/components/schemas/DocEntry"
         },
         "summary": "A document version changed."
+      },
+      "geometry.changed": {
+        "schema": {
+          "$ref": "#/components/schemas/GeometryEventData"
+        },
+        "summary": "A grid change committed before the holder heard of it."
+      },
+      "geometry.checkpoint": {
+        "schema": {
+          "$ref": "#/components/schemas/GeometryEventData"
+        },
+        "summary": "The screen was checkpointed at the new grid."
+      },
+      "geometry.input_ready": {
+        "schema": {
+          "$ref": "#/components/schemas/GeometryEventData"
+        },
+        "summary": "Input readiness returned at the new grid."
       },
       "graphics.dropped": {
         "schema": {
@@ -11723,7 +11745,7 @@
       "EndpointDescriptor": "bac7506b03ccb7372862b0ab54a748d6c627c95322e2ca8fb0febf5b956a9822",
       "ErrorData": "e7cd26bf05aae4a9ba709a6640d0df6c4ad1214d74535fbcd4f7a44867a3b8a2",
       "ErrorKindEntry": "07778ef8047e0705c00237b91bb5d1deb098c410519cb73c91d050797f1a6c9c",
-      "ErrorKindName": "38f819c26d1d24cba8b12171afa992ef2f931b97bbd612fe9c0618e56806cd87",
+      "ErrorKindName": "ba07ef6ddae71f5c2da659320235f830df57ffa9d2b29274de5f87b45738c546",
       "ErrorKindToken": "8072e24a95d477dcee3486d9f48fa3cde908c6927b08f928be491a456015e9e4",
       "EventCursor": "8987071ac361585e45c8043f2ce255aa84ce4e515e0b32f7ff1c43a8c5f592dc",
       "EventEnvelope": "7cfdc7b7dfc44a972f3c85dcc4a565006a2494e50a960d283a7b65def8d68410",
@@ -11756,6 +11778,8 @@
       "FirstMessageState": "4b4b1ba2ee27559e28323dce13c11fcd5eb4af3534a24124765d52ff8f5f6854",
       "ForegroundData": "43ec2f13f7d9042a1c6155d3ee1fe457eb7616bb98a100753bc1f99dd1c6117b",
       "Geometry": "203ba57fe5ad7513e2587dbcf6cca47f0587e5564819dde221e002c72f43be5d",
+      "GeometryEpoch": "8a783b84bcdaf7ceeb1a1fb73fc2c34110ee2351d560657760d04d1def035b90",
+      "GeometryEventData": "62d4d8022391a6ae33f80ea4849814e78e6b6f2329d496ba3b038e953dd13936",
       "GrantEpoch": "6b95537a7154619dbf17b172ced22ada59501d058746d68079ab33606c8a4867",
       "GraphicsDropReason": "90d513414d885a285e23e1cc76929884325da31a675652cf180d311695986ef9",
       "GraphicsDroppedData": "fe6f9284e048d7ac9914fbe6ab1b4258d46f1c700637fa5b234c54770d030445",

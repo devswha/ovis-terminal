@@ -23,6 +23,8 @@ use super::request::validated;
 use super::row::{Location, Row, Stored};
 use super::{AgentStatusEvent, Clear, ProcessOwner, ProcessTokens, Register, Report, StatusError};
 
+mod reads;
+
 /// Most child records one terminal keeps.
 const CHILD_LIMIT: usize = 64;
 

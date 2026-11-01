@@ -18,6 +18,7 @@ use super::records::{AgentBinding, StatusSnapshot, TerminalGeometry, TerminalRec
 use crate::domain::conversation_records::RecordsAppended;
 use crate::domain::graphics::{GraphicsDroppedData, GraphicsEvictedData};
 use crate::domain::session_binding::SessionBindingRecord;
+use crate::schema::events::GeometryEventData;
 
 /// Every event type, in publication order of the schema.
 pub(super) const EVENTS: &[EventSpec] = &[
@@ -121,6 +122,21 @@ pub(super) const EVENTS: &[EventSpec] = &[
         "lease.geometry",
         "Geometry ownership moved.",
         LeaseEventData
+    ),
+    event!(
+        "geometry.changed",
+        "A grid change committed before the holder heard of it.",
+        GeometryEventData
+    ),
+    event!(
+        "geometry.checkpoint",
+        "The screen was checkpointed at the new grid.",
+        GeometryEventData
+    ),
+    event!(
+        "geometry.input_ready",
+        "Input readiness returned at the new grid.",
+        GeometryEventData
     ),
     event!("stream.closed", "A stream closed.", StreamClosedData),
     event!("op.committed", "A long operation committed.", OpRecord),

@@ -111,6 +111,7 @@ impl ExitStatus {
                 "invalid_account",
                 "privileged_account",
                 "password_required",
+                "not_a_tty",
             ],
             Self::NotFound => &[
                 "not_found",
@@ -131,6 +132,7 @@ impl ExitStatus {
                 "not_ready",
                 "service_manager_unavailable",
                 "service_unsupported",
+                "connection_lost",
             ],
             Self::NeedsTarget => &["needs_target", "ambiguous_target"],
             Self::Blocked => &["blocked"],
@@ -148,6 +150,7 @@ impl ExitStatus {
                 "foreign_registration",
                 "identity_mismatch",
                 "service_exists",
+                "lease_held",
             ],
             Self::Forbidden => &[
                 "forbidden",
@@ -160,9 +163,11 @@ impl ExitStatus {
                 "no_lease",
                 "raw_not_authorized",
                 "takeover_not_authorized",
+                "attach_refused",
             ],
             Self::OutcomeUnknown => &[
                 "outcome_unknown",
+                "server_restart",
                 "deadline_exceeded",
                 "manager_timeout",
                 "holder_not_ready",

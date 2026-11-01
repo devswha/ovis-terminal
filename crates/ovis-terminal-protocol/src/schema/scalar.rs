@@ -87,6 +87,10 @@ decimal_newtype!(
     LeaseEpoch
 );
 decimal_newtype!(
+    /// Epoch of a terminal grid; bumps on every committed geometry change.
+    GeometryEpoch
+);
+decimal_newtype!(
     /// Incarnation counter of a terminal or a spawned program.
     Incarnation
 );

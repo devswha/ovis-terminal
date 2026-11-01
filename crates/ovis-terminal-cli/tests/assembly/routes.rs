@@ -1,0 +1,199 @@
+//! Discovery reads answer from this build's own document and agree with hello; the
+//! machine and service routes answer typed outcomes over the socket.
+
+use serde_json::{Value, json};
+
+use super::support::{Served, TestResult, op_id};
+
+fn call(served: &Served, method: &str, params: &Value) -> TestResult<Value> {
+    served.ok(&["call", method, "--params", &params.to_string()])
+}
+
+/// The JSON error line of a refused call, whatever its exit status.
+fn error(served: &Served, method: &str, params: &Value) -> TestResult<Value> {
+    let output = served.cli(&["call", method, "--params", &params.to_string()])?;
+    assert!(!output.status.success(), "{method} succeeded: {output:?}");
+    let record: Value = serde_json::from_slice(&output.stderr)?;
+    Ok(record.get("error").cloned().ok_or("error record")?)
+}
+
+fn names(list: Option<&Value>) -> Vec<Value> {
+    list.and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| entry.get("name").cloned())
+        .collect()
+}
+
+#[test]
+fn discovery_reads_answer_from_the_committed_document_and_agree_with_hello() -> TestResult {
+    let served = Served::start()?;
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../schema/ovis-terminal.openrpc.json"
+    );
+    let document: Value = serde_json::from_slice(&std::fs::read(path)?)?;
+    assert_eq!(call(&served, "rpc.discover", &json!({}))?, document);
+    let errors = call(&served, "schema.errors", &json!({}))?;
+    assert_eq!(errors.get("kinds"), document.get("x-error-kinds"));
+    let events = call(&served, "schema.events", &json!({}))?;
+    let published = names(document.get("x-events"));
+    assert_ne!(published, Vec::<Value>::new());
+    assert_eq!(names(events.get("events")), published);
+    let capabilities = call(&served, "schema.capabilities", &json!({}))?;
+    let hello = served.hello_reply(served.bearer())?;
+    for field in ["capabilities", "limits", "generation"] {
+        assert_eq!(
+            capabilities.get(field),
+            hello.pointer(&format!("/result/{field}")),
+            "{field}: {capabilities} vs {hello}"
+        );
+    }
+    let numeric = error(&served, "schema.errors", &json!({"extra": 1}))?;
+    assert_eq!(
+        numeric.get("kind"),
+        Some(&json!("invalid_params")),
+        "{numeric}"
+    );
+    served.stop()?;
+    Ok(())
+}
+
+#[test]
+fn metrics_count_every_settled_call_and_status_reports_the_published_census() -> TestResult {
+    let served = Served::start()?;
+    let before = call(&served, "server.status", &json!({}))?;
+    assert_eq!(before.get("live_terminals"), Some(&json!("0")), "{before}");
+    served.run_shell("shell")?;
+    for _ in 0..3 {
+        call(&served, "terminal.list", &json!({}))?;
+    }
+    let refused = error(
+        &served,
+        "terminal.get",
+        &json!({"target": {"address": "t9"}}),
+    )?;
+    assert_eq!(refused.get("kind"), Some(&json!("not_found")), "{refused}");
+    let status = call(&served, "server.status", &json!({}))?;
+    assert_eq!(status.get("live_terminals"), Some(&json!("1")), "{status}");
+    assert_eq!(status.get("holder_count"), Some(&json!("1")), "{status}");
+    let metrics = call(&served, "server.metrics", &json!({}))?;
+    let row = |method: &str| {
+        metrics
+            .get("rpc_latency")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .find(|row| row.get("method") == Some(&json!(method)))
+            .cloned()
+    };
+    let listed = row("terminal.list").ok_or_else(|| metrics.to_string())?;
+    assert_eq!(listed.get("calls"), Some(&json!("3")), "{listed}");
+    let got = row("terminal.get").ok_or_else(|| metrics.to_string())?;
+    assert_eq!(got.get("failures"), Some(&json!("1")), "{got}");
+    assert_eq!(metrics.get("server_boot_id"), status.get("server_boot_id"));
+    let reset = error(&served, "server.metrics", &json!({"reset": true}))?;
+    assert_eq!(reset.get("kind"), Some(&json!("invalid_params")), "{reset}");
+    served.stop()?;
+    Ok(())
+}
+
+#[test]
+fn input_barrier_reports_the_admitted_input_reached_once_its_echo_arrived() -> TestResult {
+    let served = Served::start()?;
+    served.run_shell("shell")?;
+    let t1 = json!({"address": "t1"});
+    let sent = call(
+        &served,
+        "input.send",
+        &json!({"op_id": op_id()?, "target": t1, "expect": null,
+            "text": "echo barrier-$((6+6))", "submit": "enter", "lease_id": null}),
+    )?;
+    let queued = sent
+        .pointer("/receipt/queued_seq")
+        .cloned()
+        .ok_or_else(|| sent.to_string())?;
+    let cursor = sent
+        .pointer("/receipt/output_cursor/offset")
+        .cloned()
+        .ok_or_else(|| sent.to_string())?;
+    let waited = call(
+        &served,
+        "terminal.wait_output",
+        &json!({"target": t1, "cursor": {"offset": cursor},
+            "pattern": {"text": "barrier-12"}, "timeout_ms": "10000"}),
+    )?;
+    assert_eq!(waited.get("outcome"), Some(&json!("matched")), "{waited}");
+    let barrier = call(
+        &served,
+        "input.barrier",
+        &json!({"target": t1, "queued_seq": queued}),
+    )?;
+    assert_eq!(barrier.get("reached"), Some(&json!(true)), "{barrier}");
+    assert_eq!(barrier.get("pending_bytes"), Some(&json!("0")), "{barrier}");
+    let ahead = error(
+        &served,
+        "input.barrier",
+        &json!({"target": t1, "queued_seq": "999"}),
+    )?;
+    assert_eq!(ahead.get("kind"), Some(&json!("seq_ahead")), "{ahead}");
+    served.stop()?;
+    Ok(())
+}
+
+#[test]
+fn agent_history_lists_only_below_its_root_and_the_boundary_policy_bounds_payloads() -> TestResult {
+    let served = Served::start()?;
+    let stores = served.root().join("state").join("agent-stores");
+    std::fs::create_dir_all(stores.join("claude"))?;
+    std::fs::write(stores.join("claude").join("session-1.jsonl"), b"{}\n")?;
+    let listed = call(&served, "agent.history", &json!({"store": "claude"}))?;
+    let sessions = listed.get("sessions").and_then(Value::as_array);
+    assert_eq!(sessions.map(Vec::len), Some(1), "{listed}");
+    let escaped = error(&served, "agent.history", &json!({"store": "../../secret"}))?;
+    assert_eq!(escaped.get("kind"), Some(&json!("forbidden")), "{escaped}");
+    let huge = "x".repeat(70_000);
+    let run = json!({"op_id": op_id()?, "program": {"argv": ["/bin/echo", huge]},
+        "geometry": {"cols": 80, "rows": 24}, "cwd": "/tmp", "env": {}, "name": null,
+        "labels": null, "parent": null, "child_policy": null, "keep": null,
+        "first_message": null, "machine": null});
+    let bounded = error(&served, "terminal.run", &run)?;
+    assert_ne!(
+        bounded.get("kind"),
+        Some(&json!("spawn_failed")),
+        "{bounded}"
+    );
+    assert!(bounded.get("bound").is_some(), "{bounded}");
+    served.stop()?;
+    Ok(())
+}
+
+#[test]
+fn service_describe_and_machine_add_answer_typed_outcomes_over_the_socket() -> TestResult {
+    let served = Served::start()?;
+    let described = error(&served, "service.describe", &json!({}))?;
+    assert_eq!(
+        described.get("kind"),
+        Some(&json!("unavailable")),
+        "{described}"
+    );
+    let added = error(
+        &served,
+        "machine.add",
+        &json!({"op_id": op_id()?, "name": "gone", "transport": {"argv": ["/bin/false"]},
+            "credential": "unused", "expected_machine_id": null}),
+    )?;
+    assert_ne!(
+        added.get("kind"),
+        Some(&json!("method_not_found")),
+        "{added}"
+    );
+    let listed = error(
+        &served,
+        "machine.get",
+        &json!({"machine": {"name": "gone"}}),
+    )?;
+    assert_eq!(listed.get("kind"), Some(&json!("not_found")), "{listed}");
+    served.stop()?;
+    Ok(())
+}

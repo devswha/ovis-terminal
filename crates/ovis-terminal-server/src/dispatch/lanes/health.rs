@@ -18,6 +18,7 @@ use ovis_terminal_core::ops::{OperationEvent, OperationSnapshot};
 use ovis_terminal_core::registry::{MachineId, RuntimeIdentity};
 use ovis_terminal_protocol::errors::{BoundaryError, ErrorKind, OpId};
 use ovis_terminal_protocol::schema::common::NoParams;
+use ovis_terminal_protocol::schema::limits::TransportKind;
 use ovis_terminal_protocol::schema::scalar::EventSeq;
 use ovis_terminal_store::{Snapshot, StoreError};
 use serde::Serialize;
@@ -145,6 +146,10 @@ impl<H> Measured<H> {
 impl<H: RequestHandler> RequestHandler for Measured<H> {
     fn methods(&self) -> Vec<&'static str> {
         self.inner.methods()
+    }
+
+    fn transports(&self) -> Vec<TransportKind> {
+        self.inner.transports()
     }
 
     async fn call(&self, call: Call) -> Result<Value, BoundaryError> {

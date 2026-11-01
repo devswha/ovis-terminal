@@ -1,19 +1,925 @@
 {
+  "format": "ovis-conformance/1",
   "scenario": "services/worktrees",
   "title": "Explicit worktree identities and destructive scope over the real socket",
   "todo": 45,
-  "closes": ["GAP-114", "GAP-115"],
-  "delivers": ["IDEAL-087", "IDEAL-088"],
-  "platforms": ["linux", "macos"],
+  "closes": [
+    "GAP-114",
+    "GAP-115"
+  ],
+  "delivers": [
+    "IDEAL-087",
+    "IDEAL-088"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
   "cases": [
     {
       "case": "happy",
-      "summary": "In an isolated Git fixture, worktree.create from the primary checkout's explicit id returns branch, source and seq; worktree.open links one workspace; worktree.remove without group scope is scope_required and names the checkout and workspace; with group scope it closes exactly that workspace and removes the checkout; worktree.list then shows only the primary checkout."
+      "summary": "A program in the isolated root creates a Git repository and registers it in <state>/worktrees.json; after a planned restart the successor lists the primary checkout, creates one from its explicit id, opens it as a layout workspace, refuses removal without group scope (scope_required) and with group scope closes exactly that workspace and removes the checkout.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "worktree.list",
+                  "worktree.create",
+                  "worktree.open",
+                  "worktree.remove",
+                  "server.restart"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "set -e; r=$(pwd); mkdir -p wt/repo wt/checkouts; cd wt/repo; git init -q -b main; echo kept > README; git add README; git -c user.name=t -c user.email=t@e commit -qm init; cd \"$r\"; printf '{\"root\":\"%s/wt\",\"repositories\":[{\"id\":\"repo:main\",\"path\":\"%s/wt/repo\",\"checkouts\":\"%s/wt/checkouts\"}]}' \"$r\" \"$r\" \"$r\" > srv/state/worktrees.json; echo REGISTERED-$((1+1))"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": null,
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "register",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "written",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "REGISTERED-2"
+                  },
+                  "timeout_ms": "20000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "written": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "restart",
+                "method": "server.restart",
+                "params": {
+                  "op_id": "$op:restart"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "restart": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/server_boot_id_new": {
+                  "$capture": "boot_new"
+                }
+              }
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "control",
+            "method": "$/closing",
+            "expect": {
+              "/params/reason": "server_restart"
+            }
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "announced": {
+            "expect": {
+              "/restarted/server_boot_id": "$value:boot_new"
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "wt",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "wt",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/server_boot_id": "$value:boot_new"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "primary",
+                "method": "worktree.list",
+                "params": {
+                  "repository_id": "repo:main"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "primary": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/worktrees/0/checkout_id": {
+                  "$capture": "primary"
+                },
+                "/result/worktrees/1": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "create",
+                "method": "worktree.create",
+                "params": {
+                  "op_id": "$op:create",
+                  "repository_id": "repo:main",
+                  "source": "$value:primary",
+                  "branch": "feature"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "create": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/worktree/branch": "feature",
+                "/result/worktree/source": "$value:primary",
+                "/result/worktree/checkout_id": {
+                  "$capture": "checkout"
+                },
+                "/result/worktree/path": {
+                  "$capture": "path"
+                },
+                "/result/seq": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "worktree.open",
+                "params": {
+                  "op_id": "$op:open",
+                  "checkout_id": "$value:checkout"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/worktree/workspaces/0": {
+                  "$capture": "workspace"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "layout",
+                "method": "layout.get",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "layout": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/workspaces/0/workspace_id": "$value:workspace"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "scoped",
+                "method": "worktree.remove",
+                "params": {
+                  "op_id": "$op:scoped",
+                  "checkout_id": "$value:checkout",
+                  "scope": {
+                    "group": false,
+                    "force": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "scoped": {
+                "/error/data/kind": "scope_required"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "remove",
+                "method": "worktree.remove",
+                "params": {
+                  "op_id": "$op:remove",
+                  "checkout_id": "$value:checkout",
+                  "scope": {
+                    "group": true,
+                    "force": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "remove": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/affected_workspaces/0": "$value:workspace",
+                "/result/affected_workspaces/1": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "closed-layout",
+                "method": "layout.get",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "closed-layout": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/workspaces": []
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "only-primary",
+                "method": "worktree.list",
+                "params": {
+                  "repository_id": "repo:main"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "only-primary": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/worktrees/0/checkout_id": "$value:primary",
+                "/result/worktrees/1": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
     },
     {
       "case": "failure",
-      "summary": "worktree.remove of a dirty checkout with scope {group:false, force:false} is checkout_dirty, error.data.affected lists the checkout id, and the untracked file and every workspace survive. The plan's flat {checkout_id, force, group} payload without op_id is invalid_params before any effect."
+      "summary": "Removing a checkout holding an untracked file with scope {group:true, force:false} is checkout_dirty and the checkout survives; the plan's flat payload without op_id is invalid_params.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "worktree.list",
+                  "worktree.create",
+                  "worktree.open",
+                  "worktree.remove",
+                  "server.restart"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "set -e; r=$(pwd); mkdir -p wt/repo wt/checkouts; cd wt/repo; git init -q -b main; echo kept > README; git add README; git -c user.name=t -c user.email=t@e commit -qm init; cd \"$r\"; printf '{\"root\":\"%s/wt\",\"repositories\":[{\"id\":\"repo:main\",\"path\":\"%s/wt/repo\",\"checkouts\":\"%s/wt/checkouts\"}]}' \"$r\" \"$r\" \"$r\" > srv/state/worktrees.json; echo REGISTERED-$((1+1))"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": null,
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "register",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "written",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "REGISTERED-2"
+                  },
+                  "timeout_ms": "20000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "written": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "restart",
+                "method": "server.restart",
+                "params": {
+                  "op_id": "$op:restart"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "restart": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/server_boot_id_new": {
+                  "$capture": "boot_new"
+                }
+              }
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "control",
+            "method": "$/closing",
+            "expect": {
+              "/params/reason": "server_restart"
+            }
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "announced": {
+            "expect": {
+              "/restarted/server_boot_id": "$value:boot_new"
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "wt",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "wt",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/server_boot_id": "$value:boot_new"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "primary",
+                "method": "worktree.list",
+                "params": {
+                  "repository_id": "repo:main"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "primary": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/worktrees/0/checkout_id": {
+                  "$capture": "primary"
+                },
+                "/result/worktrees/1": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "create",
+                "method": "worktree.create",
+                "params": {
+                  "op_id": "$op:create",
+                  "repository_id": "repo:main",
+                  "source": "$value:primary",
+                  "branch": "feature"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "create": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/worktree/branch": "feature",
+                "/result/worktree/source": "$value:primary",
+                "/result/worktree/checkout_id": {
+                  "$capture": "checkout"
+                },
+                "/result/worktree/path": {
+                  "$capture": "path"
+                },
+                "/result/seq": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "dirty",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:dirty",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "echo scratch > \"$1/untracked\"; echo DIRTY-$((1+1))",
+                      "sh",
+                      "$value:path"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": null,
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "dirty",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "dirty": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": {
+                  "$capture": "dirtier"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "dirtied",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:dirtier"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "DIRTY-2"
+                  },
+                  "timeout_ms": "20000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "dirtied": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "refused",
+                "method": "worktree.remove",
+                "params": {
+                  "op_id": "$op:refused",
+                  "checkout_id": "$value:checkout",
+                  "scope": {
+                    "group": true,
+                    "force": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "refused": {
+                "/error/data/kind": "checkout_dirty"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "flat",
+                "method": "worktree.remove",
+                "params": {
+                  "checkout_id": "$value:checkout",
+                  "force": false,
+                  "group": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "flat": {
+                "/error/data/kind": "invalid_params"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "wt",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "kept",
+                "method": "worktree.list",
+                "params": {
+                  "repository_id": "repo:main"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "wt",
+            "expect": {
+              "kept": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/worktrees/1/checkout_id": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
     }
-  ],
-  "executed_today_by": "cargo test -p ovis-terminal-server --test dispatch worktrees (same socket, dispatcher, SQLite coordinator and Git; see docs/evidence/task-45/)"
+  ]
 }

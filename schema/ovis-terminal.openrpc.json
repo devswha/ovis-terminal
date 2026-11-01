@@ -2708,6 +2708,7 @@
           "lease_revoked",
           "lease_conflict",
           "lease_epoch_mismatch",
+          "stale_geometry",
           "blocked",
           "not_ready",
           "recovering",
@@ -3734,6 +3735,78 @@
         "required": [
           "cols",
           "rows"
+        ],
+        "type": "object"
+      },
+      "GeometryEpoch": {
+        "description": "GeometryEpoch carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
+      "GeometryEventData": {
+        "description": "Data of `geometry.changed`, `geometry.checkpoint` and `geometry.input_ready`.",
+        "properties": {
+          "epoch": {
+            "$ref": "#/components/schemas/GeometryEpoch",
+            "description": "Grid epoch of the transition."
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/Geometry",
+            "description": "Grid at this step."
+          },
+          "output_offset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ByteOffset"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Raw output offset the step applies at."
+          },
+          "owner_lease": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeaseId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Geometry lease that requested the change, for `geometry.changed`."
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Geometry"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Grid before the change, for `geometry.changed`."
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Revision"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Screen revision at the new grid, for the checkpoint and input readiness."
+          },
+          "terminal_id": {
+            "$ref": "#/components/schemas/TerminalId",
+            "description": "Terminal whose grid changed."
+          }
+        },
+        "required": [
+          "terminal_id",
+          "epoch",
+          "geometry"
         ],
         "type": "object"
       },
@@ -23361,6 +23434,11 @@
     },
     {
       "code": -32000,
+      "description": "A geometry request names an epoch a newer transition superseded.",
+      "kind": "stale_geometry"
+    },
+    {
+      "code": -32000,
       "description": "The program is blocked on a prompt; answer it instead.",
       "kind": "blocked"
     },
@@ -24003,6 +24081,27 @@
         "$ref": "#/components/schemas/LeaseEventData"
       },
       "summary": "Geometry ownership moved."
+    },
+    {
+      "name": "geometry.changed",
+      "schema": {
+        "$ref": "#/components/schemas/GeometryEventData"
+      },
+      "summary": "A grid change committed before the holder heard of it."
+    },
+    {
+      "name": "geometry.checkpoint",
+      "schema": {
+        "$ref": "#/components/schemas/GeometryEventData"
+      },
+      "summary": "The screen was checkpointed at the new grid."
+    },
+    {
+      "name": "geometry.input_ready",
+      "schema": {
+        "$ref": "#/components/schemas/GeometryEventData"
+      },
+      "summary": "Input readiness returned at the new grid."
     },
     {
       "name": "stream.closed",

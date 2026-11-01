@@ -7,6 +7,7 @@ use ovis_terminal_authz::{Authority, AuthzError, Session};
 use ovis_terminal_core::registry::RegistryIdentities;
 use ovis_terminal_core::telemetry::redaction::redacted;
 use ovis_terminal_protocol::errors::{BoundaryError, ErrorData, ErrorKind};
+use ovis_terminal_protocol::schema::limits::TransportKind;
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use serde_json::Value;
 
@@ -116,6 +117,10 @@ fn withhold_secrets(error: BoundaryError) -> BoundaryError {
 impl<H: RequestHandler> RequestHandler for BoundaryPolicy<H> {
     fn methods(&self) -> Vec<&'static str> {
         self.inner.methods()
+    }
+
+    fn transports(&self) -> Vec<TransportKind> {
+        self.inner.transports()
     }
 
     async fn call(&self, call: Call) -> Result<Value, BoundaryError> {
