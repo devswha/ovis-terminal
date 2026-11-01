@@ -170,6 +170,14 @@ impl Client {
         Ok(())
     }
 
+    pub(super) async fn notify(&mut self, method: &str, params: &Value) -> TestResult {
+        let notification = json!({"jsonrpc": "2.0", "method": method, "params": params});
+        let mut bytes = serde_json::to_vec(&notification)?;
+        bytes.push(b'\n');
+        self.0.get_mut().write_all(&bytes).await?;
+        Ok(())
+    }
+
     pub(super) async fn reply(&mut self) -> TestResult<Value> {
         let mut line = String::new();
         let read = tokio::time::timeout(super::HANG, self.0.read_line(&mut line)).await??;

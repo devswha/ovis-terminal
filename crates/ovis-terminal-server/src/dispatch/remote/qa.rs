@@ -197,6 +197,31 @@ async fn an_observer_may_read_a_machine_but_never_send_it_input() -> TestResult 
     harness.close().await
 }
 
+#[tokio::test]
+async fn a_cancel_request_ends_only_the_named_call_and_the_connection_keeps_serving() -> TestResult
+{
+    let harness = Harness::start(DEADLINE).await?;
+    let mut slow = harness.machine(("slow", 0xc1), Mode::Silent).await?;
+    let mut client = harness.client(&harness.bearer).await?;
+
+    client
+        .send("input.send", &send("o-held", "slow/t1"))
+        .await?;
+    slow.read(1).await?;
+    client
+        .notify("$/cancelRequest", &json!({"id": "input.send"}))
+        .await?;
+    let cancelled = client.reply().await?;
+    let after = client
+        .call("terminal.get", &json!({"target": {"address": "t1"}}))
+        .await?;
+
+    assert_eq!(cancelled.get("id"), Some(&json!("input.send")));
+    assert_eq!(data(&cancelled, "kind"), Some(&json!("cancelled")));
+    assert_eq!(after.pointer("/result/local"), Some(&json!("terminal.get")));
+    harness.close().await
+}
+
 #[test]
 fn a_refusal_this_build_cannot_read_is_internal_never_a_success() {
     let numeric = json!({"code": -32000, "message": "x", "data": {
