@@ -67,6 +67,26 @@ Post-merge gates on `05651a7`:
 | `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` | 0 | 1207 tests run: 1207 passed, 1 skipped; hygiene 0 violations in 1182 files; 143 JSON files checked (`r2-merge-check.log`). This run started before the 2026-11-01 RAM-target host rule (`env.sh` changed at 15:59 +0900) and used the on-disk target |
 | `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` / `cargo clippy ... -- -D warnings` | 0 / 0 | `r2-merge-windows-check.log`; ran under the RAM-target rule (`CARGO_TARGET_DIR=/dev/shm/ovt-target-lane-t86`) |
 
+## Merge: integration 26278c1 (merge-only round)
+
+origin/integration moved to `26278c1` (T59 health and metrics, with regenerated schema and SDK), and this PR conflicted again. As authorized, I merged it in `228b7d6` (parents `d9e88f7` and `26278c1`); nothing was rebased or force-pushed. Round 2 content is unchanged.
+- `crates/ovis-terminal-protocol/src/domain.rs`: union of the mod lines (`pub mod graphics;` and `pub mod health;`).
+- `.github/workflows/probe-stress-macos.yml`: integration's file, with `graphics-caps` appended last, after `health`, both to the options and as the final job.
+- `schema/ovis-terminal.openrpc.json`: regenerated with `openrpc write`. `check` reports it fresh, and `compat schema/released.openrpc.json` exits 0 (`r3-merge-schema-compat.log`). It is a strict superset of integration's document: no method, event, component schema or limit is missing, and the only additions are the five graphics schemas and the two graphics limits.
+- `packages/client-ts/src/generated`: integration's files taken as the base, regenerated with `bun run generate`, and committed with the merge.
+- `Cargo.lock`: neither side changed it, so it is identical to integration's; `cargo metadata --locked` exits 0.
+
+Post-merge gates on `228b7d6`. All cargo ran on the RAM target `CARGO_TARGET_DIR=/dev/shm/ovt-target-lane-t86` under the 2026-11-01 host rule.
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo nextest run -p ovis-terminal-core -p ovis-terminal-protocol --locked` | 0 | 584 tests run, 584 passed (`r3-merge-nextest.log`) |
+| `cargo clippy -p ovis-terminal-protocol --all-targets --all-features --locked -- -D warnings` | 0 | `r3-merge-clippy.log` |
+| `conformance --binary $CARGO_TARGET_DIR/debug/ovis-terminal --scenario part-a/task-86 --isolated --case all` | 0 | 2 cases, 8 assertions (`r3-merge-conformance.log/json`) |
+| SDK gate (`bun run generate && generate:check && typecheck && bun test`, with `OVIS_CONFORMANCE_BIN`/`OVIS_TERMINAL_BIN` from the RAM target and `TMPDIR=$OVIS_FIXTURE_ROOT`) | 0 | Attempt 2: generate changed 0 files, 30 pass, 0 fail. Attempt 1 failed 6 tests. Every fixture-starting test got `sqlite ... disk I/O error (778)` opening its store, and the runner-replay test's evidence JSON came back empty. I classified that as a transient host write failure on `/dev/shm`: the identical binary and environment started cleanly minutes later, another lane's fixtures failed in the same directory at the same time, and `/dev/shm` was at 80%. My leaked fixture roots were removed before attempt 2 (`r3-merge-sdk.log`) |
+| `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` | 0 | Attempt 2: 1232 tests run, 1232 passed, 1 skipped; hygiene 0 violations in 1201 files; 158 JSON files checked (`r3-merge-check.log`). It was a cold build from a wiped RAM target with `CARGO_INCREMENTAL=0`, which matches CI because `Swatinem/rust-cache@v2` sets it, and `CARGO_PROFILE_{DEV,TEST}_DEBUG=line-tables-only`. The second setting shrinks binaries only: opt-level, debug-assertions and overflow checks are unchanged, and backtraces keep file:line. The whole target came to 4.3G. Attempt 1 used the default profile and failed with `Disk quota exceeded (os error 122)` at about 37G: `/dev/shm` is `tmpfs ... usrquota`, shared by every lane since they all run as one user (`r3-merge-check-attempt1-quota.log`) |
+| `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` / `cargo clippy ... -- -D warnings` | 0 / 0 | Attempt 2 from a wiped RAM target with the same overrides (`r3-merge-windows-check.log`). Attempt 1 hit the same `/dev/shm` user quota (`r3-merge-windows-check-attempt1-quota.log`) |
+
 ## Seams
 
 - Write scope named `crates/ovis-terminal-core/src/limits.rs`, but that file does not exist. The runtime `Limits::v1` lives in `crates/ovis-terminal-protocol/src/schema/limits.rs`, which core already reads (`docs/service.rs`, `ops/params.rs`, `subscriptions/limits.rs`). The two fields were added there, additively.

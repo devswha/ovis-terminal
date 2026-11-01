@@ -1,0 +1,23 @@
+== attempt 1 (16:34, failed: 6 tests; every fixture-starting test got 'the fixture server failed to open the store: sqlite operation failed: disk I/O error: Error code 778', and the runner-replay test's evidence JSON was empty) ==
+bins: /dev/shm/ovt-target-lane-t86/debug/conformance /dev/shm/ovt-target-lane-t86/debug/ovis-terminal tmp=/dev/shm/ovt-fixtures
+{"generated":"written","files":31,"changed":0}
+{"generated":"fresh","files":31}
+$ tsc --noEmit -p tsconfig.json
+ 24 pass
+ 6 fail
+ 3298 expect() calls
+Ran 30 tests across 5 files. [7.83s]
+EXIT=1
+
+classification: transient host write failure on /dev/shm, not this change. The identical fixture binary and env (TMPDIR=/dev/shm/ovt-fixtures) started cleanly at 16:36 in an A/B/C launch; another lane's fixture roots failed in the same directory at 16:34:26; /dev/shm was at 80% (37G/47G) with concurrent lanes' RAM targets. My 10 leaked fixture roots were removed before attempt 2.
+
+== attempt 2 (single gate run) ==
+bins: /dev/shm/ovt-target-lane-t86/debug/conformance /dev/shm/ovt-target-lane-t86/debug/ovis-terminal tmp=/dev/shm/ovt-fixtures
+{"generated":"written","files":31,"changed":0}
+{"generated":"fresh","files":31}
+$ tsc --noEmit -p tsconfig.json
+ 30 pass
+ 0 fail
+ 3365 expect() calls
+Ran 30 tests across 5 files. [8.66s]
+EXIT=0
