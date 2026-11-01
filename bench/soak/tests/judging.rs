@@ -44,6 +44,7 @@ fn measured(tally: &Tally) -> Measured<'_> {
         disk_peak: 50 * MIB,
         planned_exits: vec![Some(0)],
         probe: Some(Probe {
+            ran: true,
             dedicated: "unknown:holder_unreachable".to_owned(),
             shared_survived: 49,
             shared_expected: 49,
@@ -99,6 +100,7 @@ fn the_probe_must_lose_only_the_dedicated_terminal() {
     let tally = answered();
     let mut wrong = measured(&tally);
     wrong.probe = Some(Probe {
+        ran: true,
         dedicated: "survived".to_owned(),
         shared_survived: 48,
         shared_expected: 49,
@@ -108,6 +110,9 @@ fn the_probe_must_lose_only_the_dedicated_terminal() {
         rules(&wrong),
         vec!["dedicated_holder_loss", "shared_holder_isolation"]
     );
+    // A run that ended before the probe reports that, not a fake isolation failure.
+    wrong.probe = Some(Probe::default());
+    assert_eq!(rules(&wrong), vec!["holder_loss_probe_not_run"]);
 }
 
 #[test]

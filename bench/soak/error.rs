@@ -43,6 +43,17 @@ pub enum SoakError {
         #[source]
         source: io::Error,
     },
+    /// A file-system operation on a named path failed.
+    #[error("{operation} failed at {}", path.display())]
+    PathIo {
+        /// What was being done.
+        operation: &'static str,
+        /// The path it was done to.
+        path: std::path::PathBuf,
+        /// I/O failure.
+        #[source]
+        source: io::Error,
+    },
     /// A JSON record could not be encoded or decoded.
     #[error("a JSON record could not be encoded or decoded")]
     Json {
@@ -122,7 +133,7 @@ impl SoakError {
             Self::NotIsolated => "not_isolated",
             Self::Inject { .. } => "invalid_inject",
             Self::Binary { .. } => "binary_unavailable",
-            Self::Io { .. } => "io",
+            Self::Io { .. } | Self::PathIo { .. } => "io",
             Self::Json { .. } => "json",
             Self::HolderNotReady { .. } => "holder_not_ready",
             Self::Timeout { .. } => "timeout",
@@ -146,7 +157,9 @@ impl SoakError {
                 "pass --inject '{\"fixture\":\"holder-tail-gap-and-lost-receipt\"}'"
             }
             Self::Binary { .. } => "build it with cargo build --release -p ovis-terminal-cli",
-            Self::Io { .. } | Self::Json { .. } => "inspect the evidence directory and free space",
+            Self::Io { .. } | Self::PathIo { .. } | Self::Json { .. } => {
+                "inspect the evidence directory and free space"
+            }
             Self::HolderNotReady { .. } => "run the binary's `service run` by hand to see why",
             Self::Timeout { .. } | Self::ControlGone { .. } | Self::ChildExited { .. } => {
                 "read the control process stderr companion beside the evidence"

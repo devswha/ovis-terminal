@@ -152,24 +152,52 @@ impl HolderProcess {
     }
 }
 
-/// Bytes of every file below `root`, from file metadata.
+/// What the file system says about `path` now; `None` when it no longer exists.
+///
+/// The run root changes while it is measured: staged checkpoints are renamed into place
+/// and sockets are removed at a handover, so an entry listed a moment ago may be gone.
+pub(super) fn stat_now(path: &Path) -> Result<Option<std::fs::Metadata>, SoakError> {
+    match std::fs::symlink_metadata(path) {
+        Ok(metadata) => Ok(Some(metadata)),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(source) => Err(SoakError::PathIo {
+            operation: "stat the run root",
+            path: path.to_path_buf(),
+            source,
+        }),
+    }
+}
+
+/// Bytes of every file below `root`, from file metadata; entries that vanish while the
+/// walk runs count as gone, any other failure is reported.
 pub(super) fn disk_bytes(root: &Path) -> Result<u64, SoakError> {
     let mut total = 0_u64;
     let mut pending = vec![root.to_path_buf()];
     while let Some(dir) = pending.pop() {
-        for entry in std::fs::read_dir(&dir).map_err(SoakError::io("list the run root"))? {
-            let entry = entry.map_err(SoakError::io("list the run root"))?;
-            let kind = entry
-                .file_type()
-                .map_err(SoakError::io("stat the run root"))?;
-            if kind.is_dir() {
+        let entries = match std::fs::read_dir(&dir) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(source) => {
+                return Err(SoakError::PathIo {
+                    operation: "list the run root",
+                    path: dir,
+                    source,
+                });
+            }
+        };
+        for entry in entries {
+            let entry = entry.map_err(|source| SoakError::PathIo {
+                operation: "list the run root",
+                path: dir.clone(),
+                source,
+            })?;
+            let Some(metadata) = stat_now(&entry.path())? else {
+                continue;
+            };
+            if metadata.is_dir() {
                 pending.push(entry.path());
-            } else if kind.is_file() {
-                let length = entry
-                    .metadata()
-                    .map_err(SoakError::io("stat the run root"))?
-                    .len();
-                total = total.saturating_add(length);
+            } else if metadata.is_file() {
+                total = total.saturating_add(metadata.len());
             }
         }
     }

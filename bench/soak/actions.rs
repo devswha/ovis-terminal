@@ -154,6 +154,7 @@ impl Run<'_> {
             .filter(|recovered| recovered.survival == (Survival::Survived {}))
             .count();
         Ok(Probe {
+            ran: true,
             dedicated,
             shared_survived: u64::try_from(shared_survived).unwrap_or(u64::MAX),
             shared_expected: u64::try_from(last).unwrap_or(u64::MAX),

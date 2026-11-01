@@ -9,7 +9,9 @@ use clap::Parser as _;
 use ovis_terminal_protocol::schema::scalar::EventSeq;
 
 use super::cli::Cli;
+use super::holders::{disk_bytes, stat_now};
 use super::plan::{Kind, schedule};
+use super::samples::parse_ps;
 use super::wire::Line;
 
 const fn secs(value: u64) -> Duration {
@@ -116,4 +118,35 @@ fn a_relative_binary_is_pinned_to_its_absolute_path_before_any_process_starts() 
         missing.plan().err().map(|error| error.kind()),
         Some("binary_unavailable")
     );
+}
+
+#[test]
+fn a_run_root_entry_that_vanished_is_gone_not_a_failure() {
+    let base = std::env::var_os("OVIS_FIXTURE_ROOT")
+        .map_or_else(std::env::temp_dir, std::path::PathBuf::from);
+    let root = base.join(format!("soak-disk-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("state")).unwrap();
+    std::fs::write(root.join("state/checkpoint"), [0_u8; 1000]).unwrap();
+    std::fs::write(root.join("samples"), [0_u8; 24]).unwrap();
+    assert_eq!(disk_bytes(&root).unwrap(), 1024);
+    std::fs::remove_file(root.join("samples")).unwrap();
+    assert!(stat_now(&root.join("samples")).unwrap().is_none());
+    assert!(stat_now(&root.join("state/checkpoint")).unwrap().is_some());
+    assert_eq!(disk_bytes(&root).unwrap(), 1000);
+    std::fs::remove_dir_all(&root).unwrap();
+    assert_eq!(
+        disk_bytes(&root).unwrap(),
+        0,
+        "a root that is gone holds nothing"
+    );
+}
+
+#[test]
+fn one_ps_listing_sums_the_asked_pids_and_counts_the_missing() {
+    let listing = "  101  2048\n  102   512\n  999  4096\nnot a row\n";
+    assert_eq!(
+        parse_ps(listing, &[101, 102, 103]),
+        ((2048 + 512) * 1024, 1)
+    );
+    assert_eq!(parse_ps("", &[7]), (0, 1));
 }

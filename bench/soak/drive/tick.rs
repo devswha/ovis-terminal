@@ -16,23 +16,14 @@ use super::Run;
 const CHECKPOINT_EVERY: u64 = 60;
 
 impl Run<'_> {
-    /// One sample, one control ping and, every fifth tick, a status read.
+    /// One control ping and, every fifth tick, a status read; then one footprint sample.
+    ///
+    /// Lines that already arrived are accounted before the outstanding ping is judged, and
+    /// the ping goes out before the (slow on macOS) sampling, so the harness's own work
+    /// never makes a control reply look late.
     pub(in super::super) fn tick(&mut self, elapsed: Duration) -> Result<(), SoakError> {
-        let control = self.control.as_ref().map_or(0, ControlProcess::pid);
-        let holders: Vec<u32> = self.holders.iter().map(|holder| holder.pid).collect();
-        let (control_rss, _) = rss(&[control]);
-        let (holder_rss, _) = rss(&holders);
-        let (program_rss, _) = rss(&self.programs);
-        let sample = Sample {
-            elapsed_ms: Count::new(u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX)),
-            boot: Count::new(self.boot),
-            runtime_rss: ByteCount::new(control_rss.saturating_add(holder_rss)),
-            control_rss: ByteCount::new(control_rss),
-            holder_rss: ByteCount::new(holder_rss),
-            program_rss: ByteCount::new(program_rss),
-            disk_bytes: ByteCount::new(disk_bytes(&self.plan.root)?),
-        };
-        self.samples.record(&sample)?;
+        self.elapsed = elapsed;
+        self.listen(Instant::now())?;
         if self.ping.take().is_some() {
             self.tally.late();
         }
@@ -53,6 +44,21 @@ impl Run<'_> {
             self.stalled
                 .retain_mut(|stalled| std::io::Write::write_all(stalled, asked.as_bytes()).is_ok());
         }
+        let control = self.control.as_ref().map_or(0, ControlProcess::pid);
+        let holders: Vec<u32> = self.holders.iter().map(|holder| holder.pid).collect();
+        let (control_rss, _) = rss(&[control]);
+        let (holder_rss, _) = rss(&holders);
+        let (program_rss, _) = rss(&self.programs);
+        let sample = Sample {
+            elapsed_ms: Count::new(u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX)),
+            boot: Count::new(self.boot),
+            runtime_rss: ByteCount::new(control_rss.saturating_add(holder_rss)),
+            control_rss: ByteCount::new(control_rss),
+            holder_rss: ByteCount::new(holder_rss),
+            program_rss: ByteCount::new(program_rss),
+            disk_bytes: ByteCount::new(disk_bytes(&self.plan.root)?),
+        };
+        self.samples.record(&sample)?;
         if self.samples.count.is_multiple_of(CHECKPOINT_EVERY) {
             let snapshot = serde_json::json!({
                 "started_unix_ms": self.samples.started_unix_ms,

@@ -32,31 +32,37 @@ pub(super) struct Observer {
     socket: PathBuf,
     name: String,
     writer: UnixStream,
-    lines: Receiver<Option<Line>>,
+    lines: Receiver<Arrival>,
     reader: JoinHandle<bool>,
     /// The next sequence this observer expects.
     next: u64,
     pub(super) continuity: Continuity,
+    /// When the line most recently returned by [`Observer::next`] arrived.
+    pub(super) arrived: Instant,
 }
 
+/// One received line and when it arrived, stamped by the reader thread so a busy harness
+/// never inflates a measured latency.
+type Arrival = (Instant, Option<Line>);
+
 /// Forwards parsed lines; `None` marks the end. `false` once nobody listens.
-fn read(stream: UnixStream, sender: &std::sync::mpsc::Sender<Option<Line>>) -> bool {
+fn read(stream: UnixStream, sender: &std::sync::mpsc::Sender<Arrival>) -> bool {
     for line in BufReader::new(stream).lines() {
         let parsed = line
             .ok()
             .and_then(|text| serde_json::from_str::<Line>(&text).ok());
         let stop = parsed.is_none();
-        if sender.send(parsed).is_err() {
+        if sender.send((Instant::now(), parsed)).is_err() {
             return false;
         }
         if stop {
             return true;
         }
     }
-    sender.send(None).is_ok()
+    sender.send((Instant::now(), None)).is_ok()
 }
 
-type Opened = (UnixStream, Receiver<Option<Line>>, JoinHandle<bool>);
+type Opened = (UnixStream, Receiver<Arrival>, JoinHandle<bool>);
 
 impl Observer {
     fn open(socket: &Path, hello: &Hello) -> Result<Opened, SoakError> {
@@ -94,6 +100,7 @@ impl Observer {
             reader,
             next: 0,
             continuity: Continuity::default(),
+            arrived: Instant::now(),
         })
     }
 
@@ -108,6 +115,7 @@ impl Observer {
             reader,
             next,
             mut continuity,
+            ..
         } = self;
         writer
             .shutdown(Shutdown::Both)
@@ -132,6 +140,7 @@ impl Observer {
             reader,
             next,
             continuity,
+            arrived: Instant::now(),
         })
     }
 
@@ -175,12 +184,13 @@ impl Observer {
         loop {
             let wait = deadline.saturating_duration_since(Instant::now());
             match self.lines.recv_timeout(wait) {
-                Ok(Some(line)) => {
+                Ok((at, Some(line))) => {
                     if self.account(&line) {
+                        self.arrived = at;
                         return Ok(Some(line));
                     }
                 }
-                Ok(None) | Err(RecvTimeoutError::Disconnected) => {
+                Ok((_, None)) | Err(RecvTimeoutError::Disconnected) => {
                     return Err(SoakError::ControlGone {
                         waiting_for: "observer lines",
                     });

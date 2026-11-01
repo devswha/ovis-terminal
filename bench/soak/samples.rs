@@ -7,7 +7,6 @@ use std::io::{BufWriter, Write as _};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use ovis_terminal_probes::platform::{Pid, resident_memory};
 use ovis_terminal_protocol::schema::scalar::{ByteCount, Count, TimestampMs};
 use serde::Serialize;
 
@@ -27,14 +26,59 @@ pub(super) struct Sample {
     pub(super) disk_bytes: ByteCount,
 }
 
-/// Resident bytes of `pids`; a PID that is gone counts zero and is reported.
+/// Resident bytes of `pids`, and how many of them were not found.
+#[cfg(not(target_os = "macos"))]
 pub(super) fn rss(pids: &[u32]) -> (u64, u64) {
+    use ovis_terminal_probes::platform::{Pid, resident_memory};
+
     pids.iter().fold((0, 0), |(total, missing), pid| {
         resident_memory(Pid::new(*pid)).map_or_else(
             |_| (total, missing.saturating_add(1)),
             |bytes| (total.saturating_add(bytes.get()), missing),
         )
     })
+}
+
+/// Resident bytes of `pids`, and how many of them were not found: one `ps` for all of
+/// them, because a `ps` per PID costs more than the sampling period on a small runner.
+#[cfg(target_os = "macos")]
+pub(super) fn rss(pids: &[u32]) -> (u64, u64) {
+    let listed: Vec<String> = pids
+        .iter()
+        .filter(|pid| **pid > 0)
+        .map(u32::to_string)
+        .collect();
+    let all = u64::try_from(pids.len()).unwrap_or(u64::MAX);
+    if listed.is_empty() {
+        return (0, all);
+    }
+    std::process::Command::new("ps")
+        .args(["-o", "pid=,rss=", "-p", &listed.join(",")])
+        .output()
+        .map_or((0, all), |output| {
+            parse_ps(&String::from_utf8_lossy(&output.stdout), pids)
+        })
+}
+
+/// Bytes of the `pids` listed in `ps -o pid=,rss=` output (RSS in KiB), and how many of
+/// `pids` it does not list.
+#[cfg(any(target_os = "macos", test))]
+pub(super) fn parse_ps(text: &str, pids: &[u32]) -> (u64, u64) {
+    let mut total = 0_u64;
+    let mut found = 0_u64;
+    for line in text.lines() {
+        let mut fields = line.split_whitespace();
+        let pid = fields.next().and_then(|pid| pid.parse::<u32>().ok());
+        let kib = fields.next().and_then(|kib| kib.parse::<u64>().ok());
+        if let (Some(pid), Some(kib)) = (pid, kib)
+            && pids.contains(&pid)
+        {
+            total = total.saturating_add(kib.saturating_mul(1024));
+            found = found.saturating_add(1);
+        }
+    }
+    let all = u64::try_from(pids.len()).unwrap_or(u64::MAX);
+    (total, all.saturating_sub(found))
 }
 
 #[derive(Debug)]

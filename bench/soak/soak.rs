@@ -81,6 +81,7 @@ fn soak(cli: &cli::Cli) -> Result<(Vec<u8>, usize), SoakError> {
         Ok(())
     });
     outcome.error = measured.err();
+    outcome.elapsed = outcome.elapsed.max(run.elapsed);
     outcome.teardown = run.teardown().err();
     let (value, violations) = report::report(&run, (&facts, &outcome));
     let json = serde_json::to_vec_pretty(&value)?;

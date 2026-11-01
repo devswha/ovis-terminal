@@ -46,6 +46,8 @@ pub(super) struct Run<'p> {
     pub(super) cli: Vec<CliRun>,
     /// Every holder this run started, with its identity at start.
     pub(super) started_holders: Vec<serde_json::Value>,
+    /// Measured time at the latest tick; what an interrupted run reports as its length.
+    pub(super) elapsed: Duration,
     ping: Option<(u64, Instant)>,
     pings: u64,
 }
@@ -92,6 +94,7 @@ impl<'p> Run<'p> {
             planned_exits: Vec::new(),
             cli: Vec::new(),
             started_holders: Vec::new(),
+            elapsed: Duration::ZERO,
             ping: None,
             pings: 0,
         })
@@ -224,8 +227,13 @@ impl<'p> Run<'p> {
             && let Some((sent, at)) = self.ping
             && sent == id.get()
         {
+            let arrived = self
+                .observer
+                .as_ref()
+                .map_or_else(Instant::now, |observer| observer.arrived);
+            let waited = arrived.saturating_duration_since(at);
             self.tally
-                .pong(u64::try_from(at.elapsed().as_millis()).unwrap_or(u64::MAX));
+                .pong(u64::try_from(waited.as_millis()).unwrap_or(u64::MAX));
             self.ping = None;
         }
         self.tally.line(self.boot, line);

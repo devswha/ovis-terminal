@@ -25,11 +25,17 @@ fn millis(duration: Duration) -> u64 {
     u64::try_from(duration.as_millis()).unwrap_or(u64::MAX)
 }
 
+/// The typed error with every underlying cause, so the evidence explains itself.
 fn error_json(error: Option<&SoakError>) -> Value {
-    error.map_or(
-        Value::Null,
-        |error| json!({"kind": error.kind(), "message": error.to_string(), "hint": error.hint()}),
-    )
+    error.map_or(Value::Null, |error| {
+        let mut causes = Vec::new();
+        let mut cause = std::error::Error::source(error);
+        while let Some(inner) = cause {
+            causes.push(inner.to_string());
+            cause = inner.source();
+        }
+        json!({"kind": error.kind(), "message": error.to_string(), "hint": error.hint(), "causes": causes})
+    })
 }
 
 fn violations(run: &Run<'_>, outcome: &Outcome) -> (Vec<Violation>, Value) {

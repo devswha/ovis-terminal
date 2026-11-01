@@ -12,6 +12,8 @@ use super::plan::{Kind, Limits};
 /// What the internal holder-loss probe found.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub(super) struct Probe {
+    /// Whether the probe ran at all; a requested probe that did not run is a failure.
+    pub(super) ran: bool,
     /// The dedicated terminal's survival after its holder was killed.
     pub(super) dedicated: String,
     pub(super) shared_survived: u64,
@@ -142,6 +144,14 @@ fn runtime(measured: &Measured<'_>, found: &mut Vec<Violation>) {
 
 fn probe(measured: &Measured<'_>, found: &mut Vec<Violation>) {
     let Some(probe) = &measured.probe else { return };
+    if !probe.ran {
+        found.push(rule(
+            "holder_loss_probe_not_run",
+            &"not run",
+            &"run after the measured phase",
+        ));
+        return;
+    }
     if probe.dedicated != "unknown:holder_unreachable" {
         found.push(rule(
             "dedicated_holder_loss",
