@@ -53,6 +53,19 @@ fn replayed_or_reordered_upstream_positions_are_refused() -> TestResult {
         .delivery
         .recv_timeout(std::time::Duration::from_secs(5))?;
     assert_eq!(published.cursor.seq, EventSeq::new(1));
+    let delivered_origin = published
+        .origin
+        .as_ref()
+        .ok_or("delivered without origin")?;
+    assert_eq!(
+        (delivered_origin.machine_id, delivered_origin.runtime_id),
+        (MachineId::new(Uuid::from_u128(2))?, RuntimeId::try_from(7)?)
+    );
+    assert_eq!(
+        delivered_origin.seq.get(),
+        5,
+        "the upstream position, not the local seq"
+    );
     assert!(matches!(
         observer.delivery.try_recv(),
         Err(EventError::TryReceive(mpsc::TryRecvError::Empty))

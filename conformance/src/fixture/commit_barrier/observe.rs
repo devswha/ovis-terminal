@@ -66,7 +66,8 @@ pub(super) fn pages(
     }))
 }
 
-/// Pulls until `total` is delivered and checks snapshot plus deliveries cover 1..=total.
+/// Pulls until `total` is delivered and checks snapshot plus deliveries cover 1..=total;
+/// each delivered record's own origin must carry exactly its source's upstream position.
 pub(super) fn subscription(
     installed: &Started<Barrier, Ballast>,
     total: u64,
@@ -79,7 +80,7 @@ pub(super) fn subscription(
     let deadline = Instant::now()
         .checked_add(BOUND)
         .ok_or_else(|| at("bound the drain")("clock overflow"))?;
-    let mut delivered = Vec::new();
+    let (mut delivered, mut remote, mut origins_intact) = (Vec::new(), 0_u64, true);
     while delivered.last().copied().unwrap_or(boundary) < total && Instant::now() < deadline {
         match installed
             .feed
@@ -87,7 +88,17 @@ pub(super) fn subscription(
             .map_err(at("pull the subscription"))?
         {
             Pulled::Events(batch) => {
-                delivered.extend(batch.events.iter().map(|event| event.cursor.seq.get()));
+                for event in &batch.events {
+                    delivered.push(event.cursor.seq.get());
+                    let upstream = event.origin.as_ref().map(|origin| origin.seq.get());
+                    origins_intact &= match &event.data {
+                        Barrier::Wrote { source, n } if source == "remote" => {
+                            remote = remote.saturating_add(1);
+                            upstream == Some(n.saturating_add(super::UPSTREAM_BASE))
+                        }
+                        _ => upstream.is_none(),
+                    };
+                }
             }
             Pulled::Heartbeat(_) => {}
             _ => return Err(at("pull the subscription")("delivery stopped")),
@@ -98,5 +109,7 @@ pub(super) fn subscription(
         "snapshot_seq": boundary.to_string(),
         "delivered": delivered.len().to_string(),
         "partitions_committed": held && delivered == after,
+        "delivered_remote": remote.to_string(),
+        "delivered_origins_intact": origins_intact,
     }))
 }

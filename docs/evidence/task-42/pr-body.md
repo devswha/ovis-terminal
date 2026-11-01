@@ -106,6 +106,7 @@ $ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked
 
 ## Risks
 
+- **No daemon wiring yet.** `AgentAssembly` is wired only into the conformance fixture until todo 31. The `ovis-terminal` daemon assembly does not construct or serve it yet.
 - **Fixture stand-in.** `fixture.commit_barrier` runs the real `Boundary`, `Pager`, `Subscriptions`, coordinator and SQLite writer inside the fixture process, but on a dedicated store with a 64 MiB history stand-in section. No wire method for `session.snapshot` paging or `events.subscribe` is served by the binary yet. Assembling the full roster producer and the subscription transport over the wire remains for the assembly owners (todos 63/66). The remote source is a `RemoteOrigin`-tagged commit, not a live remote line (todo 52 assembles the mirror).
 - **Gaps between this assembly and production.** `agent.tree` and template launch still register through their own fixture modules. OSC ingestion is not yet wired to the live output pump.
 - **Debug-build cost.** The 64 MiB probe takes about 8.5 s in a debug build against the runner's 20 s per-reply bound. A much slower CI runner could approach that bound.
@@ -160,5 +161,27 @@ conformance --scenario agent/e2e --isolated --case all                          
 conformance agent/e2e --case happy, 10 consecutive runs                               # 10/10 exit 0 (fix-e2e-repeat.log)
 cargo nextest run -p ovis-terminal-conformance -E 'test(suite::)'                     # exit 0, 4/4 passed (runs all/all)
 bash ~/.ovis-toolchain/with-slot.sh bash scripts/check.sh                            # exit 0, nextest 1286 run: 1286 passed, 1 skipped; hygiene 0 violations
+RUSTFLAGS=-Dwarnings cargo check / cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked   # exit 0 / exit 0
+```
+
+## Round 2 (gate review: B1, B2)
+
+**B1: concurrency during the snapshot and the install is now demonstrated, not assumed.**
+- Each `fixture.commit_barrier` committer commits 10 records, signals, and holds on its own release channel (bounded wait).
+- The probe pins the 64 MiB window and installs the subscription while all three are held, then releases them. The remaining 90 commits land while the pages are read and are delivered to the subscription.
+- `agent/e2e` now asserts the exact boundary: `snapshot/revision "30"`, `subscription/snapshot_seq "30"`, `subscription/delivered "90"` and `delivered_remote "30"`.
+- Mutant M7b (hold removed) fails with revision `"91"`, snapshot_seq `"97"` and delivered `"23"`. M7 (hold removed outright) fails as `fixture_failed`.
+
+**B2: the origin is now read back from what was delivered, not from `Committed::remote()`.**
+- `remote::replayed_or_reordered_upstream_positions_are_refused` asserts the delivered event's own `origin`: machine, runtime and upstream seq 5.
+- The probe checks every delivered event's own `origin`: a remote record must carry exactly `1000 + n`, and every other record must carry none (`delivered_origins_intact`).
+- Mutant M8 (`.mirrored_from` removed) fails both: the core test with exit 101 and the scenario with `delivered_origins_intact: false`.
+
+Round 2 gates:
+```
+cargo test -p ovis-terminal-core --test commit                                        # exit 0, 9 passed
+conformance --scenario agent/e2e --isolated --case all                                # exit 0, 133 assertions, 2/2 passed (r2-qa-all.log)
+cargo nextest run -p ovis-terminal-conformance -E 'test(suite::)'                     # exit 0, 4/4 passed (runs all/all)
+bash ~/.ovis-toolchain/with-slot.sh bash scripts/check.sh                            # exit 0, nextest 1286/1286 passed, 1 skipped; hygiene 0 violations
 RUSTFLAGS=-Dwarnings cargo check / cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked   # exit 0 / exit 0
 ```

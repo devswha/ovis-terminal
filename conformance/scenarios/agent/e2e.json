@@ -62,7 +62,7 @@
   "cases": [
     {
       "case": "happy",
-      "summary": "Through the bridge and a phone socket served by the production agent assembly: an unknown-brand agent registers and the phone reads the same record; a sequenced report is replayed and a stale one refused with current_seq; an open form prompt blocks an ordinary send naming p1 and is answered once by the writer; history pages through one disconnect and resumes by cursor; the retried answer and an op.get pipelined beside it both return the retained committed receipt, never the retry's queue place; terminal, registry and remote sources then commit concurrently while a 64 MiB snapshot is paged at one revision and a subscription installs, with no missing, duplicate or reordered record; the CLI reads the agent through the real binary.",
+      "summary": "Through the bridge and a phone socket served by the production agent assembly: an unknown-brand agent registers and the phone reads the same record; a sequenced report is replayed and a stale one refused with current_seq; an open form prompt blocks an ordinary send naming p1 and is answered once by the writer; history pages through one disconnect and resumes by cursor; the retried answer and an op.get pipelined beside it both return the retained committed receipt, never the retry's queue place; terminal, registry and remote sources commit 10 records each and are held while a 64 MiB snapshot is pinned at revision 30 and a subscription installs at seq 30, then the remaining 90 commit while the pages are read and are delivered with their own upstream origins, with no missing, duplicate or reordered record; the CLI reads the agent through the real binary.",
       "steps": [
         {
           "serve": {
@@ -663,7 +663,12 @@
                 "/result/subscription/partitions_committed": true,
                 "/error": {
                   "$present": false
-                }
+                },
+                "/result/snapshot/revision": "30",
+                "/result/subscription/snapshot_seq": "30",
+                "/result/subscription/delivered": "90",
+                "/result/subscription/delivered_remote": "30",
+                "/result/subscription/delivered_origins_intact": true
               }
             }
           }

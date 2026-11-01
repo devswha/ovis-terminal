@@ -55,3 +55,23 @@ exit: 101
 killed_by:
   test agent_assembly::a_queued_retry_of_a_committed_answer_still_inspects_as_committed ... FAILED
   (left: "queued", queued_position "1"; right: "committed")
+
+## Round 2 (gate findings B1, B2)
+
+## M7-no-hold (B1)
+file: conformance/src/fixture/commit_barrier.rs
+mutation: committers no longer wait for the release after their tenth commit
+command: conformance --scenario agent/e2e --isolated --case happy
+exit: 1 (fixture_failed: a finished committer dropped its receiver, so the release send failed)
+
+## M7b-no-hold-tolerant-release (B1)
+mutation: the M7 change plus release sends whose error is ignored
+command: conformance --scenario agent/e2e --isolated --case happy
+exit: 1
+failed: snapshot/revision "91" (expected "30"), subscription/snapshot_seq "97" (expected "30"), subscription/delivered "23" (expected "90"), subscription/delivered_remote "23" (expected "30")
+
+## M8-no-mirrored-from (B2)
+file: crates/ovis-terminal-core/src/commit/boundary.rs
+mutation: '.mirrored_from(origin.clone())' removed from the remote arm
+command: cargo test -p ovis-terminal-core --test commit -> exit 101, killed_by: remote::replayed_or_reordered_upstream_positions_are_refused (the delivered event's own origin)
+command: conformance agent/e2e --case happy -> exit 1, failed: subscription/delivered_origins_intact false

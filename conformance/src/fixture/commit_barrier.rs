@@ -35,6 +35,7 @@ use crate::error::RunnerError;
 pub(crate) const METHOD: &str = "fixture.commit_barrier";
 
 const PER_SOURCE: u64 = 40;
+const HELD_AFTER: u64 = 10;
 const SOURCES: [&str; 3] = ["terminal", "registry", "remote"];
 const BOUND: Duration = Duration::from_secs(20);
 const UPSTREAM_BASE: u64 = 1_000;
@@ -83,11 +84,12 @@ fn record(name: &str, n: u64) -> Result<Commit<Barrier>, RunnerError> {
     Ok(Commit::new(op, data, vec![ResourceId::Terminal(terminal)]))
 }
 
-/// Commits `PER_SOURCE` records from `name`, signalling after the tenth.
+/// Commits `PER_SOURCE` records from `name`; after the tenth it signals `started` and
+/// holds until `release`, so the rest commit while the snapshot is read and delivered.
 fn committer(
     boundary: Boundary<Barrier, Ballast>,
     name: &'static str,
-    started: mpsc::Sender<()>,
+    (started, release): (mpsc::Sender<()>, mpsc::Receiver<()>),
 ) -> std::thread::JoinHandle<Result<Vec<Committed>, RunnerError>> {
     std::thread::spawn(move || {
         let mut committed = Vec::new();
@@ -96,8 +98,11 @@ fn committer(
             let from = source(name, n)?;
             let done = boundary.commit(from, |_| Ok(unit));
             committed.push(done.map_err(at("commit through the boundary"))?);
-            if n == 10 {
-                started.send(()).map_err(at("signal the tenth commit"))?;
+            if n == HELD_AFTER {
+                started.send(()).map_err(at("signal the held commit"))?;
+                release
+                    .recv_timeout(BOUND)
+                    .map_err(at("await the release after install"))?;
             }
         }
         Ok(committed)
@@ -124,10 +129,13 @@ fn race(dir: &Path) -> Result<Value, RunnerError> {
     let hub = Subscriptions::start(Arc::clone(&core), identity()?, limits)
         .map_err(at("start the subscriptions"))?;
     let (started, ready) = mpsc::channel();
-    let threads: Vec<_> = SOURCES
-        .iter()
-        .map(|name| committer(boundary.clone(), name, started.clone()))
-        .collect();
+    let mut releases = Vec::new();
+    let mut threads = Vec::new();
+    for name in SOURCES {
+        let (release, held) = mpsc::channel();
+        releases.push(release);
+        threads.push(committer(boundary.clone(), name, (started.clone(), held)));
+    }
     for _ in SOURCES {
         ready
             .recv_timeout(BOUND)
@@ -140,6 +148,9 @@ fn race(dir: &Path) -> Result<Value, RunnerError> {
     let installed = hub
         .subscribe(Request::new(Start::Snapshot, Selector::all()))
         .map_err(at("install the subscription"))?;
+    for release in releases {
+        release.send(()).map_err(at("release a held committer"))?;
+    }
     let snapshot = observe::pages(&pager, &window)?;
     let mut sources = Vec::new();
     for thread in threads {
