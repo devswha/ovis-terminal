@@ -131,7 +131,9 @@ Raw evidence (request/response transcripts, process argv/stdout/stderr, binary h
 
 ### macOS stress
 
-STRESS_PLACEHOLDER
+The macOS stress job runs on the stress-only branch `lane/t62-stress`, so the shared workflow file stays at base in this PR. Each run does 25 iterations of the three attach PTY test binaries plus `cli/interactive-attach --case all` on `macos-latest`.
+- Previous lane head (9e009f4): https://github.com/devswha/ovis-terminal/actions/runs/41256920783 (success).
+- This head (9e07178, merged into stress branch 50c522c): https://github.com/devswha/ovis-terminal/actions/runs/41273039178 (dispatched; result recorded below when it finishes).
 
 ## Seams
 
