@@ -1,0 +1,42 @@
+{
+  "scenario": "recovery/crash",
+  "todo": 49,
+  "title": "Crash recovery adopts surviving holders, rebuilds exact screens and reports honest reboot metadata",
+  "closes": ["GAP-121", "GAP-123", "GAP-124", "GAP-125"],
+  "delivers": ["IDEAL-093", "IDEAL-095", "IDEAL-096", "IDEAL-097", "IDEAL-117"],
+  "excludes": ["EXCL-019", "EXCL-021", "EXCL-026", "EXCL-027"],
+  "platforms": ["linux", "macos"],
+  "verification": {
+    "status": "declared_until_routable",
+    "blocked_by": {
+      "31": "assembles the served binary that runs ovis_terminal_core::recovery::recover at an unplanned boot and puts dispatch::lanes::recovery (admit_input, admit_relaunch, evidence, incidents) in front of input.*, terminal.recover and server.metrics; until then no served route returns terminal.run, so the runner cannot observe invalid_params at params.isolation from the binary",
+      "52": "composes the real endpoints and fault injection across private runtimes with shared and dedicated holders (core kill mid-output, holder loss, host-reboot metadata); the todo-21 runner's only fixture ('protocol') holds no holder-owned program and cannot kill and restart its own core"
+    },
+    "covered_meanwhile_by": [
+      "cargo test -p ovis-terminal-core --lib recovery (real holder services on Unix sockets: core dropped mid-output at MARK then adopted with a crash hello, rebuilt screen plus spliced live output equals an independent engine fed the whole retained stream; unreachable dedicated holder -> unknown only for its terminal, no relaunch, programs still running; reboot -> restored_metadata with no adoption; missing boot stamp -> unknown; damaged checkpoint quarantined, repeated recovery reaches the same verdict; property tests for checkpoint+tail exactness, tail overflow gaps, splice overlap and every survival evidence combination)",
+      "cargo test -p ovis-terminal-server --lib lanes::recovery (recovering/not_lost/not_found admission, evidence lists survivors only, incident reads never clear)",
+      "cargo test -p ovis-terminal-protocol --lib domain::recovery (records round trip, decimal-string offsets with numeric refused, terminal.run with isolation refused as invalid_params at params.isolation and absent from the schema)"
+    ]
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "steps": [
+        {"hold": "a writer '/bin/sh -c \"... printf MARK ... printf DONE; read gate\"' in the shared holder; the core checkpoints at MARK and records the boot stamp"},
+        {"kill": "the control core without a handover while the writer keeps printing"},
+        {"boot": "unplanned", "expect": {"/cause": "core_crash", "/terminals/0/survival/survival": "survived", "/terminals/0/screen/exact": true, "/terminals/0/screen/gaps": []}},
+        {"assert": "the restored screen plus spliced live output equals an independent VT fed the whole retained stream; same PID and start token"},
+        {"reboot_fixture": "boot stamp of another boot", "expect": {"/cause": "host_reboot", "/terminals/0/survival/survival": "restored_metadata"}}
+      ]
+    },
+    {
+      "case": "failure",
+      "steps": [
+        {"inject": {"method": "terminal.run", "params": {"isolation": "dedicated"}},
+         "expect": {"/error/data/kind": "invalid_params", "/error/data/field_path": "params.isolation"}},
+        {"unplug": "the dedicated holder's socket", "expect": {"/terminals/1/survival": {"survival": "unknown", "reason": "holder_unreachable"}}},
+        {"assert": "terminal.recover on that terminal returns recovering; no second process is spawned; the program keeps its PID and start token"}
+      ]
+    }
+  ]
+}

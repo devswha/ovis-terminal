@@ -1245,6 +1245,10 @@
         ],
         "type": "object"
       },
+      "BearerText": {
+        "description": "Bearer text, shown to the caller exactly once and never in diagnostics.",
+        "type": "string"
+      },
       "BootChallenge": {
         "description": "Fresh random challenge, 32 bytes as lowercase hexadecimal.",
         "pattern": "^[0-9a-f]{64}$",
@@ -1576,6 +1580,68 @@
           }
         ]
       },
+      "CommitRace": {
+        "description": "Where a write queued under a withdrawn credential ended up.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "Rechecked before its write; no byte reached the program.",
+            "properties": {
+              "outcome": {
+                "const": "cancelled_before_commit",
+                "type": "string"
+              },
+              "reason": {
+                "$ref": "#/components/schemas/FenceToken",
+                "description": "Why the write was withheld."
+              }
+            },
+            "required": [
+              "outcome",
+              "reason"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The holder had already written these bytes before the withdrawal.",
+            "properties": {
+              "outcome": {
+                "const": "already_committed",
+                "type": "string"
+              },
+              "output_offset": {
+                "$ref": "#/components/schemas/ByteOffset",
+                "description": "Output offset the holder saw when the write started."
+              },
+              "written_bytes": {
+                "$ref": "#/components/schemas/ByteCount",
+                "description": "Bytes the holder wrote."
+              }
+            },
+            "required": [
+              "outcome",
+              "written_bytes",
+              "output_offset"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The write is with the holder and its fence is not answered yet; it is never resent.",
+            "properties": {
+              "outcome": {
+                "const": "outcome_unknown",
+                "type": "string"
+              }
+            },
+            "required": [
+              "outcome"
+            ],
+            "type": "object"
+          }
+        ]
+      },
       "ConsumerQueue": {
         "description": "Outbound backlog of one consumer.",
         "properties": {
@@ -1715,6 +1781,114 @@
         "description": "Count carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
+      },
+      "CredentialEpoch": {
+        "description": "CredentialEpoch carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
+      "CredentialId": {
+        "description": "Opaque identity string.",
+        "type": "string"
+      },
+      "CredentialRevokeParams": {
+        "additionalProperties": false,
+        "description": "Parameters of `credential.revoke`.",
+        "properties": {
+          "credential": {
+            "$ref": "#/components/schemas/CredentialId",
+            "description": "The credential to withdraw."
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Client-minted operation identity."
+          }
+        },
+        "required": [
+          "op_id",
+          "credential"
+        ],
+        "type": "object"
+      },
+      "CredentialRevokeResult": {
+        "description": "Result of `credential.revoke`.",
+        "properties": {
+          "standing": {
+            "$ref": "#/components/schemas/PrincipalStanding",
+            "description": "Its principal afterwards."
+          },
+          "withdrawn": {
+            "$ref": "#/components/schemas/WithdrawnCredential",
+            "description": "The withdrawn credential."
+          },
+          "writes": {
+            "description": "Writes the withdrawal raced, in admission order.",
+            "items": {
+              "$ref": "#/components/schemas/RacedWrite"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "withdrawn",
+          "standing",
+          "writes"
+        ],
+        "type": "object"
+      },
+      "CredentialRotateParams": {
+        "additionalProperties": false,
+        "description": "Parameters of `credential.rotate`.",
+        "properties": {
+          "credential": {
+            "$ref": "#/components/schemas/CredentialId",
+            "description": "The credential to replace."
+          },
+          "expires_at_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimestampMs"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Expiry of the replacement; defaults to the replaced credential's expiry."
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Client-minted operation identity."
+          },
+          "principal_epoch": {
+            "$ref": "#/components/schemas/PrincipalEpoch",
+            "description": "The principal epoch the caller last read; a newer one refuses the rotation."
+          }
+        },
+        "required": [
+          "op_id",
+          "credential",
+          "principal_epoch"
+        ],
+        "type": "object"
+      },
+      "CredentialRotateResult": {
+        "description": "Result of `credential.rotate`.",
+        "properties": {
+          "issued": {
+            "$ref": "#/components/schemas/IssuedReplacement",
+            "description": "The replacement."
+          },
+          "replaced": {
+            "$ref": "#/components/schemas/CredentialRevokeResult",
+            "description": "The replaced credential, withdrawn in the same step."
+          }
+        },
+        "required": [
+          "issued",
+          "replaced"
+        ],
+        "type": "object"
       },
       "DecimalCounter": {
         "description": "Unsigned 64-bit integer carried as a canonical decimal string.",
@@ -2006,6 +2180,9 @@
           },
           "op_id": {
             "$ref": "#/components/schemas/OpId"
+          },
+          "principal_epoch": {
+            "$ref": "#/components/schemas/PrincipalEpoch"
           },
           "prompt_ids": {
             "items": {
@@ -2795,6 +2972,10 @@
       "FenceEpoch": {
         "$ref": "#/components/schemas/DecimalCounter",
         "description": "Holder FenceEpoch as a canonical decimal string."
+      },
+      "FenceToken": {
+        "description": "Stable token of the reason no byte of a write was delivered, such as\n`credential_revoked`.",
+        "type": "string"
       },
       "FieldPath": {
         "description": "Dotted path to the offending input field.",
@@ -3769,6 +3950,34 @@
           "target",
           "text",
           "submit"
+        ],
+        "type": "object"
+      },
+      "IssuedReplacement": {
+        "description": "The replacement a rotation issued.",
+        "properties": {
+          "bearer": {
+            "$ref": "#/components/schemas/BearerText",
+            "description": "The text to present in `hello`."
+          },
+          "credential": {
+            "$ref": "#/components/schemas/CredentialId",
+            "description": "The new credential."
+          },
+          "epoch": {
+            "$ref": "#/components/schemas/CredentialEpoch",
+            "description": "Its first epoch."
+          },
+          "expires_at_ms": {
+            "$ref": "#/components/schemas/TimestampMs",
+            "description": "When it stops being valid."
+          }
+        },
+        "required": [
+          "credential",
+          "epoch",
+          "expires_at_ms",
+          "bearer"
         ],
         "type": "object"
       },
@@ -5899,6 +6108,33 @@
           }
         ]
       },
+      "PrincipalEpoch": {
+        "description": "PrincipalEpoch carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
+      "PrincipalName": {
+        "description": "Opaque identity string.",
+        "type": "string"
+      },
+      "PrincipalStanding": {
+        "description": "The principal a withdrawal touched and its epoch afterwards.",
+        "properties": {
+          "principal": {
+            "$ref": "#/components/schemas/PrincipalName",
+            "description": "The principal."
+          },
+          "principal_epoch": {
+            "$ref": "#/components/schemas/PrincipalEpoch",
+            "description": "Its epoch after the change."
+          }
+        },
+        "required": [
+          "principal",
+          "principal_epoch"
+        ],
+        "type": "object"
+      },
       "ProbeOutcome": {
         "description": "How the selected executable answered its readiness probe.",
         "oneOf": [
@@ -6603,6 +6839,34 @@
         "description": "QueuePosition carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
+      },
+      "RacedWrite": {
+        "description": "One write raced by a withdrawal: its admission receipt and its fate.",
+        "properties": {
+          "admitted_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Bytes admitted."
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that admitted the write."
+          },
+          "queued_seq": {
+            "$ref": "#/components/schemas/EventSeq",
+            "description": "Its position in the terminal's input sequence."
+          },
+          "race": {
+            "$ref": "#/components/schemas/CommitRace",
+            "description": "What happened to them."
+          }
+        },
+        "required": [
+          "op_id",
+          "queued_seq",
+          "admitted_bytes",
+          "race"
+        ],
+        "type": "object"
       },
       "ReadinessContract": {
         "description": "How a launched program proves it can take its first message.\n\nOnly a declaration by the program counts; output silence is never readiness.",
@@ -10348,6 +10612,24 @@
             "type": "string"
           }
         ]
+      },
+      "WithdrawnCredential": {
+        "description": "A credential that no longer authenticates, and the epoch its withdrawal produced.",
+        "properties": {
+          "credential": {
+            "$ref": "#/components/schemas/CredentialId",
+            "description": "The withdrawn credential."
+          },
+          "epoch": {
+            "$ref": "#/components/schemas/CredentialEpoch",
+            "description": "Its epoch after withdrawal."
+          }
+        },
+        "required": [
+          "credential",
+          "epoch"
+        ],
+        "type": "object"
       },
       "WorkspaceId": {
         "description": "Opaque identity string.",
@@ -20918,6 +21200,222 @@
         "$ref": "#/components/schemas/NoParams"
       },
       "x-targeting": "untargeted"
+    },
+    {
+      "errors": [
+        {
+          "code": -32602,
+          "message": "invalid_params"
+        },
+        {
+          "code": -32000,
+          "message": "unavailable"
+        },
+        {
+          "code": -32603,
+          "message": "internal"
+        },
+        {
+          "code": -32000,
+          "message": "not_found"
+        },
+        {
+          "code": -32000,
+          "message": "unauthenticated"
+        },
+        {
+          "code": -32000,
+          "message": "forbidden"
+        },
+        {
+          "code": -32000,
+          "message": "deadline_exceeded"
+        },
+        {
+          "code": -32000,
+          "message": "cancelled"
+        },
+        {
+          "code": -32000,
+          "message": "backpressure"
+        },
+        {
+          "code": -32000,
+          "message": "op_expired"
+        },
+        {
+          "code": -32000,
+          "message": "op_reused"
+        },
+        {
+          "code": -32000,
+          "message": "persistence_failed"
+        },
+        {
+          "code": -32000,
+          "message": "outcome_unknown"
+        },
+        {
+          "code": -32000,
+          "message": "version_conflict"
+        },
+        {
+          "code": -32000,
+          "message": "credential_revoked"
+        },
+        {
+          "code": -32000,
+          "message": "credential_expired"
+        },
+        {
+          "code": -32000,
+          "message": "limit_exceeded"
+        }
+      ],
+      "name": "credential.rotate",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "credential",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/CredentialId",
+            "description": "The credential to replace."
+          }
+        },
+        {
+          "name": "expires_at_ms",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimestampMs"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Expiry of the replacement; defaults to the replaced credential's expiry."
+          }
+        },
+        {
+          "name": "op_id",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Client-minted operation identity."
+          }
+        },
+        {
+          "name": "principal_epoch",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/PrincipalEpoch",
+            "description": "The principal epoch the caller last read; a newer one refuses the rotation."
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/CredentialRotateResult"
+        }
+      },
+      "summary": "Replace a credential and withdraw the old one in one step, guarded by the principal epoch.",
+      "x-effect": "mutation",
+      "x-params": {
+        "$ref": "#/components/schemas/CredentialRotateParams"
+      },
+      "x-targeting": "lookup"
+    },
+    {
+      "errors": [
+        {
+          "code": -32602,
+          "message": "invalid_params"
+        },
+        {
+          "code": -32000,
+          "message": "unavailable"
+        },
+        {
+          "code": -32603,
+          "message": "internal"
+        },
+        {
+          "code": -32000,
+          "message": "not_found"
+        },
+        {
+          "code": -32000,
+          "message": "unauthenticated"
+        },
+        {
+          "code": -32000,
+          "message": "forbidden"
+        },
+        {
+          "code": -32000,
+          "message": "deadline_exceeded"
+        },
+        {
+          "code": -32000,
+          "message": "cancelled"
+        },
+        {
+          "code": -32000,
+          "message": "backpressure"
+        },
+        {
+          "code": -32000,
+          "message": "op_expired"
+        },
+        {
+          "code": -32000,
+          "message": "op_reused"
+        },
+        {
+          "code": -32000,
+          "message": "persistence_failed"
+        },
+        {
+          "code": -32000,
+          "message": "outcome_unknown"
+        }
+      ],
+      "name": "credential.revoke",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "credential",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/CredentialId",
+            "description": "The credential to withdraw."
+          }
+        },
+        {
+          "name": "op_id",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Client-minted operation identity."
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/CredentialRevokeResult"
+        }
+      },
+      "summary": "Withdraw a credential; its queued writes are rechecked before any byte is written.",
+      "x-effect": "mutation",
+      "x-params": {
+        "$ref": "#/components/schemas/CredentialRevokeParams"
+      },
+      "x-targeting": "lookup"
     }
   ],
   "openrpc": "1.3.2",

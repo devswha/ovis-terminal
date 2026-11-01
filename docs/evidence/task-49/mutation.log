@@ -1,0 +1,10 @@
+Mutation probes (each applied alone to the working tree, targeted tests run, file restored):
+| mutant | file | tests run | result |
+|---|---|---|---|
+| OSC committed fence removed | recovery/replay.rs | recovery::qa::exact | KILLED (test failed) |
+| query answered fence removed | recovery/replay.rs | recovery::qa::exact | KILLED (test failed) |
+| inconclusive boot read as survived | recovery/verdict.rs | recovery::qa | KILLED (test failed) |
+| holder-unreachable incident mislabelled core_crash | recovery/recover.rs | recovery::qa::groups | KILLED (test failed) |
+| reused PID with another start token read as survived | recovery/verdict.rs | recovery::qa::verdicts | KILLED (test failed) |
+Note: a first exactness test with fence == checkpoint offset let both fence mutants survive; the test now lets the crashed core run past its last checkpoint (fence > checkpoint offset), which kills them.
+Unmutated baseline: cargo test -p ovis-terminal-core --lib recovery:: -> 19 passed.

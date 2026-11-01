@@ -1,0 +1,52 @@
+$ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+exit=0
+--- stdout
+
+--- stderr (tail)
+   Compiling getrandom v0.4.3
+   Compiling regex-syntax v0.8.11
+   Compiling uuid v1.29.0
+   Compiling ovis-terminal-authz v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t49/crates/ovis-terminal-authz)
+   Compiling regex-automata v0.4.18
+   Compiling alacritty_terminal v0.26.0
+   Compiling ovis-terminal-vt v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t49/crates/ovis-terminal-vt)
+   Compiling ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t49/crates/ovis-terminal-core)
+   Compiling ovis-terminal-agent v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t49/crates/ovis-terminal-agent)
+   Compiling ovis-terminal-remote v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t49/crates/ovis-terminal-remote)
+   Compiling ovis-terminal-services v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t49/crates/ovis-terminal-services)
+   Compiling ovis-terminal-agent-adapters v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t49/crates/ovis-terminal-agent-adapters)
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t49/crates/ovis-terminal-server)
+   Compiling ovis-terminal-cli v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t49/crates/ovis-terminal-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 22.39s
+
+
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario recovery/crash --isolated --case happy --evidence "/home/devswha/workspace/ovis-terminal-wt/lane-t49/.omo/evidence/ovis-terminal-v1/task-49/task-49-ovis-terminal-v1.json"
+exit=1
+--- stdout
+{"case":"happy","error":{"detail":"recovery/crash is a declaration, not a registered executable scenario","hint":"register the scenario with \"format\": \"ovis-conformance/1\" and typed steps","kind":"scenario_not_executable","step":null},"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t49/.omo/evidence/ovis-terminal-v1/task-49/task-49-ovis-terminal-v1.json","evidence_written":null,"result":"failed","scenario":"recovery/crash","totals":{"assertions":"0","cases":"0","declared_only":"0","failed":"0","passed":"0","skipped":"0"}}
+
+--- stderr (tail)
+   Compiling ovis-terminal-conformance v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t49/conformance)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 11.08s
+     Running `target/debug/conformance --binary target/debug/ovis-terminal --scenario recovery/crash --isolated --case happy --evidence /home/devswha/workspace/ovis-terminal-wt/lane-t49/.omo/evidence/ovis-terminal-v1/task-49/task-49-ovis-terminal-v1.json`
+
+
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario recovery/crash --isolated --case failure --inject '{"method":"terminal.run","params":{"isolation":"dedicated"}}' --evidence "/home/devswha/workspace/ovis-terminal-wt/lane-t49/.omo/evidence/ovis-terminal-v1/task-49/task-49-ovis-terminal-v1.json" --append
+exit=1
+--- stdout
+{"case":"failure","error":{"detail":"recovery/crash is a declaration, not a registered executable scenario","hint":"register the scenario with \"format\": \"ovis-conformance/1\" and typed steps","kind":"scenario_not_executable","step":null},"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t49/.omo/evidence/ovis-terminal-v1/task-49/task-49-ovis-terminal-v1.json","evidence_written":null,"result":"failed","scenario":"recovery/crash","totals":{"assertions":"0","cases":"0","declared_only":"0","failed":"0","passed":"0","skipped":"0"}}
+
+--- stderr (tail)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running `target/debug/conformance --binary target/debug/ovis-terminal --scenario recovery/crash --isolated --case failure --inject '{"method":"terminal.run","params":{"isolation":"dedicated"}}' --evidence /home/devswha/workspace/ovis-terminal-wt/lane-t49/.omo/evidence/ovis-terminal-v1/task-49/task-49-ovis-terminal-v1.json --append`
+
+
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario all/all --isolated --case all --evidence "/home/devswha/workspace/ovis-terminal-wt/lane-t49/.omo/evidence/ovis-terminal-v1/task-49/task-49-all.json"
+exit=0
+--- stdout
+{"case":"all","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t49/.omo/evidence/ovis-terminal-v1/task-49/task-49-all.json","evidence_written":null,"result":"passed","scenario":"all/all","totals":{"assertions":"1169","cases":"32","declared_only":"36","failed":"0","passed":"32","skipped":"0"}}
+
+--- stderr (tail)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.08s
+     Running `target/debug/conformance --binary target/debug/ovis-terminal --scenario all/all --isolated --case all --evidence /home/devswha/workspace/ovis-terminal-wt/lane-t49/.omo/evidence/ovis-terminal-v1/task-49/task-49-all.json`
+

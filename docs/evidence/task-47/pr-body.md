@@ -204,3 +204,26 @@ After the merge:
   - Windows `cargo check` and `cargo clippy -D warnings` (`x86_64-pc-windows-gnu`) exit 0 (`r2-windows.log`, `r2-check-script.log`).
   - Services `update::` passes 17/17.
 - Pushed on top of `3d11b7b`; integration is not merged (`b96f583`).
+
+## Merge round 2 (origin/integration 44e1660: T57 credential rotation, T49 holder recovery)
+
+I merged `origin/integration` (`44e1660`) into the lane on explicit request. Both sides are kept:
+
+- `conformance/src/engine/exchange.rs`: the `$capture` recording and T57's `keep_bearer` check both run on each reply.
+- `fixture/handler.rs`: the `fixture.deliver` route and the `fixture.update` probe; the docs are combined.
+- `fixture/serve.rs`: the update lane registration, T57's `observer` and `writer` delegates, and the `Revalidated` wrapper outermost.
+- `runner_tests/suite.rs`: the `EXECUTABLE` slice is sorted, with `security/rotation.json` and `services/update.json` (21 entries).
+- The workflow is integration's file, with the `update` option and job last; it parses with `yaml.safe_load`.
+- `schema/ovis-terminal.openrpc.json` is regenerated.
+
+The ledger head on integration is unchanged (`sha256:362980ac…`). The todo-47 entry still chains to `sha256:53782aab…`. `openrpc check` and `openrpc compat` exit 0.
+
+The merged fixture `serve()` reached 101 lines (`clippy::too_many_lines`). I moved the closing serve-report announcement into `announce_report(&ServeReport)`, with no behavior change.
+
+Results:
+- The runner's capture tests pass (`capture_requires_the_value_and_yields_it_by_name` and `captured_values_replace_their_placeholders_and_unknown_names_stay`).
+- `all/all --case all` exits 0: 40/40 cases, 1685 assertions, failed 0, skipped 0.
+- `all/all --case all --require-no-skips` exits 1 only with `declared_only_present`. Its totals are the same (40/40 passed, failed 0, skipped 0), and the 37 declarations are exactly integration's `declared.json`, none owned by todo 47 (`r3-all-all.log`).
+- `bash scripts/check.sh` exits 0: nextest `1115 tests run: 1115 passed (1 slow), 1 skipped`, hygiene `0 violation(s) in 1107 file(s)` (`r3-check-script.log`).
+- Windows `cargo check` and `cargo clippy -D warnings` exit 0 (`r3-windows.log`).
+- `services/update`: happy has 81 assertions, failure with the plan's `--inject --append` has 48, and `--case all` has 137; all exit 0 (`r3-qa.log`).

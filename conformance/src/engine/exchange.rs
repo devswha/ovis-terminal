@@ -110,6 +110,9 @@ impl Session<'_> {
             for (name, value) in expect.captures(&record) {
                 self.labels.capture(name, value);
             }
+            if let Some(name) = replies.keep_bearer.get(&id) {
+                checked.push(self.keep_bearer((&scope, &record), name));
+            }
             arrivals.push(Value::String(id));
         }
         let conn = self.conn(&replies.conn)?;

@@ -1,0 +1,484 @@
+{
+  "binary": {
+    "bytes": "152090048",
+    "path": "target/debug/ovis-terminal",
+    "sha256": "f2f430a36a0868639acdbc0004de0476939d4e38ddd9e87f2adc03b270f7c119"
+  },
+  "case": "failure",
+  "cases": [
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[open-p1]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "p1",
+          "check": "reply[open-p1]/result/prompt_id",
+          "expected": "p1",
+          "passed": true
+        },
+        {
+          "actual": "open",
+          "check": "reply[open-p1]/result/state",
+          "expected": "open",
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[open-p1]/result/version",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": [
+            "open-p1"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "open-p1"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[queued]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": {
+            "state": "queued"
+          },
+          "check": "reply[queued]/result/receipt/delivery",
+          "expected": {
+            "state": "queued"
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[queued]/result/receipt/queued_seq",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": [
+            "queued"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "queued"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[revoke]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "writer",
+          "check": "reply[revoke]/result/standing/principal",
+          "expected": "writer",
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[revoke]/result/standing/principal_epoch",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": "c3",
+          "check": "reply[revoke]/result/withdrawn/credential",
+          "expected": "c3",
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[revoke]/result/withdrawn/epoch",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": "01a19406-31e4-743c-aff9-42bf22ddb90b",
+          "check": "reply[revoke]/result/writes/0/op_id",
+          "expected": "01a19406-31e4-743c-aff9-42bf22ddb90b",
+          "passed": true
+        },
+        {
+          "actual": {
+            "outcome": "cancelled_before_commit",
+            "reason": "credential_revoked"
+          },
+          "check": "reply[revoke]/result/writes/0/race",
+          "expected": {
+            "outcome": "cancelled_before_commit",
+            "reason": "credential_revoked"
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[revoke]/result/writes/1",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "revoke"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "revoke"
+          ],
+          "passed": true
+        },
+        {
+          "actual": {
+            "method": "prompt.answer",
+            "params": {
+              "prompt_id": "p1",
+              "version": 1
+            },
+            "principal_fixture": "revoked-token"
+          },
+          "check": "inject/planned",
+          "expected": {
+            "method": "prompt.answer",
+            "params": {
+              "prompt_id": "p1",
+              "version": 1
+            },
+            "principal_fixture": "revoked-token"
+          },
+          "passed": true
+        },
+        {
+          "actual": "inject-0",
+          "check": "inject[0]/id",
+          "expected": "inject-0",
+          "passed": true
+        },
+        {
+          "actual": "invalid_params",
+          "check": "inject[0]/error/data/kind",
+          "expected": "credential_revoked",
+          "passed": false
+        },
+        {
+          "actual": null,
+          "check": "inject[0]/error/data/principal_epoch",
+          "expected": "2",
+          "passed": false
+        },
+        {
+          "actual": null,
+          "check": "inject[0]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        }
+      ],
+      "case": "failure",
+      "connections": [
+        {
+          "bytes_decoded": "2083",
+          "bytes_received": "2083",
+          "bytes_sent": "705",
+          "name": "owner",
+          "records_received": "3",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "e9d2134b20dbaca8a4a0846935e9a3b2785c3c80946c4d2876417042eff2746c",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "4",
+              "bytes": "1412",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "1785a0de5c22b4dbbf1084c96a98bd8d9e797d72ffed05df27e0cba1eda5a77a",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.keep\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"doc.get\",\"doc.set\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793484796366\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "7",
+              "bytes": "334",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "c08af52240de56a5c9af64e01ef3b01cce3f97a3c9419d0c0039d636dae4608c",
+              "text": "{\"id\":\"open-p1\",\"jsonrpc\":\"2.0\",\"method\":\"prompt.open\",\"params\":{\"op_id\":\"01a19406-31d2-7507-813a-080807b43e70\",\"process_token\":\"fixture-process-token-agent\",\"prompt\":{\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"},{\"id\":\"no\",\"label\":\"No\"}],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"text\":\"Proceed?\"},\"prompt_id\":\"p1\",\"target\":{\"name\":\"agent\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "25",
+              "bytes": "355",
+              "direction": "received",
+              "offset": "1412",
+              "sha256": "88d19d72f18d45054eb9a4e57b28c373b7c0a56d6c35bae016cc00b06c7f8737",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"open-p1\",\"result\":{\"agent_id\":null,\"answer\":null,\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"},{\"id\":\"no\",\"label\":\"No\"}],\"closed_seq\":null,\"fields\":[],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"opened_seq\":\"4\",\"process_incarnation\":\"1\",\"prompt_id\":\"p1\",\"session\":null,\"state\":\"open\",\"terminal_id\":\"terminal:4\",\"text\":\"Proceed?\",\"version\":\"1\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "40",
+              "bytes": "137",
+              "direction": "sent",
+              "offset": "568",
+              "sha256": "9161ab5be9c6a07bcf0b1e43548015f0be12b77cf3add49c425b5680f545b942",
+              "text": "{\"id\":\"revoke\",\"jsonrpc\":\"2.0\",\"method\":\"credential.revoke\",\"params\":{\"credential\":\"c3\",\"op_id\":\"01a19406-31f2-7645-b961-541a1bc6e1e9\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "56",
+              "bytes": "316",
+              "direction": "received",
+              "offset": "1767",
+              "sha256": "f61040aa6067546868a34526cb4f1e34cf4581fc5db15682b6215cb623f94b1c",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"revoke\",\"result\":{\"standing\":{\"principal\":\"writer\",\"principal_epoch\":\"2\"},\"withdrawn\":{\"credential\":\"c3\",\"epoch\":\"2\"},\"writes\":[{\"admitted_bytes\":\"1\",\"op_id\":\"01a19406-31e4-743c-aff9-42bf22ddb90b\",\"queued_seq\":\"1\",\"race\":{\"outcome\":\"cancelled_before_commit\",\"reason\":\"credential_revoked\"}}]}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "3"
+        },
+        {
+          "bytes_decoded": "1975",
+          "bytes_received": "1975",
+          "bytes_sent": "574",
+          "name": "writer",
+          "records_received": "3",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "fdc510786bcc78be2f46da27b699aa944b0a5c1e9aafb51f8af896763eae2c52",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "1412",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "bd489d44688004d18443a387349f0a4b6641a9e743ed3e9ce101a415db75fe32",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.keep\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"doc.get\",\"doc.set\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793484796369\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "20",
+              "bytes": "168",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "b4b126f592427ee2e013207d1bf237d51c43381a1a16088ef56386d2b48ebedc",
+              "text": "{\"id\":\"queued\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"op_id\":\"01a19406-31e4-743c-aff9-42bf22ddb90b\",\"submit\":\"none\",\"target\":{\"name\":\"rotation\"},\"text\":\"q\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "35",
+              "bytes": "329",
+              "direction": "received",
+              "offset": "1412",
+              "sha256": "a4647fc5e34560d34312c4a53f0c826e66edbf4a27c0595d427f5a4d031c1ba8",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"queued\",\"result\":{\"receipt\":{\"admitted_bytes\":\"1\",\"agent_accepted\":{\"state\":\"unknown\"},\"delivery\":{\"state\":\"queued\"},\"kind\":\"text\",\"mode_revision\":\"0\",\"op_id\":\"01a19406-31e4-743c-aff9-42bf22ddb90b\",\"output_cursor\":\"0\",\"queued_seq\":\"1\",\"turn_ended\":{\"state\":\"unknown\"},\"turn_started\":{\"state\":\"unknown\"}}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "52",
+              "bytes": "172",
+              "direction": "sent",
+              "offset": "402",
+              "sha256": "a2cc3ce72329c409b06c422edc7e3fd8b375eb6d15953280bfb9c42f501bff09",
+              "text": "{\"id\":\"inject-0\",\"jsonrpc\":\"2.0\",\"method\":\"prompt.answer\",\"params\":{\"answer\":{\"choice\":\"yes\"},\"op_id\":\"01a19406-3203-7554-9810-d6bc61cc2446\",\"prompt_id\":\"p1\",\"version\":1}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "52",
+              "bytes": "234",
+              "direction": "received",
+              "offset": "1741",
+              "sha256": "3b463630fd5e90635743131a0b73405148e5674564037fd10f65eb3def525e65",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-0\",\"error\":{\"code\":-32602,\"message\":\"method parameters violate the closed schema\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"correct the method parameters\",\"retryable\":false,\"field_path\":\"params.version\"}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "3"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-070",
+          "GAP-071",
+          "GAP-073",
+          "GAP-074",
+          "GAP-075",
+          "GAP-078",
+          "GAP-084",
+          "GAP-131",
+          "GAP-133"
+        ],
+        "delivers": [
+          "IDEAL-048",
+          "IDEAL-049",
+          "IDEAL-050",
+          "IDEAL-051",
+          "IDEAL-052",
+          "IDEAL-055",
+          "IDEAL-061",
+          "IDEAL-103",
+          "IDEAL-104",
+          "IDEAL-106"
+        ],
+        "excludes": [
+          "EXCL-007",
+          "EXCL-023",
+          "EXCL-026"
+        ],
+        "title": "Credentials rotate and revoke atomically; queued writes are rechecked before any byte, and no socket keeps authority",
+        "todo": "57"
+      },
+      "descriptors": [],
+      "elapsed_ms": "127",
+      "failure": {
+        "detail": "expectation inject[0]/error/data/kind did not hold",
+        "hint": "compare expected and actual values in the evidence",
+        "kind": "assertion_failed",
+        "step": "11"
+      },
+      "fixture": {
+        "accepted": "2",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "failed",
+      "processes": [
+        {
+          "argv": [
+            "target/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "1003093",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "target/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "1003096",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "/home/devswha/workspace/ovis-terminal-wt/lane-t57/target/debug/conformance",
+            "fixture",
+            "--root",
+            "/tmp/ovc-994742-0"
+          ],
+          "exit_code": 0,
+          "pid": "1002946",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "security/rotation",
+      "summary": "An open prompt p1 version 1 and a queued write of the writer exist; the owner revokes c3, which reports the write cancelled_before_commit at principal epoch 2. prompt.answer over the revoked writer socket, with the plan's numeric version literal or a valid decimal one, is refused credential_revoked at principal epoch 2 before its parameters are decoded; p1 stays open at version 1 with no answer, the released boundary writes nothing and the PTY holds zero bytes. Revoking again advances both the credential and principal epoch to 3; an unknown credential is not_found; reconnecting with the revoked bearer fails hello."
+    }
+  ],
+  "elapsed_ms": "5231",
+  "error": null,
+  "format": "ovis-conformance-evidence/1",
+  "host": {
+    "arch": "x86_64",
+    "family": "unix",
+    "os": "linux"
+  },
+  "inventory": null,
+  "result": "failed",
+  "runner_version": "0.1.0",
+  "scenario": "security/rotation",
+  "totals": {
+    "assertions": "27",
+    "cases": "1",
+    "declared_only": "0",
+    "failed": "1",
+    "passed": "0",
+    "skipped": "0"
+  }
+}

@@ -3,7 +3,8 @@
 //! Those are the read-only protocol methods `rpc.discover` and paged `terminal.output`,
 //! the fixture-only `fixture.transcript` provider write, `fixture.pty` input byte count,
 //! `fixture.bridge` extension driver, the `fixture.exit` and `fixture.program` program
-//! lifecycle stand-ins, and the `fixture.update` release probe.
+//! lifecycle stand-ins, `fixture.deliver`, which lets the sequenced terminal's holder
+//! stand-in write, and the `fixture.update` release probe.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -22,6 +23,7 @@ use super::agents::Directory;
 use super::bridge::Extension;
 use super::output;
 use super::prompts::Gate;
+use super::rotation::Sequenced;
 use super::serve::at;
 use super::tree::{self, Tree};
 use crate::error::RunnerError;
@@ -38,6 +40,9 @@ const PROVIDER_WRITE: &str = "fixture.transcript";
 /// The PTY stand-in's byte count; served but never advertised.
 const PTY_READ: &str = "fixture.pty";
 
+/// Releases the sequenced terminal's write boundary; served but never advertised.
+const DELIVER: &str = "fixture.deliver";
+
 /// The in-process extension stand-in's driver; served but never advertised.
 const EXTENSION: &str = "fixture.bridge";
 
@@ -53,6 +58,7 @@ pub(crate) struct Probes {
     pub(crate) gate: Arc<Gate>,
     pub(crate) directory: Arc<Directory>,
     pub(crate) extension: Arc<Extension>,
+    pub(crate) sequenced: Arc<Sequenced>,
     pub(crate) tree: Arc<Tree>,
 }
 
@@ -108,6 +114,10 @@ impl RequestHandler for FixtureHandler {
             EXTENSION => self.probes.extension.call(&call.request).await,
             PROGRAM_EXIT => tree::exit(&self.probes.tree, &call.request).await,
             PROGRAM_READ => tree::program(&self.probes.tree, &call.request),
+            DELIVER => {
+                let _: NoParams = decode_params(&call.request).map_err(BoundaryError::from)?;
+                self.probes.sequenced.deliver()
+            }
             super::update::PROBE => super::update::probe(&self.root),
             _ => self.dispatch.call(call).await,
         }
