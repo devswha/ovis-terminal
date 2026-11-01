@@ -7,6 +7,7 @@ pub(super) mod agents;
 mod machine;
 mod service;
 mod update;
+mod worktrees;
 
 use std::path::Path;
 use std::sync::Arc;
@@ -19,6 +20,7 @@ use ovis_terminal_core::ops::{OperationEvent, OperationProducer};
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
 use ovis_terminal_protocol::schema::scalar::EventSeq;
 use ovis_terminal_server::dispatch::Dispatcher;
+use ovis_terminal_services::worktrees::WorktreeEvent;
 use ovis_terminal_store::{Store, StoreOptions};
 use serde::{Deserialize, Serialize};
 
@@ -33,6 +35,8 @@ pub(super) enum ServedEvent {
     Agent(AgentStatusEvent),
     /// A document changed.
     Doc(DocChanged),
+    /// A checkout was created, opened or removed.
+    Worktree(WorktreeEvent),
 }
 
 impl EventData for ServedEvent {
@@ -40,6 +44,7 @@ impl EventData for ServedEvent {
         match self {
             Self::Agent(event) => event.event_type(),
             Self::Doc(event) => event.event_type(),
+            Self::Worktree(event) => event.event_type(),
         }
     }
 
@@ -47,6 +52,7 @@ impl EventData for ServedEvent {
         match self {
             Self::Agent(event) => event.at_sequence(seq),
             Self::Doc(event) => event.at_sequence(seq),
+            Self::Worktree(event) => event.at_sequence(seq),
         }
     }
 }
@@ -60,6 +66,12 @@ impl From<OperationEvent> for ServedEvent {
 impl From<AgentStatusEvent> for ServedEvent {
     fn from(event: AgentStatusEvent) -> Self {
         Self::Agent(event)
+    }
+}
+
+impl From<WorktreeEvent> for ServedEvent {
+    fn from(event: WorktreeEvent) -> Self {
+        Self::Worktree(event)
     }
 }
 
@@ -110,5 +122,6 @@ pub(super) fn host(hosting: &Hosting<'_>) -> Result<(Dispatch, Arc<DispatchLog>)
     machine::register(&mut dispatch, hosting)?;
     agents::register(&mut dispatch, hosting, &log)?;
     update::register(&mut dispatch, hosting)?;
+    worktrees::register(&mut dispatch, hosting, &log)?;
     Ok((dispatch, log))
 }

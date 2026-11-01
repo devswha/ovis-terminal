@@ -24,6 +24,8 @@ pub mod support;
 mod update;
 #[path = "assembly/websocket.rs"]
 mod websocket;
+#[path = "assembly/worktrees.rs"]
+mod worktrees;
 
 use std::collections::BTreeSet;
 use std::process::Command;
@@ -32,7 +34,7 @@ use serde_json::{Value, json};
 use support::{BIN, Served, TestResult, op_id};
 
 /// Schema methods no landed crate implements; each must answer `method_not_found`.
-const UNIMPLEMENTED: [&str; 31] = [
+const UNIMPLEMENTED: [&str; 27] = [
     "agent.list",
     "agent.note",
     "agent.release",
@@ -60,10 +62,6 @@ const UNIMPLEMENTED: [&str; 31] = [
     "terminal.search",
     "turn.get",
     "turn.wait",
-    "worktree.create",
-    "worktree.list",
-    "worktree.open",
-    "worktree.remove",
 ];
 
 /// Every method name the committed OpenRPC document publishes.

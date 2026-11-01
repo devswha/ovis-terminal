@@ -39,6 +39,18 @@ fn fixture_root() -> PathBuf {
     std::env::var_os("OVIS_FIXTURE_ROOT").map_or_else(|| PathBuf::from("/tmp"), PathBuf::from)
 }
 
+/// A new, empty server root below the fixture root.
+///
+/// # Errors
+///
+/// Fails when the directory cannot be created.
+pub fn fresh_root() -> TestResult<PathBuf> {
+    let unique = NEXT.fetch_add(1, Ordering::Relaxed);
+    let root = fixture_root().join(format!("ovt31a-{}-{unique}", std::process::id()));
+    std::fs::create_dir_all(&root)?;
+    Ok(root)
+}
+
 fn uuid_text(id: u128) -> String {
     let hex = format!("{id:032x}");
     let part = |from: usize, to: usize| hex.get(from..to).unwrap_or_default().to_owned();
@@ -97,10 +109,7 @@ impl Served {
     ///
     /// Fails when a process, socket or file step fails.
     pub fn start_with(extra: &[&str]) -> TestResult<Self> {
-        let unique = NEXT.fetch_add(1, Ordering::Relaxed);
-        let root = fixture_root().join(format!("ovt31a-{}-{unique}", std::process::id()));
-        std::fs::create_dir_all(&root)?;
-        Self::start_at(&root, extra)
+        Self::start_at(&fresh_root()?, extra)
     }
 
     /// Starts `serve` on an existing `root`, as a later boot of the same state.

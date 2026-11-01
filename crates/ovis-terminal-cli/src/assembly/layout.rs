@@ -5,10 +5,11 @@
 mod wire;
 
 use ovis_terminal_authz::Session;
-use ovis_terminal_core::events::Coordinator;
+use ovis_terminal_core::events::{Coordinator, ResourceId};
 use ovis_terminal_core::layout::{
     Call, EditRequest, LaunchOutcome, LayoutError, LayoutEvent, Layouts, Producer, SelectRequest,
 };
+use ovis_terminal_core::registry::WorkspaceId;
 use ovis_terminal_protocol::errors::{BoundaryError, OpId};
 use ovis_terminal_protocol::schema::methods::layout::{
     LayoutEditParams, LayoutTree, SelectionSetParams,
@@ -144,5 +145,42 @@ impl Runtime {
             .select(Call::new(session, op), &request)
             .map_err(|e| layout_refusal(&e))?;
         self.answer(session, &change)
+    }
+
+    /// Opens one workspace named `name` for a checkout, under the control's own session.
+    pub(super) fn open_workspace(&self, name: &str) -> Result<WorkspaceId, BoundaryError> {
+        let edit = wire::checked(json!({"op": "create_workspace", "name": name,
+            "group_with": null}))?;
+        let change = self.control_edit(&EditRequest::new(edit))?;
+        change
+            .created
+            .iter()
+            .find_map(|id| match id {
+                ResourceId::Workspace(workspace) => Some(*workspace),
+                _ => None,
+            })
+            .ok_or_else(|| refusal("internal", "the workspace edit created no workspace"))
+    }
+
+    /// Closes exactly `workspaces`, under the control's own session.
+    pub(super) fn close_workspaces(&self, workspaces: &[WorkspaceId]) -> Result<(), BoundaryError> {
+        for workspace in workspaces {
+            let edit = wire::checked(json!({"op": "close",
+                "target": {"kind": "workspace", "id": workspace}, "scope": "target"}))?;
+            self.control_edit(&EditRequest::new(edit))?;
+        }
+        Ok(())
+    }
+
+    fn control_edit(
+        &self,
+        request: &EditRequest,
+    ) -> Result<ovis_terminal_core::layout::Change, BoundaryError> {
+        let layouts = self.layouts();
+        let op = OpId::new(uuid::Uuid::now_v7().to_string());
+        self.control
+            .with_terminals(|_, session| Ok(layouts.edit(Call::new(session, op), request)))
+            .map_err(|error| refusal(error.kind(), error.hint()))?
+            .map_err(|e| layout_refusal(&e))
     }
 }
