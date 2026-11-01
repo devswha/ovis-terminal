@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # F2a loaded proof: 25 runs of the whole conformance crate (its all/all suite test is where the
 # three occurrences surfaced), pinned to cores 120-123 with 8 busy loops there at nice 10
-# (task-31 r5 recipe; the product at nice 0 keeps its share). Run through the heavy gate.
+# (task-31 r5 recipe; the product at nice 0 keeps its share). One crate: run directly, outside
+# the heavy slot gate (owner instruction), inside the toolchain env's cargo shim.
 set -u
 LOADED=120-123
 SCR=/dev/shm/ovt-fixtures/f2a-scratch

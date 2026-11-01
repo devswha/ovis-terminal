@@ -1,5 +1,6 @@
 //! The stand-in remote runtime at the far end of a fixture machine's line.
 
+use std::io::Write as _;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
@@ -149,8 +150,11 @@ impl Remote {
     }
 }
 
-/// A fixture failure that is no fault of the request.
-pub(crate) fn internal<E>(_: E) -> BoundaryError {
+/// A fixture failure that is no fault of the request; its cause goes to the fixture's
+/// stderr, which the runner keeps in the case evidence, as the hint promises.
+pub(crate) fn internal<E: std::fmt::Debug>(cause: E) -> BoundaryError {
+    let line = json!({"internal": format!("{cause:?}")});
+    drop(writeln!(std::io::stderr().lock(), "{line}"));
     BoundaryError::domain(ErrorKind::Internal, false).with_hint("inspect the fixture's stderr")
 }
 

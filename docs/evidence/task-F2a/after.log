@@ -1,12 +1,20 @@
-# F2a after (Linux 7.0.0-38-generic x86_64, debug build of this branch)
-$ conformance --binary <target>/debug/ovis-terminal --scenario remote/isolation --isolated --case all --evidence <scratch>/after-isolation.json
-{"case":"all","result":"passed","scenario":"remote/isolation","totals":{"assertions": "111", "cases": "2", "declared_only": "0", "failed": "0", "passed": "2", "skipped": "0"}}
-CONFORMANCE_EXIT=0
-binary sha256: 5fb71b36107ba6aab54d03bc250be0afa6d80bb073d14e0adcacb135e52a72d4
-per case (case, assertions, passed, failure): [('happy', 67, 67, None), ('failure', 44, 44, None)]
-step 8 assertions (happy): [{"actual": null, "check": "reply[child-on-bravo]/error", "expected": {"$present": false}, "passed": true}, {"actual": true, "check": "reply[child-on-bravo]/result/linked", "expected": true, "passed": true}]
+# F2a after (Linux 7.0.0-38-generic x86_64, debug build of this branch's final tree)
 
+## 1. Real binary, both cases
+$ conformance --binary <target>/debug/ovis-terminal --scenario remote/isolation --isolated --case all --evidence <scratch>/after-isolation.json
+result=passed totals={"assertions": "111", "cases": "2", "declared_only": "0", "failed": "0", "passed": "2", "skipped": "0"}  CONFORMANCE_EXIT=0
+binary sha256: 5fb71b36107ba6aab54d03bc250be0afa6d80bb073d14e0adcacb135e52a72d4
+
+## 2. Widened-gap reproduction (diagnostic patch, not committed)
+The old order (clock read, 2 ms busy wait, mint from the live clock) re-applied on top of this branch:
+step 8 fails exactly like the three occurrences, and the fixture's stderr now carries the cause
+instead of nothing: failure={"detail": "expectation reply[child-on-bravo]/error did not hold", "hint": "compare expected and actual values in the evidence", "kind": "assertion_failed", "step": "8"}
+fixture stderr=["{\"internal\":\"InvalidParams\"}\n"]
+With the shipped code the mint and the clock come from one reading, so no gap exists to widen.
+
+## 3. Regression test
 $ cargo nextest run --locked --manifest-path conformance/Cargo.toml -E 'test(stamped)'
-PASS fixture::machines::remote::tests::an_operation_stamped_at_a_reading_is_accepted_at_that_reading
-Summary: 1 test run: 1 passed, 30 skipped (exit 0)
-Mutants: docs/evidence/task-F2a/mutants.log (4/4 fail the shipped test with Err("invalid_params")).
+PASS fixture::machines::remote::tests::an_operation_stamped_at_a_reading_is_accepted_at_that_reading  (1 passed, exit 0)
+
+## 4. Mutants: docs/evidence/task-F2a/mutants.log, 4/4 fail the shipped test with Err("invalid_params")
+(M1 is the old code: id minted from the live clock.)
