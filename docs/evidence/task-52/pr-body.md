@@ -244,3 +244,5 @@ The full `scripts/check.sh` and the Windows cross-check are left to CI for this 
 - `MachineAdd::restricted` (the todo-58 endpoint allowlist) **still has no production caller.** The fixture uses `MachineAdd::new`, because its stdio peer uses an argv transport, which a host allowlist refuses by design.
 - Document retention floors (`doc.*`) stay with todo 50's lane tests until assembly. The shared fixture's `doc.*` names belong to the todo-21 stubs that protocol scenarios pin.
 - Still not done: a planned restart of the *local core's listener* (only the control boot is restarted). The `x-effect: control` methods are still classed as reads locally by remote dispatch; this is a todo-61 note from the gate.
+
+**Round 2 CI fix (633b829):** `rustdoc -D warnings` failed because the public module doc of `fixture::peer::ssh` linked the private `DESTINATION` const. The doc now names it in plain code formatting, with no intra-doc link and no `#[allow]`. `RUSTDOCFLAGS=-Dwarnings cargo doc --no-deps -p ovis-terminal-conformance` (also server, remote, protocol) exits 0.

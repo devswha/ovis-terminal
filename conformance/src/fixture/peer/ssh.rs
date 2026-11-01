@@ -1,7 +1,7 @@
 //! An SSH loopback without sshd, so `machine.add` over SSH runs end to end.
 //!
 //! An `ssh` first on the fixture's search path accepts only the runtime's fixed SSH
-//! transport argument vector for [`DESTINATION`] and carries its stdio to the peer through
+//! transport argument vector for `DESTINATION` and carries its stdio to the peer through
 //! the binary under test: the real argument vector, handshake and credential check.
 
 use std::os::unix::fs::PermissionsExt as _;
