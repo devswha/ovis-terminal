@@ -117,10 +117,10 @@ The VT engine (`ovis-terminal-vt`) already computes checkpoint `Fidelity` and `I
 
 ### Tests and gates (literal commands, exit codes)
 
-- `cargo nextest run -p ovis-terminal-conformance`: NEXTEST_RESULT (`nextest.log`). The literal `-p conformance` exits 101 (`nextest-literal-p-conformance.log`); see the amendment.
+- `cargo nextest run -p ovis-terminal-conformance`: exit 0, 33 tests passed, including `attach_input::happy`, `attach_input::failure` and the suite inventory with the three declarations (`nextest.log`). The literal `-p conformance` exits 101 (`nextest-literal-p-conformance.log`); see the amendment.
 - `cargo clippy -p ovis-terminal-conformance -p ovis-terminal-cli -p ovis-terminal-protocol -p ovis-terminal-server --all-targets -- -D warnings`: exit 0 (`clippy.log`).
-- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh`: CHECK_RESULT (`check.log`).
-- Windows: `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings`: WINDOWS_RESULT (`windows.log`).
+- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh`: exit 0, `check.sh: all steps passed` (workspace fmt/clippy/nextest/doc tests, hygiene, source-check, evidence-audit with 0 findings) (`check.log`).
+- Windows: `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings`: both exit 0 (WINCHECK_EXIT=0, WINCLIPPY_EXIT=0) (`windows.log`).
 - **Mutants (`mutants.log`).** Each was applied, the binary rebuilt, the shipped `attach_input::*` tests run, and the mutant reverted. All seven were killed:
   - M1: credit beyond sent accepted → `failure` fails.
   - M2: takeover epoch check removed → `failure` fails.
