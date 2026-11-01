@@ -1,7 +1,6 @@
 //! Parse-once decoding of method parameters into their closed typed form.
 
-use serde::de::{self, DeserializeOwned, Visitor};
-use serde::forward_to_deserialize_any;
+use serde::de::DeserializeOwned;
 use thiserror::Error;
 
 use crate::errors::BoundaryError;
@@ -75,44 +74,19 @@ pub fn decode_params<P: DeserializeOwned>(request: &RpcRequest) -> Result<P, Par
     })
 }
 
-/// The first top-level key of `params` that `P` does not declare, when `P` is a struct.
+/// The first top-level key of `params` that `P` refuses as unknown. Each key is decoded
+/// alone, so the refusal cannot come from another member; serde names an unknown field
+/// only in its message, as it does a missing one.
 fn unknown_key<P: DeserializeOwned>(params: &serde_json::Value) -> Option<String> {
-    let mut declared = None;
-    // The probe always fails; it only records the field list serde hands to a struct.
-    let probed = P::deserialize(FieldNames(&mut declared));
-    let fields = declared.filter(|_| probed.is_err())?;
-    params
-        .as_object()?
-        .keys()
-        .find(|key| !fields.contains(&key.as_str()))
-        .cloned()
-}
-
-/// A deserializer that captures the field names a derived struct declares.
-struct FieldNames<'a>(&'a mut Option<&'static [&'static str]>);
-
-impl<'de> de::Deserializer<'de> for FieldNames<'_> {
-    type Error = serde_json::Error;
-
-    fn deserialize_any<V: Visitor<'de>>(self, _visitor: V) -> Result<V::Value, Self::Error> {
-        Err(de::Error::custom("params are not a struct"))
-    }
-
-    fn deserialize_struct<V: Visitor<'de>>(
-        self,
-        _name: &'static str,
-        fields: &'static [&'static str],
-        _visitor: V,
-    ) -> Result<V::Value, Self::Error> {
-        *self.0 = Some(fields);
-        Err(de::Error::custom("struct fields captured"))
-    }
-
-    forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string bytes
-        byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct map enum
-        identifier ignored_any
-    }
+    params.as_object()?.iter().find_map(|(key, value)| {
+        let alone =
+            serde_json::Value::Object(std::iter::once((key.clone(), value.clone())).collect());
+        let refused = serde_json::from_value::<P>(alone).err()?;
+        refused
+            .to_string()
+            .starts_with(&format!("unknown field `{key}`"))
+            .then(|| key.clone())
+    })
 }
 
 /// Name of the absent required field. serde names it only in its message,
