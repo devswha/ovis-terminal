@@ -6,12 +6,14 @@ use std::sync::Arc;
 
 use ovis_terminal_core::leases::Caller;
 use ovis_terminal_protocol::errors::BoundaryError;
+use ovis_terminal_protocol::schema::common::NoParams;
 use ovis_terminal_protocol::schema::decode_params;
 use ovis_terminal_protocol::schema::limits::TransportKind;
 use ovis_terminal_protocol::schema::methods::attach::{
     AttachLeaseParams, AttachLeasesParams, AttachOpenParams, AttachResizeParams,
 };
 use ovis_terminal_protocol::schema::methods::input::InputBarrierParams;
+use ovis_terminal_protocol::schema::methods::layout::{LayoutEditParams, SelectionSetParams};
 use ovis_terminal_protocol::schema::methods::server::OpRefParams;
 use ovis_terminal_protocol::schema::methods::terminal::{TerminalGetParams, TerminalRunParams};
 use ovis_terminal_protocol::schema::records::LeaseRole;
@@ -31,7 +33,7 @@ use super::error::{refusal, worker_gone};
 use super::lanes::Dispatch;
 
 /// Methods served by the runtime actor and the lease table, besides the attach streams.
-pub(super) const ROUTED: [&str; 23] = [
+pub(super) const ROUTED: [&str; 26] = [
     "terminal.run",
     "terminal.list",
     "terminal.get",
@@ -55,6 +57,9 @@ pub(super) const ROUTED: [&str; 23] = [
     "attach.leases",
     "attach.focus",
     "attach.release_geometry",
+    "layout.get",
+    "layout.edit",
+    "selection.set",
 ];
 
 type Lane = AttachLane<Arc<Directory>>;
@@ -129,18 +134,11 @@ impl RequestHandler for Served {
                     .call(move |runtime| runtime.resize(&session, &params))
                     .await
             }
-            "attach.release_geometry" => {
-                let params: AttachLeaseParams = decode(&call)?;
-                self.actor
-                    .call(move |runtime| runtime.release_geometry(&session, &params))
-                    .await
-            }
-            "attach.focus" => {
-                let params: AttachLeaseParams = decode(&call)?;
-                self.actor
-                    .call(move |runtime| runtime.focus(&session, &params))
-                    .await
-            }
+            "layout.get"
+            | "layout.edit"
+            | "selection.set"
+            | "attach.release_geometry"
+            | "attach.focus" => self.layout_or_lease(call).await,
             "attach.leases" => {
                 let params: AttachLeasesParams = decode(&call)?;
                 let leases = self
@@ -178,6 +176,44 @@ impl Served {
     /// After a ready interact attach that named a grid, takes the geometry lease for the
     /// same principal and client (queued behind a holder, never displacing one) and
     /// applies the grid through the geometry controller.
+    /// Layout reads and edits, selections, and changes to a held lease, on the actor.
+    async fn layout_or_lease(&self, call: Call) -> Result<Value, BoundaryError> {
+        let session = Arc::clone(&call.session);
+        match call.request.method() {
+            "layout.get" => {
+                let _: NoParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.layout_get(&session))
+                    .await
+            }
+            "layout.edit" => {
+                let params: LayoutEditParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.layout_edit(&session, &params))
+                    .await
+            }
+            "selection.set" => {
+                let params: SelectionSetParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.select(&session, &params))
+                    .await
+            }
+            "attach.release_geometry" => {
+                let params: AttachLeaseParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.release_geometry(&session, &params))
+                    .await
+            }
+            "attach.focus" => {
+                let params: AttachLeaseParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.focus(&session, &params))
+                    .await
+            }
+            _ => Err(BoundaryError::method_not_found()),
+        }
+    }
+
     async fn claim_geometry(
         &self,
         call: (&Arc<ovis_terminal_authz::Session>, &AttachOpenParams),

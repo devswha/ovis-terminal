@@ -57,6 +57,7 @@ pub(super) struct Runtime {
     pub(super) directory: Arc<Directory>,
     pub(super) setup: StreamSetup,
     pub(super) geometry_log: GeometryLog,
+    pub(super) layout_log: super::layout::LayoutLog,
     pub(super) live: BTreeMap<TerminalId, Live>,
     pub(super) launches: BTreeMap<TerminalId, (Geometry, Option<String>)>,
     pub(super) created: BTreeMap<TerminalId, Revision>,
@@ -135,7 +136,10 @@ impl Runtime {
             .map_err(AssemblyError::stop("shut the holder down"))?;
         self.geometry_log
             .close()
-            .map_err(AssemblyError::stop("close the geometry log"))
+            .map_err(AssemblyError::stop("close the geometry log"))?;
+        self.layout_log
+            .close()
+            .map_err(AssemblyError::stop("close the layout log"))
     }
 }
 

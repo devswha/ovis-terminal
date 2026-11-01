@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use ovis_terminal_core::events::Coordinator;
 use ovis_terminal_core::health::Health;
+use ovis_terminal_core::layout::Producer;
 use ovis_terminal_core::registry::RuntimeIdentity;
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_store::OpId;
@@ -39,6 +40,12 @@ impl Runtime {
         std::mem::replace(&mut self.geometry_log, reopened)
             .close()
             .map_err(internal("close the geometry log of the old boot"))?;
+        let layout =
+            super::boot::store(state, "layout.db").map_err(internal("reopen the layout log"))?;
+        let reopened = Coordinator::new(layout, identity, Producer::new(identity.runtime_id()));
+        std::mem::replace(&mut self.layout_log, reopened)
+            .close()
+            .map_err(internal("close the layout log of the old boot"))?;
         self.setup = self.setup.clone().reporting_to(Arc::clone(&health));
         self.health = health;
         self.census = None;

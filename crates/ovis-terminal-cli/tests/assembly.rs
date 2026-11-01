@@ -6,6 +6,8 @@
 mod control;
 #[path = "assembly/lanes.rs"]
 mod lanes;
+#[path = "assembly/layout.rs"]
+mod layout;
 #[path = "assembly/leases.rs"]
 mod leases;
 #[path = "assembly/prompts.rs"]
@@ -30,7 +32,7 @@ use serde_json::{Value, json};
 use support::{BIN, Served, TestResult, op_id};
 
 /// Schema methods no landed crate implements; each must answer `method_not_found`.
-const UNIMPLEMENTED: [&str; 34] = [
+const UNIMPLEMENTED: [&str; 31] = [
     "agent.list",
     "agent.note",
     "agent.release",
@@ -42,14 +44,11 @@ const UNIMPLEMENTED: [&str; 34] = [
     "events.update",
     "events.wait",
     "input.interrupt",
-    "layout.edit",
-    "layout.get",
     "machine.exec",
     "machine.file",
     "machine.list",
     "machine.login",
     "machine.rm",
-    "selection.set",
     "server.start",
     "service.install",
     "service.remove",

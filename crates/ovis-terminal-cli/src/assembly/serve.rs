@@ -152,6 +152,11 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         directory: Arc::clone(&directory),
         setup,
         geometry_log: booted.geometry,
+        layout_log: ovis_terminal_core::events::Coordinator::new(
+            super::boot::store(&state, "layout.db")?,
+            booted.identity,
+            ovis_terminal_core::layout::Producer::new(booted.identity.runtime_id()),
+        ),
         live: BTreeMap::new(),
         launches: BTreeMap::new(),
         created: BTreeMap::new(),

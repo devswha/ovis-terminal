@@ -35,7 +35,7 @@ pub(super) fn terminal_refusal(error: &TerminalError) -> BoundaryError {
 /// The environment variable a spawned program finds its process token in.
 const PROCESS_TOKEN_VAR: &str = "OVIS_TERMINAL_PROCESS_TOKEN";
 
-fn launch(params: TerminalRunParams) -> Result<(Launch, ProcessToken), TerminalError> {
+pub(super) fn launch(params: TerminalRunParams) -> Result<(Launch, ProcessToken), TerminalError> {
     let unsupported = params.parent.is_some()
         || params.child_policy.is_some()
         || params.first_message.is_some()
@@ -69,7 +69,7 @@ fn launch(params: TerminalRunParams) -> Result<(Launch, ProcessToken), TerminalE
 
 /// Refuses an oversized or unsafe launch before anything is admitted (plan todo 58): the
 /// argv and environment bounds, NUL bytes and runtime-reserved variables.
-fn bounded(params: &TerminalRunParams) -> Result<(), BoundaryError> {
+pub(super) fn bounded(params: &TerminalRunParams) -> Result<(), BoundaryError> {
     if let Some(LaunchProgram::Argv(argv)) = &params.program {
         LaunchArgv::parse(argv).map_err(|violation| violation.to_boundary())?;
     }
