@@ -1,0 +1,34 @@
+# symlinked scratch root (Darwin /var -> /private/var analogue): OVIS_FIXTURE_ROOT=/home/devswha/.ovis-run/scratch/t63/linked-root -> /dev/shm/ovt-fixtures/t63-real
+$ bun run --cwd packages/client-ts build && bun run --cwd packages/client-ts pack && bun test packages/client-ts/tests
+$ bun scripts/build.ts
+{"built":"dist","generated_files":31,"entries":["dist/index.js","dist/protocol.js"]}
+$ bun scripts/pack.ts
+{"tarball":"/home/devswha/workspace/ovis-terminal-wt/lane-t63/packages/client-ts/pack/ovis-terminal-client-0.1.0.tgz","sha256":"ed9f8c9bc24f32f69e31aa68083446554c9918d77c3c7a508824e68e18dc5963"}
+bun test v1.4.3 (c6da4a4d3)
+
+packages/client-ts/tests/consumer.test.ts:
+(pass) happy > every entry point resolves to the installed tarball's dist, outside the repository [50.36ms]
+(pass) happy > the consumer typechecks against the packed declarations and every misuse is rejected [1082.71ms]
+(pass) happy > one framed connection to the real server carries pipelined calls; future_status and u64 stay exact [534.68ms]
+(pass) happy > an additive output enum value is kept as received and the known fields are unchanged [39.04ms]
+(pass) happy > typed attach outcomes, isolated stream bytes and per-stream credit [41.30ms]
+(pass) happy > frames decode identically at every split, bytewise, and a truncated tail is typed [40.29ms]
+(pass) failure > an expired op_id is the server's typed op_expired, sent once and never resent [397.18ms]
+(pass) failure > a lost mutation reply is an inspectable draft; reconnect resends nothing [479.65ms]
+(pass) failure > stale state: a closed stream's ack grants nothing and the next credit belongs to the live stream [37.24ms]
+(pass) failure > stale state: reconnect resumes after the retained cursor and drops the replayed duplicate [41.29ms]
+(pass) failure > a malformed server frame fails the decoder once; the mutation becomes a draft and is not resent [43.58ms]
+(pass) failure > Windows named pipes are refused with a typed error; Unix platforms use sockets [35.26ms]
+
+packages/client-ts/tests/package.test.ts:
+(pass) the tarball carries only built output, the license, the readme and the manifest [6.28ms]
+(pass) the packed manifest's exports, types, files, engines and license resolve inside the tarball [11.44ms]
+(pass) the exported OpenRPC document is the Rust-emitted schema byte for byte [12.38ms]
+(pass) building and packing again reproduces the tarball byte for byte [1289.35ms]
+(pass) build refuses a schema the committed generated modules do not match, writing nothing [43.12ms]
+
+ 17 pass
+ 0 fail
+ 51 expect() calls
+Ran 17 tests across 2 files. [4.21s]
+exit=0

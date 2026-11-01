@@ -10,12 +10,34 @@
     "url": "https://github.com/devswha/ovis-terminal.git",
     "directory": "packages/client-ts"
   },
-  "exports": {
-    ".": "./src/index.ts"
+  "engines": {
+    "bun": ">=1.4.3"
   },
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./protocol": {
+      "types": "./dist/types/protocol.d.ts",
+      "default": "./dist/protocol.js"
+    },
+    "./openrpc.json": "./dist/openrpc.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "generate": "bun scripts/generate.ts",
     "generate:check": "bun scripts/generate.ts --check",
+    "build": "bun scripts/build.ts",
+    "pack": "bun scripts/pack.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "bun test"
   },
