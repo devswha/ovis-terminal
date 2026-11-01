@@ -48,14 +48,28 @@ pub(crate) struct FixtureProcess {
     pub(crate) ready: Ready,
 }
 
-/// Starts `runner fixture --root <root>` and waits, bounded, for its ready line.
-pub(crate) async fn start(runner: &Path, root: &Path) -> Result<FixtureProcess, RunnerError> {
+/// The fixture's executable search path: its own `bin` directory, where the SSH loopback
+/// shim lives, before the system directories.
+fn search_path(root: &Path) -> String {
+    format!("{}:/usr/bin:/bin", root.join("bin").display())
+}
+
+/// Starts `runner fixture --root <root> --binary <binary>` and waits, bounded, for its
+/// ready line.
+pub(crate) async fn start(
+    runner: &Path,
+    root: &Path,
+    binary: &Path,
+) -> Result<FixtureProcess, RunnerError> {
     let mut command = tokio::process::Command::new(runner);
     command
         .arg("fixture")
         .arg("--root")
         .arg(root)
+        .arg("--binary")
+        .arg(binary)
         .env_clear()
+        .env("PATH", search_path(root))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -89,6 +103,8 @@ pub(crate) async fn start(runner: &Path, root: &Path) -> Result<FixtureProcess, 
             "fixture".to_owned(),
             "--root".to_owned(),
             root.display().to_string(),
+            "--binary".to_owned(),
+            binary.display().to_string(),
         ],
         ready: ready.ready,
     })

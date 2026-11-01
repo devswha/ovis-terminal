@@ -140,6 +140,7 @@ impl JsonSchema for ErrorData {
                 "prompt_ids": generator.subschema_for::<Vec<super::ids::PromptId>>(),
                 "unavailable": generator.subschema_for::<crate::domain::conversation_records::Unavailable>(),
                 "principal_epoch": generator.subschema_for::<super::scalar::PrincipalEpoch>(),
+                "last_seen_seq": generator.subschema_for::<super::scalar::EventSeq>(),
             },
             "required": ["kind", "hint", "retryable"],
         })

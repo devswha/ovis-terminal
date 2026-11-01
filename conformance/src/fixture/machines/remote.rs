@@ -22,7 +22,7 @@ use tokio::task::JoinHandle;
 
 use super::Core;
 
-pub(super) type PipeLine = Lines<ReadHalf<DuplexStream>, WriteHalf<DuplexStream>>;
+pub(crate) type PipeLine = Lines<ReadHalf<DuplexStream>, WriteHalf<DuplexStream>>;
 
 /// One remote machine; its applied notices outlive any single line to it.
 #[derive(Debug)]
@@ -148,7 +148,7 @@ impl Remote {
 }
 
 /// A fixture failure that is no fault of the request.
-pub(super) fn internal<E>(_: E) -> BoundaryError {
+pub(crate) fn internal<E>(_: E) -> BoundaryError {
     BoundaryError::domain(ErrorKind::Internal, false).with_hint("inspect the fixture's stderr")
 }
 

@@ -64,6 +64,12 @@ pub(crate) enum Mode {
     Fixture {
         #[arg(long)]
         root: PathBuf,
+        /// Serve as the second private runtime, machine `peer`, with no machines of its own.
+        #[arg(long)]
+        peer: bool,
+        /// The binary under test, whose `connect` bridge carries the line to the peer.
+        #[arg(long)]
+        binary: Option<PathBuf>,
     },
 }
 

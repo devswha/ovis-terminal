@@ -63,6 +63,10 @@ impl TerminalDirectory for Directory {
                 machine: None,
                 name: ResourceName::new(name.as_str())?,
             },
+            Target::Address(address) if !address.as_str().contains('/') => TargetRequest::Name {
+                machine: None,
+                name: ResourceName::new(address.as_str())?,
+            },
             _ => return Err(TargetResolutionError::NotFound),
         };
         let resolved = TargetIndex::from_targets(self.snapshot()).resolve(request)?;

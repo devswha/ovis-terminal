@@ -31,8 +31,20 @@ pub(super) enum Step {
         request: RpcRequest,
         session: Arc<Session>,
     },
+    /// Stop waiting for this request's reply: a `$/cancelRequest` notification.
+    Cancel(RequestId),
     /// Send `$/closing` for this failure and end the connection.
     Close(ConnectionError),
+}
+
+/// The request a `{"method": "$/cancelRequest", "params": {"id": ...}}` notification names.
+fn cancellation(text: &str) -> Option<RequestId> {
+    let record: Value = serde_json::from_str(text).ok()?;
+    let named = record.get("id").is_none()
+        && record.get("jsonrpc").and_then(Value::as_str) == Some("2.0")
+        && record.get("method").and_then(Value::as_str) == Some("$/cancelRequest");
+    let id = record.pointer("/params/id").and_then(Value::as_str)?;
+    named.then(|| RequestId::new(id.to_owned()))
 }
 
 #[derive(Debug)]
@@ -120,6 +132,12 @@ impl ConnectionCore {
 
     fn on_record(&mut self, record: &[u8], steps: &mut Vec<Step>) -> Result<(), ConnectionError> {
         let text = std::str::from_utf8(record).map_err(ConnectionError::InvalidUtf8)?;
+        if matches!(self.phase, Phase::Established(_))
+            && let Some(id) = cancellation(text)
+        {
+            steps.push(Step::Cancel(id));
+            return Ok(());
+        }
         let request = match parse_request(text) {
             Ok(request) => request,
             Err(error) => match recover_id(text) {

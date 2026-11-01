@@ -86,6 +86,7 @@ fn summary(steps: &[Step]) -> Vec<String> {
             Step::Reply(_) => "reply:unknown".to_owned(),
             Step::Upgrade => "upgrade".to_owned(),
             Step::Dispatch { request, .. } => format!("dispatch:{}", request.id().as_str()),
+            Step::Cancel(id) => format!("cancel:{}", id.as_str()),
             Step::Close(error) => format!("close:{}", error.kind()),
         })
         .collect()
@@ -116,6 +117,49 @@ proptest! {
         let observed = feed_split(&mut core, &bytes, &cuts);
         prop_assert_eq!(observed, ["ok:h", "upgrade", "dispatch:r1", "dispatch:r2"]);
     }
+}
+
+#[test]
+fn a_cancel_notification_names_its_request_and_any_other_notification_closes() {
+    let cancel = r#"{"jsonrpc":"2.0","method":"$/cancelRequest","params":{"id":"r1"}}"#;
+    let other = r#"{"jsonrpc":"2.0","method":"$/other","params":{"id":"r1"}}"#;
+    let (mut core, bearer) = core_for(OWNER);
+    let mut bytes = hello("\"1\"", &bearer);
+    bytes.push(b'\n');
+    for record in [
+        request("r1").as_str(),
+        cancel,
+        &request("r2"),
+        other,
+        &request("r3"),
+    ] {
+        bytes.extend(frame(record));
+    }
+
+    let observed = feed_split(&mut core, &bytes, &[]);
+
+    assert_eq!(
+        observed,
+        [
+            "ok:h",
+            "upgrade",
+            "dispatch:r1",
+            "cancel:r1",
+            "dispatch:r2",
+            "close:invalid_request"
+        ]
+    );
+}
+
+#[test]
+fn a_cancel_notification_before_hello_is_never_a_cancellation() {
+    let cancel = r#"{"jsonrpc":"2.0","method":"$/cancelRequest","params":{"id":"r1"}}"#;
+    let (mut core, _) = core_for(OWNER);
+    let observed = feed_split(&mut core, format!("{cancel}\n").as_bytes(), &[]);
+    assert!(
+        !observed.iter().any(|step| step.starts_with("cancel:")),
+        "{observed:?}"
+    );
 }
 
 #[test]
