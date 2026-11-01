@@ -87,6 +87,8 @@ The CI run on 4e0f09f failed both `client-ts` jobs with `generate:check` reporti
 Fix (authorized merge, no force-push): merged origin/integration 723d101 into the lane, then ran `bun run generate`. There were no hand edits, and the generator needed no change for the new schema. The regenerated diff is 31 files, +617/-71: mostly the T47 `update.*` methods and components, plus the new source digest in every header.
 
 - Lane gate on the merged tree, one run: `cd packages/client-ts && bun run generate:check && bun run typecheck && bun test` gave `{"generated":"fresh","files":31}`, 30 pass, 0 fail, exit 0 (`docs/evidence/task-82/qa-happy-r2-merged.log`). The fixture binaries were rebuilt from the merged code with `cargo build --locked -p ovis-terminal-cli -p ovis-terminal-conformance`.
+- check.sh on the merged tree: `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` gave exit 0. nextest ran 1141 tests, 1141 passed, 1 skipped; workspace-hygiene reported 0 violations in 1125 files (`docs/evidence/task-82/check-r2-merged.log`).
+- Windows pre-check on the merged tree: `cargo check` + `cargo clippy` for `x86_64-pc-windows-gnu` with `-D warnings` gave exit 0 (`docs/evidence/task-82/windows-check-r2-merged.log`).
 
 ## Gates
 
