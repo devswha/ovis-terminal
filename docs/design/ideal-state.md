@@ -160,6 +160,10 @@ Each row is an acceptance predicate: it either holds in a conformance scenario o
 | IDEAL-115 | machines | Structured logs correlate request, operation, principal, machine, runtime, resource, sequence, and outcome without mixing diagnostics into protocol stdout. | Cross-machine failures need traceable evidence rather than attach-text parsing. | NEED-005, NEED-148, RT-HD-07 |
 | IDEAL-116 | ovis | Health metrics expose active streams, per-consumer queue bytes, event lag, dropped/resynced ranges, RPC latency, and recovery state through read-only queries. | Operators need to distinguish consumer backpressure from runtime failure. | NEED-015, NEED-036, NEED-074 |
 | IDEAL-117 | agents | Operation inspection distinguishes accepted, running, committed, failed, cancelled, and outcome-unknown states and exposes supporting receipts or process evidence. | A success-shaped message must never be the only proof that work finished. | RT-HC-03, NEED-161, NEED-019 |
+| IDEAL-118 | agents, Ovis | Attach and observe streams forward Kitty, iTerm2 and sixel graphics sequences byte-identical and whole, dropping an over-cap sequence entirely with a typed notice. | Viewers render images; the runtime must neither corrupt nor split them. | GAP-151 |
+| IDEAL-119 | agents, Ovis | A reattach replays every image whose placement is still on screen, in receipt order, and none that scrolled off, was cleared or was deleted. | Reconnecting viewers see the same screen as continuous ones. | GAP-152 |
+| IDEAL-120 | agents | Screen reads and records mark image placements with a placeholder {image_id, format, rows, cols, bytes} and never inline payloads. | Agents reason about layout without paying for pixels. | GAP-153 |
+| IDEAL-121 | operators | Graphics caps (per sequence, per terminal store) are advertised in hello as decimal strings and enforced through store entries sized to the cap; the daemon performs no decoding. | Bounded memory and a stable trust boundary. | GAP-154 |
 
 ## Excluded herdr features
 

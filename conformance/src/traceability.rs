@@ -69,8 +69,8 @@ fn every_ledger_id_is_mapped_exactly_once_to_known_todos() -> TestResult {
     );
     assert_ne!(map.derivation, "");
     let sections = [
-        (&map.ideals, "IDEAL", 117, "docs/design/ideal-state.md"),
-        (&map.gaps, "GAP", 150, "docs/design/gap-list.md"),
+        (&map.ideals, "IDEAL", 121, "docs/design/ideal-state.md"),
+        (&map.gaps, "GAP", 154, "docs/design/gap-list.md"),
         (&map.exclusions, "EXCL", 27, "docs/design/ideal-state.md"),
     ];
     for (section, prefix, count, ledger) in sections {
@@ -87,7 +87,7 @@ fn every_ledger_id_is_mapped_exactly_once_to_known_todos() -> TestResult {
             for todo in &owners.todos {
                 let number: u16 = todo.parse()?;
                 assert!(
-                    (1..=70).contains(&number) && todo == &number.to_string(),
+                    (1..=86).contains(&number) && todo == &number.to_string(),
                     "{id}: todo {todo}"
                 );
             }
