@@ -18,7 +18,7 @@ use ovis_terminal_protocol::schema::scalar::Incarnation;
 use ovis_terminal_server::dispatch::lanes::agent_status::TerminalDirectory as _;
 use serde_json::{Value, json};
 
-use super::actor::Runtime;
+use super::actor::{Link, Runtime};
 use super::error::refusal;
 
 /// Bound on waiting for the holder's spawn evidence before answering `pending`.
@@ -114,7 +114,7 @@ impl Runtime {
         while matches!(record.spawn, LaunchState::Admitted | LaunchState::Pending)
             && deadline.is_some_and(|deadline| Instant::now() < deadline)
         {
-            if !self.receive(Duration::from_millis(50)) {
+            if self.receive(Duration::from_millis(50)) != Link::Linked {
                 break;
             }
             record = self.lifecycle(|terminals| terminals.get(session, id))?;

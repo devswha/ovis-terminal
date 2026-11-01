@@ -29,6 +29,17 @@ use super::{AssemblyError, StageSource};
 /// How long one wait for a holder message lasts before queued jobs run again.
 const POLL: Duration = Duration::from_millis(5);
 
+/// The holder link as one receive found it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Link {
+    /// Messages arrive from the current lifecycle.
+    Linked,
+    /// A planned restart owns the lifecycle; the successor's messages follow it.
+    Restarting,
+    /// Control stopped or the holder went away; no message will follow.
+    Gone,
+}
+
 /// A unit of work run on the actor thread.
 type Job = Box<dyn FnOnce(&mut Runtime) + Send>;
 
@@ -82,8 +93,8 @@ impl Runtime {
             })
     }
 
-    /// Applies at most one holder message; `false` once the holder link is gone.
-    pub(super) fn receive(&mut self, wait: Duration) -> bool {
+    /// Applies at most one holder message and says whether the holder link is still there.
+    pub(super) fn receive(&mut self, wait: Duration) -> Link {
         let received = self
             .control
             .with_terminals(|terminals, _| terminals.receive_message(wait));
@@ -92,19 +103,20 @@ impl Runtime {
                 if let Err(error) = self.follow(&message) {
                     report("follow holder message", error.as_ref());
                 }
-                true
+                Link::Linked
             }
             Ok(None)
             | Err(RestartError::Terminal(TerminalError::Notification(RecvTimeoutError::Timeout))) => {
-                true
+                Link::Linked
             }
+            Err(RestartError::Restarting { .. }) => Link::Restarting,
             Err(
                 RestartError::Terminal(TerminalError::Notification(RecvTimeoutError::Disconnected))
                 | RestartError::ControlStopped,
-            ) => false,
+            ) => Link::Gone,
             Err(error) => {
                 report("apply holder message", &error);
-                true
+                Link::Linked
             }
         }
     }
@@ -149,7 +161,15 @@ fn run(mut runtime: Runtime, jobs: &mpsc::Receiver<Job>) -> Result<(), AssemblyE
             }
         }
         if linked {
-            linked = runtime.receive(POLL);
+            match runtime.receive(POLL) {
+                Link::Linked => {}
+                Link::Restarting => match jobs.recv_timeout(POLL) {
+                    Ok(job) => job(&mut runtime),
+                    Err(RecvTimeoutError::Timeout) => {}
+                    Err(RecvTimeoutError::Disconnected) => return runtime.close(),
+                },
+                Link::Gone => linked = false,
+            }
             runtime.publish_census();
         } else {
             match jobs.recv() {
