@@ -2,7 +2,7 @@
 
 import { createHash } from "node:crypto";
 
-import { DECIMAL_PATTERN, GenerateError, Renderer, type Schema, literals, refName } from "./render";
+import { DECIMAL_PATTERN, GenerateError, Renderer, type Schema, literals, refName, typeName } from "./render";
 
 interface Method {
   readonly name: string;
@@ -42,24 +42,30 @@ function brandImport(body: string, from: string): string {
   return used.length === 0 ? "" : `import type { ${used.join(", ")} } from "${from}";\n`;
 }
 
-function claim(names: Set<string>, name: string): void {
-  if (names.has(name)) {
-    throw new GenerateError("name_collision", `two generated declarations are both named ${name}`);
+/** Records that `component` declares `name`; generated name -> the component that declared it. */
+function claim(names: Map<string, string>, name: string, component: string): void {
+  const earlier = names.get(name);
+  if (earlier !== undefined) {
+    throw new GenerateError("name_collision", `components ${earlier} and ${component} both generate the declaration ${name}`, {
+      target: name,
+      sources: [earlier, component],
+    });
   }
-  names.add(name);
+  names.set(name, component);
 }
 
 function components(document: Document): string {
   const render = new Renderer("");
-  const names = new Set<string>();
+  const names = new Map<string, string>();
   const lines = Object.keys(document.components.schemas)
     .sort()
-    .map((name) => {
-      const schema = document.components.schemas[name] as Schema;
-      claim(names, name);
+    .map((component) => {
+      const schema = document.components.schemas[component] as Schema;
+      const name = typeName(component);
+      claim(names, name, component);
       const values = literals(schema);
       if (values !== undefined) {
-        claim(names, `${name}Values`);
+        claim(names, `${name}Values`, component);
         return `export const ${name}Values = ${JSON.stringify(values)} as const;\nexport type ${name} = (typeof ${name}Values)[number];`;
       }
       if (schema.type === "string") {
