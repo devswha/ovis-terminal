@@ -80,7 +80,7 @@ Each step below ends in a typed rejection or an asserted outcome.
 - `cargo clippy -p ovis-terminal-conformance -p ovis-terminal-cli --all-targets -- -D warnings` exits 0 (`clippy.log`).
 - `cargo nextest run -p ovis-terminal-cli -E 'test(a_qa_seam_is_refused)'` exits 0: the QA seam is refused outside a QA root (`nextest-cli-seam.log`).
 - `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` exits 0 with `check.sh: all steps passed`. evidence-audit passed with 0 findings (`check.log`, last 300 lines).
-- Windows: `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` (`windows.log`): both exit 0 (WINCHECK_EXIT=0, WINCLIPPY_EXIT=0).
+- Windows (round 1; round 2 changes only scenario JSON and the Unix-only runner test module): `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` (`windows.log`): both exit 0 (WINCHECK_EXIT=0, WINCLIPPY_EXIT=0).
 - **Mutants (`mutants.log`).** Each was applied, the binary rebuilt, the shipped `attach_input::*` tests run, and the mutant reverted. All four were killed:
   - M1 credit beyond sent accepted → `failure` fails (`credit-max` answered a result with `stream_offset` u64::MAX).
   - M2 takeover epoch check removed → `failure` fails (stale takeover acquired).
@@ -127,4 +127,4 @@ The scenarios now capture the prompt's `matched_at` and its end cursor. They che
 
 DEFERRED VERIFICATION: none. `part-a/task-30` happy and failure both execute on the assembled binary (exit 0).
 
-macOS stress dispatch: https://github.com/devswha/ovis-terminal/actions/runs/41347211460 (probe=attach-input, head fb2e4cd)
+macOS stress dispatch: round 1 https://github.com/devswha/ovis-terminal/actions/runs/41347211460 (head fb2e4cd) failed at iteration 1, `part-a/task-30` happy after 20 assertions, from the same Darwin prompt offset; round 2 https://github.com/devswha/ovis-terminal/actions/runs/41349240120 (head b6fecf8).
