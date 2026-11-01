@@ -1,6 +1,6 @@
 {
   "format": "ovis-traceability-unclaimed/1",
-  "derivation": "Rows of docs/design/traceability.json whose listed owner scenario file exists but does not declare the id (2026-11-01, todo 60). conformance/src/traceability/unclaimed.rs fails on any row outside this list and on any entry that no longer applies, so the list only shrinks.",
+  "derivation": "Rows of docs/design/traceability.json whose listed owner scenario file exists but does not declare the id (2026-11-01, todo 60). Entries with status deferred are Windows halves with no v1 deliverer; the others are pre-existing rows their owner todo reconciles. conformance/src/traceability/unclaimed.rs fails on any unclaimed row outside this list and on any entry that no longer applies.",
   "entries": [
     {
       "id": "EXCL-002",
@@ -277,6 +277,20 @@
       "scenario": "agent/records",
       "owner_todo": "37",
       "reason": "Executable scenario of todo 37 does not declare EXCL-029 in its excludes list although the ledger names it an owner; adding the claim (or dropping the owner) is todo 37's change."
+    },
+    {
+      "id": "GAP-048",
+      "scenario": "platform/matrix",
+      "owner_todo": "60",
+      "status": "deferred",
+      "reason": "Deferred: no served attach over the Windows named pipe in v1. GAP-048's Windows half (an ordered attach stream to a client over the pipe) has no v1 deliverer; platform/matrix runs on Linux and macOS, and todo 60's Windows smoke proves only the holder's ordered ConPTY read, so the matrix does not claim GAP-048."
+    },
+    {
+      "id": "GAP-050",
+      "scenario": "platform/windows-service",
+      "owner_todo": "54",
+      "status": "deferred",
+      "reason": "Deferred: no served attach over the Windows named pipe in v1. GAP-050's Windows half (a geometry-change event before a new-grid screen, delivered over a served attach) has no v1 deliverer; todo 26 closes the Unix half, and the plan amendment of 2026-11-02 names it for the final wave's gap list."
     }
   ]
 }

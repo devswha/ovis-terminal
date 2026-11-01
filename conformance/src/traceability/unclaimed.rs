@@ -27,6 +27,9 @@ struct Exception {
     id: String,
     scenario: String,
     owner_todo: String,
+    /// `deferred` for a half with no v1 deliverer; absent for a row its owner reconciles.
+    #[serde(default)]
+    status: Option<String>,
     reason: String,
 }
 
@@ -88,6 +91,14 @@ fn every_listed_owner_claims_its_row_except_the_recorded_ones() -> TestResult {
         let owner = todo_of(repo.scenarios_dir(), &entry.scenario)?;
         assert_eq!(entry.owner_todo, owner, "{} {}", entry.id, entry.scenario);
         assert!(entry.reason.contains(&entry.id), "{}: reason", entry.id);
+        if let Some(status) = &entry.status {
+            assert_eq!(status, "deferred", "{} {}", entry.id, entry.scenario);
+            assert!(
+                entry.reason.starts_with("Deferred: ") && entry.reason.contains("in v1"),
+                "{}: a deferral states why v1 does not deliver it",
+                entry.id
+            );
+        }
         recorded.insert((entry.id.clone(), entry.scenario.clone()));
     }
     let found = unclaimed(&load()?, repo.scenarios_dir())?;

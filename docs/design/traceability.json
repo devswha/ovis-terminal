@@ -2100,15 +2100,18 @@
         "12",
         "53",
         "54",
-        "64"
+        "60",
+        "64",
+        "71"
       ],
       "scenarios": [
         "part-a/task-12",
         "platform/conpty",
         "platform/windows-service",
+        "platform/matrix",
         "client/fixtures"
       ],
-      "note": "Reassigned from todo 60 (2026-11-01): platform/matrix runs on Linux and macOS only, and the Windows smoke tier proves the holder's ordered ConPTY read, not a served attach stream over the named pipe. The Windows served attach is owned by todo 64, whose client/fixtures replay runs against the binary on every released platform."
+      "note": "Owners equal the plan-derived conformance/traceability.json. The platform/matrix scenario of todo 60 runs on Linux and macOS, and the Windows smoke tier proves the holder's ordered ConPTY read, not a served attach stream; that Windows half is recorded as DEFERRED in docs/design/traceability-unclaimed.json (no served attach over the Windows named pipe in v1)."
     },
     "GAP-049": {
       "todos": [
@@ -2125,13 +2128,13 @@
     "GAP-050": {
       "todos": [
         "26",
-        "62"
+        "54"
       ],
       "scenarios": [
         "part-a/task-26",
-        "cli/interactive-attach"
+        "platform/windows-service"
       ],
-      "note": "Reassigned from todos 54 and 60 (2026-11-01): neither scenario delivers a geometry-change event over the Windows pipe, because no served attach exists there yet. Todo 26 delivers the event on Linux and macOS. Todo 62 (interactive attach, blocked by 53 and 54, resize through RPC on every platform) owns the Windows half, since the event reaches a client over the attach stream it builds. Todo 85 was considered and rejected: it marks image placements in screen reads and touches no attach or pipe."
+      "note": "Owners equal the plan-derived conformance/traceability.json, regenerated from the plan amended on 2026-11-02 (todo 60 no longer claims GAP-050). Todo 26 closes the Unix half (landed). The Windows half has no v1 deliverer, because no v1 todo serves attach over the Windows named pipe; todo 54's listing is recorded as DEFERRED in docs/design/traceability-unclaimed.json."
     },
     "GAP-051": {
       "todos": [

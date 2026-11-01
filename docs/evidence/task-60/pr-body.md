@@ -1,6 +1,6 @@
 Todo 60 (wave 16): first-class Unix QA and Windows smoke CI on freshly built binaries.
 
-Closes GAP-049, GAP-051, GAP-095, GAP-121. GAP-050 and the Windows served-attach half of GAP-048 are reassigned in `docs/design/traceability.json` (to todo 62 and todo 64, with reasons; see Round 2). Delivers IDEAL-001, IDEAL-034, IDEAL-071, IDEAL-093. Enforces EXCL-016, EXCL-019, EXCL-027.
+Closes GAP-049, GAP-051, GAP-095, GAP-121. GAP-050 is no longer claimed by todo 60 (plan amended 2026-11-02): its Unix half is closed by todo 26 and its Windows half is DEFERRED. The Windows served-attach half of GAP-048 is also DEFERRED. See Round 3. Delivers IDEAL-001, IDEAL-034, IDEAL-071, IDEAL-093. Enforces EXCL-016, EXCL-019, EXCL-027.
 
 ## Round 2 (review of 2da8a9d)
 
@@ -15,14 +15,41 @@ Closes GAP-049, GAP-051, GAP-095, GAP-121. GAP-050 and the Windows served-attach
   - a pipe that stays busy: `pipe_busy_timeout` after the bound, and an absent pipe is still `server_not_running`/`stopped`.
 - The test-client `two_clients` test in `probes/platform-qa/tests/pipe_smoke.rs` is removed. That file keeps only server-side checks (generation refusal, observer denial).
 
-**B2, ledger reassigned.**
+**B2.** Superseded by Round 3 below: the round-2 reassignment of GAP-050 to todo 62 is withdrawn.
 
-- `docs/design/traceability.json` GAP-050 now lists todos `26, 62` and scenarios `part-a/task-26, cli/interactive-attach`, with a `note`.
-  - Todo 26 delivers the geometry-change event on Linux and macOS.
-  - Todo 62 (interactive attach, blocked by 53 and 54, resize through RPC on every platform) owns the Windows half, because the event reaches a client over the attach stream it builds.
-  - Todo 85 was considered and rejected: it marks image placements in screen reads (Closes GAP-153) and touches no attach or pipe.
-- GAP-048 drops todo 60 and `platform/matrix` (`matrix.json` no longer closes it; it runs on Linux and macOS only). The Windows served attach stays with todo 64 (`client/fixtures`), with a `note`.
-- `Owners` gained an optional `note`, checked to name the todos it moves.
+## Round 3 (review of ebea1b7)
+
+**B3, GAP-050 and GAP-048 in both ledgers.** The plan was amended on 2026-11-02, and todo 60 no longer claims GAP-050:
+
+- Todo 26 closes GAP-050's Unix half (landed).
+- No v1 todo serves attach over the Windows named pipe: todo 62's attach is Unix-only, and todo 64 is consumer fixtures. GAP-050 is not reassigned to 62 or 64.
+
+What changed:
+
+- `conformance/traceability.json` and `conformance/ideal-map.json` were regenerated with the sanctioned command: `cargo run --locked --manifest-path probes/Cargo.toml --bin quality-matrix -- --mode write --plan <amended live plan>`.
+  - It changed only GAP-050 (todos `26, 54`, scenarios `part-a/task-26, platform/windows-service`) and the plan hash.
+  - `quality-matrix --mode verify` exits 0, and `--mode check --plan <amended plan>` exits 0.
+- `docs/design/traceability.json` gives GAP-050 and GAP-048 exactly the owners of the regenerated plan-derived matrix, each with a `note`. So **the two ledgers agree on both rows**.
+  - One caveat: GAP-050 cannot be todo 26 alone in either ledger while the plan's todo 54 Closes line still names GAP-050. That entry is recorded as deferred below. If todo 54's line is amended too, one regeneration plus removing that entry leaves todo 26 alone.
+  - The two ledgers already differed on 57 other rows before this todo (they use different derivations). Those are untouched.
+- `docs/design/traceability-unclaimed.json` records the Windows halves as **DEFERRED** (`status: deferred`), each with the reason "Deferred: no served attach over the Windows named pipe in v1":
+  - `(GAP-050, platform/windows-service)`, owner todo 54;
+  - `(GAP-048, platform/matrix)`, owner todo 60 (matrix runs on Linux and macOS; the Windows smoke proves only the holder's ordered ConPTY read).
+- The checker requires a deferred entry to start "Deferred: " and to state why v1 does not deliver it.
+- The conformance traceability tests pass 4/4.
+
+**B4, the busy-wait test now proves the wait.** `a_busy_pipe_is_waited_out_and_opened_once_an_instance_is_free` holds the only instance, pins the production `open`, and polls it exactly once.
+
+- It asserts the poll is `Pending`. That state is reachable only after `ClientOptions::open` returned `ERROR_PIPE_BUSY` and the open is waiting in `WaitNamedPipeW`; a free instance or any other error would be `Ready`.
+- Only then does it create the second instance and await the open, which must succeed.
+- This is deterministic, with no scheduling assumption.
+- The reopen-loop mutant (after the wait, return an error instead of opening again) was run on Windows CI on a throwaway branch; the result is in `docs/evidence/task-60/adversarial-mutants-r3.log`.
+
+**N2, observer denial through the production client.** `observer-denial` now runs `ovis-terminal-cli` `invocation::transport::pipe::tests::sessions::an_observer_invocation_is_refused_every_mutation_while_an_owner_is_served`:
+
+- An observer `Session::open` and an owner `Session::open` are opened at once against the production pipe listener behind the production boundary policy.
+- Every published mutation the observer calls returns `forbidden`, with zero handler calls; the owner's `doc.set` is served.
+- `probes/platform-qa/tests/pipe_smoke.rs` keeps only the raw generation-refusal test (the production client always sends the canonical generation). Its helper no longer duplicates the busy loop, and probes no longer depends on windows-sys.
 
 **Reverse traceability check.** `conformance/src/traceability/unclaimed.rs` now flags any row whose listed owner scenario exists but does not declare the id.
 
@@ -209,7 +236,7 @@ Files outside the literal write scope, and why:
 
 ## Risks
 
-- GAP-050 (geometry events for mirror clients on Windows) is not delivered. It is reassigned to todos 26 and 62 in `docs/design/traceability.json` with a note, and neither `platform/matrix` nor `platform/windows-service` claims it. The Windows served attach (GAP-048's Windows half) stays with todo 64.
+- GAP-050's Windows half and GAP-048's Windows served-attach half are DEFERRED: no served attach over the Windows named pipe exists in v1. Both are recorded in `docs/design/traceability-unclaimed.json` with their owning todos and reasons; per the plan amendment, the final wave (F4) lists GAP-050 as a named gap.
 - The CLI busy-wait tests run only on Windows (CI `windows-smoke` and `test (windows-latest)`); locally they are checked by the Windows-target clippy only.
 - On Windows the conformance fixture is Unix-only (`conformance/src/fixture.rs:86`), so `platform/matrix` declares linux and macos. On Windows, the generation refusal is proven by `generation-refusal` over the production pipe, not by the conformance runner.
 - `conpty-attach` is the holder's ordered ConPTY output read with mode state. It is not a served `attach.open` over the pipe, which is unmet on Windows.

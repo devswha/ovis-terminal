@@ -54,16 +54,16 @@
     },
     {
       "name": "observer-denial",
-      "observes": "over a production pipe behind the production boundary policy, an observe-only credential is forbidden every published mutation with zero handler calls while the owner is served.",
+      "observes": "an observer invocation opened through the production CLI client against the production pipe listener and boundary policy is refused every published mutation (forbidden) with zero handler calls, while an owner invocation opened at the same time is served.",
       "tests": [
-        {"package": "ovis-terminal-probes", "target": "pipe_smoke", "test": "an_observer_is_refused_every_mutation_over_the_pipe_while_the_owner_is_served", "ignored": false}
+        {"package": "ovis-terminal-cli", "target": "lib", "test": "invocation::transport::pipe::tests::sessions::an_observer_invocation_is_refused_every_mutation_while_an_owner_is_served", "ignored": false}
       ]
     },
     {
       "name": "two-clients",
-      "observes": "two ovis-terminal invocations opened at once through the production CLI client both complete hello and get their replies from the production pipe listener (two accepted, no failure); a client refused with ERROR_PIPE_BUSY waits with WaitNamedPipeW and opens the freed instance, and one whose pipe stays busy past the bound reports pipe_busy_timeout.",
+      "observes": "two ovis-terminal invocations opened at once through the production CLI client both complete hello and get their replies from the production pipe listener (two accepted, no failure); a client first observed refused with ERROR_PIPE_BUSY (its open is pending in WaitNamedPipeW) opens the instance freed after that, and one whose pipe stays busy past the bound reports pipe_busy_timeout.",
       "tests": [
-        {"package": "ovis-terminal-cli", "target": "lib", "test": "invocation::transport::pipe::tests::two_invocations_opened_at_once_both_get_a_session_from_the_production_listener", "ignored": false},
+        {"package": "ovis-terminal-cli", "target": "lib", "test": "invocation::transport::pipe::tests::sessions::two_invocations_opened_at_once_both_get_a_session_from_the_production_listener", "ignored": false},
         {"package": "ovis-terminal-cli", "target": "lib", "test": "invocation::transport::pipe::tests::a_busy_pipe_is_waited_out_and_opened_once_an_instance_is_free", "ignored": false},
         {"package": "ovis-terminal-cli", "target": "lib", "test": "invocation::transport::pipe::tests::a_pipe_that_stays_busy_is_pipe_busy_timeout_after_the_bound", "ignored": false}
       ]
