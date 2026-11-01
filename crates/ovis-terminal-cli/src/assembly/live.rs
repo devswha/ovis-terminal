@@ -27,6 +27,33 @@ use super::actor::{Runtime, now};
 /// Scrollback lines every screen keeps.
 const HISTORY_LINES: u32 = 10_000;
 
+/// Largest parse slice of a screen, as in [`ScreenBounds::DEFAULT`].
+const WORK_BUDGET: u64 = 64 * 1024;
+
+/// Screen bounds retaining `ring` raw output bytes (the QA output ring seam), or the
+/// defaults: a checkpoint every half ring and slices of at most a quarter keep every
+/// checkpoint plus the bytes after it inside retention.
+pub(super) fn screen_bounds(ring: Option<u64>) -> Result<ScreenBounds, super::AssemblyError> {
+    let Some(ring) = ring else {
+        return Ok(ScreenBounds::DEFAULT);
+    };
+    let bytes = |count: u64| {
+        usize::try_from(count)
+            .ok()
+            .and_then(std::num::NonZeroUsize::new)
+            .ok_or(super::QaRingInvalid { ring })
+    };
+    let sized = || {
+        Ok::<_, super::QaRingInvalid>(
+            ScreenBounds::DEFAULT
+                .with_retained_output(bytes(ring)?)
+                .with_checkpoint_interval(bytes(ring / 2)?)
+                .with_work_budget(bytes((ring / 4).min(WORK_BUDGET))?),
+        )
+    };
+    sized().map_err(super::AssemblyError::start("size the QA output ring"))
+}
+
 /// One program incarnation the server is serving.
 #[derive(Debug)]
 pub(super) struct Live {
@@ -99,10 +126,10 @@ impl Runtime {
             Geometry::new(grid.cols, grid.rows)?,
             HistoryLimit::new(HISTORY_LINES),
         );
-        let screen = Screen::new(target.clone(), ScreenConfig::new(vt, ScreenBounds::DEFAULT))?;
+        let screen = Screen::new(target.clone(), ScreenConfig::new(vt, self.screen_bounds))?;
         let waits = Arc::new(Waits::new(Screen::new(
             target,
-            ScreenConfig::new(vt, ScreenBounds::DEFAULT),
+            ScreenConfig::new(vt, self.screen_bounds),
         )?));
         let resolved = ResolvedTarget::new(
             self.identity.machine_id(),

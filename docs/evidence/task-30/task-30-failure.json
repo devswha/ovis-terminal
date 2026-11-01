@@ -1,0 +1,2246 @@
+{
+  "binary": {
+    "bytes": "144358696",
+    "path": "/dev/shm/ovt-target-lane-t30/debug/ovis-terminal",
+    "sha256": "1e0c140932d1589ee822f7d6266a839e60172f07121c1f61f93c8092b2e39f19"
+  },
+  "case": "failure",
+  "cases": [
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": [
+            "hello",
+            "server.status",
+            "server.stop",
+            "server.restart",
+            "server.metrics",
+            "op.get",
+            "op.cancel",
+            "session.snapshot",
+            "terminal.run",
+            "terminal.first_message",
+            "terminal.list",
+            "terminal.get",
+            "terminal.kill",
+            "terminal.rm",
+            "terminal.keep",
+            "terminal.recover",
+            "terminal.label",
+            "terminal.rename",
+            "terminal.process_info",
+            "terminal.screen",
+            "terminal.output",
+            "terminal.wait_output",
+            "input.send",
+            "input.keys",
+            "input.raw",
+            "input.paste",
+            "input.interrupt",
+            "input.barrier",
+            "attach.open",
+            "attach.resize",
+            "attach.release_geometry",
+            "attach.focus",
+            "attach.repaint",
+            "attach.credit",
+            "attach.close",
+            "attach.takeover",
+            "attach.leases",
+            "events.subscribe",
+            "events.update",
+            "events.unsubscribe",
+            "events.wait",
+            "status.get",
+            "status.report",
+            "status.clear",
+            "prompt.list",
+            "prompt.get",
+            "prompt.open",
+            "prompt.answer",
+            "prompt.close",
+            "turn.get",
+            "turn.wait",
+            "agent.register",
+            "agent.get",
+            "agent.update_session",
+            "agent.children",
+            "agent.conversation",
+            "agent.append_records",
+            "agent.records",
+            "agent.history",
+            "template.list",
+            "template.get",
+            "layout.get",
+            "layout.edit",
+            "selection.set",
+            "worktree.list",
+            "worktree.create",
+            "worktree.open",
+            "worktree.remove",
+            "plugin.list",
+            "plugin.invoke",
+            "plugin.run_get",
+            "doc.get",
+            "doc.set",
+            "machine.add",
+            "machine.list",
+            "machine.get",
+            "machine.rename",
+            "service.describe",
+            "update.stage",
+            "update.verify",
+            "update.activate",
+            "update.rollback",
+            "update.query",
+            "rpc.discover",
+            "schema.errors",
+            "schema.events",
+            "schema.capabilities",
+            "credential.rotate",
+            "credential.revoke"
+          ],
+          "check": "hello/result/methods",
+          "expected": {
+            "$contains": [
+              "attach.credit",
+              "attach.takeover",
+              "input.keys",
+              "input.paste",
+              "input.barrier",
+              "events.wait"
+            ]
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[run]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "spawned",
+          "check": "reply[run]/result/spawn",
+          "expected": "spawned",
+          "passed": true
+        },
+        {
+          "actual": "t1",
+          "check": "reply[run]/result/terminal/address",
+          "expected": "t1",
+          "passed": true
+        },
+        {
+          "actual": "live",
+          "check": "reply[run]/result/terminal/state",
+          "expected": "live",
+          "passed": true
+        },
+        {
+          "actual": [
+            "run"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "run"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[prompt]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "reply[prompt]/result/matched_at",
+          "expected": "0",
+          "passed": true
+        },
+        {
+          "actual": "matched",
+          "check": "reply[prompt]/result/outcome",
+          "expected": "matched",
+          "passed": true
+        },
+        {
+          "actual": [
+            "prompt"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "prompt"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[writer-open]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "262144",
+          "check": "reply[writer-open]/result/credit_initial",
+          "expected": "262144",
+          "passed": true
+        },
+        {
+          "actual": {
+            "cursor": {
+              "col": 2,
+              "row": 0,
+              "visible": true
+            },
+            "geometry": {
+              "cols": 80,
+              "rows": 24
+            },
+            "history_lines": "0",
+            "modes": {
+              "enabled": [],
+              "kitty_keyboard": 0,
+              "revision": "0"
+            },
+            "output_offset": "2",
+            "revision": "2",
+            "stream_offset": "0"
+          },
+          "check": "reply[writer-open]/result/first_paint",
+          "expected": {
+            "$capture": "paint"
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[writer-open]/result/lease/epoch",
+          "expected": {
+            "$capture": "writer_epoch"
+          },
+          "passed": true
+        },
+        {
+          "actual": "lease:1",
+          "check": "reply[writer-open]/result/lease/lease_id",
+          "expected": {
+            "$capture": "writer_lease"
+          },
+          "passed": true
+        },
+        {
+          "actual": "interact",
+          "check": "reply[writer-open]/result/lease/role",
+          "expected": "interact",
+          "passed": true
+        },
+        {
+          "actual": "ready",
+          "check": "reply[writer-open]/result/outcome",
+          "expected": "ready",
+          "passed": true
+        },
+        {
+          "actual": "stream:01a198c5-a0c5-72cb-bdb7-36ed0c2f09f7",
+          "check": "reply[writer-open]/result/stream_id",
+          "expected": {
+            "$capture": "writer_stream"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "writer-open"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "writer-open"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[observer-open]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": {
+            "cursor": {
+              "col": 2,
+              "row": 0,
+              "visible": true
+            },
+            "geometry": {
+              "cols": 80,
+              "rows": 24
+            },
+            "history_lines": "0",
+            "modes": {
+              "enabled": [],
+              "kitty_keyboard": 0,
+              "revision": "0"
+            },
+            "output_offset": "2",
+            "revision": "2",
+            "stream_offset": "0"
+          },
+          "check": "reply[observer-open]/result/first_paint",
+          "expected": {
+            "cursor": {
+              "col": 2,
+              "row": 0,
+              "visible": true
+            },
+            "geometry": {
+              "cols": 80,
+              "rows": 24
+            },
+            "history_lines": "0",
+            "modes": {
+              "enabled": [],
+              "kitty_keyboard": 0,
+              "revision": "0"
+            },
+            "output_offset": "2",
+            "revision": "2",
+            "stream_offset": "0"
+          },
+          "passed": true
+        },
+        {
+          "actual": "observe",
+          "check": "reply[observer-open]/result/lease/role",
+          "expected": "observe",
+          "passed": true
+        },
+        {
+          "actual": "ready",
+          "check": "reply[observer-open]/result/outcome",
+          "expected": "ready",
+          "passed": true
+        },
+        {
+          "actual": "stream:01a198c5-a0c8-7562-a13e-180437a263f1",
+          "check": "reply[observer-open]/result/stream_id",
+          "expected": {
+            "$capture": "observer_stream"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "observer-open"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "observer-open"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "forbidden",
+          "check": "reply[observer-send]/error/data/kind",
+          "expected": "forbidden",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[observer-send]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "observer-send"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "observer-send"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "invalid_credit",
+          "check": "reply[credit-max]/error/data/kind",
+          "expected": "invalid_credit",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[credit-max]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "credit-max"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "credit-max"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "invalid_params",
+          "check": "reply[credit-numeric]/error/data/kind",
+          "expected": "invalid_params",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[credit-numeric]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "credit-numeric"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "credit-numeric"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "stream_not_found",
+          "check": "reply[credit-stale]/error/data/kind",
+          "expected": "stream_not_found",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[credit-stale]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "credit-stale"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "credit-stale"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[fake]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": {
+            "offset": "2"
+          },
+          "check": "reply[fake]/result/receipt/output_cursor",
+          "expected": {
+            "$capture": "fake_cursor"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "fake"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "fake"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[fake-wait]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "matched",
+          "check": "reply[fake-wait]/result/outcome",
+          "expected": "matched",
+          "passed": true
+        },
+        {
+          "actual": [
+            "fake-wait"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "fake-wait"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[after-fake]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[after-fake]/result/status_at_send/reported",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[after-fake]/result/status_at_send/state",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "after-fake"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "after-fake"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[operator-open]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[operator-open]/result/holder/epoch",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "writer",
+          "check": "reply[operator-open]/result/holder/holder",
+          "expected": "writer",
+          "passed": true
+        },
+        {
+          "actual": "held",
+          "check": "reply[operator-open]/result/outcome",
+          "expected": "held",
+          "passed": true
+        },
+        {
+          "actual": "lease.revoked",
+          "check": "reply[operator-open]/result/retry/event",
+          "expected": {
+            "$present": true
+          },
+          "passed": true
+        },
+        {
+          "actual": "writer",
+          "check": "reply[operator-open]/result/retry/lease/holder",
+          "expected": "writer",
+          "passed": true
+        },
+        {
+          "actual": "lease_released",
+          "check": "reply[operator-open]/result/retry/on",
+          "expected": "lease_released",
+          "passed": true
+        },
+        {
+          "actual": "stream:01a198c5-a0d8-7399-90db-7c4110586151",
+          "check": "reply[operator-open]/result/stream_id",
+          "expected": {
+            "$capture": "operator_stream"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "operator-open"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "operator-open"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "lease_epoch_mismatch",
+          "check": "reply[stale-takeover]/error/data/kind",
+          "expected": "lease_epoch_mismatch",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[stale-takeover]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "stale-takeover"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "stale-takeover"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[takeover]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "operator",
+          "check": "reply[takeover]/result/acquired/holder",
+          "expected": "operator",
+          "passed": true
+        },
+        {
+          "actual": "lease:5",
+          "check": "reply[takeover]/result/acquired/lease_id",
+          "expected": {
+            "$capture": "operator_lease"
+          },
+          "passed": true
+        },
+        {
+          "actual": "writer",
+          "check": "reply[takeover]/result/displaced/holder",
+          "expected": "writer",
+          "passed": true
+        },
+        {
+          "actual": [
+            "takeover"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "takeover"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "checkpoint",
+          "check": "notification[attach.control]/params/kind",
+          "expected": "checkpoint",
+          "passed": true
+        },
+        {
+          "actual": "input_ready",
+          "check": "notification[attach.control]/params/kind",
+          "expected": "input_ready",
+          "passed": true
+        },
+        {
+          "actual": "input_revoked",
+          "check": "notification[attach.control]/params/kind",
+          "expected": "input_revoked",
+          "passed": true
+        },
+        {
+          "actual": "operator",
+          "check": "notification[attach.control]/params/close/by/holder",
+          "expected": "operator",
+          "passed": true
+        },
+        {
+          "actual": "taken_over",
+          "check": "notification[attach.control]/params/close/reason",
+          "expected": "taken_over",
+          "passed": true
+        },
+        {
+          "actual": "close",
+          "check": "notification[attach.control]/params/kind",
+          "expected": "close",
+          "passed": true
+        },
+        {
+          "actual": "no_lease",
+          "check": "reply[revoked]/error/data/kind",
+          "expected": "no_lease",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[revoked]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "revoked"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "revoked"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "paste_refused",
+          "check": "reply[paste]/error/data/kind",
+          "expected": "paste_refused",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[paste]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "paste"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "paste"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[head-now]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "101",
+          "check": "reply[head-now]/result/output_offset",
+          "expected": {
+            "$capture": "before_flood"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "head-now"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "head-now"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[flood]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": {
+            "offset": "101"
+          },
+          "check": "reply[flood]/result/receipt/output_cursor",
+          "expected": {
+            "offset": "101"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "flood"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "flood"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[overtaken]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "300170",
+          "check": "reply[overtaken]/result/matched_at",
+          "expected": {
+            "$at_least": "300000"
+          },
+          "passed": true
+        },
+        {
+          "actual": "matched",
+          "check": "reply[overtaken]/result/outcome",
+          "expected": "matched",
+          "passed": true
+        },
+        {
+          "actual": [
+            "overtaken"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "overtaken"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[evicted]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "234646",
+          "check": "reply[evicted]/result/floor_offset",
+          "expected": {
+            "$capture": "evicted_floor"
+          },
+          "passed": true
+        },
+        {
+          "actual": "234646",
+          "check": "reply[evicted]/result/from_offset",
+          "expected": {
+            "$capture": "floor"
+          },
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "reply[evicted]/result/gap",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": [
+            "evicted"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "evicted"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "cursor_expired",
+          "check": "reply[expired]/error/data/kind",
+          "expected": "cursor_expired",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[expired]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "expired"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "expired"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "invalid_params",
+          "check": "reply[beyond-head]/error/data/kind",
+          "expected": "invalid_params",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[beyond-head]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "beyond-head"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "beyond-head"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "params.from_offset",
+          "check": "reply[numeric-offset]/error/data/field_path",
+          "expected": "params.from_offset",
+          "passed": true
+        },
+        {
+          "actual": "invalid_params",
+          "check": "reply[numeric-offset]/error/data/kind",
+          "expected": "invalid_params",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[numeric-offset]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "numeric-offset"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "numeric-offset"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[stall]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "spawned",
+          "check": "reply[stall]/result/spawn",
+          "expected": "spawned",
+          "passed": true
+        },
+        {
+          "actual": "t2",
+          "check": "reply[stall]/result/terminal/address",
+          "expected": "t2",
+          "passed": true
+        },
+        {
+          "actual": 3417276,
+          "check": "reply[stall]/result/terminal/process/pid",
+          "expected": {
+            "$capture": "stall_pid"
+          },
+          "passed": true
+        },
+        {
+          "actual": "live",
+          "check": "reply[stall]/result/terminal/state",
+          "expected": "live",
+          "passed": true
+        },
+        {
+          "actual": [
+            "stall"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "stall"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[stalled]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "matched",
+          "check": "reply[stalled]/result/outcome",
+          "expected": "matched",
+          "passed": true
+        },
+        {
+          "actual": [
+            "stalled"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "stalled"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[q1]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "65536",
+          "check": "reply[q1]/result/receipt/admitted_bytes",
+          "expected": "65536",
+          "passed": true
+        },
+        {
+          "actual": {
+            "offset": "7"
+          },
+          "check": "reply[q1]/result/receipt/output_cursor",
+          "expected": {
+            "offset": "7"
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[q1]/result/receipt/queued_seq",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[q2]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "65536",
+          "check": "reply[q2]/result/receipt/admitted_bytes",
+          "expected": "65536",
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[q2]/result/receipt/queued_seq",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": [
+            "q1",
+            "q2"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "q1",
+            "q2"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[barrier]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "131072",
+          "check": "reply[barrier]/result/pending_bytes",
+          "expected": {
+            "$at_least": "1"
+          },
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[barrier]/result/reached",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": [
+            "barrier"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "barrier"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[escape]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[escape]/result/receipt/admitted_bytes",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "3",
+          "check": "reply[escape]/result/receipt/queued_seq",
+          "expected": "3",
+          "passed": true
+        },
+        {
+          "actual": [
+            "escape"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "escape"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[still]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "timeout",
+          "check": "reply[still]/result/outcome",
+          "expected": "timeout",
+          "passed": true
+        },
+        {
+          "actual": [
+            "still"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "still"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[alive]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[alive]/result/finished",
+          "expected": null,
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[alive]/result/process/incarnation",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": 3417276,
+          "check": "reply[alive]/result/process/pid",
+          "expected": 3417276,
+          "passed": true
+        },
+        {
+          "actual": [
+            "alive"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "alive"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "argv_element_bytes",
+          "check": "reply[huge]/error/data/bound/limit",
+          "expected": "argv_element_bytes",
+          "passed": true
+        },
+        {
+          "actual": "32768",
+          "check": "reply[huge]/error/data/bound/value",
+          "expected": "32768",
+          "passed": true
+        },
+        {
+          "actual": "params.program.argv",
+          "check": "reply[huge]/error/data/field_path",
+          "expected": "params.program.argv",
+          "passed": true
+        },
+        {
+          "actual": "too_large",
+          "check": "reply[huge]/error/data/kind",
+          "expected": "too_large",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[huge]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "huge"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "huge"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "not_found",
+          "check": "reply[no-spawn]/error/data/kind",
+          "expected": "not_found",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[no-spawn]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "no-spawn"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "no-spawn"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "9559",
+          "check": "connection[control]/bytes_received=bytes_decoded",
+          "expected": "9559",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "failure",
+      "connections": [
+        {
+          "bytes_decoded": "9559",
+          "bytes_received": "9559",
+          "bytes_sent": "204838",
+          "name": "control",
+          "records_received": "20",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "450210be4fe9103fa73510de54c8daa9972053058bbdfd43d9bf107893c3a450",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2604",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "24084fb0d1f076aaa0785f5438f84d1acd3e636068324ec53fb25bf548bc3bf2",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198c5-a00e-7512-bd94-92157c217108\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793564450976\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1",
+              "bytes": "356",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "09a5f1e72a2399077aab7471f82a13ddeacbd5af7ff668fff0cdfb919f34a568",
+              "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a198c5-a0a0-70a2-a773-612d690b8c4c\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "31",
+              "bytes": "871",
+              "direction": "received",
+              "offset": "2604",
+              "sha256": "9407937e2a44599245b1691d37b2434f78d7da4cd6491a24a2aac0cb3e6bb889",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a198c5-a00e-7512-bd94-92157c217108\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":3417111,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6518686\",\"started_ms\":\"1793564451003\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "31",
+              "bytes": "170",
+              "direction": "sent",
+              "offset": "590",
+              "sha256": "5bbc5e6acce0f78ac04792a3b2c9b3db4fab63d87542e2da898dbebb741ae29f",
+              "text": "{\"id\":\"prompt\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.wait_output\",\"params\":{\"cursor\":{\"offset\":\"0\"},\"pattern\":{\"text\":\"$ \"},\"target\":{\"address\":\"t1\"},\"timeout_ms\":\"10000\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "36",
+              "bytes": "285",
+              "direction": "received",
+              "offset": "3475",
+              "sha256": "81ca0f66095ec38dae6401e0c44af4daaec394dc6ebb1ccd58f2680ed39df919",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"prompt\",\"result\":{\"cursor\":{\"offset\":\"2\"},\"matched_at\":\"0\",\"outcome\":\"matched\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "45",
+              "bytes": "183",
+              "direction": "sent",
+              "offset": "760",
+              "sha256": "d2593835cedf6cd9ec94ce6a037203e39b4b7802e4e1394a0045781a53ee81ea",
+              "text": "{\"id\":\"fake-wait\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.wait_output\",\"params\":{\"cursor\":{\"offset\":\"2\"},\"pattern\":{\"text\":\"PROMPT> done\"},\"target\":{\"address\":\"t1\"},\"timeout_ms\":\"10000\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "50",
+              "bytes": "290",
+              "direction": "received",
+              "offset": "3760",
+              "sha256": "1bdb203074032c72b253a0a45852d02207ec10024f9a3c02ff3cf1df6db999a6",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"fake-wait\",\"result\":{\"cursor\":{\"offset\":\"35\"},\"matched_at\":\"23\",\"outcome\":\"matched\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "66",
+              "bytes": "114",
+              "direction": "sent",
+              "offset": "943",
+              "sha256": "72b87ae518a0a2ef694e94bc8de5edf3b4a4347da18058ca1aa5b29fc1cb3c8d",
+              "text": "{\"id\":\"head-now\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.screen\",\"params\":{\"format\":\"text\",\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "66",
+              "bytes": "388",
+              "direction": "received",
+              "offset": "4050",
+              "sha256": "9ad091c07610fb36b99479aec5b5e2083c42874c9cd37deffc2234ecf87ad362",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"head-now\",\"result\":{\"cursor\":{\"col\":2,\"row\":5,\"visible\":true},\"lines\":[\"$ printf 'state: idle\\\\nPROMPT> done\\\\n'\",\"state: idle\",\"PROMPT> done\",\"$ echo after-$((2+2))\",\"after-4\",\"$\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"],\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"101\",\"revision\":\"101\",\"title\":null,\"truncated\":false}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "66",
+              "bytes": "181",
+              "direction": "sent",
+              "offset": "1057",
+              "sha256": "767efdf82b52438d6d186e41b5fc30aadae6fc476df8b10fe52eb56b6c39228e",
+              "text": "{\"id\":\"overtaken\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.wait_output\",\"params\":{\"cursor\":{\"offset\":\"101\"},\"pattern\":{\"text\":\"flood-25\"},\"target\":{\"address\":\"t1\"},\"timeout_ms\":\"10000\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1240",
+              "bytes": "298",
+              "direction": "received",
+              "offset": "4438",
+              "sha256": "9843560e57ea64956b50e6da4b1d9c46ddde0ff73253e2e4daf37d664d294d9d",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"overtaken\",\"result\":{\"cursor\":{\"offset\":\"300178\"},\"matched_at\":\"300170\",\"outcome\":\"matched\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1240",
+              "bytes": "136",
+              "direction": "sent",
+              "offset": "1238",
+              "sha256": "b0499a7bf5544dee101eecb8ea310d7b1f8bdefdb8715381b133049cc58e7c8d",
+              "text": "{\"id\":\"evicted\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.output\",\"params\":{\"from_offset\":\"101\",\"limit_bytes\":\"64\",\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1240",
+              "bytes": "227",
+              "direction": "received",
+              "offset": "4736",
+              "sha256": "52c227cd77bb424e91a8ab6a4a8609569c99d899fb98b161b750eb6a41d9c904",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"evicted\",\"result\":{\"data_b64\":\"enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6enp6eg==\",\"floor_offset\":\"234646\",\"from_offset\":\"234646\",\"gap\":true,\"next_offset\":\"234710\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1240",
+              "bytes": "178",
+              "direction": "sent",
+              "offset": "1374",
+              "sha256": "d2102114bbbcb0cf92dddd9a5f257ef7938f69b08146e4a866f995d7e250b0c8",
+              "text": "{\"id\":\"expired\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.wait_output\",\"params\":{\"cursor\":{\"offset\":\"101\"},\"pattern\":{\"text\":\"flood-25\"},\"target\":{\"address\":\"t1\"},\"timeout_ms\":\"1000\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1241",
+              "bytes": "220",
+              "direction": "received",
+              "offset": "4963",
+              "sha256": "4c57f985f499c12c1a827344d09002bff6f6da61fe522386f39b28ca33352d8d",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"expired\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"cursor_expired\",\"hint\":\"the cursor is behind retained output; read terminal.output from its floor\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1241",
+              "bytes": "157",
+              "direction": "sent",
+              "offset": "1552",
+              "sha256": "9bc93cdf9c4ebed1f6f52f3e4a688207b010c0fd00e2c4becccfcc0aa01180da",
+              "text": "{\"id\":\"beyond-head\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.output\",\"params\":{\"from_offset\":\"18446744073709551615\",\"limit_bytes\":\"64\",\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1241",
+              "bytes": "218",
+              "direction": "received",
+              "offset": "5183",
+              "sha256": "a4d9c21e51697beb9b285b6b80e0242e368550e8342ea39e8482df142a0e69df",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"beyond-head\",\"error\":{\"code\":-32602,\"message\":\"operation failed\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"send the request in its schema form with ranges inside the snapshot\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1241",
+              "bytes": "139",
+              "direction": "sent",
+              "offset": "1709",
+              "sha256": "ae4986d148136c7010e452aa306ed4dcb8016df0599b7d4ed1ccaa2be88096f7",
+              "text": "{\"id\":\"numeric-offset\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.output\",\"params\":{\"from_offset\":0,\"limit_bytes\":\"64\",\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1242",
+              "bytes": "244",
+              "direction": "received",
+              "offset": "5401",
+              "sha256": "d116ee81fa8d798aadd4913cee8807ea05eb6b20667491c763ee036b74c38472",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"numeric-offset\",\"error\":{\"code\":-32602,\"message\":\"method parameters violate the closed schema\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"correct the method parameters\",\"retryable\":false,\"field_path\":\"params.from_offset\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1242",
+              "bytes": "420",
+              "direction": "sent",
+              "offset": "1848",
+              "sha256": "63f348dc394a092c822b8c0bc84deb00d6fa4815bf43c8013f4d2980cb22e615",
+              "text": "{\"id\":\"stall\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"stall\",\"op_id\":\"01a198c5-a57a-7031-a558-93ffa7ae0287\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\",\"-c\",\"stty -echo -icanon; printf 'STALL''ED'; exec sleep 600\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1280",
+              "bytes": "940",
+              "direction": "received",
+              "offset": "5645",
+              "sha256": "79892ace75f5f8d0756abfbce6be2844d8ed43a54918f14d79241c365a67e571",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"stall\",\"result\":{\"created_seq\":\"64\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t2\",\"agent\":null,\"created_seq\":\"64\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"66\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a198c5-a00e-7512-bd94-92157c217108\",\"name\":\"stall\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\",\"-c\",\"stty -echo -icanon; printf 'STALL''ED'; exec sleep 600\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":3417276,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6518810\",\"started_ms\":\"1793564452252\"},\"revision\":\"66\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:2\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"66\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1280",
+              "bytes": "176",
+              "direction": "sent",
+              "offset": "2268",
+              "sha256": "1d1776d0a0d65fe9cd6be1292bb3b8482aaba34085a405cdd11c49f7bb07b1d5",
+              "text": "{\"id\":\"stalled\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.wait_output\",\"params\":{\"cursor\":{\"offset\":\"0\"},\"pattern\":{\"text\":\"STALLED\"},\"target\":{\"address\":\"t2\"},\"timeout_ms\":\"10000\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1285",
+              "bytes": "286",
+              "direction": "received",
+              "offset": "6585",
+              "sha256": "691b9a36f0d8bcba90b975bc9141e39d5de9bfb838fbd54e9b425d38c4d3713e",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"stalled\",\"result\":{\"cursor\":{\"offset\":\"7\"},\"matched_at\":\"0\",\"outcome\":\"matched\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1291",
+              "bytes": "131452",
+              "direction": "sent",
+              "offset": "2444",
+              "sha256": "db69c746611c49574b1db56abb05c0915cbf4f67dadc3e4fa94486d00093143d",
+              "text": null,
+              "unit": "write"
+            },
+            {
+              "at_ms": "1298",
+              "bytes": "380",
+              "direction": "received",
+              "offset": "6871",
+              "sha256": "037cb00d2c50c8d8dcdca4805864edadc3e623cc905dd5ef5ba14085be6d838b",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"q1\",\"result\":{\"receipt\":{\"admitted_bytes\":\"65536\",\"mode_revision\":\"0\",\"op_id\":\"01a198c5-a5a5-70a6-918f-121bcb21fbdd\",\"output_cursor\":{\"offset\":\"7\"},\"queued_seq\":\"1\"},\"status_at_send\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1300",
+              "bytes": "380",
+              "direction": "received",
+              "offset": "7251",
+              "sha256": "f828238d8c44437d03fe580f2f5449382aa7b19656b0496281bdf3bb843a4f67",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"q2\",\"result\":{\"receipt\":{\"admitted_bytes\":\"65536\",\"mode_revision\":\"0\",\"op_id\":\"01a198c5-a5a5-70a6-918f-121c864db1b1\",\"output_cursor\":{\"offset\":\"7\"},\"queued_seq\":\"2\"},\"status_at_send\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1300",
+              "bytes": "112",
+              "direction": "sent",
+              "offset": "133896",
+              "sha256": "064eeb534ed0d5a86431afdd16ef575f196ea0c82d70c4e420873e8e75f37ea0",
+              "text": "{\"id\":\"barrier\",\"jsonrpc\":\"2.0\",\"method\":\"input.barrier\",\"params\":{\"queued_seq\":\"2\",\"target\":{\"address\":\"t2\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1300",
+              "bytes": "105",
+              "direction": "received",
+              "offset": "7631",
+              "sha256": "95a456374f0be788e54c199430cb4f4e09a5fe00ca4d099ed94a19b7874aa4c4",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"barrier\",\"result\":{\"output_offset\":\"7\",\"pending_bytes\":\"131072\",\"reached\":false}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1300",
+              "bytes": "186",
+              "direction": "sent",
+              "offset": "134008",
+              "sha256": "24314c94e213c3f244f963f0a06897ac77c14731e016c11e8cd786939821241c",
+              "text": "{\"id\":\"escape\",\"jsonrpc\":\"2.0\",\"method\":\"input.keys\",\"params\":{\"expect\":null,\"keys\":[\"escape\"],\"lease_id\":null,\"op_id\":\"01a198c5-a5b4-7132-8afb-5a2d4ccf9b46\",\"target\":{\"address\":\"t2\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1301",
+              "bytes": "380",
+              "direction": "received",
+              "offset": "7736",
+              "sha256": "79ab97fc98f64fa9bf2d2eebdbb41ce1485916eeeb5ca034b388f0bf611c8e26",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"escape\",\"result\":{\"receipt\":{\"admitted_bytes\":\"1\",\"mode_revision\":\"0\",\"op_id\":\"01a198c5-a5b4-7132-8afb-5a2d4ccf9b46\",\"output_cursor\":{\"offset\":\"7\"},\"queued_seq\":\"3\"},\"status_at_send\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1301",
+              "bytes": "122",
+              "direction": "sent",
+              "offset": "134194",
+              "sha256": "f0039da51928169480cf602a75c3c6685c0ef577dde4cbbd62a9e4ecf0e11fc6",
+              "text": "{\"id\":\"still\",\"jsonrpc\":\"2.0\",\"method\":\"events.wait\",\"params\":{\"exit\":true,\"target\":{\"address\":\"t2\"},\"timeout_ms\":\"200\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1502",
+              "bytes": "72",
+              "direction": "received",
+              "offset": "8116",
+              "sha256": "ad0ab44a580603521a64e5b5d027c8abee90136776a130592048eb0360910d69",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"still\",\"result\":{\"outcome\":\"timeout\",\"seq\":\"0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1502",
+              "bytes": "92",
+              "direction": "sent",
+              "offset": "134316",
+              "sha256": "b02be0c29abe8ea5dba18867df1b53f9a6bbbab0dfcfcf09f84da7727e1d89b3",
+              "text": "{\"id\":\"alive\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.get\",\"params\":{\"target\":{\"address\":\"t2\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1507",
+              "bytes": "890",
+              "direction": "received",
+              "offset": "8188",
+              "sha256": "26b6d7d6589fd65c4d6c40fbefe7d678b7286dea1976e54573291c4d333a504a",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"alive\",\"result\":{\"address\":\"t2\",\"agent\":null,\"created_seq\":\"64\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"67\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a198c5-a00e-7512-bd94-92157c217108\",\"name\":\"stall\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"7\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\",\"-c\",\"stty -echo -icanon; printf 'STALL''ED'; exec sleep 600\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":3417276,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6518810\",\"started_ms\":\"1793564452252\"},\"revision\":\"67\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:2\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"67\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1510",
+              "bytes": "70335",
+              "direction": "sent",
+              "offset": "134408",
+              "sha256": "cd6ab2f772fcf9a98eecb4179cb86d88c16851d374b3385746946a878741d1c9",
+              "text": null,
+              "unit": "write"
+            },
+            {
+              "at_ms": "1515",
+              "bytes": "283",
+              "direction": "received",
+              "offset": "9078",
+              "sha256": "98c346d54dedb4bf3adbbde56a970e62a045a19e9fbd388b0531bfec52d418d2",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"huge\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"too_large\",\"hint\":\"send a value within the limit named in the error bound\",\"retryable\":false,\"field_path\":\"params.program.argv\",\"bound\":{\"limit\":\"argv_element_bytes\",\"value\":\"32768\"}}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1515",
+              "bytes": "95",
+              "direction": "sent",
+              "offset": "204743",
+              "sha256": "b25f04f211a0cfbe43a483d14d1edf01eb3f1d467a3d671e7ea2452b3397893d",
+              "text": "{\"id\":\"no-spawn\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.get\",\"params\":{\"target\":{\"address\":\"t3\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1515",
+              "bytes": "198",
+              "direction": "received",
+              "offset": "9361",
+              "sha256": "f7a72a3f450aa8a379a7624576ee6b7a9171c99d1bec8c238494ce3ea0e0d925",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"no-spawn\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_found\",\"hint\":\"refresh the resource roster and supply a current target\",\"retryable\":false}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "19"
+        },
+        {
+          "bytes_decoded": "5109",
+          "bytes_received": "5109",
+          "bytes_sent": "1170",
+          "name": "observer",
+          "records_received": "8",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "4e35a924355720996576aafdbc37269991327ae35e0ebf152dae640238c4cec6",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2604",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "4b7c04af2727fb634fac4c909a23f58d932d11cce2eed1f84ce70e3371cb87d0",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198c5-a00e-7512-bd94-92157c217108\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793564451016\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "240",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "c3fcb60224e8130baa5f2b0f82bed5f4d272545eb687ed7e548d6a1d5a5b393e",
+              "text": "{\"id\":\"observer-open\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"observer\",\"geometry\":null,\"op_id\":\"01a198c5-a0c8-731b-aad3-7c37f672089c\",\"role\":\"observe\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "403",
+              "direction": "received",
+              "offset": "2604",
+              "sha256": "078dc4c4518a6099670b916f54a7b95d963fce9549a0ceb345f601aa56b38546",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":{\"cursor\":{\"col\":2,\"row\":0,\"visible\":true},\"geometry\":{\"cols\":80,\"rows\":24},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"2\",\"revision\":\"2\",\"stream_offset\":\"0\"},\"close\":null,\"kind\":\"checkpoint\",\"skipped\":null,\"stream_id\":\"stream:01a198c5-a0c8-7562-a13e-180437a263f1\",\"stream_offset\":\"0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "589",
+              "direction": "received",
+              "offset": "3007",
+              "sha256": "20fc2aec073abc9bae760225fa79ac39abef0813aa9bfee6d51af311b1710412",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G2MbWzE7MUgbWzA7Mzk7NDltJBtbMjsxSBtbMzsxSBtbNDsxSBtbNTsxSBtbNjsxSBtbNzsxSBtbODsxSBtbOTsxSBtbMTA7MUgbWzExOzFIG1sxMjsxSBtbMTM7MUgbWzE0OzFIG1sxNTsxSBtbMTY7MUgbWzE3OzFIG1sxODsxSBtbMTk7MUgbWzIwOzFIG1syMTsxSBtbMjI7MUgbWzIzOzFIG1syNDsxSBtbMTsxSBtbMDszOTs0OW0bNxtbPzI1aBtbPzFsG1s/MTAwMGwbWz8xMDAybBtbPzEwMDNsG1s/MTAwNGwbWz8xMDA1bBtbPzEwMDZsG1s/MTAwN2gbWz8xMDQyaBtbPzIwMDRsG1s/NmwbWz0wOzF1G1s+NDswbRtbPzkwMDFsGz4bWzIgcRtbMTszSBtbPzdoG1s0bBtbMjBsG1swOzM5OzQ5bQ==\",\"offset\":\"0\",\"stream_id\":\"stream:01a198c5-a0c8-7562-a13e-180437a263f1\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "648",
+              "direction": "received",
+              "offset": "3596",
+              "sha256": "0031364248132ab3cd700149790383509a3af24c31d89c26b95fbec24c9a61fe",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"observer-open\",\"result\":{\"channel\":null,\"credit_initial\":\"262144\",\"displaced\":null,\"final_output_offset\":null,\"first_paint\":{\"cursor\":{\"col\":2,\"row\":0,\"visible\":true},\"geometry\":{\"cols\":80,\"rows\":24},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"2\",\"revision\":\"2\",\"stream_offset\":\"0\"},\"holder\":null,\"lease\":{\"epoch\":\"1\",\"holder\":\"observer\",\"lease_id\":\"lease:2\",\"role\":\"observe\"},\"outcome\":\"ready\",\"reason\":null,\"retry\":null,\"stream_id\":\"stream:01a198c5-a0c8-7562-a13e-180437a263f1\",\"terminal\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "226",
+              "direction": "sent",
+              "offset": "474",
+              "sha256": "426ea8f29c44591271a467dbd719a2cab37ce75b67281f158c5d40ff80055b34",
+              "text": "{\"id\":\"observer-send\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"expect\":null,\"lease_id\":\"lease:1\",\"op_id\":\"01a198c5-a0ca-7592-83d0-4d61fcbdcbc9\",\"submit\":\"enter\",\"target\":{\"address\":\"t1\"},\"text\":\"echo rogue-$((1+1))\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "201",
+              "direction": "received",
+              "offset": "4244",
+              "sha256": "458168802c2462752747dc3320070033e938abdd44de5727ef06025a9d6b6c1f",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"observer-send\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"forbidden\",\"hint\":\"ask an administrator for a grant covering this target\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "168",
+              "direction": "sent",
+              "offset": "700",
+              "sha256": "92f62cb3f61a5fa43d7715fd4c6d574aa74975d459233436e934ba7338423a97",
+              "text": "{\"id\":\"credit-max\",\"jsonrpc\":\"2.0\",\"method\":\"attach.credit\",\"params\":{\"acknowledged\":\"18446744073709551615\",\"stream_id\":\"stream:01a198c5-a0c8-7562-a13e-180437a263f1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "209",
+              "direction": "received",
+              "offset": "4445",
+              "sha256": "738083c8f25302710abc907ac19e7508a25e62c83d65b6dc419e0621d1cf4f92",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"credit-max\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"invalid_credit\",\"hint\":\"acknowledge at most the offset after the last byte received\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "151",
+              "direction": "sent",
+              "offset": "868",
+              "sha256": "61b1cf07544bca0f464394f1aefbccd6008e026f89fccf7a45d02ef499212e35",
+              "text": "{\"id\":\"credit-numeric\",\"jsonrpc\":\"2.0\",\"method\":\"attach.credit\",\"params\":{\"acknowledged\":5,\"stream_id\":\"stream:01a198c5-a0c8-7562-a13e-180437a263f1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "245",
+              "direction": "received",
+              "offset": "4654",
+              "sha256": "e21f11fca031d4a4afe9456f02d4099f261d748da9a2f58cfff469668360c628",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"credit-numeric\",\"error\":{\"code\":-32602,\"message\":\"method parameters violate the closed schema\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"correct the method parameters\",\"retryable\":false,\"field_path\":\"params.acknowledged\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "151",
+              "direction": "sent",
+              "offset": "1019",
+              "sha256": "3bafb6b78e29dba34f9cdd6a4d94a692b810fc3dcdf608beb475e09c0afb7988",
+              "text": "{\"id\":\"credit-stale\",\"jsonrpc\":\"2.0\",\"method\":\"attach.credit\",\"params\":{\"acknowledged\":\"0\",\"stream_id\":\"stream:00000000-0000-0000-0000-000000000000\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "4",
+              "bytes": "210",
+              "direction": "received",
+              "offset": "4899",
+              "sha256": "f21379ad621bb78d879628e0869dd013253f8fdd261532f424bc82f90dde119d",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"credit-stale\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"stream_not_found\",\"hint\":\"use a stream_id this principal opened and has not closed\",\"retryable\":false}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "6"
+        },
+        {
+          "bytes_decoded": "6125",
+          "bytes_received": "6125",
+          "bytes_sent": "1520",
+          "name": "operator",
+          "records_received": "11",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "450210be4fe9103fa73510de54c8daa9972053058bbdfd43d9bf107893c3a450",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2604",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "989659e8864d6f5850da2c7e9352cb50a4cea659f208541d32e889528d039cb3",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198c5-a00e-7512-bd94-92157c217108\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793564451032\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "241",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "697ebeabefeb8d1330241e3445c31ef2bca83619848de97ec4be621274728678",
+              "text": "{\"id\":\"operator-open\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"operator\",\"geometry\":null,\"op_id\":\"01a198c5-a0d8-764e-90d3-2a0703a0b691\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "405",
+              "direction": "received",
+              "offset": "2604",
+              "sha256": "7f2e416e93103d990783f391880c063db182b79e75fcb71ee7386fbc7b10a6ba",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":{\"cursor\":{\"col\":2,\"row\":3,\"visible\":true},\"geometry\":{\"cols\":80,\"rows\":24},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"69\",\"revision\":\"69\",\"stream_offset\":\"0\"},\"close\":null,\"kind\":\"checkpoint\",\"skipped\":null,\"stream_id\":\"stream:01a198c5-a0d8-7399-90db-7c4110586151\",\"stream_offset\":\"0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "669",
+              "direction": "received",
+              "offset": "3009",
+              "sha256": "178efb0700d1e930140e7b34eb6925c3f9903ecfacf72366ab28b0ca5a531c9c",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G2MbWzE7MUgbWzA7Mzk7NDltJCBwcmludGYgJ3N0YXRlOiBpZGxlXG5QUk9NUFQ+IGRvbmVcbicbWzI7MUhzdGF0ZTogaWRsZRtbMzsxSFBST01QVD4gZG9uZRtbNDsxSCQbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzk7MUgbWzEwOzFIG1sxMTsxSBtbMTI7MUgbWzEzOzFIG1sxNDsxSBtbMTU7MUgbWzE2OzFIG1sxNzsxSBtbMTg7MUgbWzE5OzFIG1syMDsxSBtbMjE7MUgbWzIyOzFIG1syMzsxSBtbMjQ7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzQ7M0gbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=\",\"offset\":\"0\",\"stream_id\":\"stream:01a198c5-a0d8-7399-90db-7c4110586151\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "837",
+              "direction": "received",
+              "offset": "3678",
+              "sha256": "4d8a1d6859513bc5f7f1e8748332703fbf868638de7f3563cfda370e7816cb3f",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"operator-open\",\"result\":{\"channel\":null,\"credit_initial\":\"262144\",\"displaced\":null,\"final_output_offset\":null,\"first_paint\":{\"cursor\":{\"col\":2,\"row\":3,\"visible\":true},\"geometry\":{\"cols\":80,\"rows\":24},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"69\",\"revision\":\"69\",\"stream_offset\":\"0\"},\"holder\":{\"epoch\":\"1\",\"holder\":\"writer\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"lease\":{\"epoch\":\"1\",\"holder\":\"operator\",\"lease_id\":\"lease:3\",\"role\":\"observe\"},\"outcome\":\"held\",\"reason\":null,\"retry\":{\"event\":\"lease.revoked\",\"lease\":{\"epoch\":\"1\",\"holder\":\"writer\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"on\":\"lease_released\"},\"stream_id\":\"stream:01a198c5-a0d8-7399-90db-7c4110586151\",\"terminal\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "298",
+              "direction": "sent",
+              "offset": "475",
+              "sha256": "cdb65749312265ad2e6698f4cc21a1bdb1235ca655b1a001f2ec1c8bead2c71a",
+              "text": "{\"id\":\"stale-takeover\",\"jsonrpc\":\"2.0\",\"method\":\"attach.takeover\",\"params\":{\"op_id\":\"01a198c5-a0da-70bc-a5e8-f8e0cb7e4fce\",\"stream_id\":\"stream:01a198c5-a0d8-7399-90db-7c4110586151\",\"takeover\":{\"lease_epoch\":\"18446744073709551615\",\"reason\":\"operator takes the terminal\"},\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "265",
+              "direction": "received",
+              "offset": "4515",
+              "sha256": "aec0991b035c40c5dbcfdab7b93dca1488af04e4a65e34e1574b572817cd060d",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"stale-takeover\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"lease_epoch_mismatch\",\"hint\":\"read the current lease and retry the takeover at its epoch\",\"retryable\":false,\"op_id\":\"01a198c5-a0da-70bc-a5e8-f8e0cb7e4fce\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "273",
+              "direction": "sent",
+              "offset": "773",
+              "sha256": "74adddb26e4dc77cb69cb0555ad2ca18841a527065a8eb1cf3d7207cc4700f11",
+              "text": "{\"id\":\"takeover\",\"jsonrpc\":\"2.0\",\"method\":\"attach.takeover\",\"params\":{\"op_id\":\"01a198c5-a0db-7651-9638-41f7d05ceb3c\",\"stream_id\":\"stream:01a198c5-a0d8-7399-90db-7c4110586151\",\"takeover\":{\"lease_epoch\":\"1\",\"reason\":\"operator takes the terminal\"},\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "4",
+              "bytes": "167",
+              "direction": "received",
+              "offset": "4780",
+              "sha256": "a5e147034a6ae030275a8474837280efc5c00e65927a6761a787cfa267d853d9",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"ZWNobyBhZnRlci0kKCgyKzIpKQ0K\",\"offset\":\"398\",\"stream_id\":\"stream:01a198c5-a0d8-7399-90db-7c4110586151\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "4",
+              "bytes": "202",
+              "direction": "received",
+              "offset": "4947",
+              "sha256": "6bd37127d2d08b539fe53af1560f7b606bdebbd3b8d4fe700af86093ee7d2c4e",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":null,\"close\":null,\"kind\":\"input_ready\",\"skipped\":null,\"stream_id\":\"stream:01a198c5-a0d8-7399-90db-7c4110586151\",\"stream_offset\":\"419\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "5",
+              "bytes": "222",
+              "direction": "received",
+              "offset": "5149",
+              "sha256": "2e4dcb73d5f60646c345fb49c5b7d81ede2dc27394fe345e2541131de348feb4",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"takeover\",\"result\":{\"acquired\":{\"epoch\":\"2\",\"holder\":\"operator\",\"lease_id\":\"lease:5\",\"role\":\"interact\"},\"displaced\":{\"epoch\":\"1\",\"holder\":\"writer\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"seq\":\"5\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "9",
+              "bytes": "209",
+              "direction": "sent",
+              "offset": "1046",
+              "sha256": "d3f6d0b82b4c4482d50119862dfd22ca1a469ae52c7dfdcf9e41619ff8162f65",
+              "text": "{\"id\":\"paste\",\"jsonrpc\":\"2.0\",\"method\":\"input.paste\",\"params\":{\"bracketed\":\"require\",\"expect\":null,\"lease_id\":\"lease:5\",\"op_id\":\"01a198c5-a0e1-7072-83eb-29d576f706be\",\"target\":{\"address\":\"t1\"},\"text\":\"a\\nb\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "9",
+              "bytes": "155",
+              "direction": "received",
+              "offset": "5371",
+              "sha256": "e5413c1cffbe8b00e96015f00bf806be5dcb768991dc9c80b783d0d48c5b6770",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"YWZ0ZXItNA0KJCA=\",\"offset\":\"419\",\"stream_id\":\"stream:01a198c5-a0d8-7399-90db-7c4110586151\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "10",
+              "bytes": "217",
+              "direction": "received",
+              "offset": "5526",
+              "sha256": "cdd290407a3cabeb46093fad61d4ea9613bedcad614b0c0e3be3ad7b84668a76",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"paste\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"paste_refused\",\"hint\":\"send one line at a time or wait until the program enables bracketed paste\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "10",
+              "bytes": "265",
+              "direction": "sent",
+              "offset": "1255",
+              "sha256": "cdde766b73eb10630bb32b75070ef81845a8c43abd7d0b2af7eda8836c6970b6",
+              "text": "{\"id\":\"flood\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"expect\":null,\"lease_id\":\"lease:5\",\"op_id\":\"01a198c5-a0e2-7189-abf5-b20250f30e0c\",\"submit\":\"enter\",\"target\":{\"address\":\"t1\"},\"text\":\"head -c 300000 /dev/zero | tr '\\\\000' z; echo; echo flood-$((5*5))\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "12",
+              "bytes": "382",
+              "direction": "received",
+              "offset": "5743",
+              "sha256": "399fcd932ae98582f2ad43474189dbf9599423939982d5eaeba2b17c59e69b9c",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"flood\",\"result\":{\"receipt\":{\"admitted_bytes\":\"66\",\"mode_revision\":\"0\",\"op_id\":\"01a198c5-a0e2-7189-abf5-b20250f30e0c\",\"output_cursor\":{\"offset\":\"101\"},\"queued_seq\":\"3\"},\"status_at_send\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "6"
+        },
+        {
+          "bytes_decoded": "6349",
+          "bytes_received": "6349",
+          "bytes_sent": "1152",
+          "name": "writer",
+          "records_received": "12",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "357fc7097472f0a2fcd0f9187ed9c8bab535512d5946076cea8c4d4e471a3c70",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2604",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "6b1cefcd9786331d39907f873ddb5e466265cad0a4db03a8c5c6430114fac61e",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198c5-a00e-7512-bd94-92157c217108\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793564451012\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "237",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "f1cfdcf10500d000850986002e4ff6964f56cec3306477a6f1f2891cb1fc64e8",
+              "text": "{\"id\":\"writer-open\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"writer\",\"geometry\":null,\"op_id\":\"01a198c5-a0c4-7669-a91a-f856efade83f\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "403",
+              "direction": "received",
+              "offset": "2604",
+              "sha256": "001aeaf4cf5b3086afe4a4e17b56f2c7eaa5b5794b53ab90c2da950c91e0aea0",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":{\"cursor\":{\"col\":2,\"row\":0,\"visible\":true},\"geometry\":{\"cols\":80,\"rows\":24},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"2\",\"revision\":\"2\",\"stream_offset\":\"0\"},\"close\":null,\"kind\":\"checkpoint\",\"skipped\":null,\"stream_id\":\"stream:01a198c5-a0c5-72cb-bdb7-36ed0c2f09f7\",\"stream_offset\":\"0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "589",
+              "direction": "received",
+              "offset": "3007",
+              "sha256": "b2e9900e91949555ff1242d489804856965d5b83f8be01b130a0c12c41421df3",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G2MbWzE7MUgbWzA7Mzk7NDltJBtbMjsxSBtbMzsxSBtbNDsxSBtbNTsxSBtbNjsxSBtbNzsxSBtbODsxSBtbOTsxSBtbMTA7MUgbWzExOzFIG1sxMjsxSBtbMTM7MUgbWzE0OzFIG1sxNTsxSBtbMTY7MUgbWzE3OzFIG1sxODsxSBtbMTk7MUgbWzIwOzFIG1syMTsxSBtbMjI7MUgbWzIzOzFIG1syNDsxSBtbMTsxSBtbMDszOTs0OW0bNxtbPzI1aBtbPzFsG1s/MTAwMGwbWz8xMDAybBtbPzEwMDNsG1s/MTAwNGwbWz8xMDA1bBtbPzEwMDZsG1s/MTAwN2gbWz8xMDQyaBtbPzIwMDRsG1s/NmwbWz0wOzF1G1s+NDswbRtbPzkwMDFsGz4bWzIgcRtbMTszSBtbPzdoG1s0bBtbMjBsG1swOzM5OzQ5bQ==\",\"offset\":\"0\",\"stream_id\":\"stream:01a198c5-a0c5-72cb-bdb7-36ed0c2f09f7\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "202",
+              "direction": "received",
+              "offset": "3596",
+              "sha256": "5b93bda258027c91113825d9cf8c2b823b068c1e75ff8c09c4bd9e31523b03df",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":null,\"close\":null,\"kind\":\"input_ready\",\"skipped\":null,\"stream_id\":\"stream:01a198c5-a0c5-72cb-bdb7-36ed0c2f09f7\",\"stream_offset\":\"337\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "645",
+              "direction": "received",
+              "offset": "3798",
+              "sha256": "b120563545675ae843ee18b4651deb085dd5adc147707c18b88e2b65e1ac8059",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"writer-open\",\"result\":{\"channel\":null,\"credit_initial\":\"262144\",\"displaced\":null,\"final_output_offset\":null,\"first_paint\":{\"cursor\":{\"col\":2,\"row\":0,\"visible\":true},\"geometry\":{\"cols\":80,\"rows\":24},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"2\",\"revision\":\"2\",\"stream_offset\":\"0\"},\"holder\":null,\"lease\":{\"epoch\":\"1\",\"holder\":\"writer\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"outcome\":\"ready\",\"reason\":null,\"retry\":null,\"stream_id\":\"stream:01a198c5-a0c5-72cb-bdb7-36ed0c2f09f7\",\"terminal\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "8",
+              "bytes": "236",
+              "direction": "sent",
+              "offset": "471",
+              "sha256": "8538cec14928bb6d485721d66d530a9588b90b7123089c21cc982ed53244e4d7",
+              "text": "{\"id\":\"fake\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"expect\":null,\"lease_id\":\"lease:1\",\"op_id\":\"01a198c5-a0cc-7616-821e-5f750c741751\",\"submit\":\"enter\",\"target\":{\"address\":\"t1\"},\"text\":\"printf 'state: idle\\\\nPROMPT> done\\\\n'\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "9",
+              "bytes": "379",
+              "direction": "received",
+              "offset": "4443",
+              "sha256": "5bce86d9f90c73b6260b8c9bd2a2138e10091ff977156a05dff24cb8cf04d913",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"fake\",\"result\":{\"receipt\":{\"admitted_bytes\":\"37\",\"mode_revision\":\"0\",\"op_id\":\"01a198c5-a0cc-7616-821e-5f750c741751\",\"output_cursor\":{\"offset\":\"2\"},\"queued_seq\":\"1\"},\"status_at_send\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "14",
+              "bytes": "223",
+              "direction": "sent",
+              "offset": "707",
+              "sha256": "174469c847979a03961a54fc34347b96284a73c85cd19e3acc337f42d1d7d0c7",
+              "text": "{\"id\":\"after-fake\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"expect\":null,\"lease_id\":\"lease:1\",\"op_id\":\"01a198c5-a0d2-738e-9167-12039a869120\",\"submit\":\"enter\",\"target\":{\"address\":\"t1\"},\"text\":\"echo after-$((2+2))\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "14",
+              "bytes": "191",
+              "direction": "received",
+              "offset": "4822",
+              "sha256": "6815f68b4372ec143fb68d0f8d77fc089e5c888256ad5102d7baa7f09a2c8cd1",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"cHJpbnRmICdzdGF0ZTogaWRsZVxuUFJPTVBUPiBkb25lXG4nDQo=\",\"offset\":\"337\",\"stream_id\":\"stream:01a198c5-a0c5-72cb-bdb7-36ed0c2f09f7\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "18",
+              "bytes": "179",
+              "direction": "received",
+              "offset": "5013",
+              "sha256": "b874ab97f8171486ae2176a68139d63359ffd797b91d0f0a92ba64f6cc0db046",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"c3RhdGU6IGlkbGUNClBST01QVD4gZG9uZQ0KJCA=\",\"offset\":\"375\",\"stream_id\":\"stream:01a198c5-a0c5-72cb-bdb7-36ed0c2f09f7\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "19",
+              "bytes": "386",
+              "direction": "received",
+              "offset": "5192",
+              "sha256": "0888a5180bd84163195ee72da1a6ceb109f227236aa3aa88bf58a221900084cf",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"after-fake\",\"result\":{\"receipt\":{\"admitted_bytes\":\"20\",\"mode_revision\":\"0\",\"op_id\":\"01a198c5-a0d2-738e-9167-12039a869120\",\"output_cursor\":{\"offset\":\"69\"},\"queued_seq\":\"2\"},\"status_at_send\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "24",
+              "bytes": "204",
+              "direction": "received",
+              "offset": "5578",
+              "sha256": "90ca072c7793204bc43f456d4550f37f701fc3b4354e423983cae0d4edfd169f",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":null,\"close\":null,\"kind\":\"input_revoked\",\"skipped\":null,\"stream_id\":\"stream:01a198c5-a0c5-72cb-bdb7-36ed0c2f09f7\",\"stream_offset\":\"404\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "24",
+              "bytes": "372",
+              "direction": "received",
+              "offset": "5782",
+              "sha256": "4599ebcef0377812fd08995ea7c259cc0b48ca24bb25030f205e2f553fbe2ded",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":null,\"close\":{\"by\":{\"epoch\":\"2\",\"holder\":\"operator\",\"lease_id\":\"lease:5\",\"role\":\"interact\"},\"exit_code\":null,\"final_offset\":\"404\",\"final_output_offset\":null,\"reason\":\"taken_over\",\"signal\":null},\"kind\":\"close\",\"skipped\":null,\"stream_id\":\"stream:01a198c5-a0c5-72cb-bdb7-36ed0c2f09f7\",\"stream_offset\":\"404\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "25",
+              "bytes": "222",
+              "direction": "sent",
+              "offset": "930",
+              "sha256": "bda4287a89dac3bd6cbfdf9509ce3bea6fe5321b6189ae484e945e6b551dfbb9",
+              "text": "{\"id\":\"revoked\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"expect\":null,\"lease_id\":\"lease:1\",\"op_id\":\"01a198c5-a0dd-7703-819d-2d3bd91f1257\",\"submit\":\"enter\",\"target\":{\"address\":\"t1\"},\"text\":\"echo revoked-$((9+9))\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "29",
+              "bytes": "195",
+              "direction": "received",
+              "offset": "6154",
+              "sha256": "ac0db6e6808178d3136149f45556460596148b2b7f10e9ddd96d1b6796c9b547",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"revoked\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"no_lease\",\"hint\":\"acquire the interact lease or present the one you hold\",\"retryable\":false}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "5"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-039",
+          "GAP-042",
+          "GAP-043",
+          "GAP-046",
+          "GAP-052",
+          "GAP-056",
+          "GAP-060",
+          "GAP-061",
+          "GAP-063",
+          "GAP-070",
+          "GAP-071",
+          "GAP-073",
+          "GAP-074",
+          "GAP-075",
+          "GAP-076",
+          "GAP-077",
+          "GAP-078",
+          "GAP-084",
+          "GAP-148"
+        ],
+        "delivers": [
+          "IDEAL-028",
+          "IDEAL-029",
+          "IDEAL-030",
+          "IDEAL-031",
+          "IDEAL-032",
+          "IDEAL-035",
+          "IDEAL-037",
+          "IDEAL-038",
+          "IDEAL-039",
+          "IDEAL-040",
+          "IDEAL-041",
+          "IDEAL-044",
+          "IDEAL-048",
+          "IDEAL-049",
+          "IDEAL-050",
+          "IDEAL-051",
+          "IDEAL-052",
+          "IDEAL-053",
+          "IDEAL-054",
+          "IDEAL-055",
+          "IDEAL-061",
+          "IDEAL-063"
+        ],
+        "excludes": [
+          "EXCL-007",
+          "EXCL-017",
+          "EXCL-019",
+          "EXCL-024",
+          "EXCL-025",
+          "EXCL-026"
+        ],
+        "title": "Attach input and aggregate capacity conformance",
+        "todo": "30"
+      },
+      "descriptors": [],
+      "elapsed_ms": "6908",
+      "failure": null,
+      "fixture": {
+        "accepted": "4",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-t30/debug/ovis-terminal",
+            "serve",
+            "--stdin-lifetime",
+            "--root",
+            "/tmp/ovc-3416652-0/srv",
+            "--qa-output-ring-bytes",
+            "65536"
+          ],
+          "exit_code": 0,
+          "pid": "3417091",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "part-a/task-30",
+      "summary": "Runs attach-input/adversarial: revoked queued write, impossible credit, stale epoch, fake status text, refused paste, stalled child with an ineffective Escape and an over-cap argv, each a typed rejection."
+    }
+  ],
+  "elapsed_ms": "7135",
+  "error": null,
+  "format": "ovis-conformance-evidence/1",
+  "host": {
+    "arch": "x86_64",
+    "family": "unix",
+    "os": "linux"
+  },
+  "inventory": null,
+  "result": "passed",
+  "runner_version": "0.1.0",
+  "scenario": "part-a/task-30",
+  "totals": {
+    "assertions": "149",
+    "cases": "1",
+    "declared_only": "0",
+    "failed": "0",
+    "passed": "1",
+    "skipped": "0"
+  }
+}

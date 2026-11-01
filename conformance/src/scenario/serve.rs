@@ -18,6 +18,10 @@ pub(crate) enum FixtureKind {
 #[serde(deny_unknown_fields)]
 pub(crate) struct Serve {
     pub(crate) fixture: FixtureKind,
+    /// Assembled only: marks the server root a QA fixture root and passes
+    /// `--qa-output-ring-bytes`, so retention overflows after this many output bytes.
+    #[serde(default)]
+    pub(crate) qa_output_ring_bytes: Option<crate::ids::Decimal>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

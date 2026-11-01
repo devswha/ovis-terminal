@@ -3,10 +3,32 @@
 use super::super::session::Session;
 use crate::error::RunnerError;
 use crate::fixture::launch;
-use crate::scenario::model::FixtureKind;
+use crate::scenario::model::{FixtureKind, Serve};
+
+/// `serve` arguments for the assembled binary in `srv`; a QA output ring marks `srv` a QA
+/// fixture root first, since the binary refuses QA seams anywhere else.
+fn assembled_args(
+    srv: &std::path::Path,
+    ring: Option<crate::ids::Decimal>,
+) -> Result<Vec<std::ffi::OsString>, RunnerError> {
+    let mut args = vec!["serve".into(), "--stdin-lifetime".into(), "--root".into()];
+    args.push(srv.into());
+    if let Some(ring) = ring {
+        std::fs::create_dir_all(srv)
+            .and_then(|()| std::fs::write(srv.join("qa-fixture"), b""))
+            .map_err(|source| RunnerError::Io {
+                operation: "mark the server root a QA fixture root",
+                source,
+            })?;
+        args.push("--qa-output-ring-bytes".into());
+        args.push(ring.0.to_string().into());
+    }
+    Ok(args)
+}
 
 impl Session<'_> {
-    pub(super) async fn serve(&mut self, kind: FixtureKind) -> Result<(), RunnerError> {
+    pub(super) async fn serve(&mut self, serve: &Serve) -> Result<(), RunnerError> {
+        let kind = serve.fixture;
         if self.fixture.is_some() {
             return Err(RunnerError::FixtureState);
         }
@@ -35,12 +57,7 @@ impl Session<'_> {
                 launch::start(&runner, &args, root).await?
             }
             FixtureKind::Assembled => {
-                let args = [
-                    "serve".into(),
-                    "--stdin-lifetime".into(),
-                    "--root".into(),
-                    root.join("srv").into(),
-                ];
+                let args = assembled_args(&root.join("srv"), serve.qa_output_ring_bytes)?;
                 launch::start(&binary, &args, root).await?
             }
         };

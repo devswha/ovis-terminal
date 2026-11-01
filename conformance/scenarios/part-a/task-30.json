@@ -1,0 +1,89 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "part-a/task-30",
+  "title": "Attach input and aggregate capacity conformance",
+  "todo": 30,
+  "closes": [
+    "GAP-039",
+    "GAP-042",
+    "GAP-043",
+    "GAP-046",
+    "GAP-052",
+    "GAP-056",
+    "GAP-060",
+    "GAP-061",
+    "GAP-063",
+    "GAP-070",
+    "GAP-071",
+    "GAP-073",
+    "GAP-074",
+    "GAP-075",
+    "GAP-076",
+    "GAP-077",
+    "GAP-078",
+    "GAP-084",
+    "GAP-148"
+  ],
+  "delivers": [
+    "IDEAL-028",
+    "IDEAL-029",
+    "IDEAL-030",
+    "IDEAL-031",
+    "IDEAL-032",
+    "IDEAL-035",
+    "IDEAL-037",
+    "IDEAL-038",
+    "IDEAL-039",
+    "IDEAL-040",
+    "IDEAL-041",
+    "IDEAL-044",
+    "IDEAL-048",
+    "IDEAL-049",
+    "IDEAL-050",
+    "IDEAL-051",
+    "IDEAL-052",
+    "IDEAL-053",
+    "IDEAL-054",
+    "IDEAL-055",
+    "IDEAL-061",
+    "IDEAL-063"
+  ],
+  "excludes": [
+    "EXCL-007",
+    "EXCL-017",
+    "EXCL-019",
+    "EXCL-024",
+    "EXCL-025",
+    "EXCL-026"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Runs attach-input/all: first-paint parity, admission-before-delivery, the exact output-wait marker, the operator lease and bounded shared storage under the 16-PTY profile.",
+      "steps": [
+        {
+          "include": {
+            "scenario": "attach-input/all",
+            "case": "happy"
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "Runs attach-input/adversarial: revoked queued write, impossible credit, stale epoch, fake status text, refused paste, stalled child with an ineffective Escape and an over-cap argv, each a typed rejection.",
+      "steps": [
+        {
+          "include": {
+            "scenario": "attach-input/adversarial",
+            "case": "failure"
+          }
+        }
+      ]
+    }
+  ]
+}

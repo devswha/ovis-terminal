@@ -9,6 +9,8 @@ use std::path::Path;
 
 use serde_json::Value;
 
+#[path = "runner_tests/attach_input.rs"]
+mod attach_input;
 #[path = "runner_tests/suite.rs"]
 mod suite;
 #[path = "runner_tests/support.rs"]

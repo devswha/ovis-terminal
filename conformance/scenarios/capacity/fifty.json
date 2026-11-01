@@ -1,0 +1,6908 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "capacity/fifty",
+  "title": "Fifty-terminal capacity, reported separately from the 16-PTY bound",
+  "todo": 30,
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Fifty live one-line /usr/bin/head -n 1 terminals on one real server: fifty concurrent input.send admissions each answer with their exact byte count and cursor 0, and each echo is matched at offset 0. The transcript records every reply time; this profile is reported, not held to the 16-PTY 100 ms bound.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat1",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat1",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat1",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat2",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat2",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat2",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t2",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat3",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat3",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat3",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t3",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat4",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat4",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat4",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat4": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t4",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat5",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat5",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat5",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat5": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t5",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat6",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat6",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat6",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat6": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t6",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat7",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat7",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat7",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat7": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t7",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat8",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat8",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat8",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t8",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat9",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat9",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat9",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat9": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t9",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat10",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat10",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat10",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat10": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t10",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat11",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat11",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat11",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat11": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t11",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat12",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat12",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat12",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat12": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t12",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat13",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat13",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat13",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat13": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t13",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat14",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat14",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat14",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat14": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t14",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat15",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat15",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat15",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat15": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t15",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat16",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat16",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat16",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat16": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t16",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat17",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat17",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat17",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat17": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t17",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat18",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat18",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat18",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat18": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t18",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat19",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat19",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat19",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat19": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t19",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat20",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat20",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat20",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat20": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t20",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat21",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat21",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat21",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat21": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t21",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat22",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat22",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat22",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat22": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t22",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat23",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat23",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat23",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat23": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t23",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat24",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat24",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat24",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat24": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t24",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat25",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat25",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat25",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat25": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t25",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat26",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat26",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat26",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat26": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t26",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat27",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat27",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat27",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat27": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t27",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat28",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat28",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat28",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat28": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t28",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat29",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat29",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat29",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat29": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t29",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat30",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat30",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat30",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat30": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t30",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat31",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat31",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat31",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat31": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t31",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat32",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat32",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat32",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat32": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t32",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat33",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat33",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat33",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat33": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t33",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat34",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat34",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat34",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat34": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t34",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat35",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat35",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat35",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat35": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t35",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat36",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat36",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat36",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat36": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t36",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat37",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat37",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat37",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat37": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t37",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat38",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat38",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat38",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat38": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t38",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat39",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat39",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat39",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat39": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t39",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat40",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat40",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat40",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat40": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t40",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat41",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat41",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat41",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat41": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t41",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat42",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat42",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat42",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat42": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t42",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat43",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat43",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat43",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat43": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t43",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat44",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat44",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat44",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat44": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t44",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat45",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat45",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat45",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat45": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t45",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat46",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat46",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat46",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat46": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t46",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat47",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat47",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat47",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat47": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t47",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat48",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat48",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat48",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat48": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t48",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat49",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat49",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat49",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat49": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t49",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat50",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat50",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat50",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat50": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t50",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "admit1",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit1",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "cap-1-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit2",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit2",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "expect": null,
+                  "text": "cap-2-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit3",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit3",
+                  "target": {
+                    "address": "t3"
+                  },
+                  "expect": null,
+                  "text": "cap-3-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit4",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit4",
+                  "target": {
+                    "address": "t4"
+                  },
+                  "expect": null,
+                  "text": "cap-4-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit5",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit5",
+                  "target": {
+                    "address": "t5"
+                  },
+                  "expect": null,
+                  "text": "cap-5-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit6",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit6",
+                  "target": {
+                    "address": "t6"
+                  },
+                  "expect": null,
+                  "text": "cap-6-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit7",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit7",
+                  "target": {
+                    "address": "t7"
+                  },
+                  "expect": null,
+                  "text": "cap-7-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit8",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit8",
+                  "target": {
+                    "address": "t8"
+                  },
+                  "expect": null,
+                  "text": "cap-8-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit9",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit9",
+                  "target": {
+                    "address": "t9"
+                  },
+                  "expect": null,
+                  "text": "cap-9-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit10",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit10",
+                  "target": {
+                    "address": "t10"
+                  },
+                  "expect": null,
+                  "text": "cap-10-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit11",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit11",
+                  "target": {
+                    "address": "t11"
+                  },
+                  "expect": null,
+                  "text": "cap-11-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit12",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit12",
+                  "target": {
+                    "address": "t12"
+                  },
+                  "expect": null,
+                  "text": "cap-12-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit13",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit13",
+                  "target": {
+                    "address": "t13"
+                  },
+                  "expect": null,
+                  "text": "cap-13-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit14",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit14",
+                  "target": {
+                    "address": "t14"
+                  },
+                  "expect": null,
+                  "text": "cap-14-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit15",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit15",
+                  "target": {
+                    "address": "t15"
+                  },
+                  "expect": null,
+                  "text": "cap-15-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit16",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit16",
+                  "target": {
+                    "address": "t16"
+                  },
+                  "expect": null,
+                  "text": "cap-16-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit17",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit17",
+                  "target": {
+                    "address": "t17"
+                  },
+                  "expect": null,
+                  "text": "cap-17-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit18",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit18",
+                  "target": {
+                    "address": "t18"
+                  },
+                  "expect": null,
+                  "text": "cap-18-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit19",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit19",
+                  "target": {
+                    "address": "t19"
+                  },
+                  "expect": null,
+                  "text": "cap-19-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit20",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit20",
+                  "target": {
+                    "address": "t20"
+                  },
+                  "expect": null,
+                  "text": "cap-20-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit21",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit21",
+                  "target": {
+                    "address": "t21"
+                  },
+                  "expect": null,
+                  "text": "cap-21-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit22",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit22",
+                  "target": {
+                    "address": "t22"
+                  },
+                  "expect": null,
+                  "text": "cap-22-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit23",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit23",
+                  "target": {
+                    "address": "t23"
+                  },
+                  "expect": null,
+                  "text": "cap-23-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit24",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit24",
+                  "target": {
+                    "address": "t24"
+                  },
+                  "expect": null,
+                  "text": "cap-24-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit25",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit25",
+                  "target": {
+                    "address": "t25"
+                  },
+                  "expect": null,
+                  "text": "cap-25-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit26",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit26",
+                  "target": {
+                    "address": "t26"
+                  },
+                  "expect": null,
+                  "text": "cap-26-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit27",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit27",
+                  "target": {
+                    "address": "t27"
+                  },
+                  "expect": null,
+                  "text": "cap-27-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit28",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit28",
+                  "target": {
+                    "address": "t28"
+                  },
+                  "expect": null,
+                  "text": "cap-28-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit29",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit29",
+                  "target": {
+                    "address": "t29"
+                  },
+                  "expect": null,
+                  "text": "cap-29-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit30",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit30",
+                  "target": {
+                    "address": "t30"
+                  },
+                  "expect": null,
+                  "text": "cap-30-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit31",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit31",
+                  "target": {
+                    "address": "t31"
+                  },
+                  "expect": null,
+                  "text": "cap-31-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit32",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit32",
+                  "target": {
+                    "address": "t32"
+                  },
+                  "expect": null,
+                  "text": "cap-32-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit33",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit33",
+                  "target": {
+                    "address": "t33"
+                  },
+                  "expect": null,
+                  "text": "cap-33-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit34",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit34",
+                  "target": {
+                    "address": "t34"
+                  },
+                  "expect": null,
+                  "text": "cap-34-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit35",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit35",
+                  "target": {
+                    "address": "t35"
+                  },
+                  "expect": null,
+                  "text": "cap-35-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit36",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit36",
+                  "target": {
+                    "address": "t36"
+                  },
+                  "expect": null,
+                  "text": "cap-36-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit37",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit37",
+                  "target": {
+                    "address": "t37"
+                  },
+                  "expect": null,
+                  "text": "cap-37-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit38",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit38",
+                  "target": {
+                    "address": "t38"
+                  },
+                  "expect": null,
+                  "text": "cap-38-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit39",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit39",
+                  "target": {
+                    "address": "t39"
+                  },
+                  "expect": null,
+                  "text": "cap-39-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit40",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit40",
+                  "target": {
+                    "address": "t40"
+                  },
+                  "expect": null,
+                  "text": "cap-40-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit41",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit41",
+                  "target": {
+                    "address": "t41"
+                  },
+                  "expect": null,
+                  "text": "cap-41-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit42",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit42",
+                  "target": {
+                    "address": "t42"
+                  },
+                  "expect": null,
+                  "text": "cap-42-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit43",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit43",
+                  "target": {
+                    "address": "t43"
+                  },
+                  "expect": null,
+                  "text": "cap-43-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit44",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit44",
+                  "target": {
+                    "address": "t44"
+                  },
+                  "expect": null,
+                  "text": "cap-44-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit45",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit45",
+                  "target": {
+                    "address": "t45"
+                  },
+                  "expect": null,
+                  "text": "cap-45-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit46",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit46",
+                  "target": {
+                    "address": "t46"
+                  },
+                  "expect": null,
+                  "text": "cap-46-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit47",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit47",
+                  "target": {
+                    "address": "t47"
+                  },
+                  "expect": null,
+                  "text": "cap-47-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit48",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit48",
+                  "target": {
+                    "address": "t48"
+                  },
+                  "expect": null,
+                  "text": "cap-48-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit49",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit49",
+                  "target": {
+                    "address": "t49"
+                  },
+                  "expect": null,
+                  "text": "cap-49-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit50",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit50",
+                  "target": {
+                    "address": "t50"
+                  },
+                  "expect": null,
+                  "text": "cap-50-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "admit1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit4": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit5": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit6": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit7": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit9": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit10": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit11": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit12": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit13": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit14": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit15": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit16": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit17": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit18": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit19": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit20": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit21": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit22": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit23": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit24": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit25": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit26": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit27": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit28": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit29": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit30": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit31": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit32": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit33": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit34": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit35": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit36": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit37": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit38": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit39": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit40": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit41": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit42": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit43": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit44": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit45": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit46": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit47": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit48": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit49": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              },
+              "admit50": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "offset": "0"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo1",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-1-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo2",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-2-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo3",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t3"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-3-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo4",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t4"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-4-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo4": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo5",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t5"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-5-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo5": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo6",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t6"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-6-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo6": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo7",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t7"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-7-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo7": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo8",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t8"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-8-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo9",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t9"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-9-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo9": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo10",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t10"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-10-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo10": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo11",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t11"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-11-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo11": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo12",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t12"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-12-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo12": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo13",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t13"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-13-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo13": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo14",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t14"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-14-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo14": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo15",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t15"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-15-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo15": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo16",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t16"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-16-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo16": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo17",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t17"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-17-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo17": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo18",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t18"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-18-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo18": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo19",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t19"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-19-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo19": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo20",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t20"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-20-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo20": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo21",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t21"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-21-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo21": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo22",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t22"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-22-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo22": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo23",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t23"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-23-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo23": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo24",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t24"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-24-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo24": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo25",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t25"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-25-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo25": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo26",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t26"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-26-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo26": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo27",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t27"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-27-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo27": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo28",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t28"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-28-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo28": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo29",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t29"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-29-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo29": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo30",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t30"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-30-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo30": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo31",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t31"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-31-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo31": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo32",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t32"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-32-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo32": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo33",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t33"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-33-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo33": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo34",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t34"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-34-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo34": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo35",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t35"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-35-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo35": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo36",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t36"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-36-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo36": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo37",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t37"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-37-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo37": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo38",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t38"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-38-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo38": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo39",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t39"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-39-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo39": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo40",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t40"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-40-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo40": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo41",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t41"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-41-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo41": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo42",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t42"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-42-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo42": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo43",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t43"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-43-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo43": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo44",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t44"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-44-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo44": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo45",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t45"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-45-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo45": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo46",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t46"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-46-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo46": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo47",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t47"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-47-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo47": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo48",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t48"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-48-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo48": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo49",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t49"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-49-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo49": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "echo50",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t50"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "cap-50-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "echo50": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "exit1",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit2",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit3",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t3"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit4",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t4"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit5",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t5"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit6",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t6"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit7",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t7"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit8",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t8"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit9",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t9"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit10",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t10"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit11",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t11"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit12",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t12"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit13",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t13"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit14",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t14"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit15",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t15"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit16",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t16"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit17",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t17"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit18",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t18"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit19",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t19"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit20",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t20"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit21",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t21"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit22",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t22"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit23",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t23"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit24",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t24"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit25",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t25"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit26",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t26"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit27",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t27"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit28",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t28"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit29",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t29"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit30",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t30"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit31",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t31"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit32",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t32"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit33",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t33"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit34",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t34"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit35",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t35"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit36",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t36"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit37",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t37"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit38",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t38"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit39",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t39"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit40",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t40"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit41",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t41"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit42",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t42"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit43",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t43"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit44",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t44"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit45",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t45"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit46",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t46"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit47",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t47"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit48",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t48"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit49",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t49"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit50",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "t50"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "exit1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit4": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit5": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit6": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit7": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit9": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit10": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit11": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit12": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit13": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit14": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit15": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit16": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit17": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit18": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit19": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit20": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit21": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit22": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit23": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit24": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit25": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit26": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit27": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit28": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit29": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit30": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit31": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit32": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit33": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit34": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit35": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit36": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit37": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit38": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit39": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit40": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit41": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit42": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit43": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit44": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit45": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit46": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit47": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit48": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit49": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              },
+              "exit50": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "census",
+                "method": "server.metrics",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "census": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

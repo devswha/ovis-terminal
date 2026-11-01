@@ -115,6 +115,7 @@ pub(super) fn plan(cli: Cli) -> Result<Plan, CliError> {
             qa: crate::assembly::QaSeams {
                 holder_poll_ms: args.qa_holder_poll_ms,
                 actor_hold: args.qa_actor_hold,
+                output_ring_bytes: args.qa_output_ring_bytes,
             },
         }),
         #[cfg(unix)]

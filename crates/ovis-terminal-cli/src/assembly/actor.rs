@@ -51,6 +51,8 @@ pub(super) struct Runtime {
     pub(super) poll: Duration,
     /// QA seam: a FIFO opened, holding the control, before the next `terminal.run`.
     pub(super) qa_hold: Option<std::path::PathBuf>,
+    /// Output retention and checkpoint bounds of every terminal's screen.
+    pub(super) screen_bounds: ovis_terminal_core::screen::ScreenBounds,
     pub(super) journal: Arc<super::journal::BootJournal>,
     /// The current boot's status events, drained between jobs.
     pub(super) status_feed: Option<ovis_terminal_core::events::Delivery<super::lanes::ServedEvent>>,

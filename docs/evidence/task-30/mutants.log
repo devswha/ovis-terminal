@@ -1,0 +1,86 @@
+=== M1 credit beyond-sent accepted
+--- crates/ovis-terminal-server/src/streams/credit.rs
+- if at > self.sent {
++ if false && at > self.sent {
+ conformance/src/runner_tests.rs                   | 2 ++
+ conformance/src/runner_tests/suite.rs             | 9 +++++++++
+ crates/ovis-terminal-server/src/streams/credit.rs | 2 +-
+ 3 files changed, 12 insertions(+), 1 deletion(-)
+        FAIL [   0.567s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+    test attach_input::failure ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.56s
+    "part-a/task-30" "failure": {"detail":"expectation reply[credit-max]/error/data/kind did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"18"}
+      {"actual":null,"check":"reply[credit-max]/error/data/kind","expected":"invalid_credit","passed":false}
+      {"actual":{"checkpoint":null,"stream_id":"stream:01a198b9-2429-7619-b0f2-c887d09b3305","stream_offset":"18446744073709551615"},"check":"reply[credit-max]/result","expected":{"$present":false},"passed":false}
+        PASS [  10.115s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+     Summary [  10.115s] 2 tests run: 1 passed, 1 failed, 30 skipped
+        FAIL [   0.567s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+NEXTEST_EXIT=100
+
+=== M2 takeover epoch check removed
+--- crates/ovis-terminal-core/src/leases/table.rs
+- if current.epoch != takeover.expected() {
++ if false && current.epoch != takeover.expected() {
+ conformance/src/runner_tests.rs               | 2 ++
+ conformance/src/runner_tests/suite.rs         | 9 +++++++++
+ crates/ovis-terminal-core/src/leases/table.rs | 2 +-
+ 3 files changed, 12 insertions(+), 1 deletion(-)
+        FAIL [   0.635s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+    test attach_input::failure ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.63s
+    "part-a/task-30" "failure": {"detail":"expectation reply[stale-takeover]/error/data/kind did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"34"}
+      {"actual":null,"check":"reply[stale-takeover]/error/data/kind","expected":"lease_epoch_mismatch","passed":false}
+      {"actual":{"acquired":{"epoch":"2","holder":"operator","lease_id":"lease:4","role":"interact"},"displaced":{"epoch":"1","holder":"writer","lease_id":"lease:1","role":"interact"},"seq":"5"},"check":"reply[stale-takeover]/result","expected":{"$present":false},"passed":false}
+        PASS [  10.231s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+     Summary [  10.231s] 2 tests run: 1 passed, 1 failed, 30 skipped
+        FAIL [   0.635s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+NEXTEST_EXIT=100
+
+=== M3 pending barrier reported reached
+--- crates/ovis-terminal-cli/src/assembly/barrier.rs
+- BarrierState::Pending { pending_bytes } => (false, pending_bytes.get()),
++ BarrierState::Pending { pending_bytes } => (true, pending_bytes.get()),
+ conformance/src/runner_tests.rs                  | 2 ++
+ conformance/src/runner_tests/suite.rs            | 9 +++++++++
+ crates/ovis-terminal-cli/src/assembly/barrier.rs | 2 +-
+ 3 files changed, 12 insertions(+), 1 deletion(-)
+        FAIL [   0.765s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+    test attach_input::failure ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.76s
+    "part-a/task-30" "failure": {"detail":"expectation reply[barrier]/result/reached did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"52"}
+      {"actual":true,"check":"reply[barrier]/result/reached","expected":false,"passed":false}
+        PASS [  10.140s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+     Summary [  10.140s] 2 tests run: 1 passed, 1 failed, 30 skipped
+        FAIL [   0.765s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+NEXTEST_EXIT=100
+
+=== reverted; rebuilt clean binary: exit 0
+
+=== M4 terminal.output no longer resumes an evicted start at the floor (QA output ring)
+--- crates/ovis-terminal-cli/src/assembly/reads.rs
+- Err(ScreenError::HistoryGap { retained, .. }) => {
++ Err(ScreenError::HistoryGap { retained, .. }) if retained.floor.get() == u64::MAX => {
+ crates/ovis-terminal-cli/src/assembly.rs           | 10 +++++++
+ crates/ovis-terminal-cli/src/assembly/actor.rs     |  2 ++
+ crates/ovis-terminal-cli/src/assembly/live.rs      | 31 ++++++++++++++++++++--
+ crates/ovis-terminal-cli/src/assembly/reads.rs     | 16 ++++++-----
+ crates/ovis-terminal-cli/src/assembly/serve.rs     |  5 +++-
+ crates/ovis-terminal-cli/src/invocation/args.rs    |  6 +++++
+ crates/ovis-terminal-cli/src/invocation/plan.rs    |  1 +
+ crates/ovis-terminal-cli/tests/assembly/pending.rs | 26 +++++++++++-------
+ 8 files changed, 78 insertions(+), 19 deletions(-)
+        FAIL [   1.839s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+    test attach_input::failure ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 1.83s
+    "part-a/task-30" "failure": {"detail":"expectation reply[evicted]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"52"}
+      {"actual":{"code":-32000,"data":{"hint":"resume from the retained floor, or start from the checkpoint and accept the gap","kind":"history_gap","retryable":false},"message":"operation failed"},"check":"reply[evicted]/error","expected":{"$present":false},"passed":false}
+      {"actual":null,"check":"reply[evicted]/result/floor_offset","expected":{"$capture":"evicted_floor"},"passed":false}
+      {"actual":null,"check":"reply[evicted]/result/from_offset","expected":{"$capture":"floor"},"passed":false}
+      {"actual":null,"check":"reply[evicted]/result/gap","expected":true,"passed":false}
+        FAIL [   1.852s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+    test attach_input::happy ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 1.84s
+    "part-a/task-30" "happy": {"detail":"expectation reply[evicted]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"43"}
+NEXTEST_EXIT=100
+
+=== reverted; REBUILD=0
