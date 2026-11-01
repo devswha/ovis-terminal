@@ -69,6 +69,24 @@ All three are `pipe_smoke` tests in the `ovis-terminal-probes` package. `cargo t
 - Fix in the workflow: it builds the runner, copies it to `$RUNNER_TEMP` and runs the copy.
 - Locally, running from the target dir exits 1 with `kind: usage`, and a copy outside it runs a real check end to end with `windows_smoke: pass`.
 
+## Round 3: two-clients and observer-denial (real Windows findings)
+
+On head 7643079 the harness fix held: `generation-refusal` and all native checks passed. `two-clients` and `observer-denial` failed at the second concurrent `ClientOptions::open` with `Os { code: 231, message: "All pipe instances are busy." }` (run 41312728281, artifact `windows-smoke`, `two-clients-0.log` / `observer-denial-0.log`, `pipe_smoke.rs:26` / `:82`).
+
+Per-check verdict: the **check** was wrong. The product is correct.
+
+- The production listener creates its following instance before it returns the accepted connection, so before serving it. See `crates/ovis-terminal-server/src/listen/pipe/endpoint.rs:126` ("the following instance exists before this returns") and `:139-142`.
+- `ERROR_PIPE_BUSY` is the short window between a client taking the waiting instance and the accept loop creating the next one.
+- The Windows client contract for that window is `WaitNamedPipe` with a bound, then reopen. The test opened the second client immediately, which only works with a Unix socket backlog.
+
+The fix is in the check:
+
+- `pipe_smoke/served.rs` `Client::open` waits on `ERROR_PIPE_BUSY` with `WaitNamedPipeW`, bounded by what is left of 20 s, and reopens. The wait is event-driven: no sleep, no rerun.
+- It returns a typed `OpenError` (`pipe_busy` / `pipe_open_failed`, `kind()` and `hint()`, the OS error as `#[source]`).
+- The three tests return `TestResult` instead of unwrapping the connect.
+- Both clients are still opened concurrently (`tokio::join!`), so the checks still exercise two clients holding the endpoint at once.
+- `generation-refusal` was unchanged and passed on 7643079.
+
 ## Adversarial
 
 - Flaky tests: readiness is event-driven. The bounded runner completes on both pipes reaching EOF and treats the deadline only as a hang guard. The pipe tests read each reply under a 20 s bound with no sleeps. No rerun-to-green anywhere: `windows-smoke` runs each test once.

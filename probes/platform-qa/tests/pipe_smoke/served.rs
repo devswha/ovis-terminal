@@ -25,7 +25,9 @@ use ovis_terminal_server::dispatch::lanes::boundary_policy::{
 use ovis_terminal_server::listen::pipe::{PipeEndpoint, PipeServerHandle, serve_pipe};
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _, BufReader};
-use tokio::net::windows::named_pipe::NamedPipeClient;
+use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
+use windows_sys::Win32::Foundation::ERROR_PIPE_BUSY;
+use windows_sys::Win32::System::Pipes::WaitNamedPipeW;
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 const BOUND: Duration = Duration::from_secs(20);
@@ -158,22 +160,114 @@ pub fn hello(generation: &Value, credential: &str) -> String {
     )
 }
 
-/// Writes `lines` and reads `replies` reply lines, each within a bound.
-///
-/// # Panics
-///
-/// The pipe fails, a reply is late or a reply line is not JSON.
-pub async fn exchange(client: NamedPipeClient, lines: &str, replies: usize) -> Vec<Value> {
-    let mut reader = BufReader::new(client);
-    reader.get_mut().write_all(lines.as_bytes()).await.unwrap();
-    let mut answered = Vec::with_capacity(replies);
-    for _ in 0..replies {
-        let mut text = String::new();
-        tokio::time::timeout(BOUND, reader.read_line(&mut text))
+/// A test failure carrying its typed cause.
+pub type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+/// One connected line-oriented client.
+#[derive(Debug)]
+pub struct Client(BufReader<NamedPipeClient>);
+
+impl Client {
+    /// Opens `name` the way the Windows pipe contract requires of a client: an open
+    /// refused with `ERROR_PIPE_BUSY` waits with `WaitNamedPipeW` for the server's next
+    /// instance, bounded by what is left of [`BOUND`], and opens again.
+    ///
+    /// # Errors
+    ///
+    /// Every instance stayed busy for the whole bound, or the open failed otherwise.
+    pub async fn open(name: &PipeName) -> Result<Self, OpenError> {
+        let started = std::time::Instant::now();
+        loop {
+            let error = match ClientOptions::new().open(name.as_str()) {
+                Ok(pipe) => return Ok(Self(BufReader::new(pipe))),
+                Err(error) => error,
+            };
+            let busy = error
+                .raw_os_error()
+                .and_then(|code| u32::try_from(code).ok())
+                == Some(ERROR_PIPE_BUSY);
+            let left = BOUND.saturating_sub(started.elapsed());
+            if !busy {
+                return Err(OpenError::Io {
+                    name: name.as_str().to_owned(),
+                    source: error,
+                });
+            }
+            if left.is_zero() {
+                return Err(OpenError::Busy {
+                    name: name.as_str().to_owned(),
+                    source: error,
+                });
+            }
+            let wide: Vec<u16> = name.as_str().encode_utf16().chain(Some(0)).collect();
+            let timeout = u32::try_from(left.as_millis()).unwrap_or(u32::MAX);
+            tokio::task::spawn_blocking(move || {
+                // SAFETY: `wide` is NUL-terminated and lives for the whole call.
+                unsafe { WaitNamedPipeW(wide.as_ptr(), timeout) }
+            })
             .await
-            .unwrap()
-            .unwrap();
-        answered.push(serde_json::from_str(&text).unwrap());
+            .map_err(|join| OpenError::Io {
+                name: name.as_str().to_owned(),
+                source: std::io::Error::other(join),
+            })?;
+        }
     }
-    answered
+
+    /// Writes `lines` and reads `replies` reply lines, each within [`BOUND`].
+    ///
+    /// # Errors
+    ///
+    /// The pipe fails, a reply is late or a reply line is not JSON.
+    pub async fn exchange(&mut self, lines: &str, replies: usize) -> TestResult<Vec<Value>> {
+        self.0.get_mut().write_all(lines.as_bytes()).await?;
+        let mut answered = Vec::with_capacity(replies);
+        for _ in 0..replies {
+            let mut text = String::new();
+            tokio::time::timeout(BOUND, self.0.read_line(&mut text)).await??;
+            answered.push(serde_json::from_str(&text)?);
+        }
+        Ok(answered)
+    }
+}
+
+/// Why a client could not open the pipe.
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum OpenError {
+    /// Every instance stayed busy for the whole bound.
+    #[error("every instance of {name} stayed busy")]
+    Busy {
+        /// The pipe name.
+        name: String,
+        /// The last refusal, `ERROR_PIPE_BUSY`.
+        #[source]
+        source: std::io::Error,
+    },
+    /// The open failed for another reason.
+    #[error("could not open {name}")]
+    Io {
+        /// The pipe name.
+        name: String,
+        /// The operating system error.
+        #[source]
+        source: std::io::Error,
+    },
+}
+
+impl OpenError {
+    /// Stable machine-readable kind.
+    pub const fn kind(&self) -> &'static str {
+        match self {
+            Self::Busy { .. } => "pipe_busy",
+            Self::Io { .. } => "pipe_open_failed",
+        }
+    }
+
+    /// What to do about it.
+    pub const fn hint(&self) -> &'static str {
+        match self {
+            Self::Busy { .. } => "the server never offered a free instance; check its accept loop",
+            Self::Io { .. } => "check the pipe exists and this account may open it",
+        }
+    }
 }
