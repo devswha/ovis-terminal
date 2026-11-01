@@ -4,9 +4,9 @@ use std::error::Error;
 use std::time::Instant;
 
 use ovis_terminal_core::events::Event;
-use ovis_terminal_core::subscriptions::{LossRecord, Pulled, Recovery};
+use ovis_terminal_core::subscriptions::{LossRecord, Pulled, Recovery, Selector, Start};
 
-use super::fixture::{BOUND, Data, State, Sub};
+use super::fixture::{BOUND, Data, State, Sub, TestResult, World};
 
 /// Batches pulled before a loss, and the recovery that reported it.
 pub type Missed = (Vec<Event<Data>>, Recovery<State>);
@@ -50,21 +50,34 @@ pub fn until_missed(feed: &Sub) -> Result<Missed, Box<dyn Error>> {
     }
 }
 
-/// Pulls batches until a committed loss marker arrives; returns its sequence and record.
+fn loss_marker(events: &[Event<Data>]) -> Option<(u64, LossRecord)> {
+    events.iter().find_map(|event| match &event.data {
+        Data::Lost(record) => Some((event.cursor.seq.get(), record.clone())),
+        Data::Set { .. } | Data::Gate(_) => None,
+    })
+}
+
+/// The first committed loss marker among `pulled`, the events this feed already
+/// delivered, or else in the batches pulled next; returns its sequence and record.
+///
+/// A marker may share a batch with the events before it, so a caller that already
+/// pulled past them passes them here instead of assuming the marker comes later.
 ///
 /// # Errors
 ///
 /// Returns a pull failure or the bound passing first.
-pub fn until_loss_event(feed: &Sub) -> Result<(u64, LossRecord), Box<dyn Error>> {
+pub fn until_loss_event(
+    feed: &Sub,
+    pulled: &[Event<Data>],
+) -> Result<(u64, LossRecord), Box<dyn Error>> {
+    if let Some(marker) = loss_marker(pulled) {
+        return Ok(marker);
+    }
     let deadline = deadline()?;
     loop {
         match feed.next(deadline)? {
             Pulled::Events(batch) => {
-                let marker = batch.events.iter().find_map(|event| match &event.data {
-                    Data::Lost(record) => Some((event.cursor.seq.get(), record.clone())),
-                    Data::Set { .. } | Data::Gate(_) => None,
-                });
-                if let Some(marker) = marker {
+                if let Some(marker) = loss_marker(&batch.events) {
                     return Ok(marker);
                 }
             }
@@ -72,6 +85,21 @@ pub fn until_loss_event(feed: &Sub) -> Result<(u64, LossRecord), Box<dyn Error>>
             other => return Err(format!("expected a loss marker, got {other:?}").into()),
         }
     }
+}
+
+/// Waits until the fan-out worker has fanned out every committed event, observed by a
+/// probe subscription that starts at the worker's head and scans up to the durable head.
+///
+/// # Errors
+///
+/// Returns a subscription or pull failure, or the bound passing first.
+pub fn until_fanned_out(world: &World) -> TestResult {
+    let (durable, _) = world.fresh()?;
+    let probe = world.subscribe(Start::Head, Selector::all())?;
+    if probe.snapshot_seq.get() < durable {
+        scan_to(&probe.feed, durable)?;
+    }
+    Ok(())
 }
 
 /// Collects batches until the subscription has scanned `seq`; heartbeats only wait.

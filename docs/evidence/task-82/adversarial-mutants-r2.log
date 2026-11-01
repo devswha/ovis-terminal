@@ -1,0 +1,29 @@
+# host: Linux x86_64, bun 1.4.3, lane head 40fdf25 + the insertion-order test; each mutant applied alone, then the original restored byte-exactly
+# command per mutant: cd packages/client-ts && bun test test/generate.test.ts (single run)
+
+## mutant: collision check dropped (modules.ts: 'if (earlier !== undefined) {' -> 'if (false && earlier !== undefined) {')
+exit 1 | 6 pass | 2 fail
+(fail) a name collision after mapping fails generation with the typed name_collision error naming both components [0.29ms]
+(fail) an unsupported schema or a colliding name fails generation with a typed kind [7.43ms]
+verdict: KILLED
+
+## mutant: component sort dropped (non-deterministic order) (modules.ts: 'Object.keys(document.components.schemas)\n    .sort()\n' -> 'Object.keys(document.components.schemas)\n')
+exit 1 | 7 pass | 1 fail
+(fail) generated modules do not depend on the insertion order of components or methods [17.93ms]
+verdict: KILLED
+
+## mutant: identifier validation skipped (render.ts: 'if (!IDENTIFIER.test(name)) {' -> 'if (false && !IDENTIFIER.test(name)) {')
+exit 1 | 7 pass | 1 fail
+(fail) a component name with no valid TypeScript identifier mapping is refused, never emitted [0.20ms]
+verdict: KILLED
+
+## mutant: method sort dropped (extra) (modules.ts: '[...document.methods].sort((a, b) => a.name.localeCompare(b.name))' -> '[...document.methods]')
+exit 1 | 6 pass | 2 fail
+(fail) generation is deterministic and the committed output is that generation [15.27ms]
+(fail) generated modules do not depend on the insertion order of components or methods [15.50ms]
+verdict: KILLED
+
+## after restore
+$ bun run generate:check
+$ bun scripts/generate.ts --check
+{"generated":"fresh","files":31}

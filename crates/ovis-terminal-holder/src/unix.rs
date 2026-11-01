@@ -27,6 +27,8 @@ mod io_error;
 mod join_report;
 mod launch;
 mod launch_error;
+#[cfg(test)]
+mod launch_tests;
 mod link;
 mod pty_io;
 mod service;

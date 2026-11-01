@@ -16,7 +16,11 @@ pub mod launch;
 #[cfg(unix)]
 pub mod launches;
 #[cfg(unix)]
+pub mod machines;
+#[cfg(unix)]
 pub mod output;
+#[cfg(unix)]
+pub mod processes;
 #[cfg(unix)]
 pub mod prompts;
 #[cfg(unix)]
@@ -31,6 +35,8 @@ pub mod terminals;
 pub mod transcripts;
 #[cfg(unix)]
 pub mod tree;
+#[cfg(unix)]
+pub mod update;
 pub mod wire;
 
 #[cfg(unix)]

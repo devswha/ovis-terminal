@@ -20,14 +20,14 @@ use ovis_terminal_core::registry::{
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::dispatch::lanes::prompt_bridge::{Gated, PromptBridgeGate};
-use ovis_terminal_server::listen::{ServerConfig, UnixEndpoint, serve_unix};
+use ovis_terminal_server::listen::{ServeReport, ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
 use tokio::io::AsyncReadExt as _;
 
 use super::bridge::{Extension, QUEUE_LIMIT};
 use super::documents::{DocGet, DocSet};
-use super::handler::{Dispatch, FixtureHandler, Probes};
+use super::handler::{Dispatch, Event, FixtureHandler, Probes};
 use super::terminals::TerminalKeep;
 use crate::error::RunnerError;
 
@@ -69,13 +69,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     ))
     .map_err(at("bootstrap the authority"))?;
     let authority = Arc::new(authority);
-    let store = Store::open(&root.join("state.db"), StoreOptions::default())
-        .map_err(at("open the store"))?;
-    let core = Arc::new(Coordinator::new(
-        store,
-        runtime,
-        OperationProducer::new(runtime.runtime_id()),
-    ));
+    let core = open_core(root, runtime)?;
     let effects = root.join("effects");
     std::fs::create_dir(&effects).map_err(at("create the effect directory"))?;
     let mut dispatch = Dispatch::new(Arc::clone(&authority), runtime, Arc::clone(&core));
@@ -93,11 +87,21 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     super::rotation::register(&mut dispatch, &authority, (runtime, Arc::clone(&sequenced)))?;
     let (status, directory) = (Arc::clone(&agents.0), Arc::clone(&agents.1));
     super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
+    let programs = super::processes::register(
+        &mut dispatch,
+        (root, runtime),
+        (&authority, issued.bearer(), &agents.0),
+    )
+    .await?;
     let parts = (&authority, &*core, agents.clone());
     let template = super::template_lane::register(&mut dispatch, (runtime, root), parts)?;
     let launch = (runtime, Arc::clone(&core), template);
     let tree = super::tree::register(&mut dispatch, (&agents, &gate), launch)?;
+    let fleet = (runtime, Arc::clone(&core));
+    let machines = super::machines::register(&mut dispatch, (&agents, &gate), fleet).await?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
+    let held = super::update::register(&mut dispatch, (root, &authority, issued.bearer()), runtime)
+        .await?;
     let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
     let writer = delegate(&authority, issued.bearer(), ("writer", WRITER))?;
     let prompts = Arc::clone(&gate.prompts);
@@ -108,6 +112,8 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         extension: Extension::new(bridge, Arc::clone(&core)),
         sequenced,
         tree,
+        machines,
+        programs,
     };
     let handler = Arc::new(FixtureHandler::new(
         Arc::new(dispatch),
@@ -139,11 +145,33 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .map_err(at("shut the server down"))?;
     handler.shutdown().await?;
     drop(handler);
+    tokio::task::spawn_blocking(move || held.shutdown())
+        .await
+        .map_err(at("join the update holder shutdown"))??;
     let core = Arc::try_unwrap(core).map_err(|_| at("release the coordinator")("still shared"))?;
     tokio::task::spawn_blocking(move || core.close())
         .await
         .map_err(at("join the store close"))?
         .map_err(at("close the store"))?;
+    announce_report(&report)
+}
+
+/// The coordinator over the run's SQLite store, sequencing as `runtime`.
+fn open_core(
+    root: &Path,
+    runtime: RuntimeIdentity,
+) -> Result<Arc<Coordinator<Event, OperationProducer>>, RunnerError> {
+    let store = Store::open(&root.join("state.db"), StoreOptions::default())
+        .map_err(at("open the store"))?;
+    Ok(Arc::new(Coordinator::new(
+        store,
+        runtime,
+        OperationProducer::new(runtime.runtime_id()),
+    )))
+}
+
+/// The serve report line: accepted connections, failures by kind, panics.
+fn announce_report(report: &ServeReport) -> Result<(), RunnerError> {
     let failures: serde_json::Map<String, Value> = report
         .failures()
         .iter()

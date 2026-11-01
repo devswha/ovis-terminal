@@ -1,0 +1,40 @@
+Todo 55 round 4: mutation check of the Unix 'a zombie keeps its start token until reap' contract.
+Host: Linux 7.0.0-38-generic x86_64; base head 1935436 plus the round-4 test changes (uncommitted at the time of the run).
+Each mutant was applied alone, the two guarding tests were run, and the mutant was reverted (git status shows only the round-4 changes afterwards).
+
+### Baseline (no mutant)
+$ cargo test --locked -p ovis-terminal-holder --lib -- process::table::tests::an_exited_unreaped_child_keeps_its_token_until_reaped unix::launch_tests::a_program_that_exits_at_once_launches_with_the_token_it_keeps_until_reaped
+test process::table::tests::an_exited_unreaped_child_keeps_its_token_until_reaped ... ok
+test unix::launch_tests::a_program_that_exits_at_once_launches_with_the_token_it_keeps_until_reaped ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 89 filtered out; finished in 0.00s
+EXIT 0
+
+### Mutant A: linux read_entry reports a zombie (state Z) as process_gone
+$ git diff (applied to crates/ovis-terminal-holder/src/process/linux.rs)
+-"Z" | "X" | "x" => false,
++"Z" | "X" | "x" => return Err(ProbeError::Gone { pid: pid.get() }),
+$ cargo test --locked -p ovis-terminal-holder --lib -- process::table::tests::an_exited_unreaped_child_keeps_its_token_until_reaped unix::launch_tests::a_program_that_exits_at_once_launches_with_the_token_it_keeps_until_reaped
+test process::table::tests::an_exited_unreaped_child_keeps_its_token_until_reaped ... FAILED
+test unix::launch_tests::a_program_that_exits_at_once_launches_with_the_token_it_keeps_until_reaped ... FAILED
+thread 'process::table::tests::an_exited_unreaped_child_keeps_its_token_until_reaped' (3522236) panicked at crates/ovis-terminal-holder/src/process/table/tests.rs:79:34:
+thread 'unix::launch_tests::a_program_that_exits_at_once_launches_with_the_token_it_keeps_until_reaped' (3522237) panicked at crates/ovis-terminal-holder/src/unix/launch_tests.rs:40:5:
+  left: None
+ right: Some(ProcessStartToken("linux:44213f41-39db-4eed-a62b-f5e5992ca358:34893294"))
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 89 filtered out; finished in 0.00s
+EXIT 101
+(mutant reverted)
+
+### Mutant B: read_start_token treats any exited process as gone (cfg!(windows) guard removed)
+$ git diff (applied to crates/ovis-terminal-holder/src/process/start_token.rs)
+-if cfg!(windows) && !entry.running {
++if !entry.running {
+$ cargo test --locked -p ovis-terminal-holder --lib -- process::table::tests::an_exited_unreaped_child_keeps_its_token_until_reaped unix::launch_tests::a_program_that_exits_at_once_launches_with_the_token_it_keeps_until_reaped
+test process::table::tests::an_exited_unreaped_child_keeps_its_token_until_reaped ... FAILED
+test unix::launch_tests::a_program_that_exits_at_once_launches_with_the_token_it_keeps_until_reaped ... FAILED
+thread 'process::table::tests::an_exited_unreaped_child_keeps_its_token_until_reaped' (3525271) panicked at crates/ovis-terminal-holder/src/process/table/tests.rs:80:46:
+thread 'unix::launch_tests::a_program_that_exits_at_once_launches_with_the_token_it_keeps_until_reaped' (3525272) panicked at crates/ovis-terminal-holder/src/unix/launch_tests.rs:40:5:
+  left: None
+ right: Some(ProcessStartToken("linux:44213f41-39db-4eed-a62b-f5e5992ca358:34893737"))
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 89 filtered out; finished in 0.00s
+EXIT 101
+(mutant reverted)

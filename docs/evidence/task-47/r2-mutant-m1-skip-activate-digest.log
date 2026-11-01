@@ -1,0 +1,15 @@
+# mutant m1-skip-activate-digest (applied to the round-2 tree, reverted after the run)
+--- a/crates/ovis-terminal-services/src/update/transition.rs
++++ b/crates/ovis-terminal-services/src/update/transition.rs
+@@ -40,3 +40,3 @@
+             .join(binary_name(&record.target));
+-        if hash_file(&binary, self.config.limits.archive_bytes)? != build.binary_sha256 {
++        if hash_file(&binary, self.config.limits.archive_bytes)? != build.binary_sha256 && false {
+             record.state = OpenEnum::Known(UpdateState::Rejected);
+
+$ cargo test -p ovis-terminal-services --lib update
+exit=0
+test update::tests::crash::an_executable_changed_after_verification_is_refused_before_selection ... FAILED
+thread 'update::tests::crash::an_executable_changed_after_verification_is_refused_before_selection' (939181) panicked at crates/ovis-terminal-services/src/update/tests/crash.rs:93:5:
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 35 filtered out; finished in 0.44s
+SVC_EXIT=101

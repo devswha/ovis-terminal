@@ -242,6 +242,10 @@ pub enum DomainErrorKind {
     NoStagedUpdate,
     /// Rolling back the update failed.
     RollbackFailed,
+    /// The update is not in the state this step starts from.
+    InvalidUpdateState,
+    /// The selected build failed readiness or restart; the previous build was restored.
+    ActivationFailed,
     /// The platform has no supported service manager.
     ServiceUnsupported,
     /// A service registration with this label already exists.

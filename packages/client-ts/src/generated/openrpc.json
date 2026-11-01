@@ -5,6 +5,84 @@
         "$ref": "#/components/schemas/DecimalCounter",
         "description": "Holder AckEpoch as a canonical decimal string."
       },
+      "ActivationPhase": {
+        "description": "Durable steps of an activation; recovery finishes or reverts from the last one.",
+        "oneOf": [
+          {
+            "const": "intent",
+            "description": "The intent is durable; the selection may not have changed yet.",
+            "type": "string"
+          },
+          {
+            "const": "selected",
+            "description": "The new build is selected; readiness and restart are unproven.",
+            "type": "string"
+          },
+          {
+            "const": "ready",
+            "description": "Readiness and restart succeeded; only the record remains to be written.",
+            "type": "string"
+          }
+        ]
+      },
+      "ActivationReceipt": {
+        "additionalProperties": false,
+        "description": "The successful activation of one update.",
+        "properties": {
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that activated it."
+          },
+          "previous": {
+            "$ref": "#/components/schemas/ActiveBuild",
+            "description": "Build it replaced, which a rollback restores."
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/ReadinessEvidence",
+            "description": "Readiness evidence of the new build."
+          },
+          "recorded_ms": {
+            "$ref": "#/components/schemas/TimestampMs",
+            "description": "When it was recorded."
+          },
+          "restart": {
+            "$ref": "#/components/schemas/ServerTransitionResult",
+            "description": "Control restart onto the new build; holders keep their programs and drain."
+          }
+        },
+        "required": [
+          "op_id",
+          "previous",
+          "readiness",
+          "restart",
+          "recorded_ms"
+        ],
+        "type": "object"
+      },
+      "ActiveBuild": {
+        "additionalProperties": false,
+        "description": "A build an activation can select: its version, target and executable digest.",
+        "properties": {
+          "binary_sha256": {
+            "$ref": "#/components/schemas/Sha256Digest",
+            "description": "Digest of the executable, read from disk."
+          },
+          "target": {
+            "$ref": "#/components/schemas/BuildTarget",
+            "description": "Target it runs on."
+          },
+          "version": {
+            "$ref": "#/components/schemas/ReleaseVersion",
+            "description": "Release version."
+          }
+        },
+        "required": [
+          "version",
+          "target",
+          "binary_sha256"
+        ],
+        "type": "object"
+      },
       "AgentBinding": {
         "description": "Agent registered on a terminal by its owning process.",
         "properties": {
@@ -1167,6 +1245,10 @@
         ],
         "type": "object"
       },
+      "BearerText": {
+        "description": "Bearer text, shown to the caller exactly once and never in diagnostics.",
+        "type": "string"
+      },
       "BootChallenge": {
         "description": "Fresh random challenge, 32 bytes as lowercase hexadecimal.",
         "pattern": "^[0-9a-f]{64}$",
@@ -1239,6 +1321,45 @@
             "type": "string"
           }
         ]
+      },
+      "BuildManifest": {
+        "additionalProperties": false,
+        "description": "`build.json` at the root of a release archive.",
+        "properties": {
+          "holder_generations": {
+            "description": "Holder wire generations the build adopts and drains.",
+            "items": {
+              "$ref": "#/components/schemas/HolderGeneration"
+            },
+            "type": "array"
+          },
+          "protocol_generations": {
+            "description": "Client protocol generations the build serves.",
+            "items": {
+              "$ref": "#/components/schemas/ProtocolGeneration"
+            },
+            "type": "array"
+          },
+          "target": {
+            "$ref": "#/components/schemas/BuildTarget",
+            "description": "Target the build runs on."
+          },
+          "version": {
+            "$ref": "#/components/schemas/ReleaseVersion",
+            "description": "Release version of the build."
+          }
+        },
+        "required": [
+          "version",
+          "target",
+          "protocol_generations",
+          "holder_generations"
+        ],
+        "type": "object"
+      },
+      "BuildTarget": {
+        "pattern": "^[a-z0-9_]{1,32}-[a-z0-9_]{1,32}$",
+        "type": "string"
       },
       "BuildVersion": {
         "description": "Opaque identity string.",
@@ -1459,6 +1580,68 @@
           }
         ]
       },
+      "CommitRace": {
+        "description": "Where a write queued under a withdrawn credential ended up.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "Rechecked before its write; no byte reached the program.",
+            "properties": {
+              "outcome": {
+                "const": "cancelled_before_commit",
+                "type": "string"
+              },
+              "reason": {
+                "$ref": "#/components/schemas/FenceToken",
+                "description": "Why the write was withheld."
+              }
+            },
+            "required": [
+              "outcome",
+              "reason"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The holder had already written these bytes before the withdrawal.",
+            "properties": {
+              "outcome": {
+                "const": "already_committed",
+                "type": "string"
+              },
+              "output_offset": {
+                "$ref": "#/components/schemas/ByteOffset",
+                "description": "Output offset the holder saw when the write started."
+              },
+              "written_bytes": {
+                "$ref": "#/components/schemas/ByteCount",
+                "description": "Bytes the holder wrote."
+              }
+            },
+            "required": [
+              "outcome",
+              "written_bytes",
+              "output_offset"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The write is with the holder and its fence is not answered yet; it is never resent.",
+            "properties": {
+              "outcome": {
+                "const": "outcome_unknown",
+                "type": "string"
+              }
+            },
+            "required": [
+              "outcome"
+            ],
+            "type": "object"
+          }
+        ]
+      },
       "ConsumerQueue": {
         "description": "Outbound backlog of one consumer.",
         "properties": {
@@ -1599,6 +1782,114 @@
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "CredentialEpoch": {
+        "description": "CredentialEpoch carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
+      "CredentialId": {
+        "description": "Opaque identity string.",
+        "type": "string"
+      },
+      "CredentialRevokeParams": {
+        "additionalProperties": false,
+        "description": "Parameters of `credential.revoke`.",
+        "properties": {
+          "credential": {
+            "$ref": "#/components/schemas/CredentialId",
+            "description": "The credential to withdraw."
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Client-minted operation identity."
+          }
+        },
+        "required": [
+          "op_id",
+          "credential"
+        ],
+        "type": "object"
+      },
+      "CredentialRevokeResult": {
+        "description": "Result of `credential.revoke`.",
+        "properties": {
+          "standing": {
+            "$ref": "#/components/schemas/PrincipalStanding",
+            "description": "Its principal afterwards."
+          },
+          "withdrawn": {
+            "$ref": "#/components/schemas/WithdrawnCredential",
+            "description": "The withdrawn credential."
+          },
+          "writes": {
+            "description": "Writes the withdrawal raced, in admission order.",
+            "items": {
+              "$ref": "#/components/schemas/RacedWrite"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "withdrawn",
+          "standing",
+          "writes"
+        ],
+        "type": "object"
+      },
+      "CredentialRotateParams": {
+        "additionalProperties": false,
+        "description": "Parameters of `credential.rotate`.",
+        "properties": {
+          "credential": {
+            "$ref": "#/components/schemas/CredentialId",
+            "description": "The credential to replace."
+          },
+          "expires_at_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimestampMs"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Expiry of the replacement; defaults to the replaced credential's expiry."
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Client-minted operation identity."
+          },
+          "principal_epoch": {
+            "$ref": "#/components/schemas/PrincipalEpoch",
+            "description": "The principal epoch the caller last read; a newer one refuses the rotation."
+          }
+        },
+        "required": [
+          "op_id",
+          "credential",
+          "principal_epoch"
+        ],
+        "type": "object"
+      },
+      "CredentialRotateResult": {
+        "description": "Result of `credential.rotate`.",
+        "properties": {
+          "issued": {
+            "$ref": "#/components/schemas/IssuedReplacement",
+            "description": "The replacement."
+          },
+          "replaced": {
+            "$ref": "#/components/schemas/CredentialRevokeResult",
+            "description": "The replaced credential, withdrawn in the same step."
+          }
+        },
+        "required": [
+          "issued",
+          "replaced"
+        ],
+        "type": "object"
+      },
       "DecimalCounter": {
         "description": "Unsigned 64-bit integer carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
@@ -1618,10 +1909,6 @@
             "type": "string"
           }
         ]
-      },
-      "Digest": {
-        "description": "Opaque identity string.",
-        "type": "string"
       },
       "DocEntry": {
         "description": "Name and version of one document.",
@@ -1894,6 +2181,9 @@
           "op_id": {
             "$ref": "#/components/schemas/OpId"
           },
+          "principal_epoch": {
+            "$ref": "#/components/schemas/PrincipalEpoch"
+          },
           "prompt_ids": {
             "items": {
               "$ref": "#/components/schemas/PromptId"
@@ -1993,6 +2283,7 @@
           "lease_revoked",
           "lease_conflict",
           "lease_epoch_mismatch",
+          "stale_geometry",
           "blocked",
           "not_ready",
           "recovering",
@@ -2071,6 +2362,8 @@
           "action_unavailable",
           "no_staged_update",
           "rollback_failed",
+          "invalid_update_state",
+          "activation_failed",
           "service_unsupported",
           "service_exists",
           "credential_revoked",
@@ -2681,6 +2974,10 @@
         "$ref": "#/components/schemas/DecimalCounter",
         "description": "Holder FenceEpoch as a canonical decimal string."
       },
+      "FenceToken": {
+        "description": "Stable token of the reason no byte of a write was delivered, such as\n`credential_revoked`.",
+        "type": "string"
+      },
       "FieldPath": {
         "description": "Dotted path to the offending input field.",
         "type": "string"
@@ -3015,6 +3312,78 @@
         ],
         "type": "object"
       },
+      "GeometryEpoch": {
+        "description": "GeometryEpoch carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
+      "GeometryEventData": {
+        "description": "Data of `geometry.changed`, `geometry.checkpoint` and `geometry.input_ready`.",
+        "properties": {
+          "epoch": {
+            "$ref": "#/components/schemas/GeometryEpoch",
+            "description": "Grid epoch of the transition."
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/Geometry",
+            "description": "Grid at this step."
+          },
+          "output_offset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ByteOffset"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Raw output offset the step applies at."
+          },
+          "owner_lease": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeaseId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Geometry lease that requested the change, for `geometry.changed`."
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Geometry"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Grid before the change, for `geometry.changed`."
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Revision"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Screen revision at the new grid, for the checkpoint and input readiness."
+          },
+          "terminal_id": {
+            "$ref": "#/components/schemas/TerminalId",
+            "description": "Terminal whose grid changed."
+          }
+        },
+        "required": [
+          "terminal_id",
+          "epoch",
+          "geometry"
+        ],
+        "type": "object"
+      },
       "GrantEpoch": {
         "$ref": "#/components/schemas/DecimalCounter",
         "description": "Holder GrantEpoch as a canonical decimal string."
@@ -3260,6 +3629,11 @@
       },
       "HistoryRevision": {
         "description": "HistoryRevision carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
+      "HolderGeneration": {
+        "description": "Holder wire generation carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
@@ -3649,6 +4023,34 @@
           "target",
           "text",
           "submit"
+        ],
+        "type": "object"
+      },
+      "IssuedReplacement": {
+        "description": "The replacement a rotation issued.",
+        "properties": {
+          "bearer": {
+            "$ref": "#/components/schemas/BearerText",
+            "description": "The text to present in `hello`."
+          },
+          "credential": {
+            "$ref": "#/components/schemas/CredentialId",
+            "description": "The new credential."
+          },
+          "epoch": {
+            "$ref": "#/components/schemas/CredentialEpoch",
+            "description": "Its first epoch."
+          },
+          "expires_at_ms": {
+            "$ref": "#/components/schemas/TimestampMs",
+            "description": "When it stops being valid."
+          }
+        },
+        "required": [
+          "credential",
+          "epoch",
+          "expires_at_ms",
+          "bearer"
         ],
         "type": "object"
       },
@@ -4950,6 +5352,188 @@
           }
         ]
       },
+      "Observed_Array_of_ProcessSample": {
+        "description": "One process field: observed, or not reported for a stated reason.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "The field was observed.",
+            "properties": {
+              "state": {
+                "const": "known",
+                "type": "string"
+              },
+              "value": {
+                "description": "Observed value.",
+                "items": {
+                  "$ref": "#/components/schemas/ProcessSample"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "state",
+              "value"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The field was not observed; this says nothing about whether a process exited.",
+            "properties": {
+              "reason": {
+                "$ref": "#/components/schemas/UnsupportedReason",
+                "description": "Why it was not observed.",
+                "x-ovis-open-enum": true
+              },
+              "state": {
+                "const": "unsupported",
+                "type": "string"
+              }
+            },
+            "required": [
+              "state",
+              "reason"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "Observed_Array_of_string": {
+        "description": "One process field: observed, or not reported for a stated reason.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "The field was observed.",
+            "properties": {
+              "state": {
+                "const": "known",
+                "type": "string"
+              },
+              "value": {
+                "description": "Observed value.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "state",
+              "value"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The field was not observed; this says nothing about whether a process exited.",
+            "properties": {
+              "reason": {
+                "$ref": "#/components/schemas/UnsupportedReason",
+                "description": "Why it was not observed.",
+                "x-ovis-open-enum": true
+              },
+              "state": {
+                "const": "unsupported",
+                "type": "string"
+              }
+            },
+            "required": [
+              "state",
+              "reason"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "Observed_ProcessSample": {
+        "description": "One process field: observed, or not reported for a stated reason.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "The field was observed.",
+            "properties": {
+              "state": {
+                "const": "known",
+                "type": "string"
+              },
+              "value": {
+                "$ref": "#/components/schemas/ProcessSample",
+                "description": "Observed value."
+              }
+            },
+            "required": [
+              "state",
+              "value"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The field was not observed; this says nothing about whether a process exited.",
+            "properties": {
+              "reason": {
+                "$ref": "#/components/schemas/UnsupportedReason",
+                "description": "Why it was not observed.",
+                "x-ovis-open-enum": true
+              },
+              "state": {
+                "const": "unsupported",
+                "type": "string"
+              }
+            },
+            "required": [
+              "state",
+              "reason"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "Observed_string": {
+        "description": "One process field: observed, or not reported for a stated reason.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "The field was observed.",
+            "properties": {
+              "state": {
+                "const": "known",
+                "type": "string"
+              },
+              "value": {
+                "description": "Observed value.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "state",
+              "value"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The field was not observed; this says nothing about whether a process exited.",
+            "properties": {
+              "reason": {
+                "$ref": "#/components/schemas/UnsupportedReason",
+                "description": "Why it was not observed.",
+                "x-ovis-open-enum": true
+              },
+              "state": {
+                "const": "unsupported",
+                "type": "string"
+              }
+            },
+            "required": [
+              "state",
+              "reason"
+            ],
+            "type": "object"
+          }
+        ]
+      },
       "OpCancelResult": {
         "description": "Cancellation adds a typed outcome while preserving every released `OpRecord` field.",
         "properties": {
@@ -5535,6 +6119,31 @@
           }
         ]
       },
+      "PendingActivation": {
+        "additionalProperties": false,
+        "description": "An activation recovery has not finished yet.",
+        "properties": {
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Activating operation."
+          },
+          "phase": {
+            "$ref": "#/components/schemas/ActivationPhase",
+            "description": "Last durable step.",
+            "x-ovis-open-enum": true
+          },
+          "update_id": {
+            "$ref": "#/components/schemas/UpdateId",
+            "description": "Update being activated."
+          }
+        },
+        "required": [
+          "update_id",
+          "op_id",
+          "phase"
+        ],
+        "type": "object"
+      },
       "PluginAction": {
         "description": "One plugin action.",
         "properties": {
@@ -5754,6 +6363,63 @@
           }
         ]
       },
+      "PrincipalEpoch": {
+        "description": "PrincipalEpoch carried as a canonical decimal string.",
+        "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
+      "PrincipalName": {
+        "description": "Opaque identity string.",
+        "type": "string"
+      },
+      "PrincipalStanding": {
+        "description": "The principal a withdrawal touched and its epoch afterwards.",
+        "properties": {
+          "principal": {
+            "$ref": "#/components/schemas/PrincipalName",
+            "description": "The principal."
+          },
+          "principal_epoch": {
+            "$ref": "#/components/schemas/PrincipalEpoch",
+            "description": "Its epoch after the change."
+          }
+        },
+        "required": [
+          "principal",
+          "principal_epoch"
+        ],
+        "type": "object"
+      },
+      "ProbeOutcome": {
+        "description": "How the selected executable answered its readiness probe.",
+        "oneOf": [
+          {
+            "const": "ready",
+            "description": "It reported the expected version and a protocol generation the runtime serves.",
+            "type": "string"
+          },
+          {
+            "const": "spawn_failed",
+            "description": "It could not be started.",
+            "type": "string"
+          },
+          {
+            "const": "exited",
+            "description": "It exited unsuccessfully.",
+            "type": "string"
+          },
+          {
+            "const": "mismatched",
+            "description": "It exited successfully but reported another version or generation.",
+            "type": "string"
+          },
+          {
+            "const": "timed_out",
+            "description": "It did not exit within the probe deadline and was killed.",
+            "type": "string"
+          }
+        ]
+      },
       "ProcessExitEvidence": {
         "description": "Holder exit evidence, including explicitly uncertain or incomplete outcomes.",
         "properties": {
@@ -5791,6 +6457,35 @@
           "io_failure",
           "final_offset"
         ],
+        "type": "object"
+      },
+      "ProcessExpect": {
+        "additionalProperties": false,
+        "description": "Incarnations `terminal.process_info` must still find; a mismatch reports nothing.",
+        "properties": {
+          "process_incarnation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Incarnation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Expected program incarnation; a mismatch is `process_replaced`."
+          },
+          "terminal_incarnation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Incarnation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Expected terminal incarnation; a mismatch is `stale_target`."
+          }
+        },
         "type": "object"
       },
       "ProcessObservation": {
@@ -5871,6 +6566,62 @@
           "incarnation",
           "argv",
           "started_ms"
+        ],
+        "type": "object"
+      },
+      "ProcessRoles": {
+        "description": "Shell, launcher, foreground and background processes of one terminal.",
+        "properties": {
+          "background": {
+            "$ref": "#/components/schemas/Observed_Array_of_ProcessSample",
+            "description": "Other processes of the terminal's session."
+          },
+          "foreground": {
+            "$ref": "#/components/schemas/Observed_Array_of_ProcessSample",
+            "description": "Members of the terminal's foreground process group."
+          },
+          "launcher": {
+            "$ref": "#/components/schemas/Observed_ProcessSample",
+            "description": "The program the holder launched."
+          },
+          "shell": {
+            "$ref": "#/components/schemas/Observed_ProcessSample",
+            "description": "The declared shell; never inferred from a process name."
+          }
+        },
+        "required": [
+          "shell",
+          "launcher",
+          "foreground",
+          "background"
+        ],
+        "type": "object"
+      },
+      "ProcessSample": {
+        "description": "One native process, named by PID and the start token that rules out PID reuse.",
+        "properties": {
+          "argv": {
+            "$ref": "#/components/schemas/Observed_Array_of_string",
+            "description": "Current argument vector."
+          },
+          "cwd": {
+            "$ref": "#/components/schemas/Observed_string",
+            "description": "Current working directory."
+          },
+          "pid": {
+            "$ref": "#/components/schemas/ProcessPid",
+            "description": "Operating-system process identifier."
+          },
+          "start_token": {
+            "$ref": "#/components/schemas/StartToken",
+            "description": "Start token read together with the PID."
+          }
+        },
+        "required": [
+          "pid",
+          "start_token",
+          "argv",
+          "cwd"
         ],
         "type": "object"
       },
@@ -6429,6 +7180,34 @@
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "RacedWrite": {
+        "description": "One write raced by a withdrawal: its admission receipt and its fate.",
+        "properties": {
+          "admitted_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Bytes admitted."
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that admitted the write."
+          },
+          "queued_seq": {
+            "$ref": "#/components/schemas/EventSeq",
+            "description": "Its position in the terminal's input sequence."
+          },
+          "race": {
+            "$ref": "#/components/schemas/CommitRace",
+            "description": "What happened to them."
+          }
+        },
+        "required": [
+          "op_id",
+          "queued_seq",
+          "admitted_bytes",
+          "race"
+        ],
+        "type": "object"
+      },
       "ReadinessContract": {
         "description": "How a launched program proves it can take its first message.\n\nOnly a declaration by the program counts; output silence is never readiness.",
         "oneOf": [
@@ -6456,6 +7235,34 @@
             "type": "object"
           }
         ]
+      },
+      "ReadinessEvidence": {
+        "additionalProperties": false,
+        "description": "Probe outcome and the bounded output that supports it.",
+        "properties": {
+          "exit_code": {
+            "description": "Exit status, when the probe exited with one; absent for a signal or no exit.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/ProbeOutcome",
+            "description": "How the probe ended.",
+            "x-ovis-open-enum": true
+          },
+          "stdout": {
+            "description": "Leading standard output, lossily decoded and bounded.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outcome",
+          "stdout"
+        ],
+        "type": "object"
       },
       "RecordCount": {
         "description": "RecordCount carried as a canonical decimal string.",
@@ -6509,6 +7316,45 @@
           "recorded_ms"
         ],
         "type": "object"
+      },
+      "RejectReason": {
+        "description": "Why a staged update was rejected; the active build is unchanged.",
+        "oneOf": [
+          {
+            "const": "digest_mismatch",
+            "description": "The staged archive no longer hashes to the requested digest.",
+            "type": "string"
+          },
+          {
+            "const": "unsafe_archive",
+            "description": "An archive entry is absolute, escapes the build directory, is a link or repeats.",
+            "type": "string"
+          },
+          {
+            "const": "missing_entry",
+            "description": "The archive lacks `build.json` or the executable.",
+            "type": "string"
+          },
+          {
+            "const": "manifest_mismatch",
+            "description": "`build.json` names another version or target than was staged.",
+            "type": "string"
+          },
+          {
+            "const": "protocol_incompatible",
+            "description": "The build does not serve this runtime's client protocol generation.",
+            "type": "string"
+          },
+          {
+            "const": "holder_incompatible",
+            "description": "The build cannot adopt the running holders' wire generation.",
+            "type": "string"
+          }
+        ]
+      },
+      "ReleaseVersion": {
+        "pattern": "^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$",
+        "type": "string"
       },
       "RemoveScope": {
         "additionalProperties": false,
@@ -6640,6 +7486,88 @@
         "description": "Revision carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
+      },
+      "RollbackReason": {
+        "description": "Why the previous build was selected again.",
+        "oneOf": [
+          {
+            "const": "readiness_failed",
+            "description": "The selected executable failed its readiness probe.",
+            "type": "string"
+          },
+          {
+            "const": "restart_failed",
+            "description": "The control restart onto the selected build failed.",
+            "type": "string"
+          },
+          {
+            "const": "interrupted",
+            "description": "An activation was interrupted and finished by recovery.",
+            "type": "string"
+          },
+          {
+            "const": "requested",
+            "description": "A caller asked for the rollback.",
+            "type": "string"
+          }
+        ]
+      },
+      "RollbackReceipt": {
+        "additionalProperties": false,
+        "description": "The rollback of one activation.",
+        "properties": {
+          "from": {
+            "$ref": "#/components/schemas/ActiveBuild",
+            "description": "Build that was deselected."
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that rolled back."
+          },
+          "readiness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadinessEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Probe evidence, when a probe ran."
+          },
+          "reason": {
+            "$ref": "#/components/schemas/RollbackReason",
+            "description": "Why.",
+            "x-ovis-open-enum": true
+          },
+          "recorded_ms": {
+            "$ref": "#/components/schemas/TimestampMs",
+            "description": "When it was recorded."
+          },
+          "restart": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServerTransitionResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Control restart onto the restored build, when one ran."
+          },
+          "restored": {
+            "$ref": "#/components/schemas/ActiveBuild",
+            "description": "Build selected again."
+          }
+        },
+        "required": [
+          "op_id",
+          "reason",
+          "from",
+          "restored",
+          "recorded_ms"
+        ],
+        "type": "object"
       },
       "RpcDiscoverResult": {
         "description": "Result of `rpc.discover`: the OpenRPC document of this build."
@@ -7397,6 +8325,10 @@
           "page"
         ],
         "type": "object"
+      },
+      "Sha256Digest": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
       },
       "SkippedOutput": {
         "description": "Raw output the stream skipped when it was resynchronized.",
@@ -8844,6 +9776,31 @@
         ],
         "type": "object"
       },
+      "TerminalProcessInfoParams": {
+        "additionalProperties": false,
+        "description": "Parameters of `terminal.process_info`.",
+        "properties": {
+          "expect": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProcessExpect"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Incarnations the caller holds."
+          },
+          "target": {
+            "$ref": "#/components/schemas/Target",
+            "description": "Terminal to inspect; there is no focused-terminal fallback."
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "type": "object"
+      },
       "TerminalProcessInfoResult": {
         "description": "Result of `terminal.process_info`.",
         "properties": {
@@ -8856,11 +9813,15 @@
                 "type": "null"
               }
             ],
-            "description": "Foreground process, when the platform reports it."
+            "description": "The launcher record while the launcher holds the foreground; `roles.foreground`\nlists every foreground process."
           },
           "launcher": {
             "$ref": "#/components/schemas/ProcessRecord",
             "description": "Program the terminal launched."
+          },
+          "roles": {
+            "$ref": "#/components/schemas/ProcessRoles",
+            "description": "Shell, launcher, foreground and background processes, each observed or\nexplicitly unsupported."
           },
           "supported_fields": {
             "description": "Fields this platform can report.",
@@ -8877,7 +9838,8 @@
         "required": [
           "terminal_id",
           "launcher",
-          "supported_fields"
+          "supported_fields",
+          "roles"
         ],
         "type": "object"
       },
@@ -9718,19 +10680,93 @@
         ],
         "type": "object"
       },
+      "UnsupportedReason": {
+        "description": "Why a process field is not reported.",
+        "oneOf": [
+          {
+            "const": "platform",
+            "description": "The operating system does not expose the field to the runtime.",
+            "type": "string"
+          },
+          {
+            "const": "undeclared_role",
+            "description": "The launch did not declare this role; it is never guessed from a name.",
+            "type": "string"
+          },
+          {
+            "const": "process_unavailable",
+            "description": "The process has no readable native record.",
+            "type": "string"
+          },
+          {
+            "const": "raced",
+            "description": "Native evidence changed while it was read.",
+            "type": "string"
+          },
+          {
+            "const": "permission",
+            "description": "Native permissions refused the read.",
+            "type": "string"
+          },
+          {
+            "const": "encoding",
+            "description": "The native value is not representable as UTF-8 or has an unknown layout.",
+            "type": "string"
+          },
+          {
+            "const": "limit",
+            "description": "The process table exceeded the bounded inspection budget.",
+            "type": "string"
+          }
+        ]
+      },
       "UpdateId": {
         "description": "Opaque identity string.",
         "type": "string"
       },
       "UpdateQueryResult": {
+        "additionalProperties": false,
         "description": "Result of `update.query`.",
         "properties": {
+          "active": {
+            "$ref": "#/components/schemas/ActiveBuild",
+            "description": "Active build, with the digest of its executable as read now."
+          },
           "active_version": {
-            "$ref": "#/components/schemas/BuildVersion",
-            "description": "Active build."
+            "$ref": "#/components/schemas/ReleaseVersion",
+            "description": "Active build version."
+          },
+          "live_incarnations": {
+            "description": "Program incarnations the holders keep across activations.",
+            "items": {
+              "$ref": "#/components/schemas/Incarnation"
+            },
+            "type": "array"
+          },
+          "pending": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PendingActivation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "An activation whose recovery has not finished."
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActiveBuild"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Build a rollback would select again; absent before the first activation."
           },
           "updates": {
-            "description": "Staged updates.",
+            "description": "Staged updates, oldest first.",
             "items": {
               "$ref": "#/components/schemas/UpdateRecord"
             },
@@ -9739,46 +10775,118 @@
         },
         "required": [
           "active_version",
+          "active",
+          "live_incarnations",
           "updates"
         ],
         "type": "object"
       },
       "UpdateRecord": {
+        "additionalProperties": false,
         "description": "One staged update.",
         "properties": {
+          "activation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActivationReceipt"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Successful activation, when one happened."
+          },
           "active_version": {
-            "$ref": "#/components/schemas/BuildVersion",
-            "description": "Build that stays active until activation succeeds."
+            "$ref": "#/components/schemas/ReleaseVersion",
+            "description": "Build active when this record was last written."
           },
-          "digest": {
-            "$ref": "#/components/schemas/Digest",
-            "description": "Content digest."
+          "build": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VerifiedBuild"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Verified build facts; absent until verification passes."
           },
-          "generation": {
-            "$ref": "#/components/schemas/ProtocolGeneration",
-            "description": "Protocol generation of the target build."
+          "rejection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UpdateRejection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it was rejected, when it was."
+          },
+          "rollback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RollbackReceipt"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Latest rollback, when one happened."
+          },
+          "sha256": {
+            "$ref": "#/components/schemas/Sha256Digest",
+            "description": "Digest of the staged release archive."
+          },
+          "staged_by": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that staged it."
           },
           "state": {
             "$ref": "#/components/schemas/UpdateState",
             "description": "Progress.",
             "x-ovis-open-enum": true
           },
+          "target": {
+            "$ref": "#/components/schemas/BuildTarget",
+            "description": "Target the build runs on."
+          },
           "update_id": {
             "$ref": "#/components/schemas/UpdateId",
             "description": "Update identity."
           },
           "version": {
-            "$ref": "#/components/schemas/BuildVersion",
+            "$ref": "#/components/schemas/ReleaseVersion",
             "description": "Target build version."
           }
         },
         "required": [
           "update_id",
           "version",
-          "digest",
-          "generation",
+          "target",
+          "sha256",
           "state",
-          "active_version"
+          "active_version",
+          "staged_by"
+        ],
+        "type": "object"
+      },
+      "UpdateRejection": {
+        "additionalProperties": false,
+        "description": "A rejection and the operation that found it.",
+        "properties": {
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "The operation that found it."
+          },
+          "reason": {
+            "$ref": "#/components/schemas/RejectReason",
+            "description": "What failed.",
+            "x-ovis-open-enum": true
+          }
+        },
+        "required": [
+          "reason",
+          "op_id"
         ],
         "type": "object"
       },
@@ -9786,23 +10894,34 @@
         "additionalProperties": false,
         "description": "Parameters of `update.stage`.",
         "properties": {
-          "digest": {
-            "$ref": "#/components/schemas/Digest",
-            "description": "Expected content digest."
-          },
           "op_id": {
             "$ref": "#/components/schemas/OpId",
             "description": "Client-minted operation identity."
           },
+          "sha256": {
+            "$ref": "#/components/schemas/Sha256Digest",
+            "description": "Expected digest of the release archive."
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BuildTarget"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Target of the release; absent means this runtime's target, and any other is refused."
+          },
           "version": {
-            "$ref": "#/components/schemas/BuildVersion",
+            "$ref": "#/components/schemas/ReleaseVersion",
             "description": "Build version to stage."
           }
         },
         "required": [
           "op_id",
           "version",
-          "digest"
+          "sha256"
         ],
         "type": "object"
       },
@@ -9811,7 +10930,7 @@
         "oneOf": [
           {
             "const": "staged",
-            "description": "Downloaded into the install root.",
+            "description": "Copied into the install root with the requested digest.",
             "type": "string"
           },
           {
@@ -9826,7 +10945,7 @@
           },
           {
             "const": "rolled_back",
-            "description": "Activation failed and the previous build was restored.",
+            "description": "Deselected again; the rollback receipt says why.",
             "type": "string"
           },
           {
@@ -9852,6 +10971,25 @@
         "required": [
           "op_id",
           "update_id"
+        ],
+        "type": "object"
+      },
+      "VerifiedBuild": {
+        "additionalProperties": false,
+        "description": "A build that passed verification.",
+        "properties": {
+          "binary_sha256": {
+            "$ref": "#/components/schemas/Sha256Digest",
+            "description": "Digest of the extracted executable."
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/BuildManifest",
+            "description": "The archive's `build.json`."
+          }
+        },
+        "required": [
+          "manifest",
+          "binary_sha256"
         ],
         "type": "object"
       },
@@ -9884,6 +11022,24 @@
             "type": "string"
           }
         ]
+      },
+      "WithdrawnCredential": {
+        "description": "A credential that no longer authenticates, and the epoch its withdrawal produced.",
+        "properties": {
+          "credential": {
+            "$ref": "#/components/schemas/CredentialId",
+            "description": "The withdrawn credential."
+          },
+          "epoch": {
+            "$ref": "#/components/schemas/CredentialEpoch",
+            "description": "Its epoch after withdrawal."
+          }
+        },
+        "required": [
+          "credential",
+          "epoch"
+        ],
+        "type": "object"
       },
       "WorkspaceId": {
         "description": "Opaque identity string.",
@@ -12199,17 +13355,36 @@
         {
           "code": -32000,
           "message": "unsupported_field"
+        },
+        {
+          "code": -32000,
+          "message": "process_replaced"
         }
       ],
       "name": "terminal.process_info",
       "paramStructure": "by-name",
       "params": [
         {
+          "name": "expect",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProcessExpect"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Incarnations the caller holds."
+          }
+        },
+        {
           "name": "target",
           "required": true,
           "schema": {
             "$ref": "#/components/schemas/Target",
-            "description": "Terminal to read."
+            "description": "Terminal to inspect; there is no focused-terminal fallback."
           }
         }
       ],
@@ -12219,10 +13394,10 @@
           "$ref": "#/components/schemas/TerminalProcessInfoResult"
         }
       },
-      "summary": "Read launcher and foreground process facts.",
+      "summary": "Read shell, launcher, foreground and background process facts.",
       "x-effect": "query",
       "x-params": {
-        "$ref": "#/components/schemas/TerminalGetParams"
+        "$ref": "#/components/schemas/TerminalProcessInfoParams"
       },
       "x-targeting": "terminal"
     },
@@ -19817,20 +20992,20 @@
         },
         {
           "code": -32000,
+          "message": "incompatible"
+        },
+        {
+          "code": -32000,
           "message": "transport_failed"
+        },
+        {
+          "code": -32000,
+          "message": "too_large"
         }
       ],
       "name": "update.stage",
       "paramStructure": "by-name",
       "params": [
-        {
-          "name": "digest",
-          "required": true,
-          "schema": {
-            "$ref": "#/components/schemas/Digest",
-            "description": "Expected content digest."
-          }
-        },
         {
           "name": "op_id",
           "required": true,
@@ -19840,10 +21015,33 @@
           }
         },
         {
+          "name": "sha256",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/Sha256Digest",
+            "description": "Expected digest of the release archive."
+          }
+        },
+        {
+          "name": "target",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BuildTarget"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Target of the release; absent means this runtime's target, and any other is refused."
+          }
+        },
+        {
           "name": "version",
           "required": true,
           "schema": {
-            "$ref": "#/components/schemas/BuildVersion",
+            "$ref": "#/components/schemas/ReleaseVersion",
             "description": "Build version to stage."
           }
         }
@@ -19917,6 +21115,14 @@
         },
         {
           "code": -32000,
+          "message": "no_staged_update"
+        },
+        {
+          "code": -32000,
+          "message": "invalid_update_state"
+        },
+        {
+          "code": -32000,
           "message": "integrity_failed"
         },
         {
@@ -19950,7 +21156,7 @@
           "$ref": "#/components/schemas/UpdateRecord"
         }
       },
-      "summary": "Check digest and protocol and holder compatibility.",
+      "summary": "Check digest, archive safety and protocol and holder compatibility.",
       "x-effect": "mutation",
       "x-params": {
         "$ref": "#/components/schemas/UpdateStepParams"
@@ -20017,7 +21223,19 @@
         },
         {
           "code": -32000,
+          "message": "invalid_update_state"
+        },
+        {
+          "code": -32000,
+          "message": "integrity_failed"
+        },
+        {
+          "code": -32000,
           "message": "incompatible"
+        },
+        {
+          "code": -32000,
+          "message": "activation_failed"
         },
         {
           "code": -32000,
@@ -20110,6 +21328,14 @@
         {
           "code": -32000,
           "message": "outcome_unknown"
+        },
+        {
+          "code": -32000,
+          "message": "no_staged_update"
+        },
+        {
+          "code": -32000,
+          "message": "invalid_update_state"
         },
         {
           "code": -32000,
@@ -20403,6 +21629,222 @@
         "$ref": "#/components/schemas/NoParams"
       },
       "x-targeting": "untargeted"
+    },
+    {
+      "errors": [
+        {
+          "code": -32602,
+          "message": "invalid_params"
+        },
+        {
+          "code": -32000,
+          "message": "unavailable"
+        },
+        {
+          "code": -32603,
+          "message": "internal"
+        },
+        {
+          "code": -32000,
+          "message": "not_found"
+        },
+        {
+          "code": -32000,
+          "message": "unauthenticated"
+        },
+        {
+          "code": -32000,
+          "message": "forbidden"
+        },
+        {
+          "code": -32000,
+          "message": "deadline_exceeded"
+        },
+        {
+          "code": -32000,
+          "message": "cancelled"
+        },
+        {
+          "code": -32000,
+          "message": "backpressure"
+        },
+        {
+          "code": -32000,
+          "message": "op_expired"
+        },
+        {
+          "code": -32000,
+          "message": "op_reused"
+        },
+        {
+          "code": -32000,
+          "message": "persistence_failed"
+        },
+        {
+          "code": -32000,
+          "message": "outcome_unknown"
+        },
+        {
+          "code": -32000,
+          "message": "version_conflict"
+        },
+        {
+          "code": -32000,
+          "message": "credential_revoked"
+        },
+        {
+          "code": -32000,
+          "message": "credential_expired"
+        },
+        {
+          "code": -32000,
+          "message": "limit_exceeded"
+        }
+      ],
+      "name": "credential.rotate",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "credential",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/CredentialId",
+            "description": "The credential to replace."
+          }
+        },
+        {
+          "name": "expires_at_ms",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimestampMs"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Expiry of the replacement; defaults to the replaced credential's expiry."
+          }
+        },
+        {
+          "name": "op_id",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Client-minted operation identity."
+          }
+        },
+        {
+          "name": "principal_epoch",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/PrincipalEpoch",
+            "description": "The principal epoch the caller last read; a newer one refuses the rotation."
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/CredentialRotateResult"
+        }
+      },
+      "summary": "Replace a credential and withdraw the old one in one step, guarded by the principal epoch.",
+      "x-effect": "mutation",
+      "x-params": {
+        "$ref": "#/components/schemas/CredentialRotateParams"
+      },
+      "x-targeting": "lookup"
+    },
+    {
+      "errors": [
+        {
+          "code": -32602,
+          "message": "invalid_params"
+        },
+        {
+          "code": -32000,
+          "message": "unavailable"
+        },
+        {
+          "code": -32603,
+          "message": "internal"
+        },
+        {
+          "code": -32000,
+          "message": "not_found"
+        },
+        {
+          "code": -32000,
+          "message": "unauthenticated"
+        },
+        {
+          "code": -32000,
+          "message": "forbidden"
+        },
+        {
+          "code": -32000,
+          "message": "deadline_exceeded"
+        },
+        {
+          "code": -32000,
+          "message": "cancelled"
+        },
+        {
+          "code": -32000,
+          "message": "backpressure"
+        },
+        {
+          "code": -32000,
+          "message": "op_expired"
+        },
+        {
+          "code": -32000,
+          "message": "op_reused"
+        },
+        {
+          "code": -32000,
+          "message": "persistence_failed"
+        },
+        {
+          "code": -32000,
+          "message": "outcome_unknown"
+        }
+      ],
+      "name": "credential.revoke",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "credential",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/CredentialId",
+            "description": "The credential to withdraw."
+          }
+        },
+        {
+          "name": "op_id",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Client-minted operation identity."
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/CredentialRevokeResult"
+        }
+      },
+      "summary": "Withdraw a credential; its queued writes are rechecked before any byte is written.",
+      "x-effect": "mutation",
+      "x-params": {
+        "$ref": "#/components/schemas/CredentialRevokeParams"
+      },
+      "x-targeting": "lookup"
     }
   ],
   "openrpc": "1.3.2",
@@ -20661,6 +22103,11 @@
       "code": -32000,
       "description": "The lease epoch does not match the current one.",
       "kind": "lease_epoch_mismatch"
+    },
+    {
+      "code": -32000,
+      "description": "A geometry request names an epoch a newer transition superseded.",
+      "kind": "stale_geometry"
     },
     {
       "code": -32000,
@@ -21054,6 +22501,16 @@
     },
     {
       "code": -32000,
+      "description": "The update is not in the state this step starts from.",
+      "kind": "invalid_update_state"
+    },
+    {
+      "code": -32000,
+      "description": "The selected build failed readiness or restart; the previous build was restored.",
+      "kind": "activation_failed"
+    },
+    {
+      "code": -32000,
       "description": "The platform has no supported service manager.",
       "kind": "service_unsupported"
     },
@@ -21284,6 +22741,27 @@
         "$ref": "#/components/schemas/LeaseEventData"
       },
       "summary": "Geometry ownership moved."
+    },
+    {
+      "name": "geometry.changed",
+      "schema": {
+        "$ref": "#/components/schemas/GeometryEventData"
+      },
+      "summary": "A grid change committed before the holder heard of it."
+    },
+    {
+      "name": "geometry.checkpoint",
+      "schema": {
+        "$ref": "#/components/schemas/GeometryEventData"
+      },
+      "summary": "The screen was checkpointed at the new grid."
+    },
+    {
+      "name": "geometry.input_ready",
+      "schema": {
+        "$ref": "#/components/schemas/GeometryEventData"
+      },
+      "summary": "Input readiness returned at the new grid."
     },
     {
       "name": "stream.closed",
