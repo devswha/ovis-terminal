@@ -1,0 +1,9 @@
+# mutant M5-relative-binary-not-pinned
+# file: bench/soak/cli.rs
+# - let binary = std::fs::canonicalize(given).map_err(|source| SoakError::Binary { source })?;
+# + let binary = given.clone();
+# command: cargo nextest run -p ovis-terminal-bench --no-fail-fast soak::
+        FAIL [   0.009s] (10/13) ovis-terminal-bench soak::tests::a_relative_binary_is_pinned_to_its_absolute_path_before_any_process_starts
+    thread 'soak::tests::a_relative_binary_is_pinned_to_its_absolute_path_before_any_process_starts' (2910889) panicked at bench/src/../soak/tests.rs:105:5:
+     Summary [   0.036s] 13 tests run: 12 passed, 1 failed, 18 skipped
+        FAIL [   0.009s] (10/13) ovis-terminal-bench soak::tests::a_relative_binary_is_pinned_to_its_absolute_path_before_any_process_starts
