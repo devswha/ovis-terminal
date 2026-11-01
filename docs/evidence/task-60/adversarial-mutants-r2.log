@@ -1,0 +1,43 @@
+== R1 GAP-050 lists platform/matrix again (docs/design/traceability.json)
+-'        "part-a/task-26",\n        "cli/interactive-attach"\n'
++'        "part-a/task-26",\n        "cli/interactive-attach",\n        "platform/matrix"\n'
+exit_status: 100 -> KILLED
+        FAIL [   0.345s] (4/4) ovis-terminal-conformance traceability::unclaimed::every_listed_owner_claims_its_row_except_the_recorded_ones
+     Summary [   0.346s] 4 tests run: 3 passed, 1 failed, 26 skipped
+        FAIL [   0.345s] (4/4) ovis-terminal-conformance traceability::unclaimed::every_listed_owner_claims_its_row_except_the_recorded_ones
+
+== R2 reverse checker ignores unclaimed rows (conformance/src/traceability/unclaimed.rs)
+-'                if !claims {'
++'                if !claims && false {'
+exit_status: 100 -> KILLED
+        FAIL [   0.008s] (1/4) ovis-terminal-conformance traceability::unclaimed::a_listed_owner_that_dropped_the_row_is_flagged
+        FAIL [   0.345s] (4/4) ovis-terminal-conformance traceability::unclaimed::every_listed_owner_claims_its_row_except_the_recorded_ones
+     Summary [   0.345s] 4 tests run: 2 passed, 2 failed, 26 skipped
+        FAIL [   0.008s] (1/4) ovis-terminal-conformance traceability::unclaimed::a_listed_owner_that_dropped_the_row_is_flagged
+        FAIL [   0.345s] (4/4) ovis-terminal-conformance traceability::unclaimed::every_listed_owner_claims_its_row_except_the_recorded_ones
+
+== R3 verify accepts an empty commit (probes/platform-qa/smoke.rs)
+-'        if sha.is_empty() {'
++'        if sha.is_empty() && false {'
+exit_status: 100 -> KILLED
+        FAIL [   0.006s] (17/21) ovis-terminal-probes platform_qa::smoke::tests::an_empty_commit_or_a_run_without_output_hashes_is_refused
+     Summary [   0.036s] 21 tests run: 20 passed, 1 failed, 4 skipped
+        FAIL [   0.006s] (17/21) ovis-terminal-probes platform_qa::smoke::tests::an_empty_commit_or_a_run_without_output_hashes_is_refused
+
+== R4 a run is recorded with the hash of empty stderr (probes/platform-qa/assemble.rs)
+-'            stderr_sha256: sha256_hex(&done.stderr),'
++'            stderr_sha256: sha256_hex(b""),'
+exit_status: 100 -> KILLED
+        FAIL [   0.008s] (14/21) ovis-terminal-probes platform_qa::assemble::tests::a_proven_run_passes_and_a_timed_out_run_fails_its_check
+     Summary [   0.034s] 21 tests run: 20 passed, 1 failed, 4 skipped
+        FAIL [   0.008s] (14/21) ovis-terminal-probes platform_qa::assemble::tests::a_proven_run_passes_and_a_timed_out_run_fails_its_check
+
+== R5 a manifest check with no test loads (probes/platform-qa/smoke.rs)
+-'        if manifest.checks.iter().any(|check| check.tests.is_empty()) {'
++'        if manifest.checks.iter().any(|check| check.tests.is_empty()) && false {'
+exit_status: 100 -> KILLED
+        FAIL [   0.010s] (14/21) ovis-terminal-probes platform_qa::smoke::tests::a_manifest_check_with_no_native_test_is_refused_at_load
+     Summary [   0.033s] 21 tests run: 20 passed, 1 failed, 4 skipped
+        FAIL [   0.010s] (14/21) ovis-terminal-probes platform_qa::smoke::tests::a_manifest_check_with_no_native_test_is_refused_at_load
+
+killed 5/5

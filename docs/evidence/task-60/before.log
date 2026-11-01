@@ -1,0 +1,15 @@
+Before (todo 60): absent - no comparable baseline capability; this is not an executed failing test.
+
+Gap baseline: GAP-048, GAP-049, GAP-050, GAP-051, GAP-095, GAP-121 (docs/design/gap-list.md:68-71, :117, :145).
+
+State of origin/integration at edfdb58 before this change:
+- No platform/matrix scenario: conformance/scenarios/platform/ held conpty.json, process-info.json,
+  unix-service.json and windows-service.json only; `--scenario platform/matrix` resolved to no file.
+- No platform QA workflow: .github/workflows/ held ci.yml, platform-probes.yml and probe-stress-macos.yml.
+- No push CI on integration: .github/workflows/ci.yml:4-5 read `push: branches: [main]`, so commits pushed
+  directly to the trunk ran no CI (the T82 landing gate caught a traceability failure from 76a173b).
+- probe-stress-macos.yml carried 41 lanes as one shared `options:` line plus 41 per-lane job blocks
+  (1427 lines); every landing re-conflicted every open lane PR on that shared list.
+- conformance/scenarios/platform/windows-service.json:6 claimed GAP-050 (geometry events over the Windows
+  service pipe) without a case or native test that delivers it.
+- No verify-ci or windows-smoke binary existed in probes/Cargo.toml.

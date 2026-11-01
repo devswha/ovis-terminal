@@ -123,6 +123,8 @@ fn cli_record(error: &CliError) -> Map<String, Value> {
         | CliError::UnsupportedTransport
         | CliError::Schema(_)
         | CliError::Encode(_) => {}
+        #[cfg(windows)]
+        CliError::PipeBusy { .. } => {}
         #[cfg(any(unix, windows))]
         CliError::Service(error) => service_detail(error, &mut record),
     }
