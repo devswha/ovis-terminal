@@ -6,7 +6,7 @@
 //! at run time, expected results checked by JSON pointer, awaited events and the
 //! normalized receipts every client must reproduce. A consumer supplies a
 //! [`Transport`] (the Rust conformance runner speaks the binary's `connect` bridge,
-//! the Bun client its own socket) and [`replay`] does the rest.
+//! the Bun client its own socket) and [`replay()`] does the rest.
 
 pub mod bind;
 pub mod case;
