@@ -286,7 +286,7 @@
     },
     {
       "case": "failure",
-      "summary": "An RPC interact attach is ready under its own lease; an observe-only principal naming that lease is refused for its permission before the lease is looked at (input.raw raw_not_authorized, input.send forbidden) and the owner's, which may write but holds no such lease, no_lease; an operator held behind it takes the interact lease over with attach.takeover, and the writer's stream is told input_revoked then closes taken_over naming the operator, after which the writer's revoked lease admits nothing (no_lease); the operator's attach.close is confirmed by its CLOSE, after which attach.leases is empty, so the CLI holder then acquires interact; a PTY observer sees the first paint and follows output, its typed bytes are never evaluated (absent after a fence on both PTYs) and attach.leases lists it as an observer; a second interact attach exits 11 lease_held naming the holder and never changes its terminal; a stale target exits 3 not_found; interact without a TTY exits 2 not_a_tty; stopping the server (forced socket EOF) sends $/closing server_shutdown first, which revokes the clients' input readiness, and the holder and the observer then exit 4 connection_lost naming that closing, with their outer terminal settings restored.",
+      "summary": "An RPC interact attach is ready under its own lease; an observe-only principal naming that lease is refused for its permission before the lease is looked at (the boundary policy's precheck answers input.raw and input.send forbidden) and the owner's, which may write but holds no such lease, no_lease; an operator held behind it takes the interact lease over with attach.takeover, and the writer's stream is told input_revoked then closes taken_over naming the operator, after which the writer's revoked lease admits nothing (no_lease); the operator's attach.close is confirmed by its CLOSE, after which attach.leases is empty, so the CLI holder then acquires interact; a PTY observer sees the first paint and follows output, its typed bytes are never evaluated (absent after a fence on both PTYs) and attach.leases lists it as an observer; a second interact attach exits 11 lease_held naming the holder and never changes its terminal; a stale target exits 3 not_found; interact without a TTY exits 2 not_a_tty; stopping the server (forced socket EOF) sends $/closing server_shutdown first, which revokes the clients' input readiness, and the holder and the observer then exit 4 connection_lost naming that closing, with their outer terminal settings restored.",
       "steps": [
         {
           "serve": {
@@ -505,7 +505,7 @@
                 "/result": {
                   "$present": false
                 },
-                "/error/data/kind": "raw_not_authorized"
+                "/error/data/kind": "forbidden"
               }
             }
           }
