@@ -93,6 +93,12 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     super::rotation::register(&mut dispatch, &authority, (runtime, Arc::clone(&sequenced)))?;
     let (status, directory) = (Arc::clone(&agents.0), Arc::clone(&agents.1));
     super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
+    let programs = super::processes::register(
+        &mut dispatch,
+        (root, runtime),
+        (&authority, issued.bearer(), &agents.0),
+    )
+    .await?;
     let parts = (&authority, &*core, agents.clone());
     let template = super::template_lane::register(&mut dispatch, (runtime, root), parts)?;
     let launch = (runtime, Arc::clone(&core), template);
@@ -110,6 +116,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         extension: Extension::new(bridge, Arc::clone(&core)),
         sequenced,
         tree,
+        programs,
     };
     let handler = Arc::new(FixtureHandler::new(
         Arc::new(dispatch),
@@ -152,7 +159,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     announce_report(&report)
 }
 
-/// The serve report the runner checks in its `stop` step.
+/// The serve report line: accepted connections, failures by kind, panics.
 fn announce_report(report: &ServeReport) -> Result<(), RunnerError> {
     let failures: serde_json::Map<String, Value> = report
         .failures()

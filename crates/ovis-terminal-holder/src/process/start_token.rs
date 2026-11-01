@@ -1,9 +1,9 @@
 //! Operating-system start tokens that distinguish a process from a reused PID.
 //!
 //! Linux reads the kernel start time (clock ticks since boot) from
-//! `/proc/<pid>/stat` and binds it to the current boot ID. Other Unix systems
-//! read the kernel start time through `ps -o lstart=` (one-second resolution);
-//! plan todo 55 owns cross-platform consistency of this evidence.
+//! `/proc/<pid>/stat` and binds it to the current boot ID; macOS reads the
+//! microsecond start time from `proc_pidinfo`; Windows reads the process creation
+//! time, in the same `windows-created:` form the ConPTY holder records at spawn.
 
 use std::io;
 
@@ -56,61 +56,52 @@ impl StartTokenError {
     }
 }
 
+/// Reads the start token of a process that has not ended for its owner.
+///
+/// On Unix a process keeps its token until its parent reaps it, so the holder can still
+/// read the token of a child that exited before spawn completed. Windows has no reaping
+/// step and any open handle keeps the process object alive, so there an exited process
+/// is gone as soon as its exit code is set.
+///
+/// # Errors
+///
+/// Returns [`StartTokenError::ProcessGone`] when the PID names no such process, and a
+/// read or layout error when the operating-system record is unusable.
+#[cfg(any(target_os = "linux", target_os = "macos", windows))]
+pub fn read_start_token(pid: ProcessId) -> Result<ProcessStartToken, StartTokenError> {
+    let entry = super::read_entry(pid)?;
+    if cfg!(windows) && !entry.running {
+        return Err(StartTokenError::ProcessGone { pid: pid.get() });
+    }
+    Ok(entry.start_token)
+}
+
 /// Reads the start token of a live process.
 ///
 /// # Errors
 ///
 /// Returns [`StartTokenError::ProcessGone`] when the PID names no process, and
 /// a read or layout error when the operating-system record is unusable.
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 pub fn read_start_token(pid: ProcessId) -> Result<ProcessStartToken, StartTokenError> {
-    os_start_token(pid).map(ProcessStartToken::new)
-}
-
-#[cfg(target_os = "linux")]
-fn os_start_token(pid: ProcessId) -> Result<String, StartTokenError> {
-    let stat = std::fs::read_to_string(format!("/proc/{}/stat", pid.get())).map_err(|source| {
-        if source.kind() == io::ErrorKind::NotFound {
-            StartTokenError::ProcessGone { pid: pid.get() }
-        } else {
-            StartTokenError::Unreadable { source }
-        }
-    })?;
-    // The command name may contain spaces or parentheses; fields resume after the last ')'.
-    // `starttime` is field 22 overall, the 20th field after the name.
-    let (_, fields) = stat.rsplit_once(')').ok_or(StartTokenError::Malformed)?;
-    let start_ticks = fields
-        .split_whitespace()
-        .nth(19)
-        .and_then(|raw| raw.parse::<u64>().ok())
-        .ok_or(StartTokenError::Malformed)?;
-    let boot_id = std::fs::read_to_string("/proc/sys/kernel/random/boot_id")
-        .map_err(|source| StartTokenError::Unreadable { source })?;
-    Ok(format!("linux:{}:{start_ticks}", boot_id.trim()))
-}
-
-#[cfg(not(target_os = "linux"))]
-fn os_start_token(pid: ProcessId) -> Result<String, StartTokenError> {
-    let output = std::process::Command::new("/bin/ps")
-        .args(["-o", "lstart=", "-p", &pid.get().to_string()])
-        .env("LC_ALL", "C")
-        .output()
-        .map_err(|source| StartTokenError::Unreadable { source })?;
-    if !output.status.success() {
-        return Err(StartTokenError::ProcessGone { pid: pid.get() });
-    }
-    let text = String::from_utf8(output.stdout).map_err(|_| StartTokenError::Malformed)?;
-    let started = text.split_whitespace().collect::<Vec<_>>().join(" ");
-    if started.is_empty() {
-        return Err(StartTokenError::Malformed);
-    }
-    Ok(format!("lstart:{started}"))
+    super::os::start_token(pid)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::process::Command;
+    use std::process::{Child, Command, Stdio};
 
     use super::{ProcessId, read_start_token};
+
+    /// A child that exits at once on every operating system: this test binary,
+    /// re-invoked to list its tests.
+    fn exiting_child() -> Child {
+        Command::new(std::env::current_exe().expect("test binary path"))
+            .arg("--list")
+            .stdout(Stdio::null())
+            .spawn()
+            .expect("spawn child")
+    }
 
     #[test]
     fn token_is_stable_while_the_process_lives() {
@@ -123,16 +114,16 @@ mod tests {
     }
 
     #[test]
-    fn reaped_process_reports_process_gone() {
-        let mut child = Command::new("/bin/sh")
-            .args(["-c", "exit 0"])
-            .spawn()
-            .expect("spawn child");
+    fn an_exited_child_reports_process_gone() {
+        let mut child = exiting_child();
         let pid = ProcessId::new(child.id());
         assert!(child.wait().expect("child exit").success());
 
-        let error = read_start_token(pid).expect_err("reaped pid has no token");
+        // Unix reaped the PID; Windows still holds the process handle in `child`, so the
+        // object exists and only its exit code shows that the process ended.
+        let error = read_start_token(pid).expect_err("an ended process has no token");
 
         assert_eq!(error.kind(), "process_gone");
+        drop(child);
     }
 }

@@ -1,7 +1,5 @@
 //! Read-only native process sampling and process-bound agent authority.
 
-#[cfg(target_os = "linux")]
-mod linux;
 mod proof;
 
 use ovis_terminal_authz::{AccessRequest, Action, Session};
