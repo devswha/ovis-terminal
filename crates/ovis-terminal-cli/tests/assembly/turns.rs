@@ -136,12 +136,29 @@ fn a_status_report_racing_a_state_wait_settles_it_with_the_reported_seq() -> Tes
 
 /// The runtime idles in its job wait for ten minutes, so nothing applies delivered status
 /// between jobs: the wait sent after the report's reply is the next job, and it observes the
-/// report only because every job first applies the status delivered before it.
+/// report only because every job first applies the status delivered before it. The stretched
+/// idle also defers holder output, so the program hands its token over a FIFO, not the screen.
 #[test]
 fn a_wait_sent_after_a_status_reports_reply_is_already_satisfied() -> TestResult {
     let served = Served::start_with(&["--qa-holder-poll-ms", "600000"])?;
-    served.run_shell("shell")?;
-    let token = spawned_token(&served)?;
+    let fifo = served.root().join("token");
+    rustix::fs::mkfifoat(
+        rustix::fs::CWD,
+        &fifo,
+        rustix::fs::Mode::RUSR | rustix::fs::Mode::WUSR,
+    )?;
+    let script = format!(
+        "printf %s \"$OVIS_TERMINAL_PROCESS_TOKEN\" > '{}'; exec cat",
+        fifo.display()
+    );
+    call(
+        &served,
+        "terminal.run",
+        &json!({"op_id": op_id()?, "program": {"argv": ["/bin/sh", "-c", script]},
+            "geometry": {"cols": 80, "rows": 24}, "cwd": "/tmp", "env": {"PATH": "/usr/bin:/bin"},
+            "name": "agent"}),
+    )?;
+    let token = std::fs::read_to_string(&fifo)?;
     call(
         &served,
         "agent.register",
