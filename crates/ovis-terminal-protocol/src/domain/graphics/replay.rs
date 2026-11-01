@@ -68,7 +68,8 @@ impl GraphicsReleased {
 pub struct GraphicsReplayedData {
     /// Raw output offsets of the re-sent sequences, in the order the paint sent them.
     pub replayed: Vec<ByteOffset>,
-    /// The most recently released sequences, oldest first, at most 64.
+    /// The most recently released sequences, at most 64, in receipt order (by
+    /// `output_offset`), however output was split into reads.
     pub released: Vec<GraphicsReleased>,
 }
 

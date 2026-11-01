@@ -16,7 +16,8 @@ use crate::engine::units::OutputOffset;
 pub struct ImagePlace {
     /// Screen it is on.
     pub buffer: ScreenBuffer,
-    /// Zero-based row of the cell its sequence began at, as the screen shows it now.
+    /// Zero-based row its placement starts at on screen now: the row its sequence began
+    /// at, or the first covered row still visible once that row scrolled off.
     pub row: u16,
     /// Zero-based column of that cell.
     pub column: u16,
@@ -67,13 +68,13 @@ impl Images {
             .map(|entry| RetainedImage {
                 key: entry.key,
                 protocol: entry.protocol,
-                place: entry.anchor.map(|anchor| ImagePlace {
+                place: entry.anchor.as_ref().map(|anchor| ImagePlace {
                     buffer: if anchor.alternate {
                         ScreenBuffer::Alternate
                     } else {
                         ScreenBuffer::Primary
                     },
-                    row: u16::try_from(anchor.line).unwrap_or(u16::MAX),
+                    row: u16::try_from(anchor.line()).unwrap_or(u16::MAX),
                     column: u16::try_from(anchor.column).unwrap_or(u16::MAX),
                     rows: entry.extent.0.max(1),
                     columns: entry.extent.1.max(1),

@@ -1,5 +1,6 @@
 //! Which images the engine retains, where it places them and why it releases them.
 
+mod footprint;
 mod paint;
 
 use alacritty_terminal::term::cell::Flags;
@@ -30,7 +31,7 @@ pub(super) fn keys(vt: &Vt) -> Vec<u64> {
         .collect()
 }
 
-fn released(vt: &Vt, key: u64) -> Option<ImageRelease> {
+pub(super) fn released(vt: &Vt, key: u64) -> Option<ImageRelease> {
     vt.images().release_of(OutputOffset::new(key))
 }
 

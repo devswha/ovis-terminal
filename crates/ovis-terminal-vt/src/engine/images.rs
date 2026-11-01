@@ -3,9 +3,10 @@
 //! alacritty keeps no image state: an APC is skipped, and a sixel `DCS q` and an
 //! `OSC 1337` are unhandled (`docs/evidence/task-84/before.log`). This module reads each
 //! Kitty, iTerm2 or sixel sequence by its header only, keyed by the raw offset where it
-//! began, and remembers where it was placed: the cursor cell at receipt. A placement is
-//! released when its anchor row leaves the visible screen, when its anchor cell is
-//! erased or overwritten, when its alternate screen is left, when a Kitty `a=d` names it
+//! began, and remembers where it was placed: the rows and columns its header declares
+//! (one cell when it declares none) from the cursor cell at receipt. A placement is
+//! released when every row it covers has left the visible screen, when any cell it covers
+//! is erased or overwritten, when its alternate screen is left, when a Kitty `a=d` names it
 //! or a transmission reuses its id, on RIS, or when more than [`IMAGE_LIMIT`] images are
 //! retained. A paint names where each image still shown is re-sent; the bytes
 //! themselves are kept by the terminal's image store, never here.
@@ -43,9 +44,9 @@ const RELEASED_LIMIT: usize = 4096;
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ImageRelease {
-    /// Its anchor row left the visible screen.
+    /// Every row it covered left the visible screen.
     ScrolledOut,
-    /// Its anchor cell was erased or overwritten, or its alternate screen was left.
+    /// A cell it covered was erased or overwritten, or its alternate screen was left.
     Erased,
     /// A Kitty `a=d` command named it.
     Deleted,
@@ -65,7 +66,7 @@ pub struct ImageSplice {
     pub at: usize,
     /// The image: the raw offset where its sequence began.
     pub key: OutputOffset,
-    /// Bytes sent first: a cursor position on its anchor cell, empty for a
+    /// Bytes sent first: a cursor position on its first visible covered cell, empty for a
     /// transmission that displays nothing itself.
     pub cursor: Vec<u8>,
 }
@@ -93,7 +94,7 @@ impl KittyRef {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct Entry {
     key: OutputOffset,
     protocol: GraphicsProtocol,
@@ -178,7 +179,7 @@ impl Images {
     }
 
     fn place(&mut self, mut entry: Entry, placing: &mut Placing<'_>) {
-        entry.anchor = Some(Anchor::place(placing));
+        entry.anchor = Some(Anchor::place(placing, entry.extent));
         self.entries.push_back(entry);
     }
 

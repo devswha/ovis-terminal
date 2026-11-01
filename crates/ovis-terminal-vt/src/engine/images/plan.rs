@@ -1,6 +1,7 @@
 //! Which retained images a paint re-sends, and where.
 //!
-//! A placement is re-sent when its anchor is still marked on the painted screen; a Kitty
+//! A placement is re-sent while its footprint is intact on the painted screen, at the
+//! first row of it still visible (its anchor row unless that scrolled off); a Kitty
 //! put also needs the transmission it displays, which is re-sent first, at its own place
 //! in receipt order. A put whose image only arrived with an `a=T` that is no longer
 //! shown has nothing to display and is skipped.
@@ -30,6 +31,7 @@ impl Images {
             .filter(|(_, entry)| {
                 entry
                     .anchor
+                    .as_ref()
                     .is_some_and(|anchor| anchor.alternate == alternate && anchor.still(grid))
             })
             .map(|(index, _)| index)
@@ -78,10 +80,10 @@ impl Images {
 }
 
 fn splice(entry: &Entry, at: usize) -> ImageSplice {
-    let cursor = entry.anchor.map_or_else(Vec::new, |anchor| {
+    let cursor = entry.anchor.as_ref().map_or_else(Vec::new, |anchor| {
         format!(
             "\x1b[{};{}H",
-            anchor.line.saturating_add(1),
+            anchor.line().saturating_add(1),
             anchor.column.saturating_add(1)
         )
         .into_bytes()

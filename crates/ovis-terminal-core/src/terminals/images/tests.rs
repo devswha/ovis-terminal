@@ -178,6 +178,21 @@ fn an_image_released_before_its_bytes_arrive_is_still_reported_once() {
 }
 
 #[test]
+fn releases_are_listed_in_receipt_order_however_reads_were_split() {
+    let (mut vt, keys) = drawn(1);
+    let mut store = store(1024);
+    let first = keys.first().copied().expect("drawn");
+    drop(store.admit(unit(first, 1), &vt.images()));
+    let second = vt.offset();
+    drop(vt.feed(&image(2)));
+    drop(vt.feed("\r\n".repeat(8).as_bytes()));
+    assert_eq!(store.admit(unit(second, 2), &vt.images()), None);
+    store.sync(&vt.images());
+    let order: Vec<u64> = released(&store).into_iter().map(|(key, _)| key).collect();
+    assert_eq!(order, [first.get(), second.get()]);
+}
+
+#[test]
 fn the_released_list_is_bounded() {
     let (vt, keys) = drawn(1);
     let key = keys.first().copied().expect("drawn");

@@ -125,20 +125,27 @@ pub(crate) async fn an_on_screen_image_is_replayed_byte_identical_after_a_reatta
 pub(crate) async fn a_scrolled_off_image_is_not_replayed() -> TestResult {
     let mut fx = Fixture::new(StreamLimits::advertised(&Limits::v1()), SESSION).await?;
     fx.issue("phone", &[Permission::Observe])?;
-    // Given an image followed by more lines than the 8-row screen holds, in one read so
-    // the image is already scrolled off when its bytes reach the store,
+    // Given an image in one read, then a sixel and more lines than the 8-row screen holds
+    // in the next, so the sixel is already scrolled off when its bytes reach the store,
     let kitty = kitty_series(5);
     let lines = "line\r\n".repeat(12);
-    fx.publish(&[kitty.as_slice(), b"\r\n", lines.as_bytes()].concat())?;
+    fx.publish(&[kitty.as_slice(), b"\r\n"].concat())?;
+    fx.publish(&[SIXEL, b"\r\n", lines.as_bytes()].concat())?;
     // When a viewer attaches,
     let late = reattach(&mut fx, "replay-2", b" after").await?;
-    // Then the image is not re-sent, and the record names it scrolled out.
+    // Then neither is re-sent, and the record names both scrolled out.
     assert_eq!(position(&late.received, b"\x1b_G"), None);
+    assert_eq!(position(&late.received, SIXEL), None);
     let notice = replayed(&late)?;
     assert_eq!(at(&notice, "/replayed"), &json!([]));
+    let sixel = offset_of(&fx, SIXEL)?;
     assert_eq!(
         released(&notice),
-        [("0".to_owned(), "scrolled_out".to_owned())]
+        [
+            ("0".to_owned(), "scrolled_out".to_owned()),
+            (sixel, "scrolled_out".to_owned())
+        ],
+        "in receipt order, though the sixel was released first"
     );
     fx.close().await
 }

@@ -106,11 +106,37 @@ macOS stress (lane `graphics-replay`):
 - Run https://github.com/devswha/ovis-terminal/actions/runs/41357513948 at `fe06883` (the pre-fix head): iterations 1-21 passed, and iteration 22 failed 1 of 2 `graphics/replay` cases (78 of 80 assertions recorded). The artifact uploads only the lane log, so the failing step cannot be read from it. It is consistent with the round-2 coalesced-read race, but that is not proven.
 - Re-dispatched once on the fixed head: https://github.com/devswha/ovis-terminal/actions/runs/41361113759 at `2c5e277`, `RESULT 25/25`.
 
-Independent review: the orchestrator ran the terra (gpt-6.1) adversarial review on `2c5e277`. Its two findings in the VT anchor model are with the gate for a ruling, and both were already disclosed under Risks:
+Independent review: the orchestrator ran the terra (gpt-6.1) adversarial review on `2c5e277`. Its two findings in the VT anchor model were ruled blockers and are fixed in round 3:
 1. Writes inside an image's footprint but outside its anchor cell do not expire it.
 2. An image is dropped when its anchor row scrolls off, even if a lower row is still visible.
 
-Deviation: the block says to expire an entry "when its rows scroll out of the scrollback window". This PR expires it when its anchor row leaves the visible screen. The attach paint re-sends visible rows only, so an image whose anchor is in scrollback has no position a paint can place it at. This is stricter than the block and is the same question as finding 2.
+Deviation (resolved in round 3): an image is now kept while any of its covered rows is on screen, and replayed at the first such row. An image whose rows are all in scrollback still has no position an attach paint, which re-sends visible rows only, can place it at.
+
+## Round 3: replay record order, and the footprint as the placement
+
+**(A) CI failure on `faf8e02`.** `test (ubuntu-latest)` failed in `suite::every_scenario_file_is_executed_or_a_listed_declaration`: `graphics/replay` case `failure`, step 20, `graphics/replayed/graphics_replayed/released`. Actual `[{"output_offset":"142","reason":"scrolled_out"},{"output_offset":"2","reason":"scrolled_out"}]`, expected `[2, 142]` (job 125016011788). **Cause:** on the loaded runner, the Kitty image (key 2) arrived in an earlier read and was stored. The sixel (key 142) arrived in the same read as the 200 lines, so `ImageStore::admit` recorded it as released at once, and Kitty's release was recorded only by the `sync` after it. The record's order depended on read splits. **Fix:** `ImageStore::released()` lists releases in receipt order (by `output_offset`), which does not depend on read splits. The wire doc of `GraphicsReplayedData.released` now says so (schema description only; `openrpc compat` exit 0; SDK regenerated). **Deterministic tests:**
+- core `releases_are_listed_in_receipt_order_however_reads_were_split`.
+- The socket test `replay_a_scrolled_off_image_is_not_replayed` now publishes the Kitty image in one read and the sixel plus 12 lines in the next, which is the CI interleaving, and asserts `released == [(0, scrolled_out), (sixel, scrolled_out)]`.
+
+**(B) terra's two VT anchor-model defects** (`.omo/evidence/ovis-terminal-v1-task-84-adversarial.md`), fixed in `crates/ovis-terminal-vt/src/engine/images/anchor.rs`:
+1. A placement is now its whole declared footprint: Kitty `r=`/`c=`, iTerm2 `height`/`width` in cells, one cell otherwise, clipped to the grid. Every covered cell carries the mark. Erasing or overwriting any covered cell expires the image (`erased`), so a write inside the footprint but off the anchor no longer leaves an overwritten image to be re-painted. Test: `footprint::a_write_inside_the_footprint_but_off_the_anchor_expires_the_image` covers CUP into the second row, EL inside the footprint, and writes beside and below that keep it.
+2. Every covered row is followed by its buffer address, and an image stays shown while any covered row is visible. It is released `scrolled_out` only when all have left. A paint re-sends it at its first visible covered row, clamped (`ImagePlace.row` reports that row). Test: `footprint::an_image_survives_while_any_of_its_rows_is_on_screen_and_replays_there` uses terra's case: a 2-row image and 4 CRLFs on a 4-row grid is retained at row 0, its splice cursor is `ESC[1;1H`, and one more CRLF gives `scrolled_out`. Also `footprint::a_footprint_is_clipped_to_the_grid`.
+
+The store bound is unchanged (the byte cap with oldest-first eviction, `IMAGE_LIMIT`, and the bounded release lists).
+
+Mutants (each applied alone and restored; logs committed). All three fail shipped tests:
+- `mutant-r3-released-not-in-receipt-order.log` (no sort): 2 fail (the core order test and the socket test).
+- `mutant-r3-anchor-cell-only.log` (only the anchor column marked): 6 fail, including all 3 footprint tests.
+- `mutant-r3-anchor-row-only.log` (only the anchor row followed): 2 fail (both footprint defect tests).
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo nextest run -p ovis-terminal-vt -p ovis-terminal-core -p ovis-terminal-server --locked --no-fail-fast images replay` | 0 | 54 run, 54 passed (`r3-tests.log`) |
+| `conformance --binary $CARGO_TARGET_DIR/debug/ovis-terminal --scenario graphics/replay --isolated --case happy` / `--case failure --inject '{"graphics":{"scroll_rows":"200"}}'` / `--case all` | 0 / 0 / 0 | regenerated `qa-happy.json`, `qa-failure.json`, `conformance.json`: 2 cases, 80 assertions, failed 0 |
+| `openrpc write` + `compat schema/released.openrpc.json`; `quality-matrix --mode contract` / `--mode verify` | 0 | compatible; `"verdict": "pass"` |
+| `cd packages/client-ts && bun install --frozen-lockfile && bun run generate && bun run generate:check && bun run typecheck && bun test` | 0 | 47 pass, 0 fail (`sdk.log`). The first local attempt failed 3 packaged-artifact tests against a stale ignored `pack/` tarball cached from round 1, which still carried the old description. With `pack/` and `dist/` removed, the single gate run passed. CI packs fresh |
+| `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` | 0 | 1533 run, 1533 passed, 2 skipped; hygiene 0 violations in 1528 files (`r3-check.log`) |
+| `RUSTFLAGS=-Dwarnings cargo check ... x86_64-pc-windows-gnu` / `cargo clippy ... -- -D warnings` | 0 / 0 | `r3-windows-check.log` |
 
 ## Seams
 
@@ -132,8 +158,8 @@ Files outside the write scope, and why:
 ## Risks
 
 - **The replay is at the VT's anchor, not the client's cursor model.** alacritty does not move the cursor for an image, while xterm.js/kitty do. Two images printed back to back therefore share an anchor in the VT, and the replay draws the second at the first one's cell, where the live client drew it below. Text after an image is placed by the VT's model both live and on replay, so this inherits the existing divergence between the VT grid and the client. A sixel or iTerm2 image re-sent at the bottom rows may also make the client scroll the painted grid.
-- **Only the anchor cell decides liveness.** The footprint from the header is reported in `ImagePlace` (rows and columns). A clear that covers the footprint but not the anchor keeps the image, and text printed into the footprint keeps it too. This was chosen because the VT cursor stays inside the image after a Kitty `a=T`, so marking the footprint would release almost every image on the next prompt.
-- **Images whose anchor row scrolled off but whose lower rows are still visible are released.** A paint can only position from visible rows.
+- **The VT cursor never moves past an image, but clients' cursors do.** Since round 3 any write into a covered cell expires the image. So text a program prints right after a multi-row image (for example `imgcat` then newline then the prompt) lands inside the footprint in the VT and expires it, while the client drew that text below the image. That image is then not re-sent on reattach. This is the conservative side of terra finding 1: an image is never re-painted over text the VT says covers it. Making the VT advance its cursor the way clients do would change the authoritative grid and is out of this todo.
+- **A partly scrolled-off image is re-sent at its first visible row.** That is the clamped position, so a client draws the whole image from there, which can push it lower than it was drawn live.
 - **Kitty commands are re-sent byte-identical, so `i=` without `q=` makes a client answer again.** An interact client could forward that answer as input. The bytes are not rewritten, because the contract says byte-identical.
 - **The store is in memory only.** A planned control restart or a recovery from checkpoint starts with an empty store and replays nothing; a restored engine has no placements. Persisting would need its own store entries, and is left out.
 - **No `graphics.evicted` / `graphics.dropped` event is committed to the event log.** Both are reported only as in-stream records, as T83 left them.

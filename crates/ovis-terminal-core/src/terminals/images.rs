@@ -186,9 +186,12 @@ impl ImageStore {
             .map(|entry| entry.pieces.as_slice())
     }
 
-    /// The most recently released sequences, oldest first.
+    /// The most recently released sequences, in receipt order (by the raw offset each
+    /// began at), so the list never depends on how output was split into reads.
     pub fn released(&self) -> Vec<GraphicsReleased> {
-        self.released.iter().cloned().collect()
+        let mut list: Vec<GraphicsReleased> = self.released.iter().cloned().collect();
+        list.sort_by_key(|item| item.output_offset.get());
+        list
     }
 
     /// Bytes retained now; never above the store cap after [`ImageStore::admit`].
