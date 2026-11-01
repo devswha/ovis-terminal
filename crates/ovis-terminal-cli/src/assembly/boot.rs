@@ -41,11 +41,13 @@ pub(super) type LeaseLog = Coordinator<LeaseEvent, NoSections>;
 /// Committed geometry transitions of every terminal.
 pub(super) type GeometryLog = Coordinator<GeometryEvent, NoSections>;
 
-/// The owner bearer and an observe-only bearer, printed once in the ready line.
+/// The owner bearer, an observe-only bearer and a writer bearer (observe, type, answer
+/// prompts), printed once in the ready line.
 #[derive(Debug)]
 pub(super) struct Bearers {
     pub(super) owner: String,
     pub(super) observer: String,
+    pub(super) writer: String,
 }
 
 /// Everything started before the endpoint is bound.
@@ -74,10 +76,11 @@ fn identity() -> Result<RuntimeIdentity, AssemblyError> {
     ))
 }
 
-/// Issues a bearer that may only observe the machine, authorized by the owner bearer.
-fn observer(
+/// Issues a bearer holding exactly `grants` on the machine, authorized by the owner bearer.
+fn delegate(
     authority: &Authority<RegistryIdentities>,
     (owner, machine): (&str, MachineId),
+    (label, grants): (&str, &[Permission]),
 ) -> Result<String, AssemblyError> {
     let now = TimestampMs::new(1);
     let admission = EndpointPolicy::new(LocalAccount::Unix(UnixUid::new(
@@ -89,15 +92,20 @@ fn observer(
         .authenticate(&admission, Presentation::new(owner, now))
         .map_err(AssemblyError::start("authenticate the issuing owner"))?;
     let principal =
-        PrincipalId::parse("observer").map_err(AssemblyError::start("observer principal"))?;
-    let grant = Grant::new(
-        Permission::Observe,
-        ResourceScope::new(machine, ScopeResource::Machine),
-    );
-    let request = IssueRequest::new(principal, vec![grant], TimestampMs::new(u64::MAX));
+        PrincipalId::parse(label).map_err(AssemblyError::start("delegate principal"))?;
+    let grants = grants
+        .iter()
+        .map(|permission| {
+            Grant::new(
+                *permission,
+                ResourceScope::new(machine, ScopeResource::Machine),
+            )
+        })
+        .collect();
+    let request = IssueRequest::new(principal, grants, TimestampMs::new(u64::MAX));
     let issued = authority
         .issue(&owner, Issuance::new(request, now))
-        .map_err(AssemblyError::start("issue the observer bearer"))?;
+        .map_err(AssemblyError::start("issue a delegate bearer"))?;
     Ok(issued.bearer().to_owned())
 }
 
@@ -118,7 +126,23 @@ pub(super) fn boot(state: &Path) -> Result<Booted, AssemblyError> {
     .map_err(AssemblyError::start("bootstrap the authority"))?;
     let authority = Arc::new(authority);
     let bearers = Bearers {
-        observer: observer(&authority, (issued.bearer(), identity.machine_id()))?,
+        observer: delegate(
+            &authority,
+            (issued.bearer(), identity.machine_id()),
+            ("observer", &[Permission::Observe]),
+        )?,
+        writer: delegate(
+            &authority,
+            (issued.bearer(), identity.machine_id()),
+            (
+                "writer",
+                &[
+                    Permission::Observe,
+                    Permission::Interact,
+                    Permission::PromptAnswer,
+                ],
+            ),
+        )?,
         owner: issued.bearer().to_owned(),
     };
     let descriptor = HolderDescriptor::new(

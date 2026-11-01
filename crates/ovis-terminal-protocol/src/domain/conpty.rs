@@ -122,7 +122,7 @@ impl ConptyLaunch {
     /// [`Self::with_env`].
     pub fn admit(params: &TerminalRunParams) -> Result<Self, ConptyLaunchError> {
         let grid = ConptyGrid::new(params.geometry.cols, params.geometry.rows)?;
-        let LaunchProgram::Argv(argv) = &params.program else {
+        let Some(LaunchProgram::Argv(argv)) = &params.program else {
             return Err(ConptyLaunchError::TemplateUnresolved);
         };
         let cwd = params.cwd.clone().ok_or(ConptyLaunchError::InvalidCwd)?;

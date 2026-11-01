@@ -23,6 +23,7 @@ mod ops;
 mod pump;
 mod records;
 mod resync;
+pub mod scheduler;
 mod upstream;
 mod viewer;
 

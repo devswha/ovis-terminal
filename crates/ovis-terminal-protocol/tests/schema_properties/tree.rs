@@ -39,6 +39,15 @@ pub enum Node {
     Nullable(Box<Self>),
     /// A schema reached through a component reference.
     Ref(Box<Self>),
+    /// A schema stated as the only member of an intersection nested in another.
+    Within(Box<Self>),
+    /// A value or null, with an optional pattern beside the union.
+    Guarded {
+        /// The non-null member.
+        child: Box<Self>,
+        /// Pattern every string value matches, stated beside `anyOf`.
+        pattern: Option<String>,
+    },
 }
 
 /// Strategy for schema trees up to four levels deep.
@@ -73,7 +82,16 @@ pub fn node() -> impl Strategy<Value = Node> {
             inner
                 .clone()
                 .prop_map(|child| Node::Nullable(Box::new(child))),
-            inner.prop_map(|child| Node::Ref(Box::new(child))),
+            inner.clone().prop_map(|child| Node::Ref(Box::new(child))),
+            inner
+                .clone()
+                .prop_map(|child| Node::Within(Box::new(child))),
+            (inner, prop::option::of(Just("^a".to_owned()))).prop_map(|(child, pattern)| {
+                Node::Guarded {
+                    child: Box::new(child),
+                    pattern,
+                }
+            }),
         ]
     })
 }
@@ -116,6 +134,10 @@ impl Renderer {
                 json!({"type": "array", "items": self.render(items), "maxItems": max_items})
             }
             Node::Nullable(child) => json!({"anyOf": [self.render(child), {"type": "null"}]}),
+            Node::Within(child) => json!({"allOf": [{"allOf": [self.render(child)]}]}),
+            Node::Guarded { child, pattern } => {
+                json!({"anyOf": [self.render(child), {"type": "null"}], "pattern": pattern})
+            }
             Node::Ref(child) => {
                 let name = format!("Def{}x", self.definitions.len());
                 self.definitions.insert(name.clone(), Value::Null);

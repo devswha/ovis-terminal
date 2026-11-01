@@ -6,6 +6,7 @@ pub mod inject;
 pub mod page;
 pub mod process;
 pub mod pty;
+pub mod redact;
 pub mod root;
 pub mod run;
 pub mod session;

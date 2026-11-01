@@ -11,7 +11,7 @@ use tokio::sync::watch;
 use super::core::ConnectionCore;
 use super::driver::{DriverContext, drive};
 use super::hello::Shared;
-use super::{ConnectionError, RequestHandler, ServerIdentity};
+use super::{ConnectionError, Ending, RequestHandler, ServerIdentity};
 use crate::listen::EndpointError;
 
 /// Everything the connections of one server share, and the signal that closes them.
@@ -21,7 +21,7 @@ pub struct Connections<H> {
     handler: Arc<H>,
     max_in_flight: usize,
     unwritten_bytes: u64,
-    signal: watch::Sender<bool>,
+    signal: watch::Sender<Option<Ending>>,
 }
 
 impl<H: RequestHandler> Connections<H> {
@@ -43,7 +43,7 @@ impl<H: RequestHandler> Connections<H> {
                 limit: "max_in_flight_requests",
             })?;
         let unwritten_bytes = identity.limits().connection_unwritten_bytes.get();
-        let (signal, _) = watch::channel(false);
+        let (signal, _) = watch::channel(None);
         Ok(Self {
             shared: Arc::new(Shared {
                 authority,
@@ -78,8 +78,15 @@ impl<H: RequestHandler> Connections<H> {
         drive(stream, core, context)
     }
 
-    /// Closes every served connection with `$/closing` and cancels its requests.
+    /// Closes every served connection with `$/closing{reason: "server_shutdown"}` and
+    /// cancels its requests.
     pub fn shutdown(&self) {
-        self.signal.send_replace(true);
+        self.end(Ending::Shutdown);
+    }
+
+    /// Closes every served connection with the `$/closing` record of `ending` and cancels
+    /// its requests.
+    pub fn end(&self, ending: Ending) {
+        self.signal.send_replace(Some(ending));
     }
 }

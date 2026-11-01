@@ -150,6 +150,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         "socket": socket,
         "bearer": booted.bearers.owner,
         "observer": booted.bearers.observer,
+        "writer": booted.bearers.writer,
     });
     if let (Some(listener), Value::Object(fields)) = (&websocket, &mut ready) {
         fields.insert(

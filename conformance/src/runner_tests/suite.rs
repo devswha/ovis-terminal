@@ -6,13 +6,17 @@ use serde_json::Value;
 
 use super::support::{TestResult, Tree, conformance, field, scenario, strings};
 
-const EXECUTABLE: [&str; 16] = [
+const EXECUTABLE: &[&str] = &[
     "_runner/self-test.json",
     "agent/binding.json",
+    "agent/bridge.json",
+    "agent/launch.json",
     "agent/prompts.json",
     "agent/status.json",
+    "agent/tree.json",
     "all/all.json",
     "part-a/task-21.json",
+    "part-a/task-29.json",
     "part-a/task-77.json",
     "part-a/task-78.json",
     "part-a/task-79.json",
@@ -23,6 +27,7 @@ const EXECUTABLE: [&str; 16] = [
     "protocol/multiplex.json",
     "protocol/pagination.json",
     "protocol/strict-target.json",
+    "security/rotation.json",
 ];
 
 /// Executable scenarios whose server is the assembled binary itself (plan todo 31).

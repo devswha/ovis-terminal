@@ -118,6 +118,7 @@ where
             op_id: op_id.clone(),
             access: prepared.access,
             decision: self.decision,
+            session: Arc::clone(&self.session),
             cancellation,
             notifier: self.notifier,
         };

@@ -26,12 +26,25 @@ pub mod support;
 /// Explicit and ambiguous registry targets.
 pub mod targeting;
 
+#[path = "../src/dispatch/lanes/agent_tree/qa.rs"]
+/// Children listed by the parent's current program incarnation.
+pub mod agent_tree;
+#[path = "../src/dispatch/lanes/credential_rotation/qa.rs"]
+/// Credential rotation and per-request revalidation over a real socket.
+pub mod credential_rotation;
+#[path = "../src/dispatch/lanes/credential_rotation/rig.rs"]
+pub mod credential_rotation_rig;
 #[path = "../src/dispatch/lanes/prompts/qa.rs"]
 /// The prompt lane's independent answer authorization over a real socket.
 pub mod prompts;
 #[path = "../src/dispatch/lanes/session_binding/qa.rs"]
 /// The session binding lane over a real dispatcher and socket.
 pub mod session_binding;
+#[path = "../src/dispatch/lanes/template_launch/qa.rs"]
+/// The template launch lane: readiness gating and write-boundary rechecks on the wire.
+pub mod template_launch;
+#[path = "../src/dispatch/lanes/template_launch/memory.rs"]
+pub mod template_launch_memory;
 #[path = "../src/dispatch/lanes/worktrees/authority.rs"]
 /// The worktree lane's grant for destructive removal.
 pub mod worktree_authority;

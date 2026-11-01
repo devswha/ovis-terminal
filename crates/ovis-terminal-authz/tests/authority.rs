@@ -11,6 +11,8 @@ mod operations;
 mod reclamation;
 #[path = "authority/revocation.rs"]
 mod revocation;
+#[path = "authority/rotation.rs"]
+mod rotation;
 #[path = "authority/scoping.rs"]
 mod scoping;
 
