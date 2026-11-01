@@ -19,6 +19,7 @@ use ovis_terminal_core::registry::{
 };
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_server::authn::Revalidated;
+use ovis_terminal_server::dispatch::lanes::health::Measured;
 use ovis_terminal_server::dispatch::lanes::prompt_bridge::{Gated, PromptBridgeGate};
 use ovis_terminal_server::listen::{ServeReport, ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
@@ -100,6 +101,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let fleet = (runtime, Arc::clone(&core));
     let machines = super::machines::register(&mut dispatch, (&agents, &gate), fleet).await?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
+    let health = super::health::register(&mut dispatch, runtime, root)?;
     let held = super::update::register(&mut dispatch, (root, &authority, issued.bearer()), runtime)
         .await?;
     let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
@@ -112,6 +114,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         extension: Extension::new(bridge, Arc::clone(&core)),
         sequenced,
         tree,
+        health: Arc::clone(&health),
         machines,
         programs,
     };
@@ -128,17 +131,14 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let endpoint = UnixEndpoint::bind(&socket)
         .await
         .map_err(at("bind the socket"))?;
-    let revalidated = Revalidated::new(Arc::clone(&authority), gated);
+    let measured = Measured::new(Arc::clone(&health.health), Arc::new(gated));
+    let revalidated = Revalidated::new(Arc::clone(&authority), measured);
     let config = ServerConfig::new(authority, runtime);
     let server = serve_unix(endpoint, config, Arc::new(revalidated)).map_err(at("serve"))?;
     announce(&json!({"ready": {
         "socket": socket, "bearer": issued.bearer(), "observer": observer, "writer": writer,
     }}))?;
-    let mut sink = Vec::new();
-    tokio::io::stdin()
-        .read_to_end(&mut sink)
-        .await
-        .map_err(at("wait for the runner to close stdin"))?;
+    runner_closed_stdin().await?;
     let report = server
         .shutdown()
         .await
@@ -154,6 +154,16 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .map_err(at("join the store close"))?
         .map_err(at("close the store"))?;
     announce_report(&report)
+}
+
+/// Returns once the runner closes the fixture's stdin, its signal to stop serving.
+async fn runner_closed_stdin() -> Result<(), RunnerError> {
+    let mut sink = Vec::new();
+    tokio::io::stdin()
+        .read_to_end(&mut sink)
+        .await
+        .map_err(at("wait for the runner to close stdin"))?;
+    Ok(())
 }
 
 /// The coordinator over the run's SQLite store, sequencing as `runtime`.

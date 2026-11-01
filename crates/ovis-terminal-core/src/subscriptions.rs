@@ -10,6 +10,7 @@ mod consume;
 mod error;
 mod fanout;
 mod feed;
+mod gauge;
 mod hub;
 mod limits;
 mod loss;

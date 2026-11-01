@@ -31,6 +31,7 @@ impl<D> Table<D> {
             Phase::Active => {
                 let events: Vec<_> = entry.queue.drain(..).map(|(event, _)| event).collect();
                 let released = std::mem::take(&mut entry.bytes);
+                entry.report_taken(released);
                 if let Some(last) = events.last() {
                     entry.delivered = last.cursor.seq.get();
                 }
@@ -64,6 +65,8 @@ impl<D> Table<D> {
         let entry = self.find(id)?;
         entry.queue.clear();
         let released = std::mem::take(&mut entry.bytes);
+        entry.report_dropped(released);
+        entry.gauge = None;
         entry.phase = Phase::Closed;
         let closed = Closed::at(entry.delivered, entry.scan);
         self.session_bytes = self.session_bytes.saturating_sub(released);
@@ -98,6 +101,7 @@ impl<D> Table<D> {
         entry.scan = seq;
         entry.delivered = seq;
         entry.phase = Phase::Active;
+        entry.report_resynced(lost);
         Ok(Some(lost))
     }
 }
