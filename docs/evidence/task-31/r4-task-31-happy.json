@@ -1,0 +1,528 @@
+{
+  "binary": {
+    "bytes": "46781808",
+    "path": "/dev/shm/ovt-target-lane-t31/debug/ovis-terminal",
+    "sha256": "b66ca674136df08eca2d68dfda4a1c8591ec50d1dd99ad73ea6734f2b6df4e4c"
+  },
+  "case": "happy",
+  "cases": [
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": [
+            "hello",
+            "server.status",
+            "server.stop",
+            "server.restart",
+            "server.metrics",
+            "op.get",
+            "op.cancel",
+            "terminal.run",
+            "terminal.list",
+            "terminal.get",
+            "terminal.kill",
+            "terminal.rm",
+            "terminal.keep",
+            "terminal.recover",
+            "terminal.label",
+            "terminal.rename",
+            "terminal.process_info",
+            "terminal.screen",
+            "terminal.output",
+            "terminal.wait_output",
+            "input.send",
+            "input.keys",
+            "input.raw",
+            "input.paste",
+            "input.barrier",
+            "attach.open",
+            "attach.resize",
+            "attach.repaint",
+            "attach.credit",
+            "attach.close",
+            "attach.takeover",
+            "attach.leases",
+            "status.get",
+            "status.report",
+            "status.clear",
+            "prompt.list",
+            "prompt.get",
+            "prompt.open",
+            "prompt.answer",
+            "prompt.close",
+            "agent.register",
+            "agent.get",
+            "agent.update_session",
+            "agent.children",
+            "agent.conversation",
+            "agent.append_records",
+            "agent.records",
+            "agent.history",
+            "plugin.list",
+            "plugin.invoke",
+            "plugin.run_get",
+            "doc.get",
+            "doc.set",
+            "machine.add",
+            "machine.get",
+            "machine.rename",
+            "service.describe",
+            "update.stage",
+            "update.verify",
+            "update.activate",
+            "update.rollback",
+            "update.query",
+            "rpc.discover",
+            "schema.errors",
+            "schema.events",
+            "schema.capabilities",
+            "credential.rotate",
+            "credential.revoke"
+          ],
+          "check": "hello/result/methods",
+          "expected": {
+            "$contains": [
+              "attach.open",
+              "attach.resize",
+              "attach.leases",
+              "input.raw",
+              "terminal.run",
+              "terminal.get",
+              "server.status"
+            ]
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[run]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "spawned",
+          "check": "reply[run]/result/spawn",
+          "expected": "spawned",
+          "passed": true
+        },
+        {
+          "actual": "t1",
+          "check": "reply[run]/result/terminal/address",
+          "expected": "t1",
+          "passed": true
+        },
+        {
+          "actual": "live",
+          "check": "reply[run]/result/terminal/state",
+          "expected": "live",
+          "passed": true
+        },
+        {
+          "actual": [
+            "run"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "run"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "method_not_found",
+          "check": "reply[layout]/error/data/kind",
+          "expected": "method_not_found",
+          "passed": true
+        },
+        {
+          "actual": [
+            "layout"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "layout"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "mark-31",
+          "check": "pty[outer]/shows",
+          "expected": "mark-31",
+          "passed": true
+        },
+        {
+          "actual": "cli",
+          "check": "reply[held]/result/geometry_owner/holder",
+          "expected": "cli",
+          "passed": true
+        },
+        {
+          "actual": "cli",
+          "check": "reply[held]/result/interact/holder",
+          "expected": "cli",
+          "passed": true
+        },
+        {
+          "actual": [
+            "held"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "held"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "40 120",
+          "check": "pty[outer]/shows",
+          "expected": "40 120",
+          "passed": true
+        },
+        {
+          "actual": 0,
+          "check": "pty[outer]/exit",
+          "expected": 0,
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "pty[outer]/terminal_settings_restored",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": "detach_key",
+          "check": "pty/stderr/detached/reason",
+          "expected": "detach_key",
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "pty/stderr/detached/stream_closed",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": {
+            "geometry_owner": null,
+            "interact": null,
+            "observers": []
+          },
+          "check": "reply[released]/result",
+          "expected": {
+            "geometry_owner": null,
+            "interact": null,
+            "observers": []
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "released"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "released"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "3659",
+          "check": "connection[control]/bytes_received=bytes_decoded",
+          "expected": "3659",
+          "passed": true
+        },
+        {
+          "actual": {},
+          "check": "fixture/failures",
+          "expected": {},
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "happy",
+      "connections": [
+        {
+          "bytes_decoded": "3659",
+          "bytes_received": "3659",
+          "bytes_sent": "844",
+          "name": "control",
+          "records_received": "5",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "ab03103d3f6423e1dc1306984202a365b630f8b7586b25c1592898ef7f228490",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2251",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "a0e70ecdc6e140a26e6fca92c2b3cc7fba170d701f1a50757238dca3c33f3e87",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a19641-1d3d-7199-8557-893feb66715f\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793522213732\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1",
+              "bytes": "356",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "4cbfdce9f0bdfcb99f6e1e1993e84620f8a0f1f770f7d6f5bd8dcc6dbc75a889",
+              "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a19641-2365-73ed-aa25-b789fe3d1560\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "36",
+              "bytes": "871",
+              "direction": "received",
+              "offset": "2251",
+              "sha256": "9dbe2c230f63da423f26e75a60e1598c395343377840e38f522dc51e4c8f1191",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a19641-1d3d-7199-8557-893feb66715f\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2220973,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:2294961\",\"started_ms\":\"1793522213764\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "36",
+              "bytes": "66",
+              "direction": "sent",
+              "offset": "590",
+              "sha256": "3f0cdfbddf43d1dd431d7793861c95e842937b5cb987b30f1a8b1b95ddd36f5b",
+              "text": "{\"id\":\"layout\",\"jsonrpc\":\"2.0\",\"method\":\"layout.get\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "36",
+              "bytes": "219",
+              "direction": "received",
+              "offset": "3122",
+              "sha256": "b0c7b6d2295f5eb1caaf9edd7bfef41065dda99abc12e9f3f7a1c4d67ccc7772",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"layout\",\"error\":{\"code\":-32601,\"message\":\"no such JSON-RPC method\",\"data\":{\"kind\":\"method_not_found\",\"hint\":\"consult rpc.discover for supported methods\",\"retryable\":false,\"field_path\":\"method\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "91",
+              "bytes": "92",
+              "direction": "sent",
+              "offset": "656",
+              "sha256": "da848e059d1a6a65dcb9f6e42e95b004cac9344966a5727bfcee1066e844284c",
+              "text": "{\"id\":\"held\",\"jsonrpc\":\"2.0\",\"method\":\"attach.leases\",\"params\":{\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "92",
+              "bytes": "220",
+              "direction": "received",
+              "offset": "3341",
+              "sha256": "2eec6b11094a1e12424be5a58b8bad244c65ef157b5a2fddd31dcb641d17bbca",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"held\",\"result\":{\"geometry_owner\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:2\",\"role\":\"interact\"},\"interact\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"observers\":[]}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "135",
+              "bytes": "96",
+              "direction": "sent",
+              "offset": "748",
+              "sha256": "caa4270a65a915373525f41b0ea95206990d201c557905d218c7ead669aff64b",
+              "text": "{\"id\":\"released\",\"jsonrpc\":\"2.0\",\"method\":\"attach.leases\",\"params\":{\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "135",
+              "bytes": "98",
+              "direction": "received",
+              "offset": "3561",
+              "sha256": "6d3a04a2ad9c8f02c3ce323554aeca0887792350de70c0a7de27ffc8cae13285",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"released\",\"result\":{\"geometry_owner\":null,\"interact\":null,\"observers\":[]}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "5"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-039",
+          "GAP-040",
+          "GAP-041",
+          "GAP-042",
+          "GAP-044",
+          "GAP-045",
+          "GAP-056",
+          "GAP-057",
+          "GAP-137",
+          "GAP-145"
+        ],
+        "delivers": [
+          "IDEAL-028",
+          "IDEAL-029",
+          "IDEAL-030",
+          "IDEAL-031",
+          "IDEAL-033",
+          "IDEAL-037",
+          "IDEAL-055",
+          "IDEAL-110",
+          "IDEAL-111",
+          "IDEAL-114"
+        ],
+        "excludes": [
+          "EXCL-001",
+          "EXCL-002",
+          "EXCL-003",
+          "EXCL-007",
+          "EXCL-016",
+          "EXCL-027"
+        ],
+        "title": "Assembled binary and plain interactive attach client",
+        "todo": "31"
+      },
+      "descriptors": [
+        {
+          "descriptors": {
+            "args": "terminal attach --target t1",
+            "grid": "100x30",
+            "pty": "outer"
+          },
+          "source": "pty_open"
+        },
+        {
+          "descriptors": {
+            "bytes": "echo mark-$((30+1))\\r",
+            "pty": "outer"
+          },
+          "source": "pty_type"
+        },
+        {
+          "descriptors": {
+            "output": "mark-31",
+            "pty": "outer",
+            "retry_type": ""
+          },
+          "source": "pty_expect"
+        },
+        {
+          "descriptors": {
+            "grid": "120x40",
+            "pty": "outer"
+          },
+          "source": "pty_resize"
+        },
+        {
+          "descriptors": {
+            "output": "40 120",
+            "pty": "outer",
+            "retry_type": "stty size\\r"
+          },
+          "source": "pty_expect"
+        },
+        {
+          "descriptors": {
+            "bytes": "\\u{1c}",
+            "pty": "outer"
+          },
+          "source": "pty_type"
+        },
+        {
+          "descriptors": {
+            "exit": "0",
+            "pty": "outer",
+            "stderr": "Expect({\"/detached/reason\": Exact(String(\"detach_key\")), \"/detached/stream_closed\": Exact(Bool(true))})"
+          },
+          "source": "pty_exit"
+        }
+      ],
+      "elapsed_ms": "1820",
+      "failure": null,
+      "fixture": {
+        "accepted": "2",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-t31/debug/ovis-terminal",
+            "terminal",
+            "attach",
+            "--target",
+            "t1"
+          ],
+          "exit_code": 0,
+          "pid": null,
+          "role": "attach",
+          "stderr": {
+            "bytes": "116",
+            "sha256": "a6f94dfb728d3583265069eb24f3c0025b8cf0ca27b4984c915449a5c2f9212e",
+            "text": "{\"detached\":{\"reason\":\"detach_key\",\"stream_closed\":true,\"stream_id\":\"stream:01a19641-239b-77b2-b812-74bac25a5871\"}}\n"
+          },
+          "stdout": {
+            "bytes": "409",
+            "sha256": "d50e52fb22fa00607ff4e0eb5ea4fec59c5bc4be4c3a28e1dbb07b19faa5655f",
+            "text": "echo mark-$((30+1))\r\n\u001bc\u001b[1;1H\u001b[0;39;49m$\u001b[2;1H\u001b[3;1H\u001b[4;1H\u001b[5;1H\u001b[6;1H\u001b[7;1H\u001b[8;1H\u001b[9;1H\u001b[10;1H\u001b[11;1H\u001b[12;1H\u001b[13;1H\u001b[14;1H\u001b[15;1H\u001b[16;1H\u001b[17;1H\u001b[18;1H\u001b[19;1H\u001b[20;1H\u001b[21;1H\u001b[22;1H\u001b[23;1H\u001b[24;1H\u001b[1;1H\u001b[0;39;49m\u001b7\u001b[?25h\u001b[?1l\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1004l\u001b[?1005l\u001b[?1006l\u001b[?1007h\u001b[?1042h\u001b[?2004l\u001b[?6l\u001b[=0;1u\u001b[>4;0m\u001b[?9001l\u001b>\u001b[2 q\u001b[1;3H\u001b[?7h\u001b[4l\u001b[20l\u001b[0;39;49mecho mark-$((30+1))\r\nmark-31\r\n$ stty size\r\n40 120\r\n"
+          }
+        },
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-t31/debug/ovis-terminal",
+            "serve",
+            "--stdin-lifetime",
+            "--root",
+            "/tmp/ovc-2220236-0/srv"
+          ],
+          "exit_code": 0,
+          "pid": "2220766",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "part-a/task-31",
+      "summary": "Real ovis-terminal serve runs /bin/sh as t1; ovis-terminal terminal attach --target t1 on a real outer PTY types a marker the shell evaluates, follows a resize the inner PTY reports, detaches on Ctrl-\\ with exit 0; the outer terminal settings equal the originals and attach.leases is empty afterwards; an unrouted method answers method_not_found."
+    }
+  ],
+  "elapsed_ms": "3344",
+  "error": null,
+  "format": "ovis-conformance-evidence/1",
+  "host": {
+    "arch": "x86_64",
+    "family": "unix",
+    "os": "linux"
+  },
+  "inventory": null,
+  "result": "passed",
+  "runner_version": "0.1.0",
+  "scenario": "part-a/task-31",
+  "totals": {
+    "assertions": "23",
+    "cases": "1",
+    "declared_only": "0",
+    "failed": "0",
+    "passed": "1",
+    "skipped": "0"
+  }
+}
