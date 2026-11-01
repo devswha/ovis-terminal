@@ -1,0 +1,27 @@
+# origin/integration 8cab061, git archive of packages/client-ts + schema, bun 1.4.3, Linux x86_64
+$ cd packages/client-ts && bun run generate:check
+36 |   if (!ref.startsWith(REF_PREFIX)) {
+37 |     throw new GenerateError("unsupported_schema", `reference ${ref} is outside components.schemas`);
+38 |   }
+39 |   const name = ref.slice(REF_PREFIX.length);
+40 |   if (!/^[A-Z][A-Za-z0-9]*$/.test(name)) {
+41 |     throw new GenerateError("unsupported_schema", `component name ${name} is not a TypeScript identifier`);
+               ^
+GenerateError: component name Observed_Array_of_ProcessSample is not a TypeScript identifier
+ kind: "unsupported_schema",
+ hint: "extend the generator before publishing this schema",
+
+      at refName (<origin/integration 8cab061 checkout>/packages/client-ts/scripts/codegen/render.ts:41:11)
+      at render (<origin/integration 8cab061 checkout>/packages/client-ts/scripts/codegen/render.ts:68:40)
+      at <anonymous> (<origin/integration 8cab061 checkout>/packages/client-ts/scripts/codegen/render.ts:116:66)
+      at map (1:11)
+      at object (<origin/integration 8cab061 checkout>/packages/client-ts/scripts/codegen/render.ts:114:60)
+      at map (1:11)
+      at render (<origin/integration 8cab061 checkout>/packages/client-ts/scripts/codegen/render.ts:89:24)
+      at <anonymous> (<origin/integration 8cab061 checkout>/packages/client-ts/scripts/codegen/modules.ts:69:46)
+      at map (1:11)
+      at components (<origin/integration 8cab061 checkout>/packages/client-ts/scripts/codegen/modules.ts:57:6)
+
+Bun v1.4.3 (Linux x64)
+
+exit 1
