@@ -24,8 +24,7 @@ const READINGS: [Duration; 3] = [
 ];
 
 fn scratch() -> Result<PathBuf, std::io::Error> {
-    let base = std::env::var_os("OVIS_FIXTURE_ROOT")
-        .map_or_else(std::env::temp_dir, PathBuf::from);
+    let base = std::env::var_os("OVIS_FIXTURE_ROOT").map_or_else(std::env::temp_dir, PathBuf::from);
     let dir = base.join(format!("ovc-stamped-{}", uuid::Uuid::now_v7()));
     std::fs::create_dir_all(&dir)?;
     Ok(dir)
@@ -44,7 +43,9 @@ fn an_operation_stamped_at_a_reading_is_accepted_at_that_reading() -> TestResult
         let request = Request::new(op, "fixture.remote_child".to_owned(), json!({}))?;
         let accepted = Operations::new(&core, context).accept(&request);
         assert_eq!(
-            accepted.map(|record| record.state).map_err(|error| error.kind()),
+            accepted
+                .map(|record| record.state)
+                .map_err(|error| error.kind()),
             Ok(OpenEnum::Known(OpState::Accepted)),
             "reading {reading:?}"
         );
