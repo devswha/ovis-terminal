@@ -147,7 +147,10 @@ fn attach(args: super::args::AttachArgs) -> Result<crate::attach::AttachPlan, Cl
     )?;
     let params: ovis_terminal_protocol::schema::methods::attach::AttachLeasesParams =
         decode_params(&request).map_err(CliError::Params)?;
-    let client = serde_json::from_value(json!(args.client_id)).map_err(CliError::ParamsJson)?;
+    let label = args
+        .client_id
+        .unwrap_or_else(|| format!("cli-{}", std::process::id()));
+    let client = serde_json::from_value(json!(label)).map_err(CliError::ParamsJson)?;
     let takeover = args
         .takeover
         .map(|epoch| serde_json::from_value(json!(epoch)))

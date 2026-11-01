@@ -110,9 +110,10 @@ pub(super) struct AttachArgs {
     /// Take over the interact lease, naming the epoch it holds now; a stale epoch is refused.
     #[arg(long, value_name = "EPOCH", conflicts_with = "observe")]
     pub(super) takeover: Option<String>,
-    /// Client label the lease is recorded under.
-    #[arg(long, default_value = "cli")]
-    pub(super) client_id: String,
+    /// Client label the lease is recorded under; defaults to `cli-<pid>`, so two attach
+    /// processes never share an owner and compete for the interact lease.
+    #[arg(long)]
+    pub(super) client_id: Option<String>,
 }
 
 /// Exactly one explicit way to name the attached terminal.

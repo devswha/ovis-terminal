@@ -26,7 +26,8 @@ fn typed_input_reaches_the_program_resize_follows_and_ctrl_backslash_restores_th
     );
     assert_eq!(
         served.leases()?.pointer("/interact/holder"),
-        Some(&json!("cli"))
+        Some(&json!(format!("cli-{}", outer.client.id()))),
+        "the default client label is per process"
     );
     termios::tcsetwinsize(
         &outer.master,
@@ -115,7 +116,10 @@ fn a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_termina
         record.pointer("/error/kind"),
         Some(&json!("lease_conflict"))
     );
-    assert_eq!(record.pointer("/error/holder/holder"), Some(&json!("cli")));
+    assert_eq!(
+        record.pointer("/error/holder/holder"),
+        Some(&json!(format!("cli-{}", first.client.id())))
+    );
     assert!(restored, "a held attach changed the outer terminal");
     let stale = Outer::attach(&served, &["--json", "terminal", "attach", "--target", "t9"])?;
     let (code, record, restored) = stale.exited()?;

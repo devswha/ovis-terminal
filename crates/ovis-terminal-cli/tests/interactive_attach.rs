@@ -83,7 +83,11 @@ fn refused_without_eviction(served: &Served, epoch: &Value) -> TestResult {
 fn a_stale_takeover_names_the_current_epoch_and_a_current_one_displaces_the_holder() -> TestResult {
     let served = Served::start()?;
     let before = incarnation(&served)?;
-    let first = attached(&served, &["terminal", "attach", "--target", "t1"], "first")?;
+    let first = attached(
+        &served,
+        &["terminal", "attach", "--target", "t1", "--client-id", "cli"],
+        "first",
+    )?;
     let epoch = served
         .leases()?
         .pointer("/interact/epoch")
@@ -142,17 +146,11 @@ fn an_observer_on_a_terminal_never_resizes_and_stays_live_after_the_operator_det
 {
     let served = Served::start()?;
     let mut operator = attached(&served, &["terminal", "attach", "--target", "t1"], "op")?;
+    // Both use the default, per-process client label: two owners, so the operator's
+    // detach releases its leases while the observer stays attached.
     let mut observer = Outer::attach(
         &served,
-        &[
-            "terminal",
-            "attach",
-            "--target",
-            "t1",
-            "--observe",
-            "--client-id",
-            "phone",
-        ],
+        &["terminal", "attach", "--target", "t1", "--observe"],
     )?;
     operator.type_bytes(b"echo seen-$((6+1))\r")?;
     assert!(

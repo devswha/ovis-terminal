@@ -75,14 +75,17 @@ The bearer credential is read from `OVIS_TERMINAL_CREDENTIAL` and is never print
   `input.raw`, or the server's typed refusal ends the attach.
 - Another holder is never displaced: a held lease exits 11 with `lease_conflict`, the
   holder's lease record in `holder` and the lease change to retry after in `retry`.
+- The lease is recorded under `--client-id`, which defaults to `cli-<pid>`: two attach
+  processes are two owners and compete. Passing the same `--client-id` twice declares
+  one owner, which re-acquires its own lease.
 - `--takeover EPOCH` displaces the interact holder only at its current epoch and with
   the takeover grant; a stale epoch exits 11 with `lease_epoch_mismatch`, the epoch
   sent in `expected_epoch` and the current lease in `current`.
 - `--observe` needs no TTY, never reads stdin, never writes input and never resizes;
   on a terminal, Ctrl-\ (SIGQUIT) detaches it.
 - The outcome record goes to stderr: `{"detached": {"reason", "stream_closed",
-  "leases_released", "leases_held", "displaced", ...}}` (exit 0) for Ctrl-\, end of
-  stdin, SIGINT, SIGTERM, SIGHUP or SIGQUIT, or the error record for a refusal; a
+  "leases_released", "leases_held", "displaced", ...}}` (exit 0) for Ctrl-\, a hung-up
+  terminal, SIGINT, SIGTERM, SIGHUP or SIGQUIT, or the error record for a refusal; a
   signal before the stream is attached exits 10 with `interrupted` and its `stage`; a
   lost connection exits 4 with `connection_lost`. The outer terminal's settings, and
   the modes the program switched on (alternate screen, mouse, bracketed paste, cursor
