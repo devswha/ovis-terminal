@@ -1,5 +1,6 @@
-//! IDEAL-010 on the real binary: a caller always learns its operation's id by the deadline,
-//! even while the runtime is held (a QA hold FIFO the actor opens with the control), and
+//! IDEAL-010 on the real binary: a caller always learns its operation's id by the deadline.
+//!
+//! This holds even while the runtime is held (a QA hold FIFO the actor opens with the control), and
 //! `op.get` then reports how the operation settled. A planned restart answered pending
 //! before control restarted is still handed over once control announces it.
 
@@ -15,13 +16,27 @@ use super::support::{Served, TestResult, fresh_root, op_id};
 fn held() -> TestResult<(Served, std::path::PathBuf)> {
     let root = fresh_root()?;
     let fifo = root.join("hold");
-    let made = Command::new("/usr/bin/mkfifo").arg(&fifo).status()?;
-    assert!(made.success(), "mkfifo {}", fifo.display());
+    make_fifo(&fifo)?;
     let fifo_arg = fifo.to_string_lossy().into_owned();
     Ok((
         Served::start_at(&root, &["--qa-actor-hold", &fifo_arg])?,
         fifo,
     ))
+}
+
+/// Makes a FIFO at `path` with the system's `mkfifo`, the same on Linux and macOS.
+///
+/// # Errors
+///
+/// When `mkfifo` cannot be started.
+///
+/// # Panics
+///
+/// When `mkfifo` exits unsuccessfully.
+pub fn make_fifo(path: &Path) -> TestResult {
+    let made = Command::new("/usr/bin/mkfifo").arg(path).status()?;
+    assert!(made.success(), "mkfifo {}", path.display());
+    Ok(())
 }
 
 /// Returns once the runtime holds the control: it writes `held` to the FIFO when it does.

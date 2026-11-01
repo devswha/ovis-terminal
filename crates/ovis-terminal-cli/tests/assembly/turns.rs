@@ -5,6 +5,7 @@
 
 use serde_json::{Value, json};
 
+use super::pending::make_fifo;
 use super::prompts::spawned_token;
 use super::support::{Served, TestResult, op_id};
 
@@ -142,11 +143,7 @@ fn a_status_report_racing_a_state_wait_settles_it_with_the_reported_seq() -> Tes
 fn a_wait_sent_after_a_status_reports_reply_is_already_satisfied() -> TestResult {
     let served = Served::start_with(&["--qa-holder-poll-ms", "600000"])?;
     let fifo = served.root().join("token");
-    rustix::fs::mkfifoat(
-        rustix::fs::CWD,
-        &fifo,
-        rustix::fs::Mode::RUSR | rustix::fs::Mode::WUSR,
-    )?;
+    make_fifo(&fifo)?;
     let script = format!(
         "printf %s \"$OVIS_TERMINAL_PROCESS_TOKEN\" > '{}'; exec cat",
         fifo.display()
