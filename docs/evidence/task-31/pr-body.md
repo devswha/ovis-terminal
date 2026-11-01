@@ -285,6 +285,10 @@ The fixture keeps the round-4 registration phases and gains T52's peer role, pee
 
 **CI-only `remote/isolation` failure (6cf4cdb, ubuntu `all/all`, step 6 `reply[child-on-bravo]/error`).** CI kept no artifact. This scenario runs on the runner's protocol fixture, not the daemon composition. Reproduced the CI way (`taskset -c 104-107 cargo nextest run -p ovis-terminal-conformance -j 4`): 5/5 runs at 28/28. Unreproduced; listed as unmet. **Merge 95e45cc (T60):** Cargo.toml dependency-block union, schema and SDK unchanged; the merged gate passes.
 
+**Declared status vs waits (macOS CI on baf85e6, product).** The actor ran a whole batch of queued jobs before draining the status feed, so an `events.wait` queued behind a `status.report` could arm against state that had not applied an event already delivered, and answered `matched` instead of `already_satisfied`. Separately, `events.wait` took its `seq` at arming, so a later match reported `"0"`.
+- Fix (adc0089): the feed is drained before every job and on every loop pass, and `seq` is read after the wait settles.
+- Test: `turns::a_status_report_racing_a_state_wait_settles_it_with_the_reported_seq` (either outcome, non-zero `seq`).
+
 **Intermittent `recovery/e2e` step 36 (3b13522 gate, unreproduced).** `child-on-peer` came back as a fixture `internal` error (`-32603`, `linked` absent); its evidence directory was already deleted. Afterwards:
 - ten full-workspace runs at `-j 16`: 1409/1409 each;
 - three rounds of two concurrent `all/all`: all green.
@@ -305,7 +309,7 @@ Evidence: `/dev/shm/ovt-fixtures/t31-scratch/r5-all-*.json`, `r5-par-*.json`, `r
 - `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` at 9a5d9c6 (after the edfdb58, 557af58 and 95e45cc merges): **exit 0**, `1386 tests run: 1386 passed (3 slow), 1 skipped`, `workspace-hygiene: 0 violation(s) in 1404 file(s) checked`, source-check `pass`, evidence-audit `pass` (`docs/evidence/task-31/check-r5.log`).
 - Windows pre-check (`cargo check` and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked`, `-D warnings`): exit 0 (`windows-precheck-r5.log`).
 - `cargo nextest run -p ovis-terminal-cli`: 71/71 unloaded. `cargo nextest run -p ovis-terminal-conformance` with the real binary: 28/28, with `all/all` executing the four flipped scenarios and 32 declared.
-- Loaded runs, recipe `docs/evidence/task-31/r5-loaded/r5-25n.sh`: the product (server, holder, CLI and programs) pinned to cores 124-125 through `OVIS_TEST_PIN_CORES`, 8 busy loops there at `nice -n 10`, nextest and the test binaries on cores 100-123. Result: **25/25**, every run 71/71 in 11-13 s, no SLOW (`final25-nice10-summaries.log`).
+- Loaded runs, recipe `docs/evidence/task-31/r5-loaded/r5-25n.sh`: the product (server, holder, CLI and programs) pinned to cores 124-125 through `OVIS_TEST_PIN_CORES`, 8 busy loops there at `nice -n 10`, nextest and the test binaries on cores 100-123. Result: **25/25**, every run 72/72 in 11-13 s on adc0089, no SLOW (`final25-nice10-summaries.log`).
 - Why the busy loops run at nice 10: with 8 loops at nice 0, `r5-loaded/stall-auto-3980869.txt` shows a just-started server runnable (`R`) with `utime=0 stime=0` after 62 s. It was never scheduled, and that alone produced the 54-258 s outliers.
 - Mutants:
   - B2 fails without the delivery join and with `restarting` made a no-op.
