@@ -1,6 +1,6 @@
 Todo 60 (wave 16): first-class Unix QA and Windows smoke CI on freshly built binaries.
 
-Closes GAP-049, GAP-051, GAP-095, GAP-121. GAP-050 is no longer claimed by todo 60 (plan amended 2026-11-02): its Unix half is closed by todo 26 and its Windows half is DEFERRED. The Windows served-attach half of GAP-048 is also DEFERRED. See Round 3. Delivers IDEAL-001, IDEAL-034, IDEAL-071, IDEAL-093. Enforces EXCL-016, EXCL-019, EXCL-027.
+Closes GAP-048, GAP-049, GAP-051, GAP-095, GAP-121. Todo 60 remains GAP-048's owner, with its Windows served-attach half DEFERRED. GAP-050 is no longer claimed by todo 60 (plan amended 2026-11-02): todo 26 closes its Unix half, and its Windows half is DEFERRED. See Round 3. Delivers IDEAL-001, IDEAL-034, IDEAL-071, IDEAL-093. Enforces EXCL-016, EXCL-019, EXCL-027.
 
 ## Round 2 (review of 2da8a9d)
 
@@ -27,14 +27,13 @@ Closes GAP-049, GAP-051, GAP-095, GAP-121. GAP-050 is no longer claimed by todo 
 What changed:
 
 - `conformance/traceability.json` and `conformance/ideal-map.json` were regenerated with the sanctioned command: `cargo run --locked --manifest-path probes/Cargo.toml --bin quality-matrix -- --mode write --plan <amended live plan>`.
-  - It changed only GAP-050 (todos `26, 54`, scenarios `part-a/task-26, platform/windows-service`) and the plan hash.
+  - It changed only GAP-050 and the plan hash. After the final amendment (todo 54's Closes no longer names GAP-050), GAP-050 is todo `26`, scenario `part-a/task-26`.
   - `quality-matrix --mode verify` exits 0, and `--mode check --plan <amended plan>` exits 0.
 - `docs/design/traceability.json` gives GAP-050 and GAP-048 exactly the owners of the regenerated plan-derived matrix, each with a `note`. So **the two ledgers agree on both rows**.
-  - One caveat: GAP-050 cannot be todo 26 alone in either ledger while the plan's todo 54 Closes line still names GAP-050. That entry is recorded as deferred below. If todo 54's line is amended too, one regeneration plus removing that entry leaves todo 26 alone.
   - The two ledgers already differed on 57 other rows before this todo (they use different derivations). Those are untouched.
-- `docs/design/traceability-unclaimed.json` records the Windows halves as **DEFERRED** (`status: deferred`), each with the reason "Deferred: no served attach over the Windows named pipe in v1":
-  - `(GAP-050, platform/windows-service)`, owner todo 54;
-  - `(GAP-048, platform/matrix)`, owner todo 60 (matrix runs on Linux and macOS; the Windows smoke proves only the holder's ordered ConPTY read).
+- The Windows halves are **DEFERRED**, each with the reason "no served attach over the Windows named pipe in v1":
+  - GAP-050's Windows half: in the GAP-050 `note` of `docs/design/traceability.json`, because no scenario lists it.
+  - GAP-048's Windows served-attach half: `(GAP-048, platform/matrix)`, owner todo 60, `status: deferred`, in `docs/design/traceability-unclaimed.json` (matrix runs on Linux and macOS; the Windows smoke proves only the holder's ordered ConPTY read).
 - The checker requires a deferred entry to start "Deferred: " and to state why v1 does not deliver it.
 - The conformance traceability tests pass 4/4.
 
@@ -86,7 +85,7 @@ The CLI busy-wait tests are Windows-only and run in `windows-smoke` and `test (w
   - `source-check` (64 rules): pass.
   - `evidence-audit` over `docs/evidence`: pass, `docs/evidence/task-60` included, no exemption added.
   - `quality-matrix --mode verify`: pass.
-- `conformance/traceability.json` is generated from the plan, which still names todo 60 under GAP-048 and GAP-050. That file is not hand-edited here. The plan amendment and regeneration are recorded for the orchestrator in `docs/evidence/task-60/seams.md`.
+- `conformance/traceability.json` is generated from the plan and is never hand-edited. After the plan amendments of 2026-11-02 it was regenerated with `quality-matrix --mode write`: GAP-050 is owned by todo 26 / `part-a/task-26` only, and GAP-048 keeps todo 60 with `platform/matrix` (see Round 3).
 - Gates on the merged tree (`round5-gates.log`): check.sh exit 0 (Summary [ 122.359s] 1349 tests run: 1349 passed (3 slow), 2 skipped), `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exit 0, and the Windows clippy exit 0.
 
 **C1/C2.** This file is the committed mirror of the PR body, with no placeholders. CI results for the round-2 head go in a PR comment and the DoneClaim, so the mirror never has to change after the push. The `platform-qa` macOS stress lane is re-dispatched on the round-2 head.
@@ -236,7 +235,7 @@ Files outside the literal write scope, and why:
 
 ## Risks
 
-- GAP-050's Windows half and GAP-048's Windows served-attach half are DEFERRED: no served attach over the Windows named pipe exists in v1. Both are recorded in `docs/design/traceability-unclaimed.json` with their owning todos and reasons; per the plan amendment, the final wave (F4) lists GAP-050 as a named gap.
+- GAP-050's Windows half and GAP-048's Windows served-attach half are DEFERRED: no served attach over the Windows named pipe exists in v1. GAP-050's is recorded in its `note` in `docs/design/traceability.json`, and GAP-048's in `docs/design/traceability-unclaimed.json`; per the plan amendment, the final wave (F4) lists GAP-050 as a named gap.
 - The CLI busy-wait tests run only on Windows (CI `windows-smoke` and `test (windows-latest)`); locally they are checked by the Windows-target clippy only.
 - On Windows the conformance fixture is Unix-only (`conformance/src/fixture.rs:86`), so `platform/matrix` declares linux and macos. On Windows, the generation refusal is proven by `generation-refusal` over the production pipe, not by the conformance runner.
 - `conpty-attach` is the holder's ordered ConPTY output read with mode state. It is not a served `attach.open` over the pipe, which is unmet on Windows.
