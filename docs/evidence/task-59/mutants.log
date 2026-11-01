@@ -1,0 +1,141 @@
+### resync-never-marked: crates/ovis-terminal-core/src/health/consumers.rs: 'Some(loss) => loss.resynced = true,' -> 'Some(loss) => loss.resynced = false,'
+
+running 9 tests
+.. 2/9
+health::qa::dropped_ranges_stay_until_resynced_and_overflow_is_counted --- FAILED
+......
+failures:
+
+---- health::qa::dropped_ranges_stay_until_resynced_and_overflow_is_counted stdout ----
+
+thread 'health::qa::dropped_ranges_stay_until_resynced_and_overflow_is_counted' (2772032) panicked at crates/ovis-terminal-core/src/health/qa.rs:130:5:
+assertion `left == right` failed
+  left: Some(false)
+ right: Some(true)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    health::qa::dropped_ranges_stay_until_resynced_and_overflow_is_counted
+
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 92 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `-p ovis-terminal-core --lib`
+RESULT resync-never-marked KILLED
+### corruption-forgotten: crates/ovis-terminal-core/src/health/recovery.rs: 'journaled.corrupted |= damaged(incident.kind);' -> 'journaled.corrupted = false;'
+
+running 9 tests
+.... 4/9
+health::qa::recovery::a_recorded_corruption_survives_every_read_and_a_reopen --- FAILED
+....
+failures:
+
+---- health::qa::recovery::a_recorded_corruption_survives_every_read_and_a_reopen stdout ----
+
+thread 'health::qa::recovery::a_recorded_corruption_survives_every_read_and_a_reopen' (2774822) panicked at crates/ovis-terminal-core/src/health/qa/recovery.rs:28:5:
+assertion failed: first.corrupted
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    health::qa::recovery::a_recorded_corruption_survives_every_read_and_a_reopen
+
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 92 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `-p ovis-terminal-core --lib`
+RESULT corruption-forgotten KILLED
+### failures-uncounted: crates/ovis-terminal-core/src/health/latency.rs: 'row.failures.saturating_add(u64::from(settled.failed))' -> 'row.failures'
+warning: useless assignment of field of type `u64` to itself
+  --> crates/ovis-terminal-core/src/health/latency.rs:76:9
+   |
+76 |         row.failures = row.failures;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+
+running 9 tests
+.. 2/9
+health::qa::latency_is_kept_per_catalog_method_with_its_slowest_operation --- FAILED
+......
+failures:
+
+---- health::qa::latency_is_kept_per_catalog_method_with_its_slowest_operation stdout ----
+
+thread 'health::qa::latency_is_kept_per_catalog_method_with_its_slowest_operation' (2777567) panicked at crates/ovis-terminal-core/src/health/qa.rs:199:5:
+assertion `left == right` failed
+  left: (3, 0)
+ right: (3, 1)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    health::qa::latency_is_kept_per_catalog_method_with_its_slowest_operation
+
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 92 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `-p ovis-terminal-core --lib`
+RESULT failures-uncounted KILLED
+### latency-unrecorded: crates/ovis-terminal-server/src/dispatch/lanes/health.rs: 'self.health.latencies().record(settled);' -> 'drop(settled);'
+warning: field `health` is never read
+   --> crates/ovis-terminal-server/src/dispatch/lanes/health.rs:133:5
+    |
+132 | pub struct Measured<H> {
+    |            -------- field in this struct
+133 |     health: Arc<Health>,
+    |     ^^^^^^
+    |
+    = note: `Measured` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+
+running 2 tests
+dispatch::lanes::health::qa::metrics_answer_while_a_call_hangs_and_name_the_current_boot --- FAILED
+dispatch::lanes::health::qa::reset_is_invalid_params_and_erases_no_counter_or_recovery_fact --- FAILED
+
+failures:
+
+---- dispatch::lanes::health::qa::metrics_answer_while_a_call_hangs_and_name_the_current_boot stdout ----
+
+thread 'dispatch::lanes::health::qa::metrics_answer_while_a_call_hangs_and_name_the_current_boot' (2803019) panicked at crates/ovis-terminal-server/src/dispatch/lanes/health/qa.rs:222:37:
+called `Option::unwrap()` on a `None` value
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- dispatch::lanes::health::qa::reset_is_invalid_params_and_erases_no_counter_or_recovery_fact stdout ----
+
+thread 'dispatch::lanes::health::qa::reset_is_invalid_params_and_erases_no_counter_or_recovery_fact' (2803020) panicked at crates/ovis-terminal-server/src/dispatch/lanes/health/qa.rs:255:49:
+called `Option::unwrap()` on a `None` value
+
+
+failures:
+    dispatch::lanes::health::qa::metrics_answer_while_a_call_hangs_and_name_the_current_boot
+    dispatch::lanes::health::qa::reset_is_invalid_params_and_erases_no_counter_or_recovery_fact
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 96 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `-p ovis-terminal-server --lib`
+RESULT latency-unrecorded KILLED
+### queue-bytes-written: crates/ovis-terminal-core/src/health/consumers.rs: 'ByteCount::new(self.queued.saturating_sub(self.written))' -> 'ByteCount::new(self.queued)'
+
+running 9 tests
+.. 2/9
+health::qa::a_stalled_viewer_shows_its_backlog_and_lag_until_written --- FAILED
+......
+failures:
+
+---- health::qa::a_stalled_viewer_shows_its_backlog_and_lag_until_written stdout ----
+
+thread 'health::qa::a_stalled_viewer_shows_its_backlog_and_lag_until_written' (2808169) panicked at crates/ovis-terminal-core/src/health/qa.rs:99:5:
+assertion `left == right` failed
+  left: 4196
+ right: 100
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    health::qa::a_stalled_viewer_shows_its_backlog_and_lag_until_written
+
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 92 filtered out; finished in 0.06s
+
+error: test failed, to rerun pass `-p ovis-terminal-core --lib`
+RESULT queue-bytes-written KILLED

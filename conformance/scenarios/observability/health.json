@@ -1,0 +1,88 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "observability/health",
+  "title": "Health and per-consumer metrics are read-only, bounded and name the boot they describe",
+  "todo": 59,
+  "closes": ["GAP-016", "GAP-017", "GAP-142", "GAP-143"],
+  "delivers": ["IDEAL-014", "IDEAL-115", "IDEAL-116"],
+  "excludes": ["EXCL-016", "EXCL-021", "EXCL-027"],
+  "platforms": ["linux", "macos"],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Status of a root with no server is stopped. A served boot reports running; a stalled viewer shows 4096 queued bytes, a nonzero lag and the resynchronized byte range 4096..8191; a recorded corruption stays degraded across repeated metrics reads and in the CLI status; latency rows count settled calls; every answer arrives within 2 s and names the hello boot. A dead socket at the default endpoint is stale_endpoint, and after stop the endpoint is stopped twice in a row without a new socket.",
+      "steps": [
+        {"run": {"args": ["--json", "server", "status"], "endpoint": true, "exit": 0, "stdout": {"/state": "stopped", "/recovery_state": null}}},
+        {"serve": {"fixture": "protocol"}},
+        {"connect": {"conn": "probe", "via": "bridge"}},
+        {"hello": {"conn": "probe", "framed": false, "expect": {"/id": "hello", "/result/server_boot_id": "boot:1", "/result/runtime_lifetime": "runtime:21"}}},
+        {"send": {"conn": "probe", "requests": [{"jsonrpc": "2.0", "id": "status", "method": "server.status", "params": {}}]}},
+        {"replies": {"conn": "probe", "within_ms": 2000, "expect": {"status": {
+          "/result/state": "running", "/result/server_boot_id": "boot:1", "/result/runtime_lifetime": "runtime:21",
+          "/result/uptime_ms": {"$at_least": "0"}, "/result/recovery_state/phase": "clean",
+          "/result/recovery_state/corrupted": false, "/result/recovery_state/incidents": "0", "/error": {"$present": false}}}}},
+        {"send": {"conn": "probe", "requests": [{"jsonrpc": "2.0", "id": "stall", "method": "fixture.viewer", "params": {"stream_id": "stream-v1", "terminal_id": "t-v1", "queued": "4096", "lost": ["4096", "8191"]}}]}},
+        {"replies": {"conn": "probe", "expect": {"stall": {"/result/stream_id": "stream-v1"}}}},
+        {"send": {"conn": "probe", "requests": [{"jsonrpc": "2.0", "id": "stalled", "method": "server.metrics", "params": {}}]}},
+        {"replies": {"conn": "probe", "within_ms": 2000, "expect": {"stalled": {
+          "/result/server_boot_id": "boot:1", "/result/runtime_lifetime": "runtime:21", "/result/collected_ms": {"$at_least": "1"},
+          "/result/streams": 1, "/result/subscriptions": 0, "/result/consumers_untracked": "0",
+          "/result/consumers/0/consumer": {"kind": "stream", "stream_id": "stream-v1", "terminal_id": "t-v1"},
+          "/result/consumers/0/queue_bytes": "4096", "/result/consumers/0/event_lag_ms": {"$at_least": "1"},
+          "/result/consumers/0/losses": [{"range": {"unit": "bytes", "first_offset": "4096", "last_offset": "8191"}, "resynced": true}],
+          "/result/consumers/0/losses_omitted": "0", "/result/consumers/1": {"$present": false},
+          "/result/latest_seq": {"$at_least": "0"},
+          "/result/rpc_latency/0/method": "server.status", "/result/rpc_latency/0/calls": "1", "/result/rpc_latency/0/failures": "0",
+          "/result/recovery_state/corrupted": false}}}},
+        {"send": {"conn": "probe", "requests": [{"jsonrpc": "2.0", "id": "corrupt", "method": "fixture.incident", "params": {"kind": "store_corrupted"}}]}},
+        {"replies": {"conn": "probe", "expect": {"corrupt": {"/result/incident/kind": "store_corrupted", "/result/incident/server_boot_id": "boot:1"}}}},
+        {"send": {"conn": "probe", "requests": [{"jsonrpc": "2.0", "id": "read-1", "method": "server.metrics", "params": {}}]}},
+        {"replies": {"conn": "probe", "within_ms": 2000, "expect": {"read-1": {
+          "/result/recovery_state": {"phase": "degraded", "corrupted": true, "incidents": "1", "unsettled": "0"},
+          "/result/consumers/0/queue_bytes": "4096"}}}},
+        {"send": {"conn": "probe", "requests": [{"jsonrpc": "2.0", "id": "read-2", "method": "server.metrics", "params": {}}]}},
+        {"replies": {"conn": "probe", "within_ms": 2000, "expect": {"read-2": {
+          "/result/recovery_state": {"phase": "degraded", "corrupted": true, "incidents": "1", "unsettled": "0"},
+          "/result/consumers/0/losses/0/resynced": true,
+          "/result/rpc_latency/0/method": "server.metrics", "/result/rpc_latency/0/calls": "2",
+          "/result/rpc_latency/1/method": "server.status", "/result/rpc_latency/1/calls": "1"}}}},
+        {"run": {"args": ["--json", "server", "status"], "endpoint": true, "exit": 0, "stdout": {"/state": "running", "/server_boot_id": "boot:1", "/recovery_state/corrupted": true, "/recovery_state/phase": "degraded"}}},
+        {"send": {"conn": "probe", "requests": [{"jsonrpc": "2.0", "id": "dead", "method": "fixture.stale_endpoint", "params": {}}]}},
+        {"replies": {"conn": "probe", "expect": {"dead": {"/result/socket": {"$present": true}}}}},
+        {"run": {"args": ["--json", "server", "status"], "exit": 0, "stdout": {"/state": "stale_endpoint", "/server_boot_id": null}}},
+        {"hangup": {"conn": "probe"}},
+        {"closed": {"conn": "probe"}},
+        {"stop": {"expect": {"/panicked": "0"}}},
+        {"run": {"args": ["--json", "server", "status"], "endpoint": true, "exit": 0, "stdout": {"/state": "stopped", "/server_boot_id": null, "/recovery_state": null}}},
+        {"run": {"args": ["--json", "server", "status"], "endpoint": true, "exit": 0, "stdout": {"/state": "stopped", "/uptime_ms": null}}}
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "With a recorded corruption, server.metrics {\"reset\": true} and server.status {\"verbose\": true} are invalid_params; the metrics read after them still reports the corruption and one incident, its latency row keeps every earlier call and counts the refusal as a failure, and the endpoint is stopped after stop.",
+      "steps": [
+        {"serve": {"fixture": "protocol"}},
+        {"connect": {"conn": "probe", "via": "bridge"}},
+        {"hello": {"conn": "probe", "framed": false, "expect": {"/id": "hello", "/result/server_boot_id": "boot:1"}}},
+        {"send": {"conn": "probe", "requests": [{"jsonrpc": "2.0", "id": "corrupt", "method": "fixture.incident", "params": {"kind": "store_corrupted"}}]}},
+        {"replies": {"conn": "probe", "expect": {"corrupt": {"/result/incident/kind": "store_corrupted"}}}},
+        {"send": {"conn": "probe", "requests": [{"jsonrpc": "2.0", "id": "before", "method": "server.metrics", "params": {}}]}},
+        {"replies": {"conn": "probe", "within_ms": 2000, "expect": {"before": {"/result/recovery_state/corrupted": true, "/result/recovery_state/incidents": "1"}}}},
+        {"inject": {"conn": "probe", "base": {}, "planned": [
+          {"request": {"method": "server.metrics", "params": {"reset": true}}, "expect": {"/error/data/kind": "invalid_params", "/result": {"$present": false}}},
+          {"request": {"method": "server.status", "params": {"verbose": true}}, "expect": {"/error/data/kind": "invalid_params", "/result": {"$present": false}}}
+        ]}},
+        {"send": {"conn": "probe", "requests": [{"jsonrpc": "2.0", "id": "after", "method": "server.metrics", "params": {}}]}},
+        {"replies": {"conn": "probe", "within_ms": 2000, "expect": {"after": {
+          "/result/server_boot_id": "boot:1",
+          "/result/recovery_state": {"phase": "degraded", "corrupted": true, "incidents": "1", "unsettled": "0"},
+          "/result/rpc_latency/0/method": "server.metrics", "/result/rpc_latency/0/calls": {"$at_least": "2"},
+          "/result/rpc_latency/0/failures": {"$at_least": "1"}}}}},
+        {"hangup": {"conn": "probe"}},
+        {"closed": {"conn": "probe"}},
+        {"stop": {"expect": {"/panicked": "0"}}},
+        {"run": {"args": ["--json", "server", "status"], "endpoint": true, "exit": 0, "stdout": {"/state": "stopped"}}}
+      ]
+    }
+  ]
+}

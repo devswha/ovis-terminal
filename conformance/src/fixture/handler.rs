@@ -3,8 +3,8 @@
 //! Those are the read-only protocol methods `rpc.discover` and paged `terminal.output`,
 //! the fixture-only `fixture.transcript` provider write, `fixture.pty` input byte count,
 //! `fixture.bridge` extension driver, the `fixture.exit` and `fixture.program` program
-//! lifecycle stand-ins, and `fixture.deliver`, which lets the sequenced terminal's holder
-//! stand-in write.
+//! lifecycle stand-ins, `fixture.deliver`, which lets the sequenced terminal's holder
+//! stand-in write, and the health stand-ins of [`super::health`].
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -21,11 +21,11 @@ use serde_json::Value;
 
 use super::agents::Directory;
 use super::bridge::Extension;
-use super::output;
 use super::prompts::Gate;
 use super::rotation::Sequenced;
 use super::serve::at;
 use super::tree::{self, Tree};
+use super::{health, output};
 use crate::error::RunnerError;
 
 /// Operation outcomes and agent status facts share the fixture's sequence domain.
@@ -60,6 +60,7 @@ pub(crate) struct Probes {
     pub(crate) extension: Arc<Extension>,
     pub(crate) sequenced: Arc<Sequenced>,
     pub(crate) tree: Arc<Tree>,
+    pub(crate) health: Arc<super::health::Probe>,
 }
 
 #[derive(Debug)]
@@ -112,6 +113,9 @@ impl RequestHandler for FixtureHandler {
                 super::prompts::pty(probes, &call.request)
             }
             EXTENSION => self.probes.extension.call(&call.request).await,
+            health::VIEWER | health::INCIDENT | health::STALE_ENDPOINT => {
+                self.probes.health.call(&call.request)
+            }
             PROGRAM_EXIT => tree::exit(&self.probes.tree, &call.request).await,
             PROGRAM_READ => tree::program(&self.probes.tree, &call.request),
             DELIVER => {

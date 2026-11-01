@@ -3,6 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::health::{ConsumerLoss, ConsumerRef, MethodLatency, RecoveryState};
 use crate::domain::machine_identity::{BootChallenge, BootProof};
 use crate::errors::OpId;
 use crate::schema::common::{NoParams, PageInfo, PageRequest};
@@ -13,7 +14,7 @@ use crate::schema::limits::{Capabilities, Limits, TransportKind};
 use crate::schema::method::{MethodSpec, method};
 use crate::schema::records::{AgentBinding, LeaseRecord, TerminalRecord};
 use crate::schema::scalar::{
-    ByteCount, DurationMs, EventSeq, Incarnation, OpenEnum, ProtocolGeneration, Revision,
+    ByteCount, Count, DurationMs, EventSeq, Incarnation, OpenEnum, ProtocolGeneration, Revision,
     TimestampMs,
 };
 
@@ -112,6 +113,8 @@ pub struct ServerStatusResult {
     pub holder_count: u32,
     /// Live terminals.
     pub live_terminals: u32,
+    /// Recovery summary, reported by a running server; absent when nothing answers.
+    pub recovery_state: Option<RecoveryState>,
 }
 
 /// Parameters of `server.start`.
@@ -185,6 +188,12 @@ pub struct ConsumerQueue {
     pub event_lag_ms: DurationMs,
     /// Events dropped and later resynchronized.
     pub resynced_events: u32,
+    /// The stream or subscription this backlog belongs to.
+    pub consumer: ConsumerRef,
+    /// Retained dropped ranges, oldest first, each marked once resynchronized.
+    pub losses: Vec<ConsumerLoss>,
+    /// Older dropped ranges no longer retained.
+    pub losses_omitted: Count,
 }
 
 /// One recorded recovery fact; reads never clear it.
@@ -215,6 +224,18 @@ pub struct ServerMetricsResult {
     pub latest_seq: EventSeq,
     /// Recovery evidence of the current runtime lifetime.
     pub recovery: Vec<RecoveryEvidence>,
+    /// Holder-supervisor lifetime the metrics were collected under.
+    pub runtime_lifetime: RuntimeLifetimeId,
+    /// Control-server boot the metrics were collected under.
+    pub server_boot_id: ServerBootId,
+    /// Collection time.
+    pub collected_ms: TimestampMs,
+    /// Consumers refused tracking because the bounded table was full.
+    pub consumers_untracked: Count,
+    /// Per-method latency since this boot.
+    pub rpc_latency: Vec<MethodLatency>,
+    /// Recovery summary; reading it never acknowledges or clears it.
+    pub recovery_state: RecoveryState,
 }
 
 /// Parameters of `session.snapshot`.
