@@ -90,7 +90,11 @@ impl<T: TerminalDirectory> AttachLane<T> {
         let session = Arc::clone(&call.session);
         let (worker, worker_stream) = (Arc::clone(&hub), stream.clone());
         let opened = tokio::task::spawn_blocking(move || {
-            let owner = Owner::new(session.principal().clone(), params.client_id.clone());
+            let owner = Owner::new(
+                session.principal().clone(),
+                params.client_id.clone(),
+                session.connection(),
+            );
             let request = OpenRequest {
                 caller: Caller::new(&session, &params.client_id, at),
                 owner: &owner,

@@ -20,7 +20,15 @@ Gap baseline: GAP-039, GAP-040, GAP-041, GAP-042, GAP-043, GAP-044, GAP-045, GAP
 
 - **Roles.** `--observe` needs no TTY. It never reads stdin, never resizes, never takes focus and never takes a controlling lease. Interact mode holds the interact lease and the geometry lease, and resizes only through `attach.resize` under that geometry lease.
 - **Explicit lease acquire and release.** Detach closes the stream, waits (bounded) for CLOSE, then reads `attach.leases` back. The record states `leases_released` and lists `leases_held`.
-- **Owners (gate round 1, B1).** A lease owner is the bearer's principal plus `--client-id`. The default label is now `cli-<pid>`, so two `terminal attach` processes are always two owners: the second is refused `lease_conflict` naming the holder and the `lease.revoked` retry boundary. This follows the plan rule "lease_conflict is reserved for competing acquisition against a live lease; held attachment reports owner and a named lease-change retry boundary". Before, both processes defaulted to `cli`, so the core lease table's same-owner re-acquire handed the second process the first one's interact lease: its typing reached the program, and its detach reported `leases_released:false`. The fix is in the CLI's identity; the core same-owner rule is unchanged. Passing the same explicit `--client-id` twice deliberately declares one owner, documented in the shipped skill.
+- **Owners: a lease belongs to its connection (B1; rounds 1 and 3).** The plan rule is "lease_conflict is reserved for competing acquisition against a live lease; held attachment reports owner and a named lease-change retry boundary".
+  - **Round 1:** the CLI's default label became `cli-<pid>`.
+  - **Round 3, the root fix** (option (b) of the gate: separate connection identity from the client label):
+    - `authz::Session` carries a `ConnectionId` drawn fresh by every `Authority::authenticate`.
+    - `core::leases::Owner` is now principal + client label + connection, filled by `Caller::owner()`, the server's stream owner and geometry focus.
+    - A second live connection presenting the same principal and `client_id` is therefore another owner. Its `attach.open{role:interact}` is answered `held`, naming the holder and the `lease.revoked` retry boundary, and the CLI exits 11 `lease_conflict`. Its `input.raw` under the holder's `lease_id`, which `attach.leases` publishes, is `no_lease`, so nothing it types reaches the program.
+    - A connection's disconnect revokes only its own leases. The same connection still re-acquires its own lease idempotently, `self_lease` still refuses the holder's own takeover, and only an explicit takeover at the current epoch moves a lease between connections. This matches spec 4.2: a disconnect revokes, and a resumed connection keeps its leases.
+  - **Why (b) rather than (a)** (refusing re-acquisition by the same principal and label): `input.raw` carries no client id, so the write check derives the owner from the presented `lease_id`. With (a) alone, a second connection could still read `lease:1` from `attach.leases` and type with it. With the connection inside `Owner`, the write, resize, focus and disconnect checks all use the same identity.
+  - The wire protocol is unchanged: `LeaseRecord` still shows only the label. There is no schema or SDK change.
 - **No chrome, byte for byte (gate round 1, B2).** `tests/interactive_transparency.rs` runs a probe that writes C0 (BS, HT, BEL, CR, LF), 8-bit C1 (CSI, IND, NEL), SGR, DECSET/DECRST (alternate screen, bracketed paste, cursor) and OSC (title, hyperlink with ST). It asserts three things: the outer terminal received exactly the bytes the server sent a protocol-level reference viewer of the same screen, followed only by the documented `ESC[0m` reset on detach; the server sent the program's raw bytes unchanged; and the probe really wrote every class.
 - **Held attaches.** On the wire, `attach.open` against a live interact lease answers `outcome: held` with `holder`, a `retry` boundary (`on: lease_released`, `event: lease.revoked`, the holder's lease) and an observe-only lease. It never evicts. The CLI reports this competing acquisition as `lease_conflict` (exit 11) with `holder` and `retry`.
 - **Takeover.** Takeover requires an explicit `--takeover <epoch>`. A stale epoch is `lease_epoch_mismatch` (exit 11), naming `expected_epoch` and the `current` lease (epoch and holder). A current epoch displaces the holder, whose client exits 0 with `closed.close.reason: taken_over` naming the new holder.
@@ -194,6 +202,48 @@ Round 2 (8f1e5d0) was CI-green and awaits the gate. Integration then moved to 26
   - Conformance `--case all`: `cli/interactive-attach` 94, `part-a/task-31` 49 and `observability/health` 96 assertions, each exit 0.
   - `check.sh` through the heavy gate: exit 0 (`1256 tests run: 1256 passed (3 slow), 1 skipped`; hygiene, manifests and json pass; `docs/evidence/task-62/check-summary.log`). The first attempt stopped in the test build with rustc `Disk quota exceeded (os error 122)`: `/dev/shm` is a tmpfs with a per-user quota that every lane shares. After freeing this lane's 7.3 GB incremental cache, the rerun used `CARGO_INCREMENTAL=0`; this is a cache setting only and matches CI's rust-cache, with no change to code or gate steps.
 
+## Round 3: B1 at the root (gate round 2)
+
+**Finding.** Round 2 fixed only the CLI default label. The gate's socket probe showed two live connections presenting the same `client_id` both answered `ready` on `lease:1`, with `holder:null` and `retry:null`. The second connection's `input.raw` was admitted and its marker reached the program, and the first stream was never told. The cause was the core rule `held.owner == claim.owner => granted(held)` with an owner of principal + label only.
+
+**Fix: option (b), lease owner = principal + client label + connection.** See *Owners* above for the mechanism and why (b) rather than (a).
+
+**Tests added:**
+- `ovis-terminal-core` `leases::connections`:
+  - a second connection under the holder's label gets `lease_conflict` naming the holder; its write under the holder's lease is `no_lease`; the holder keeps writing and re-acquires idempotently;
+  - one connection's disconnect never revokes another's leases;
+  - only an explicit takeover at the current epoch moves a lease between connections, and a repeat is `self_lease`.
+- `ovis-terminal-authz` `identity`: connection ids are fresh per draw and round-trip only as canonical hyphenated text.
+- `ovis-terminal-cli` `interactive_connections` (socket level, real `serve`): two connections with `client_id: "sdk"`.
+  - The second `attach.open{role:interact}` is `held`, naming the holder `sdk` and `lease:1`, with retry `lease_released`/`lease.revoked` and an observe-only lease.
+  - Its `input.raw` under the holder's `lease_id` is `no_lease`.
+  - After the holder's fence line, the program's raw output (`terminal.wait_output`, then `terminal.output`) never contains the intruder's marker.
+  - The holder's lease and the program incarnation are unchanged.
+- `ovis-terminal-cli` `interactive_owners`:
+  - one shared helper is now also run with a shared `--client-id shared`: the second process exits 11 `lease_conflict` naming `shared`, and its typing never reaches the program;
+  - test 2's premise is fixed: an observer sharing its operator's label is another owner, its grid never reaches the program, and its detach reports `leases_released:true` with `leases_held:[]` while the operator's leases stay.
+- Conformance `cli/interactive-attach` failure case: a twin connection presenting the holder's own `client_id: cli` is `held` naming `cli`/`lease:1`, and its `input.raw` under `lease:1` is refused `no_lease`.
+
+**Verified locally**, with `CARGO_INCREMENTAL=0` and the RAM target:
+- `cargo clippy --locked -p ovis-terminal-authz -p ovis-terminal-core -p ovis-terminal-server -p ovis-terminal-cli --all-targets -- -D warnings`: exit 0. This ran before the new and reworked CLI test files existed; a later CLI clippy flagged `needless_pass_by_value` in the new socket helper, which is fixed.
+- `cargo nextest run --locked -p ovis-terminal-authz -p ovis-terminal-core -p ovis-terminal-server` through the heavy gate: 583/583, including the four new authz and core tests (`docs/evidence/task-62/r3-authz-core-server-tests.log`).
+- `cargo +nightly fmt --all -- --check`: exit 0.
+
+**CI is the gate for the rest.** The owner's budget directive applies: `/dev/shm` is a per-user tmpfs quota shared by every lane. This lane's 23 GB mixed-profile target pushed the T86 landing gate into EDQUOT, and no new RAM build may start until that landing has run. The target was wiped, and the in-flight CLI build was stopped and its partial target removed. Therefore none of these ran locally this round:
+- the CLI crate tests, including the new socket, shared-id and observer tests;
+- the conformance scenarios with the twin steps;
+- `check.sh`;
+- the Windows pre-check;
+- the round-3 mutants.
+
+PR CI runs all of the above except the mutants.
+
+**Round-3 mutants (deferred under the same directive).** Each is the old cross-connection rule restored at one site:
+- `acquire-by-label`: `leases/table.rs` `acquire` re-grants when principal and label match, ignoring the connection. This is the old same-owner re-grant. It must fail `leases::connections` test 1, `interactive_connections` and `interactive_owners` (shared id).
+- `write-by-label`: `leases/admission.rs` `check_write` matches principal and label only. It must fail `leases::connections` test 1.
+- `disconnect-by-label`: `leases/table.rs` `take_owned` matches principal and label only. It must fail `leases::connections` test 2.
+- `observer-reads-geometry`: `attach/session.rs` `plan.observe && false`. It must fail `interactive_owners` test 2: the observer's resize under the operator's geometry lease is refused, so the observer exits non-zero.
+
 ## Seams
 
 Files outside the write scope (`crates/ovis-terminal-cli/src/attach/`, `conformance/scenarios/cli/interactive-attach/`), and why:
@@ -226,6 +276,20 @@ Files outside the write scope (`crates/ovis-terminal-cli/src/attach/`, `conforma
   - `suite.rs`: as above.
 - `crates/ovis-terminal-cli/src/assembly/{boot.rs,serve.rs}`: integration's fixture launcher now requires a `writer` bearer in the ready line (`deny_unknown_fields`). Without it, both assembled-binary scenarios (`part-a/task-31`, `cli/interactive-attach`) failed with `fixture_report`. `boot.rs` is taken verbatim from #57's head (`delegate` issuing observer and writer bearers), and `serve.rs` adds the same `"writer"` ready field #57 announces, so the union with #57 stays conflict-free.
 - `crates/ovis-terminal-cli/src/assembly/terminal.rs` and `crates/ovis-terminal-cli/tests/assembly.rs` (both #57's): the `server.status` census and decimal-string resolution of the 26278c1 merge (see the merge addendum).
+- **Round 3, the B1 root fix (lease owner = principal + label + connection).** Every file below is outside todo-62's write scope; the gate required the fix at the lease owner identity.
+  - `crates/ovis-terminal-authz/src/{identity.rs,authority.rs,lib.rs}`: the `ConnectionId` newtype (a random v4 id; its canonical hyphenated text is the only accepted form) and `Session::connection()`, drawn per `authenticate`, plus the re-export.
+  - `crates/ovis-terminal-core/src/leases/{lease.rs,requests.rs}`: `Owner.connection` and `Caller::owner()`.
+  - `crates/ovis-terminal-core/src/geometry/view.rs`: geometry focus derives the owner with its connection.
+  - `crates/ovis-terminal-server/src/streams/handler.rs`: the stream owner carries the connection, so detach and disconnect release only that connection's leases.
+  - `crates/ovis-terminal-core/src/leases/qa/{connections.rs,fixture.rs,wire.rs}` and `crates/ovis-terminal-core/tests/leases.rs`:
+    - three connection-scoped lease tests;
+    - a `twins` fixture (one credential, two connections);
+    - the wire fixture's owner gains `connection`.
+  - `crates/ovis-terminal-cli/tests/interactive_connections.rs` and `interactive_connections/socket.rs`: the socket-level test (two connections, one `client_id`), with a raw connection helper.
+  - `crates/ovis-terminal-cli/tests/interactive_owners.rs`:
+    - a shared helper, now also run with a shared `--client-id`;
+    - test 2's premise fixed: an observer sharing its operator's label is another owner and releases only its own observe lease.
+  - `conformance/scenarios/cli/interactive-attach.json`: the failure case gains a twin connection presenting the holder's own `client_id: cli`. It must be answered `held` naming the holder, and its `input.raw` under `lease:1` must be refused `no_lease`.
 - `docs/evidence/task-62/`: evidence.
 
 No schema change, so the SDK was not regenerated.
@@ -237,7 +301,8 @@ No schema change, so the SDK was not regenerated.
 - Hangup classification relies on raw mode (VMIN 1): only a hung-up terminal makes a read return zero bytes. The interact role requires a TTY on stdin and stdout, so the keyboard is always that raw terminal.
 - The attach client is unix-only (Unix socket transport). On Windows, `UnsupportedTransport` remains, as in #57.
 - `attach.takeover` is a released method that the assembled dispatcher does not serve yet (`method_not_found`). Serving it is a todo-31 follow-up outside this write scope; the CLI takes over through the `attach.open` takeover field.
-- An identical explicit `--client-id` in two processes still declares one owner, which re-acquires its own lease. This is deliberate and documented; the default never does it.
+- `hello.resume{connection_id}` is not implemented yet. When it lands, the resumed connection's `Session` must keep its `ConnectionId`, so that its leases survive the reconnect as spec 4.2 requires; today a reconnect is a new owner.
+- Persisted `LeaseEvent` records now carry `owner.connection`, and the core wire QA fixture shows the field. No production code reads lease events back, and lease liveness ends with the connection anyway.
 - Gate NOTE, not changed: `interactive_attach.rs` and `attach.rs` assert that observer typing is absent with a time-bounded negative check. Observe mode never reads stdin, which `observing_needs_no_tty_and_never_forwards_input` also covers. The round-2 refused-attach check orders causally: the refused process exits before the holder types its fence.
 
 DEFERRED VERIFICATION: none. The runner executes `cli/interactive-attach`; all commands above ran with the exit codes shown.

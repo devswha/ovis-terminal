@@ -417,7 +417,7 @@
     },
     {
       "case": "failure",
-      "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch) and 0 (invalid_params), the plan's literal attach.takeover (method_not_found: takeover is only an epoch-bound attach.open field) and a following ordinary attach.open (held with holder and retry, observe lease only) never evict the holder, which detaches cleanly with the program incarnation unchanged.",
+      "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch) and 0 (invalid_params), the plan's literal attach.takeover (method_not_found: takeover is only an epoch-bound attach.open field) a following ordinary attach.open (held with holder and retry, observe lease only), and a second connection presenting the holder's own client id cli (held naming the holder; its input.raw under lease:1 refused no_lease) never evict the holder, which detaches cleanly with the program incarnation unchanged.",
       "steps": [
         {
           "serve": {
@@ -702,6 +702,96 @@
                 "/result/retry/event": "lease.revoked",
                 "/result/lease/role": "observe",
                 "/result/displaced": null
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "twin",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "twin",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "twin",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "twin_open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:twin_open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "cli",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "twin",
+            "expect": {
+              "twin_open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "held",
+                "/result/holder/holder": "cli",
+                "/result/holder/lease_id": "lease:1",
+                "/result/retry/on": "lease_released",
+                "/result/retry/event": "lease.revoked",
+                "/result/lease/role": "observe"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "twin",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "twin_write",
+                "method": "input.raw",
+                "params": {
+                  "op_id": "$op:twin_write",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "data_b64": "ZWNobyB0d2luLSQoKDErMSkpDQ==",
+                  "lease_id": "lease:1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "twin",
+            "expect": {
+              "twin_write": {
+                "/error/data/kind": "no_lease",
+                "/result": {
+                  "$present": false
+                }
               }
             }
           }

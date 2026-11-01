@@ -1,7 +1,8 @@
-//! Plan todo 62 lease owners on a real outer PTY against a real `serve`: the default client
-//! label is per process, so two attach processes compete for the interact lease instead of
-//! sharing it, and an observer that explicitly shares its operator's label never claims that
-//! owner's geometry or input lease.
+//! Plan todo 62 lease owners on a real outer PTY against a real `serve`: a lease belongs to
+//! the connection that acquired it, so two attach processes compete for the interact lease
+//! whether they use the per-process default label or share one `--client-id`, and an
+//! observer sharing its operator's label is another owner that never claims the operator's
+//! geometry or input lease.
 #![cfg(unix)]
 
 #[path = "attach/support.rs"]
@@ -17,13 +18,19 @@ use rustix::termios::{self, Winsize};
 use serde_json::{Value, json};
 use support::{Outer, Served, TestResult, WAIT};
 
-#[test]
-fn two_attach_processes_with_the_default_label_compete_and_the_second_is_refused() -> TestResult {
-    let served = Served::start()?;
-    let before = incarnation(&served)?;
-    let mut first = attached(&served, &["terminal", "attach", "--target", "t1"], "own")?;
-    let owner = json!(format!("cli-{}", first.client.id()));
-    let mut second = Outer::attach(&served, &["--json", "terminal", "attach", "--target", "t1"])?;
+/// A first attach (`first` args) holds `t1`; a second attach process (`second` args) is
+/// refused `lease_conflict` naming the holder, and its typing never reaches the program.
+/// Returns the holder's label and the first client's pid.
+fn second_attach_is_refused(
+    served: &Served,
+    (first, second): (&[&str], &[&str]),
+) -> TestResult<(Value, u32)> {
+    let before = incarnation(served)?;
+    let mut first = attached(served, first, "own")?;
+    let pid = first.client.id();
+    let owner = served.leases()?.pointer("/interact/holder").cloned();
+    let owner = owner.ok_or("no interact holder")?;
+    let mut second = Outer::attach(served, second)?;
     second.type_bytes(b"echo intruder-$((3+4))\r")?;
     let (code, record, restored) = second.exited()?;
     assert_eq!(
@@ -65,13 +72,60 @@ fn two_attach_processes_with_the_default_label_compete_and_the_second_is_refused
     let leases = served.leases()?;
     assert_eq!(leases.pointer("/interact"), Some(&Value::Null), "{leases}");
     assert_eq!(leases.pointer("/geometry_owner"), Some(&Value::Null));
-    assert_eq!(incarnation(&served)?, before);
+    assert_eq!(incarnation(served)?, before);
+    Ok((owner, pid))
+}
+
+#[test]
+fn two_attach_processes_with_the_default_label_compete_and_the_second_is_refused() -> TestResult {
+    let served = Served::start()?;
+    let (owner, pid) = second_attach_is_refused(
+        &served,
+        (
+            &["terminal", "attach", "--target", "t1"],
+            &["--json", "terminal", "attach", "--target", "t1"],
+        ),
+    )?;
+    assert_eq!(
+        owner,
+        json!(format!("cli-{pid}")),
+        "the default label is per process"
+    );
     served.stop()
 }
 
 #[test]
-fn an_observer_sharing_its_operators_label_never_claims_the_owners_geometry_or_input() -> TestResult
-{
+fn two_attach_processes_sharing_one_client_id_compete_and_the_second_is_refused() -> TestResult {
+    let served = Served::start()?;
+    let (owner, _) = second_attach_is_refused(
+        &served,
+        (
+            &[
+                "terminal",
+                "attach",
+                "--target",
+                "t1",
+                "--client-id",
+                "shared",
+            ],
+            &[
+                "--json",
+                "terminal",
+                "attach",
+                "--target",
+                "t1",
+                "--client-id",
+                "shared",
+            ],
+        ),
+    )?;
+    assert_eq!(owner, json!("shared"));
+    served.stop()
+}
+
+#[test]
+fn an_observer_sharing_its_operators_label_is_another_owner_and_releases_only_its_own_lease()
+-> TestResult {
     let served = Served::start()?;
     let desk = [
         "terminal",
@@ -96,7 +150,7 @@ fn an_observer_sharing_its_operators_label_never_claims_the_owners_geometry_or_i
     )?;
     operator.type_bytes(b"echo seen-$((6+1))\r")?;
     assert!(observer.shows("seen-7", WAIT), "the observer never painted");
-    let geometry = served.leases()?.pointer("/geometry_owner").cloned();
+    let before = served.leases()?;
     termios::tcsetwinsize(
         &observer.master,
         Winsize {
@@ -111,25 +165,22 @@ fn an_observer_sharing_its_operators_label_never_claims_the_owners_geometry_or_i
         operator.shows("30 100", WAIT),
         "the observer's grid reached the program"
     );
-    assert_eq!(
-        served.leases()?.pointer("/geometry_owner").cloned(),
-        geometry
-    );
     observer.type_bytes(b"\x1c")?;
     let (code, record, restored) = observer.exited()?;
     assert_eq!(code, Some(0), "{record}");
     assert!(restored);
-    // The owner keeps its leases while its operator stream remains; the observer may only
-    // report its own observe lease as held, never the owner's geometry or input lease.
-    let held = record
-        .pointer("/detached/leases_held")
-        .and_then(Value::as_array);
-    let held = held.ok_or_else(|| format!("no leases_held in {record}"))?;
-    assert!(
-        held.iter()
-            .all(|lease| lease.get("role") == Some(&json!("observe"))),
-        "the observer claimed its owner's lease: {record}"
+    // The observer's connection is its own owner: detaching releases exactly its observe
+    // lease, while the operator's interact and geometry leases stay as they were.
+    assert_eq!(
+        record.pointer("/detached/leases_released"),
+        Some(&json!(true)),
+        "{record}"
     );
+    assert_eq!(record.pointer("/detached/leases_held"), Some(&json!([])));
+    let after = served.leases()?;
+    assert_eq!(after.get("interact"), before.get("interact"), "{after}");
+    assert_eq!(after.get("geometry_owner"), before.get("geometry_owner"));
+    assert_eq!(after.get("observers"), Some(&json!([])), "{after}");
     operator.type_bytes(b"\x1c")?;
     let (code, record, restored) = operator.exited()?;
     assert_eq!(code, Some(0), "{record}");

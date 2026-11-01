@@ -122,9 +122,74 @@ impl CredentialEpoch {
     }
 }
 
+/// Identity of one authenticated connection, drawn at random by every
+/// [`Authority::authenticate`](crate::Authority::authenticate): two connections of one
+/// principal are never the same lease owner, even when they present one client label.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct ConnectionId(u128);
+
+impl ConnectionId {
+    pub(super) fn random() -> Self {
+        Self(uuid::Uuid::new_v4().as_u128())
+    }
+
+    /// Parses the canonical lowercase hyphenated UUID text.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AuthzError::InvalidValue`] for any other text.
+    pub fn parse(text: &str) -> Result<Self, AuthzError> {
+        uuid::Uuid::try_parse(text)
+            .ok()
+            .filter(|id| id.hyphenated().to_string() == text)
+            .map(|id| Self(id.as_u128()))
+            .ok_or(AuthzError::InvalidValue {
+                field_path: "connection",
+            })
+    }
+}
+
+impl TryFrom<String> for ConnectionId {
+    type Error = AuthzError;
+
+    fn try_from(text: String) -> Result<Self, Self::Error> {
+        Self::parse(&text)
+    }
+}
+
+impl From<ConnectionId> for String {
+    fn from(connection: ConnectionId) -> Self {
+        connection.to_string()
+    }
+}
+
+impl fmt::Display for ConnectionId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&uuid::Uuid::from_u128(self.0).hyphenated(), f)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{CredentialEpoch, CredentialId, PrincipalId};
+    use super::{ConnectionId, CredentialEpoch, CredentialId, PrincipalId};
+
+    #[test]
+    fn connection_ids_are_drawn_fresh_and_round_trip_only_as_canonical_text()
+    -> Result<(), serde_json::Error> {
+        let first = ConnectionId::random();
+
+        let text = serde_json::to_string(&first)?;
+        let back: ConnectionId = serde_json::from_str(&text)?;
+        let simple = format!("\"{}\"", uuid::Uuid::from_u128(first.0).simple());
+
+        assert_ne!(ConnectionId::random(), first);
+        assert_eq!(back, first);
+        assert!(serde_json::from_str::<ConnectionId>(&text.to_uppercase()).is_err());
+        assert!(serde_json::from_str::<ConnectionId>(&simple).is_err());
+        assert!(serde_json::from_str::<ConnectionId>("1").is_err());
+        Ok(())
+    }
 
     #[test]
     fn credential_id_text_round_trips_and_rejects_non_canonical_forms() {

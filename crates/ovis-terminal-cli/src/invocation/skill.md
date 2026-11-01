@@ -75,9 +75,9 @@ The bearer credential is read from `OVIS_TERMINAL_CREDENTIAL` and is never print
   `input.raw`, or the server's typed refusal ends the attach.
 - Another holder is never displaced: a held lease exits 11 with `lease_conflict`, the
   holder's lease record in `holder` and the lease change to retry after in `retry`.
-- The lease is recorded under `--client-id`, which defaults to `cli-<pid>`: two attach
-  processes are two owners and compete. Passing the same `--client-id` twice declares
-  one owner, which re-acquires its own lease.
+- The lease belongs to the connection that acquired it and is recorded under
+  `--client-id`, which defaults to `cli-<pid>`. A second attach is always another owner,
+  even under the same `--client-id`: it exits 11 with `lease_conflict` and cannot type.
 - `--takeover EPOCH` displaces the interact holder only at its current epoch and with
   the takeover grant; a stale epoch exits 11 with `lease_epoch_mismatch`, the epoch
   sent in `expected_epoch` and the current lease in `current`.
