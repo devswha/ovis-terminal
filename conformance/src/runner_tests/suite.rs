@@ -10,6 +10,7 @@ const EXECUTABLE: &[&str] = &[
     "_runner/self-test.json",
     "agent/binding.json",
     "agent/bridge.json",
+    "agent/e2e.json",
     "agent/launch.json",
     "agent/prompts.json",
     "agent/records.json",

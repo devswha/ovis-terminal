@@ -74,7 +74,23 @@ where
         request
             .authorize(&state, (&session, session.principal().clone()))
             .map_err(|error| error.boundary().with_op_id(op_id.clone()))?;
-        let record = OpRecord::queued(op_id.clone(), queued.method.clone(), position);
+        // A queued retry of a settled identity: the durable outcome wins over its place.
+        let ledger = (
+            Arc::clone(&state),
+            session.principal().clone(),
+            op_id.clone(),
+        );
+        let settled = tokio::task::spawn_blocking(move || {
+            let (state, principal, op_id) = ledger;
+            let context = Context::new(principal, state.identity, now()?);
+            Ok::<_, DispatchError>(Operations::new(&state.core, context).settled(&op_id)?)
+        })
+        .await
+        .map_err(DispatchError::from)
+        .and_then(std::convert::identity)
+        .map_err(|error| error.boundary().with_op_id(op_id.clone()))?;
+        let record = settled
+            .unwrap_or_else(|| OpRecord::queued(op_id.clone(), queued.method.clone(), position));
         return serde_json::to_value(record)
             .map_err(|error| DispatchError::from(error).boundary().with_op_id(op_id));
     }

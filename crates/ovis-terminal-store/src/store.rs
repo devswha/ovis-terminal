@@ -131,6 +131,9 @@ impl Store {
         (version, options): (i64, StoreOptions),
     ) -> Result<Self, StoreError> {
         schema::prepare(&mut connection, version)?;
+        if let Some(pages) = options.limits.max_pages {
+            connection.pragma_update(None, "max_page_count", pages)?;
+        }
         let limits = options.limits.clone();
         let writer = Writer::spawn(connection, options)?;
         Ok(Self { db, limits, writer })

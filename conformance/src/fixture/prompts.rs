@@ -9,22 +9,15 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use ovis_terminal_agent::prompts::{AnswerKeys, KeyInput, KeyInputError, PromptService};
-use ovis_terminal_agent::status::StatusService;
-use ovis_terminal_core::registry::{RuntimeIdentity, TerminalId};
+use ovis_terminal_core::registry::TerminalId;
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::rpc::RpcRequest;
 use ovis_terminal_protocol::schema::decode_params;
 use ovis_terminal_protocol::schema::methods::status::StatusTargetParams;
 use ovis_terminal_server::dispatch::lanes::agent_status::TerminalDirectory;
-use ovis_terminal_server::dispatch::lanes::prompts::{
-    AnswerPrompt, ClosePrompt, GetPrompt, ListPrompts, OpenPrompt, PromptLane,
-};
 use serde_json::{Value, json};
 
 use super::agents::Directory;
-use super::handler::Dispatch;
-use super::serve::at;
-use crate::error::RunnerError;
 
 /// Bytes that reached each fixture program's input.
 #[derive(Debug, Default)]
@@ -65,40 +58,9 @@ pub(crate) struct Gate {
     pub(crate) pty: Arc<Pty>,
 }
 
-impl Gate {
-    pub(crate) fn new(runtime: RuntimeIdentity, status: &Arc<StatusService>) -> Arc<Self> {
-        let pty = Arc::new(Pty::default());
-        let keys: Arc<dyn KeyInput> = Arc::new(Typed(Arc::clone(&pty)));
-        let prompts = PromptService::new(runtime.runtime_id(), Arc::clone(status)).with_keys(keys);
-        Arc::new(Self {
-            prompts: Arc::new(prompts),
-            pty,
-        })
-    }
-}
-
-/// Registers every `prompt.*` method over the agent terminals.
-pub(crate) fn register(
-    dispatch: &mut Dispatch,
-    (gate, directory): (&Gate, Arc<Directory>),
-    runtime: RuntimeIdentity,
-) -> Result<(), RunnerError> {
-    let lane = PromptLane::new(directory, Arc::clone(&gate.prompts), runtime.machine_id());
-    dispatch
-        .register(OpenPrompt::new(&lane))
-        .map_err(at("register prompt.open"))?;
-    dispatch
-        .register(AnswerPrompt::new(&lane))
-        .map_err(at("register prompt.answer"))?;
-    dispatch
-        .register(ClosePrompt::new(&lane))
-        .map_err(at("register prompt.close"))?;
-    dispatch
-        .register_read(GetPrompt::new(&lane))
-        .map_err(at("register prompt.get"))?;
-    dispatch
-        .register_read(ListPrompts::new(&lane))
-        .map_err(at("register prompt.list"))
+/// Typed prompt answers count as bytes that reached the program's input.
+pub(crate) fn keys(pty: &Arc<Pty>) -> Arc<dyn KeyInput> {
+    Arc::new(Typed(Arc::clone(pty)))
 }
 
 /// What reached the PTY input of the named fixture terminal.

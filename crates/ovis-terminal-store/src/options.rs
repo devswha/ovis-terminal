@@ -27,6 +27,9 @@ pub struct StoreLimits {
     pub max_receipts: u64,
     /// Mutations that may wait for the writer before submission is refused.
     pub writer_queue: usize,
+    /// Database size cap in SQLite pages; a commit that would grow past it fails as
+    /// storage full and rolls back. `None` leaves the file system as the only cap.
+    pub max_pages: Option<u32>,
 }
 
 impl Default for StoreLimits {
@@ -36,6 +39,7 @@ impl Default for StoreLimits {
             max_events: 10_000,
             max_receipts: 100_000,
             writer_queue: 64,
+            max_pages: None,
         }
     }
 }
@@ -59,6 +63,13 @@ impl StoreLimits {
     #[must_use]
     pub const fn with_max_receipts(mut self, receipts: u64) -> Self {
         self.max_receipts = receipts;
+        self
+    }
+
+    /// Caps the database at `pages` SQLite pages.
+    #[must_use]
+    pub const fn with_max_pages(mut self, pages: u32) -> Self {
+        self.max_pages = Some(pages);
         self
     }
 
