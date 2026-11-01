@@ -1,0 +1,39 @@
+# base: integration 93d7fb7 + only the new QA test (src/streams/graphics/qa.rs, tests/streams.rs registration); Linux x86_64
+$ cargo nextest run -p ovis-terminal-server --locked --test streams graphics --no-fail-fast
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+────────────
+ Nextest run ID f7f39aea-0d67-4810-9ec9-8573db44b9e8 with nextest profile: default
+    Starting 3 tests across 1 binary (7 tests skipped)
+        PASS [   0.027s] (1/3) ovis-terminal-server::streams graphics_three_protocols_reach_a_live_viewer_byte_identical
+        FAIL [   0.489s] (2/3) ovis-terminal-server::streams graphics_an_over_cap_series_is_replaced_by_one_typed_notice
+  stdout ───
+    running 1 test
+    test graphics_an_over_cap_series_is_replaced_by_one_typed_notice ... FAILED
+    failures:
+    failures:
+        graphics_an_over_cap_series_is_replaced_by_one_typed_notice
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.47s
+  stderr ───
+    thread 'graphics_an_over_cap_series_is_replaced_by_one_typed_notice' (2716241) panicked at crates/ovis-terminal-server/tests/../src/streams/graphics/qa.rs:162:5:
+    assertion `left == right` failed: [Object {"jsonrpc": String("2.0"), "method": String("attach.control"), "params": Object {"checkpoint": Object {"cursor": Object {"col": Number(0), "row": Number(0), "visible": Bool(true)}, "geometry": Object {"cols": Number(40), "rows": Number(8)}, "history_lines": String("0"), "modes": Object {"enabled": Array [], "kitty_keyboard": Number(0), "revision": String("0")}, "output_offset": String("0"), "revision": String("0"), "stream_offset": String("0")}, "close": Null, "kind": String("checkpoint"), "skipped": Null, "stream_id": String("stream:01a198a9-cad2-
+      left: 0
+     right: 1
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+        FAIL [   0.493s] (3/3) ovis-terminal-server::streams graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog
+  stdout ───
+    running 1 test
+    test graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog ... FAILED
+    failures:
+    failures:
+        graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.48s
+  stderr ───
+    thread 'graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog' (2716234) panicked at crates/ovis-terminal-server/tests/../src/streams/graphics/qa.rs:124:5:
+    [Object {"jsonrpc": String("2.0"), "method": String("attach.control"), "params": Object {"checkpoint": Object {"cursor": Object {"col": Number(0), "row": Number(0), "visible": Bool(true)}, "geometry": Object {"cols": Number(40), "rows": Number(8)}, "history_lines": String("0"), "modes": Object {"enabled": Array [], "kitty_keyboard": Number(0), "revision": String("0")}, "output_offset": String("0"), "revision": String("0"), "stream_offset": String("0")}, "close": Null, "kind": String("checkpoint"), "skipped": Null, "stream_id": String("stream:01a198a9-cacf-7326-b22c-6d816ad51550"), "stream_
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+────────────
+     Summary [   0.778s] 3 tests run: 1 passed, 2 failed, 7 skipped
+        FAIL [   0.489s] (2/3) ovis-terminal-server::streams graphics_an_over_cap_series_is_replaced_by_one_typed_notice
+        FAIL [   0.493s] (3/3) ovis-terminal-server::streams graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog
+error: test run failed
+(the exit status was not captured: the escaped PIPESTATUS printed literally; nextest reported "error: test run failed" above, which is its non-zero exit 100)

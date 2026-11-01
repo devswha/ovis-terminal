@@ -4,8 +4,10 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Duration;
 
+use ovis_terminal_protocol::domain::graphics::GraphicsCaps;
 use ovis_terminal_protocol::schema::ids::StreamId;
 use ovis_terminal_protocol::schema::limits::Limits;
+use ovis_terminal_protocol::schema::scalar::ByteCount;
 
 use super::error::StreamError;
 
@@ -17,11 +19,13 @@ pub struct StreamLimits {
     pub(super) backlog_bytes: u64,
     pub(super) stall_after: Duration,
     pub(super) max_streams: usize,
+    pub(super) graphics: GraphicsCaps,
 }
 
 impl StreamLimits {
     /// The advertised limits: 16 KiB chunks, 256 KiB credit, a 4 MiB backlog, 30 s
-    /// before an unwritable stream closes and 64 streams per terminal.
+    /// before an unwritable stream closes, 64 streams per terminal and 8 MiB graphics
+    /// sequences.
     #[must_use]
     pub fn advertised(limits: &Limits) -> Self {
         let size = |count: u64| usize::try_from(count).unwrap_or(usize::MAX);
@@ -31,7 +35,15 @@ impl StreamLimits {
             backlog_bytes: limits.stream_backlog_bytes.get(),
             stall_after: Duration::from_secs(30),
             max_streams: 64,
+            graphics: GraphicsCaps::advertised(limits),
         }
+    }
+
+    /// Replaces the largest graphics sequence a stream passes whole.
+    #[must_use]
+    pub const fn with_graphics_sequence_max_bytes(mut self, bytes: u64) -> Self {
+        self.graphics.sequence_max_bytes = ByteCount::new(bytes);
+        self
     }
 
     /// Replaces the per-stream backlog bound.

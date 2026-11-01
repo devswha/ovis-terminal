@@ -15,7 +15,7 @@ use super::root::IsolatedRoot;
 use super::session::Session;
 use crate::error::RunnerError;
 use crate::scenario::matcher::Assertion;
-use crate::scenario::model::{FORMAT, FixtureKind, Replay};
+use crate::scenario::model::{FORMAT, FixtureKind, Replay, Serve};
 
 mod wire;
 
@@ -112,7 +112,8 @@ impl Session<'_> {
             .map_err(|e| replay_failure(&e))?;
         let previous = std::mem::replace(&mut self.root, IsolatedRoot::create()?);
         let ran = async {
-            self.serve(kind).await?;
+            let serve = Serve { fixture: kind, qa_graphics_sequence_max_bytes: None };
+            self.serve(&serve).await?;
             let mut wire = Wire::new(self, case.id.as_str());
             let options = Options::new(&set.legacy, Bindings::new(bindings), inject);
             let outcome = ovis_terminal_replay::replay(case, &mut wire, options).await;

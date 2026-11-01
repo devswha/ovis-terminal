@@ -18,8 +18,10 @@ const SUB: u8 = 0x1a;
 /// Longest incomplete sequence held back; longer ones are released unfiltered.
 const HOLD_LIMIT: usize = 4096;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Scan {
+/// Where the boundary tracker is inside an escape sequence; shared with the graphics gate.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(super) enum Scan {
+    #[default]
     Ground,
     Escape,
     Csi,
@@ -27,8 +29,9 @@ enum Scan {
     TextEscape,
 }
 
+/// What one byte did to the sequence boundary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Step {
+pub(super) enum Step {
     Continue,
     Begin,
     End,
@@ -37,7 +40,7 @@ enum Step {
     EndBeforeEscape,
 }
 
-const fn step(scan: Scan, byte: u8) -> (Scan, Step) {
+pub(super) const fn step(scan: Scan, byte: u8) -> (Scan, Step) {
     match (scan, byte) {
         (Scan::Ground | Scan::Escape | Scan::Csi, ESC) => (Scan::Escape, Step::Begin),
         (Scan::Ground, _) => (Scan::Ground, Step::Continue),

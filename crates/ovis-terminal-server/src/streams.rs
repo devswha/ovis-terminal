@@ -11,6 +11,7 @@ mod control;
 mod credit;
 mod error;
 mod filter;
+mod graphics;
 mod handler;
 mod hub;
 mod journal;
