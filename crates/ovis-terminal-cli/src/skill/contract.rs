@@ -98,15 +98,12 @@ pub(super) fn command_line(cli: &Value) -> String {
         "\n## Command line\n\n`--json` (or `OVIS_JSON=1`) selects JSON whatever stdout is: \
          a result is one JSON document on stdout, a failure is one `{\"error\": {...}}` \
          record on stderr with `origin` (`cli` or `server`), `kind`, `hint` and \
-         `exit_code`. The command line is parsed and typed before any connection.\n\n\
-         | command | about |\n|---|---|\n",
+         `exit_code`. The command line is parsed and typed before any connection. The \
+         commands differ by platform (`serve`, `hold` and `terminal attach` are Unix \
+         only), so they are listed by the manual (`ovis-terminal --skill`) and by \
+         `ovis-terminal schema cli` of each build, not here; everything below holds on \
+         every platform.\n",
     );
-    for command in list(cli, "/commands") {
-        out.push_str(&rows(&[
-            format!("`ovis-terminal {}`", text(command, "/command")),
-            text(command, "/about"),
-        ]));
-    }
     out.push_str("\n| exit code | name | kinds |\n|---|---|---|\n");
     for status in list(cli, "/exit_codes") {
         let kinds: Vec<&str> = list(status, "/kinds")

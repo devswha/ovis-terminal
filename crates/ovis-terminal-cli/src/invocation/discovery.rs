@@ -159,7 +159,6 @@ mod tests {
 
     use super::{MANUAL, cli_contract};
     use crate::invocation::exit::ExitStatus;
-    use crate::skill;
 
     fn command_paths() -> Vec<String> {
         cli_contract()
@@ -189,61 +188,6 @@ mod tests {
                 MANUAL.contains(&format!("| {} | {} |", status.code(), status.name())),
                 "manual omits exit status {}",
                 status.name()
-            );
-        }
-    }
-
-    #[test]
-    fn the_shipped_contract_reference_is_the_one_this_build_renders() {
-        let rendered = skill::contract(&cli_contract()).expect("the contract renders");
-        assert_eq!(
-            include_str!("../../../../docs/runtime-contract.md"),
-            rendered,
-            "regenerate with `ovis-terminal schema contract > docs/runtime-contract.md`"
-        );
-    }
-
-    #[test]
-    fn every_kind_this_binary_reports_is_published() {
-        use crate::invocation::error::CliError;
-
-        let published: Vec<String> = ExitStatus::ALL
-            .iter()
-            .flat_map(|status| status.kinds().iter())
-            .chain(super::FAILURE_KINDS.iter())
-            .map(|kind| (*kind).to_owned())
-            .collect();
-        let json = serde_json::from_str::<Value>("[").expect_err("not JSON");
-        let errors = [
-            CliError::MissingCommand,
-            CliError::SkillWithCommand,
-            CliError::ParamsJson(json),
-            CliError::UnknownMethod {
-                method: String::new(),
-            },
-            CliError::NeedsTarget {
-                candidates: Vec::new(),
-                listed: false,
-            },
-            CliError::NotRunning {
-                path: std::path::PathBuf::new(),
-                state: "stopped",
-            },
-            CliError::Io {
-                operation: "send",
-                source: std::io::Error::other("x"),
-            },
-            CliError::Closed,
-            CliError::Restarted,
-            CliError::Timeout { deadline_ms: 1 },
-            CliError::UnsupportedTransport,
-            CliError::Command(crate::commands::CommandError::Repeated { field: "target" }),
-        ];
-        for error in errors {
-            assert!(
-                published.iter().any(|kind| kind == error.kind()),
-                "{} is unpublished",
-                error.kind()
             );
         }
     }

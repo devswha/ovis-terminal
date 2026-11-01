@@ -1,7 +1,8 @@
 ## How to read this reference
 
-The tables from `## Methods` on are rendered from the Rust types of this exact build: the
-OpenRPC document, the authorization roles and the command-line grammar. The sections
+The tables from `## Methods` on are rendered from the Rust types of this build: the OpenRPC
+document, the authorization roles and the exit codes. They are the same on every platform;
+the platform's commands are in the manual and `ovis-terminal schema cli`. The sections
 before them state behaviour that types cannot express. They come from the runtime API
 advisory with the binding decisions of the work plan applied; `## Advisory overrides
 applied` lists every place where the plan replaced the advisory.
