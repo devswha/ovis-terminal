@@ -29,7 +29,7 @@ use super::error::{checked, internal, refusal};
 use super::input::live_terminal;
 use super::records::unreported;
 
-fn wait_refusal(error: &WaitError) -> BoundaryError {
+pub(super) fn wait_refusal(error: &WaitError) -> BoundaryError {
     match error {
         WaitError::OutputGap { .. } => refusal(
             "cursor_expired",

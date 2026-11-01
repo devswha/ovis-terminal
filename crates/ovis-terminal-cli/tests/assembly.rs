@@ -20,6 +20,10 @@ pub mod restart;
 mod routes;
 #[path = "assembly/support.rs"]
 pub mod support;
+#[path = "assembly/templates.rs"]
+mod templates;
+#[path = "assembly/turns.rs"]
+mod turns;
 #[path = "assembly/update.rs"]
 mod update;
 #[path = "assembly/websocket.rs"]
@@ -34,7 +38,7 @@ use serde_json::{Value, json};
 use support::{BIN, Served, TestResult, op_id};
 
 /// Schema methods no landed crate implements; each must answer `method_not_found`.
-const UNIMPLEMENTED: [&str; 27] = [
+const UNIMPLEMENTED: [&str; 21] = [
     "agent.list",
     "agent.note",
     "agent.release",
@@ -44,8 +48,6 @@ const UNIMPLEMENTED: [&str; 27] = [
     "events.subscribe",
     "events.unsubscribe",
     "events.update",
-    "events.wait",
-    "input.interrupt",
     "machine.exec",
     "machine.file",
     "machine.list",
@@ -55,13 +57,9 @@ const UNIMPLEMENTED: [&str; 27] = [
     "service.install",
     "service.remove",
     "session.snapshot",
-    "template.get",
-    "template.list",
     "terminal.first_message",
     "terminal.history",
     "terminal.search",
-    "turn.get",
-    "turn.wait",
 ];
 
 /// Every method name the committed OpenRPC document publishes.

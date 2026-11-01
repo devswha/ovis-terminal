@@ -128,6 +128,15 @@ impl Generation {
             agents: Arc::clone(&shared.agents),
             health: Arc::clone(&health),
         })?;
+        let feed = super::feed::subscribe(&log)?;
+        shared
+            .actor
+            .call(move |runtime| {
+                runtime.status_feed = Some(feed);
+                Ok(())
+            })
+            .await
+            .map_err(AssemblyError::start("install the status feed"))?;
         let dispatch = Arc::new(dispatch);
         let served = Arc::new(Served {
             actor: shared.actor.clone(),

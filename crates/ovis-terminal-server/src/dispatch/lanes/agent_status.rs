@@ -152,6 +152,10 @@ lane_method!(
     GetStatus
 );
 lane_method!(
+    /// `turn.get`: the current turn, ended or still open.
+    GetTurn
+);
+lane_method!(
     /// `status.clear`: removes the root or one child record.
     ClearStatus
 );
@@ -223,6 +227,16 @@ lane_impl!(
     |lane, params, terminal| {
         drop(params);
         move |snapshot: &_| lane.status(snapshot, terminal)
+    }
+);
+lane_impl!(
+    GetTurn,
+    "turn.get",
+    StatusTargetParams,
+    Action::Read,
+    |lane, params, terminal| {
+        drop(params);
+        move |snapshot: &_| lane.turn(snapshot, terminal)
     }
 );
 lane_impl!(

@@ -9,6 +9,7 @@ use ovis_terminal_agent::tree::TreeService;
 use ovis_terminal_authz::validation::ScopedRoot;
 use ovis_terminal_core::registry::RuntimeIdentity;
 use ovis_terminal_server::dispatch::agent::AgentAssembly;
+use ovis_terminal_server::dispatch::lanes::agent_status::{AgentStatusLane, GetTurn};
 use ovis_terminal_server::dispatch::lanes::agent_tree::{AgentTreeLane, ListChildren};
 use ovis_terminal_server::dispatch::lanes::boundary_policy::AgentHistory;
 
@@ -58,6 +59,10 @@ pub(super) fn register(
     agents
         .register(dispatch)
         .map_err(stage("register the agent assembly"))?;
+    let turns = AgentStatusLane::new(Arc::clone(&hosting.directory), Arc::clone(agents.status()));
+    dispatch
+        .register(GetTurn::new(&turns))
+        .map_err(stage("register turn.get"))?;
     let tree = Arc::new(TreeService::new(
         hosting.identity,
         (Arc::clone(agents.status()), Arc::clone(agents.prompts())),

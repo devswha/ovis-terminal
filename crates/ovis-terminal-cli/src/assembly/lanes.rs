@@ -6,6 +6,7 @@
 pub(super) mod agents;
 mod machine;
 mod service;
+mod templates;
 mod update;
 mod worktrees;
 
@@ -121,6 +122,7 @@ pub(super) fn host(hosting: &Hosting<'_>) -> Result<(Dispatch, Arc<DispatchLog>)
     .map_err(stage("register server.status and server.metrics"))?;
     machine::register(&mut dispatch, hosting)?;
     agents::register(&mut dispatch, hosting, &log)?;
+    templates::register(&mut dispatch, hosting)?;
     update::register(&mut dispatch, hosting)?;
     worktrees::register(&mut dispatch, hosting, &log)?;
     Ok((dispatch, log))

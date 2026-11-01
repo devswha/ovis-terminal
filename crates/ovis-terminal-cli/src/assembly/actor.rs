@@ -50,6 +50,8 @@ pub(super) struct Runtime {
     /// for holder messages again.
     pub(super) poll: Duration,
     pub(super) journal: Arc<super::journal::BootJournal>,
+    /// The current boot's status events, drained between jobs.
+    pub(super) status_feed: Option<ovis_terminal_core::events::Delivery<super::lanes::ServedEvent>>,
     pub(super) holder: Holder,
     pub(super) identity: RuntimeIdentity,
     pub(super) authority: Arc<Authority<RegistryIdentities>>,
@@ -169,6 +171,7 @@ fn run(mut runtime: Runtime, jobs: &mpsc::Receiver<Job>) -> Result<(), AssemblyE
                 Err(TryRecvError::Disconnected) => return runtime.close(),
             }
         }
+        runtime.drain_status();
         if linked {
             match runtime.receive() {
                 Link::Linked => {}

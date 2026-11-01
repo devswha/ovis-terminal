@@ -64,7 +64,7 @@ pub(super) fn live_terminal<'a>(
         .ok_or_else(|| refusal("not_found", "name a terminal this server spawned"))
 }
 
-fn result(receipt: &Receipt) -> Result<Value, BoundaryError> {
+pub(super) fn result(receipt: &Receipt) -> Result<Value, BoundaryError> {
     let value = json!({
         "receipt": {
             "op_id": receipt.op_id,
@@ -100,6 +100,16 @@ impl Runtime {
         session: &Session,
         admission: Admission<'_>,
     ) -> Result<Value, BoundaryError> {
+        result(&self.admit_receipt(session, admission)?)
+    }
+
+    /// Admits one write as [`Runtime::admit_input`] does and returns its receipt; the
+    /// terminal remembers it as its latest queued input.
+    pub(super) fn admit_receipt(
+        &mut self,
+        session: &Session,
+        admission: Admission<'_>,
+    ) -> Result<Receipt, BoundaryError> {
         let runtime_id = self.identity.runtime_id();
         let Self {
             directory,
@@ -109,7 +119,7 @@ impl Runtime {
         } = self;
         let live = live_terminal((directory, served), admission.target)?;
         if let Some(prior) = live.sequencer.receipt(admission.op_id) {
-            return result(prior);
+            return Ok(prior.clone());
         }
         live.geometry
             .input_ready()
@@ -143,8 +153,9 @@ impl Runtime {
             })
             .map_err(|error| error.boundary())?
             .map_err(|error| refusal(error.kind(), error.hint()))?;
+        live.last_input = receipt.queued_seq;
         live.pump(holder).map_err(internal)?;
-        result(&receipt)
+        Ok(receipt)
     }
 
     /// `input.raw`: base64 bytes under the interact lease.

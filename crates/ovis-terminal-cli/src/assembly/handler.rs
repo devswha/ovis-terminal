@@ -33,7 +33,7 @@ use super::error::{refusal, worker_gone};
 use super::lanes::Dispatch;
 
 /// Methods served by the runtime actor and the lease table, besides the attach streams.
-pub(super) const ROUTED: [&str; 26] = [
+pub(super) const ROUTED: [&str; 29] = [
     "terminal.run",
     "terminal.list",
     "terminal.get",
@@ -60,11 +60,14 @@ pub(super) const ROUTED: [&str; 26] = [
     "layout.get",
     "layout.edit",
     "selection.set",
+    "turn.wait",
+    "events.wait",
+    "input.interrupt",
 ];
 
 type Lane = AttachLane<Arc<Directory>>;
 
-fn decode<P: DeserializeOwned>(call: &Call) -> Result<P, BoundaryError> {
+pub(super) fn decode<P: DeserializeOwned>(call: &Call) -> Result<P, BoundaryError> {
     decode_params(&call.request).map_err(BoundaryError::from)
 }
 
@@ -139,6 +142,7 @@ impl RequestHandler for Served {
             | "selection.set"
             | "attach.release_geometry"
             | "attach.focus" => self.layout_or_lease(call).await,
+            "turn.wait" | "events.wait" | "input.interrupt" => self.waited(call).await,
             "attach.leases" => {
                 let params: AttachLeasesParams = decode(&call)?;
                 let leases = self

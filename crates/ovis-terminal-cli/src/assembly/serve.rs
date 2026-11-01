@@ -145,6 +145,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         control: Arc::clone(&booted.control),
         poll: plan.holder_poll,
         journal: Arc::clone(&journal),
+        status_feed: None,
         holder: booted.holder,
         identity: booted.identity,
         authority: Arc::clone(&booted.authority),

@@ -14,6 +14,7 @@ mod credentials;
 mod directory;
 mod discovery;
 mod error;
+mod feed;
 mod generation;
 mod handler;
 mod health;
@@ -35,6 +36,8 @@ mod restart;
 mod routes;
 mod serve;
 mod terminal;
+mod turns;
+mod waited;
 mod websocket;
 
 use std::io;
