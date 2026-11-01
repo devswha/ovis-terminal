@@ -237,3 +237,23 @@ Gates on the merged tree (`docs/evidence/task-59/merge4-*`):
 - `all/all --case all`: exit 0, 48/48 cases, 2056 assertions, failed 0, skipped 0.
 - `with-slot.sh bash scripts/check.sh`: exit 0, `1193 tests run: 1193 passed (1 slow), 1 skipped`, hygiene `0 violation(s) in 1180 file(s)`.
 - Windows `cargo check` and `cargo clippy` for `x86_64-pc-windows-gnu` `-D warnings`: exit 0.
+
+## Round 3 (gate review round 2: two test gaps; production code unchanged)
+
+Report: `.omo/evidence/ovis-terminal-v1-task-59-gate-review.md#round-2`. Test-only change, pushed on top of bdc5361 with no merge.
+
+- B1, `crates/ovis-terminal-server/src/streams/qa/health.rs` (`a_real_stalled_viewer_reports_its_backlog_and_resynced_ranges`): the stalled viewer's reported loss ranges must now **equal**, in order, the inclusive skipped ranges of the `gap` control records that viewer received. Each `[from_output_offset, to_output_offset)` maps to `Bytes{from..=to-1}`. Any older ranges the bounded row no longer retains are counted in `losses_omitted` and skipped. The test waits event-driven until the viewer has received exactly as many gap records as the row accounts for. The earlier check, that a range only lies inside the published output, is gone.
+- B2, `crates/ovis-terminal-core/src/subscriptions/qa/health.rs` (`a_real_stalled_subscription_reports_its_queue_loss_and_resync`): each row's `client_id` must equal the client passed to `Request::for_client` (`witness`, `viewer`).
+- Mutants (`bash docs/evidence/task-59/mutants-r3.sh`, log `mutants-r3.log`):
+
+| Mutant | Change | Killed by |
+|---|---|---|
+| half-range | `streams/resync.rs` reports only the first half of the skipped range | `a_real_stalled_viewer_reports_its_backlog_and_resynced_ranges` (streams/qa/health.rs:139, reported ranges differ from the gap records) |
+| forged-label | `subscriptions/gauge.rs` tracks every subscription under the label `subscription` | `health::a_real_stalled_subscription_reports_its_queue_loss_and_resync` (subscriptions/qa/health.rs:74, client_id differs) |
+
+  2/2 were killed by a failing test, not a compile error, and both sources were restored.
+- Gates:
+  - `cargo test --locked -p ovis-terminal-server --test streams`: 6 passed.
+  - `cargo test --locked -p ovis-terminal-core --test subscriptions`: 22 passed.
+  - `cargo clippy --locked -p ovis-terminal-core -p ovis-terminal-server --all-targets -- -D warnings`: exit 0.
+  - `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh`: exit 0, `1193 tests run: 1193 passed (1 slow), 1 skipped`, hygiene `0 violation(s) in 1180 file(s)` (`r3-check.log`).

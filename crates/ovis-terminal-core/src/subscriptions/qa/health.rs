@@ -68,6 +68,11 @@ fn a_real_stalled_subscription_reports_its_queue_loss_and_resync() -> TestResult
     scan_to(&witness.feed, first)?;
     // Then the stalled consumer's undelivered event is queued bytes, the witness's is not.
     let queued = metrics(&health)?;
+    // And each row carries the client its subscription was requested for.
+    for (started, client) in [(&witness, "witness"), (&stalled, "viewer")] {
+        let row = row(&queued, started).ok_or("tracked row")?;
+        assert_eq!(row.client_id.as_str(), client, "{row:?}");
+    }
     assert_eq!(queued.subscriptions.get(), 2);
     assert_eq!(queued.streams.get(), 0);
     assert_eq!(
