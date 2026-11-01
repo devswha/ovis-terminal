@@ -347,3 +347,24 @@ Fix (`d57822e`): the launch program is decoded through its serialized form, whic
 Verified before pushing:
 - **Lane:** `cargo build -p ovis-terminal-cli` and `cargo clippy -p ovis-terminal-cli --all-targets -- -D warnings` pass, CLI tests pass 28/28, and `bash scripts/check.sh` exits 0 (931 passed, 0 hygiene violations).
 - **Scratch merge with `origin/integration` `804e508`** (built from `git merge-tree`/`commit-tree` in a throwaway worktree; the lane was not merged): workspace clippy `-D warnings` is clean, and CLI plus conformance pass 53/53.
+
+## Round 6
+
+- **B2, wait under the control lock (fixed structurally).** Core gains `Terminals::try_receive_message()`. It applies one holder notification that has already arrived; it takes no duration (`try_recv`), and an empty queue reports the same `Notification(Timeout)` as a zero-length wait. The runtime's receive inside the restart control uses it, so a wait under the lock can no longer come from changing one constant (the round-5 mutant was a 5 ms `receive_message`).
+- **B3, declared status ordering (deterministic test).** `turns::a_wait_sent_after_a_status_reports_reply_is_already_satisfied`. With `--qa-holder-poll-ms 600000` the runtime idles in its job wait, so nothing applies delivered status between jobs. The wait sent after the report's reply is the next job, and it must answer `already_satisfied`, with no alternative accepted. Removing the per-job drain fails it 5 runs out of 5. The racing test keeps covering `seq`.
+- **B1, template launch: bound (1c4a889).** The daemon binds T35's lane over the runtime with T35's lane untouched, and `terminal.first_message` is served (hello gap 15).
+  - `reserve` runs the plan's literal argv and environment through the runtime's `terminal.run` path, with the caller's session passed by op id from the served handler. It returns the real terminal, the program incarnation the holder assigned and the live wait hub.
+  - `start` answers the launched record. `boundary` answers the live leases, modes and running incarnation. `write` admits the first message through `input.raw`'s admission, presenting no lease.
+  - A `terminal.run` carrying a template or a first message goes to T35's `RunTerminal`; `GetFirstMessage` serves `terminal.first_message`.
+  - Seam: the holder assigns the program incarnation when it spawns (`holder/src/unix/holder.rs`, `allocate_process`). The program therefore already runs when `reserve` returns, whereas T35's reference launcher reserves first. Readiness stays correct because state waits are evaluated against the current declared state. Removing that ordering difference needs a holder `Spawn` with a caller-chosen incarnation, which is a follow-up.
+  - Test: `template_launch::a_template_launch_runs_and_its_first_message_is_released_on_idle`. The template spawns; a `working` declaration keeps the message `accepted`; `idle` releases it once and `terminal.first_message` reports `sent`; the program echoes it.
+- **Verification of round 6.**
+  - `scripts/check.sh` at 1c4a889: exit 0, 1428/1428 tests.
+  - Windows pre-check: exit 0.
+  - 25x nice-10 recipe at df44bea: 25/25, each run 74/74 in about 12 s, no SLOW.
+  - The drain-removal mutant fails the ordering test.
+- **25x run 6 before df44bea (test-only).** The ordering test took the process token from the screen (`spawned_token`, `terminal.wait_output` at `prompts.rs:41`). Under `--qa-holder-poll-ms 600000` the runtime defers holder output until its next job, so under load that wait timed out. The program now hands its token over a FIFO.
+  - Product path: a parked `events.wait` is woken by `Runtime::feed_status` (`assembly/turns.rs:85`, which calls `live.waits.report`). It runs from `drain_status` before every job and on every loop pass, at least every `poll` (5 ms by default, `serve.rs:203`). A later matching status therefore wakes a parked wait without needing a job. Only the QA idle stretch defers it.
+- **Follow-up for todo 61 (gate N1):** actor-routed reads have no server deadline.
+- **Merge:** `origin/integration` d064c74 (T69). No conflicts; lockfile regenerated; `evidence-audit` passes; SDK unchanged.
+
