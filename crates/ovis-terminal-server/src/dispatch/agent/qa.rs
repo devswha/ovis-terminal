@@ -35,6 +35,10 @@ impl TerminalDirectory for Two {
         match target {
             Target::Name(name) if name.as_str() == "agent" => Ok(self.0),
             Target::Name(name) if name.as_str() == "other" => Ok(self.1),
+            Target::TerminalId(id) => [self.0, self.1]
+                .into_iter()
+                .find(|known| id.as_str() == known.terminal.to_string())
+                .ok_or(TargetResolutionError::NotFound),
             _ => Err(TargetResolutionError::NotFound),
         }
     }
@@ -192,6 +196,62 @@ async fn two_clients_share_one_agent_record_behind_the_bridge_gate() -> TestResu
     let replay = ask(&mut third, ("replay", "agent.register"), register).await?;
     assert_eq!(at(&replay, "/result"), at(&registered, "/result"));
     drop((second, third, assembly));
+    close((core, dispatch), server).await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_queued_retry_of_a_committed_answer_still_inspects_as_committed() -> TestResult {
+    // Given p1 answered once under operation X.
+    let mut rig = rig()?;
+    rig.assembly.register(&mut rig.dispatch)?;
+    let Rig {
+        socket,
+        core,
+        dispatch,
+        assembly,
+    } = rig;
+    let dispatch = Arc::new(dispatch);
+    let server = socket
+        .serve(1, Arc::new(assembly.gate(Arc::clone(&dispatch))))
+        .await?;
+    let (mut first, mut second) = (connect(&socket).await?, connect(&socket).await?);
+    let open = json!({"op_id": op(), "target": {"name": "agent"}, "process_token": "token-agent",
+        "prompt_id": "p1", "prompt": {"kind": "permission", "text": "Proceed?", "mechanism": "rpc",
+        "choices": [{"id": "yes", "label": "Yes"}]}});
+    ask(&mut first, ("open", "prompt.open"), open).await?;
+    let answer = json!({"op_id": op(), "prompt_id": "p1", "version": "1",
+        "answer": {"choice": "yes"}});
+    let answered = ask(&mut first, ("answer", "prompt.answer"), answer.clone()).await?;
+    assert_eq!(at(&answered, "/result/state"), "answered", "{answered}");
+    // When every pinned-snapshot slot is held, so X's retry provably waits in the queue.
+    let mut leases = Vec::new();
+    while let Ok(lease) = core.pin_snapshot() {
+        leases.push(lease);
+    }
+    let retry = ask(&mut first, ("retry", "prompt.answer"), answer.clone()).await?;
+    assert_eq!(error_kind(&retry), "deadline_exceeded", "{retry}");
+    assert!(
+        at(&retry, "/error/data/queued_position").is_string(),
+        "{retry}"
+    );
+    let inspected = ask(
+        &mut second,
+        ("get", "op.get"),
+        json!({"op_id": at(&answer, "/op_id")}),
+    )
+    .await?;
+    // Then inspection reports the durable outcome, not the retry's queue place.
+    assert_eq!(at(&inspected, "/result/state"), "committed", "{inspected}");
+    assert_eq!(
+        at(&inspected, "/result/queued_position"),
+        &Value::Null,
+        "{inspected}"
+    );
+    for lease in leases {
+        core.release_snapshot(&lease.token)?;
+    }
+    dispatch.drain().await?;
+    drop((first, second, assembly));
     close((core, dispatch), server).await
 }
 

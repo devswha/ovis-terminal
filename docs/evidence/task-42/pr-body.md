@@ -87,6 +87,8 @@ $ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked
 
 ## Seams (files outside the write scope, and why)
 
+- `crates/ovis-terminal-core/src/ops/context/settled.rs` (+ the `mod settled;` line in `ops/context.rs`) and `crates/ovis-terminal-server/src/dispatch/control.rs`: the product fix for the CI failure described below.
+
 - `crates/ovis-terminal-core/src/lib.rs`: the `pub mod commit;` line.
 - `crates/ovis-terminal-core/Cargo.toml`: `tokio` moves from dev-dependency to dependency, for `spawn_blocking` and `Semaphore` in `Boundary::submit`. Cargo.lock is unchanged.
 - `crates/ovis-terminal-core/src/events/coordinator.rs`: an additive getter, `Coordinator::limits()`. The pager needs the page bound to align arbitrary offsets.
@@ -130,3 +132,33 @@ RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-wi
 cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings          # exit 0
 ```
 The macOS stress run `probe=commit-barrier` was dispatched once on a062208: https://github.com/devswha/ovis-terminal/actions/runs/41288062895
+
+## Fix after CI on b8faf06 (test (ubuntu-latest))
+
+**Failure.** `suite::every_scenario_file_is_executed_or_a_listed_declaration` failed because `all/all` failed inside it. In `agent/e2e` step 30, `reply[answer-receipt]/result/state` was `queued`, not `committed`.
+
+**Root cause.** The product was wrong, not the expectation.
+- On the resumed connection, the retried `prompt.answer` (same `op_id` X, already committed) and `op.get X` are pipelined, and the dispatcher runs them concurrently.
+- The retry registers as a new active request waiting in the FIFO admission queue.
+- `op.get`'s control path (`dispatch/control.rs`) returned `OpRecord::queued` whenever the caller had an active queued request for that identity. It never consulted the ledger, which already held X's committed receipt.
+- So an acknowledged, durable outcome was reported as "queued", which is misleading state (IDEAL-097). Locally the retry usually settled first; on CI `op.get` won the race.
+- The merges did not drop a wait. The fixture still composes `Revalidated(Measured(BoundaryPolicy(assembly.gate(..))))`, and the path still commits through the coordinator.
+
+**Fix.**
+- New `Operations::settled(op)` reads that one ledger row through `Coordinator::read_view`: one WAL view, no pinned-snapshot slot, so it cannot queue behind the retry. It returns the record only when it is committed, failed, cancelled or outcome-unknown.
+- `op.get`'s queued branch now answers that durable record when one exists, and the queue place otherwise.
+
+**Regression.**
+- Server test `agent_assembly::a_queued_retry_of_a_committed_answer_still_inspects_as_committed` is deterministic and event-driven. Every pin slot is held, so the retry provably queues; its `deadline_exceeded` reply carries `queued_position`. `op.get` then must be `committed` with no `queued_position`.
+- Mutant M6 (ignore the settled row) fails it with `left: "queued"`.
+- `agent/e2e` step 30 now also asserts `/result/method = prompt.answer` and `/result/queued_position` absent.
+
+Gates on the fix (on top of b8faf06):
+```
+cargo test -p ovis-terminal-server --test dispatch agent_assembly                     # exit 0, 3 passed
+conformance --scenario agent/e2e --isolated --case all                                # exit 0, 128 assertions, 2/2 passed
+conformance agent/e2e --case happy, 10 consecutive runs                               # 10/10 exit 0 (fix-e2e-repeat.log)
+cargo nextest run -p ovis-terminal-conformance -E 'test(suite::)'                     # exit 0, 4/4 passed (runs all/all)
+bash ~/.ovis-toolchain/with-slot.sh bash scripts/check.sh                            # exit 0, nextest 1286 run: 1286 passed, 1 skipped; hygiene 0 violations
+RUSTFLAGS=-Dwarnings cargo check / cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked   # exit 0 / exit 0
+```

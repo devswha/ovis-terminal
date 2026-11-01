@@ -14,6 +14,7 @@ use super::{OP_RETENTION_MS, OperationError, OperationEvent, OperationSnapshot};
 use crate::events::{Commit, Coordinator, EventData, ResourceId, SnapshotProducer, SnapshotSlot};
 use crate::registry::RuntimeIdentity;
 
+mod settled;
 #[cfg(test)]
 mod tests;
 

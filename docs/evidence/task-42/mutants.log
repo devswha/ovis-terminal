@@ -47,3 +47,11 @@ exit: 101
 killed_by:
   test storage::a_full_store_acknowledges_and_publishes_nothing ... FAILED
 
+## M6-op-get-ignores-settled-ledger (after the CI fix)
+file: crates/ovis-terminal-server/src/dispatch/control.rs
+mutation: report OpRecord::queued for a queued retry without consulting Operations::settled
+command: cargo test -p ovis-terminal-server --test dispatch agent_assembly
+exit: 101
+killed_by:
+  test agent_assembly::a_queued_retry_of_a_committed_answer_still_inspects_as_committed ... FAILED
+  (left: "queued", queued_position "1"; right: "committed")

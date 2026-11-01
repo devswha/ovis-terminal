@@ -62,7 +62,7 @@
   "cases": [
     {
       "case": "happy",
-      "summary": "Through the bridge and a phone socket served by the production agent assembly: an unknown-brand agent registers and the phone reads the same record; a sequenced report is replayed and a stale one refused with current_seq; an open form prompt blocks an ordinary send naming p1 and is answered once by the writer; history pages through one disconnect and resumes by cursor; the retried answer and its op.get return the retained receipt; terminal, registry and remote sources then commit concurrently while a 64 MiB snapshot is paged at one revision and a subscription installs, with no missing, duplicate or reordered record; the CLI reads the agent through the real binary.",
+      "summary": "Through the bridge and a phone socket served by the production agent assembly: an unknown-brand agent registers and the phone reads the same record; a sequenced report is replayed and a stale one refused with current_seq; an open form prompt blocks an ordinary send naming p1 and is answered once by the writer; history pages through one disconnect and resumes by cursor; the retried answer and an op.get pipelined beside it both return the retained committed receipt, never the retry's queue place; terminal, registry and remote sources then commit concurrently while a 64 MiB snapshot is paged at one revision and a subscription installs, with no missing, duplicate or reordered record; the CLI reads the agent through the real binary.",
       "steps": [
         {
           "serve": {
@@ -599,7 +599,11 @@
                 "/result/state": "committed",
                 "/error": {
                   "$present": false
-                }
+                },
+                "/result/queued_position": {
+                  "$present": false
+                },
+                "/result/method": "prompt.answer"
               }
             }
           }
