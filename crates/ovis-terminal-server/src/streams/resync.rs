@@ -46,6 +46,7 @@ pub(super) fn resync(log: &OutputLog, viewer: &mut Viewer, painted: &Painted) ->
     let checkpoint = records::checkpoint(&painted.paint, at);
     let record = records::checkpoint_control(&viewer.id, checkpoint.clone());
     viewer.paint(record, (Arc::clone(&painted.bytes), log.end()));
+    viewer.skip_notices(log.notice_seq());
     viewer.report_resync(unsent, lost);
     viewer.report_queued(viewer.backlog(log));
     checkpoint

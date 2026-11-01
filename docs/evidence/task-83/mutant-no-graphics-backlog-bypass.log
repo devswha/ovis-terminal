@@ -1,0 +1,28 @@
+# mutant mutant-no-graphics-backlog-bypass: crates/ovis-terminal-server/src/streams/graphics/backlog.rs
+#   - backlog > limits.backlog_bytes && {
+#   + backlog > limits.backlog_bytes || {
+$ cargo nextest run -p ovis-terminal-server --locked graphics --no-fail-fast
+        PASS [   0.017s] ( 1/17) ovis-terminal-server streams::graphics::tests::other_strings_and_queries_pass_through_untouched
+        PASS [   0.017s] ( 2/17) ovis-terminal-server streams::graphics::tests::a_unit_still_arriving_stays_held_across_a_fence
+        PASS [   0.017s] ( 3/17) ovis-terminal-server streams::graphics::tests::text_between_chunks_ends_the_series_without_reordering
+        PASS [   0.018s] ( 4/17) ovis-terminal-server streams::graphics::tests::dropped::every_protocol_over_its_cap_is_dropped_whole
+        PASS [   0.019s] ( 5/17) ovis-terminal-server streams::graphics::tests::dropped::a_dropped_series_never_holds_more_than_its_cap
+        PASS [   0.019s] ( 6/17) ovis-terminal-server streams::graphics::tests::dropped::chunks_after_the_drop_belong_to_the_dropped_series
+        PASS [   0.022s] ( 7/17) ovis-terminal-server streams::graphics::tests::a_sixel_is_released_whole_at_every_split
+        PASS [   0.022s] ( 8/17) ovis-terminal-server streams::graphics::tests::dropped::the_cap_is_admitted_and_one_byte_more_is_dropped_whole
+        PASS [   0.022s] ( 9/17) ovis-terminal-server streams::graphics::tests::an_answered_query_beside_an_image_is_still_removed
+        PASS [   0.024s] (10/17) ovis-terminal-server streams::graphics::tests::an_iterm2_image_is_released_whole_at_every_split
+        PASS [   0.024s] (11/17) ovis-terminal-server streams::graphics::tests::a_kitty_chunk_series_is_released_whole_at_every_split
+        PASS [   0.035s] (12/17) ovis-terminal-server streams::graphics::tests::dropped::an_over_cap_sequence_is_dropped_whole_wherever_reads_split
+        PASS [   0.023s] (13/17) ovis-terminal-server::streams graphics_three_protocols_reach_a_live_viewer_byte_identical
+        PASS [   0.041s] (14/17) ovis-terminal-server streams::graphics::tests::every_byte_arrives_in_order_wherever_reads_split
+        PASS [   0.061s] (15/17) ovis-terminal-server streams::graphics::tests::arbitrary_output_is_never_lost_or_reordered
+        FAIL [   0.760s] (16/17) ovis-terminal-server::streams graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog
+    test graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.74s
+    thread 'graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog' (3176110) panicked at crates/ovis-terminal-server/tests/../src/streams/graphics/qa.rs:124:5:
+        PASS [   0.969s] (17/17) ovis-terminal-server::streams graphics_an_over_cap_series_is_replaced_by_one_typed_notice
+     Summary [   0.970s] 17 tests run: 16 passed, 1 failed, 219 skipped
+        FAIL [   0.760s] (16/17) ovis-terminal-server::streams graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog
+error: test run failed
+exit=100

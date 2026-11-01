@@ -17,7 +17,7 @@ use tokio::sync::Notify;
 use tokio::time::Instant;
 
 use super::credit::{Credit, CreditRefusal};
-use super::log::{OutputLog, Shared};
+use super::log::{Notice, OutputLog, Shared};
 use super::offset::{LogOffset, StreamOffset};
 
 #[derive(Debug)]
@@ -51,6 +51,8 @@ pub(super) struct Viewer {
     closed: bool,
     progress: Instant,
     gauge: Option<ConsumerGauge>,
+    /// Sequence number of the last graphics notice sent or skipped.
+    notices_seen: u64,
 }
 
 impl Viewer {
@@ -90,7 +92,13 @@ impl Viewer {
             closed: false,
             progress: Instant::now(),
             gauge: None,
+            notices_seen: 0,
         }
+    }
+
+    /// Notices up to `seq` stand before this viewer's cursor; it is never sent them.
+    pub(super) const fn skip_notices(&mut self, seq: u64) {
+        self.notices_seen = seq;
     }
 
     /// Offset of the next byte this viewer will be sent, after queued paints.
@@ -158,6 +166,7 @@ impl Viewer {
         self.drop_backlog();
         self.closing = Some((self.cursor, close));
         self.cursor = LogOffset::new(u64::MAX);
+        self.notices_seen = u64::MAX;
     }
 
     /// The close record was delivered; nothing follows it.
@@ -227,19 +236,39 @@ impl Viewer {
     }
 
     fn live(&mut self, log: &OutputLog, chunk: usize) -> Option<Delivery> {
+        let mut until = self
+            .closing
+            .as_ref()
+            .map_or_else(|| log.end(), |(last, _)| *last);
+        if let Some(notice) = log.notice_after(self.notices_seen)
+            && notice.at <= until
+        {
+            if notice.at <= self.cursor {
+                self.notices_seen = notice.seq;
+                return Some(self.dropped(notice));
+            }
+            until = notice.at;
+        }
         if let Some((last, _)) = &self.closing
             && self.cursor.min(log.end()) >= *last
         {
             return self.finish();
         }
-        let until = self
-            .closing
-            .as_ref()
-            .map_or_else(|| log.end(), |(last, _)| *last);
         let room = usize::try_from(until.since(self.cursor)).unwrap_or(usize::MAX);
         let bytes = log.read(self.cursor, chunk.min(self.allowance()).min(room))?;
         self.cursor = self.cursor.advanced(bytes.len());
         Some(self.data(bytes))
+    }
+
+    /// The `graphics_dropped` record that stands where the dropped sequence was.
+    fn dropped(&self, notice: &Notice) -> Delivery {
+        let at = self.credit.sent().wire();
+        let mut record = AttachControl::new(self.id.clone(), ControlKind::GraphicsDropped, at);
+        record.graphics_dropped = Some(notice.data.clone());
+        Delivery::Control {
+            record: Box::new(record),
+            last: false,
+        }
     }
 
     fn finish(&mut self) -> Option<Delivery> {

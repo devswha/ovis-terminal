@@ -9,9 +9,10 @@ use std::collections::VecDeque;
 use std::ops::Range;
 use std::sync::Arc;
 
+use ovis_terminal_protocol::domain::graphics::GraphicsDroppedData;
 use ovis_terminal_vt::OutputOffset;
 
-use super::filter::Filtered;
+use super::graphics::Gated;
 use super::offset::LogOffset;
 
 #[derive(Debug)]
@@ -20,6 +21,17 @@ struct Chunk {
     raw: OutputOffset,
     bytes: Arc<[u8]>,
     removed: Vec<(usize, u64)>,
+    /// Bytes of whole graphics sequences in `bytes`.
+    graphics: u64,
+}
+
+/// A graphics sequence dropped whole where the log stood at `at`.
+#[derive(Debug)]
+pub(super) struct Notice {
+    pub at: LogOffset,
+    /// Increases by one per notice; a viewer remembers the last it was sent.
+    pub seq: u64,
+    pub data: GraphicsDroppedData,
 }
 
 impl Chunk {
@@ -73,10 +85,25 @@ pub(super) struct OutputLog {
     chunks: VecDeque<Chunk>,
     end: LogOffset,
     raw_end: OutputOffset,
+    notices: VecDeque<Notice>,
+    notice_seq: u64,
 }
 
 impl OutputLog {
-    pub(super) fn append(&mut self, filtered: Filtered) {
+    pub(super) fn append(&mut self, gated: Gated) {
+        let Gated {
+            filtered,
+            graphics,
+            dropped,
+        } = gated;
+        for (index, data) in dropped {
+            self.notice_seq = self.notice_seq.saturating_add(1);
+            self.notices.push_back(Notice {
+                at: self.end.advanced(index),
+                seq: self.notice_seq,
+                data,
+            });
+        }
         self.raw_end = filtered.raw_end;
         if filtered.bytes.is_empty() {
             return;
@@ -86,6 +113,7 @@ impl OutputLog {
             raw: filtered.raw_start,
             bytes: filtered.bytes.into(),
             removed: filtered.removed,
+            graphics,
         };
         self.end = chunk.end();
         self.chunks.push_back(chunk);
@@ -115,11 +143,32 @@ impl OutputLog {
         })
     }
 
-    /// Drops chunks every live viewer has read past.
+    /// Drops chunks and notices every live viewer has read past.
     pub(super) fn trim(&mut self, keep: LogOffset) {
         while self.chunks.front().is_some_and(|chunk| chunk.end() <= keep) {
             self.chunks.pop_front();
         }
+        while self.notices.front().is_some_and(|notice| notice.at < keep) {
+            self.notices.pop_front();
+        }
+    }
+
+    /// Graphics bytes in the chunks from `from` on.
+    pub(super) fn graphics_after(&self, from: LogOffset) -> u64 {
+        self.chunks
+            .iter()
+            .filter(|chunk| chunk.end() > from)
+            .fold(0, |sum, chunk| sum.saturating_add(chunk.graphics))
+    }
+
+    /// The sequence number of the newest notice; a viewer starting now skips them all.
+    pub(super) const fn notice_seq(&self) -> u64 {
+        self.notice_seq
+    }
+
+    /// The first notice newer than `seen`.
+    pub(super) fn notice_after(&self, seen: u64) -> Option<&Notice> {
+        self.notices.iter().find(|notice| notice.seq > seen)
     }
 }
 
@@ -134,12 +183,15 @@ mod tests {
     #[test]
     fn log_offsets_map_back_to_raw_offsets_across_removed_queries() {
         let mut log = OutputLog::default();
-        log.append(Filtered {
-            bytes: b"abcd".to_vec(),
-            raw_start: OutputOffset::new(10),
-            raw_end: OutputOffset::new(18),
-            removed: vec![(2, 4)],
-        });
+        log.append(
+            Filtered {
+                bytes: b"abcd".to_vec(),
+                raw_start: OutputOffset::new(10),
+                raw_end: OutputOffset::new(18),
+                removed: vec![(2, 4)],
+            }
+            .into(),
+        );
         assert_eq!(log.raw_at(LogOffset::new(1)), OutputOffset::new(11));
         assert_eq!(log.raw_at(LogOffset::new(2)), OutputOffset::new(16));
         assert_eq!(log.raw_at(LogOffset::new(4)), OutputOffset::new(18));

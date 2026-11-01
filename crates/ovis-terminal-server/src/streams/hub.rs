@@ -1,7 +1,8 @@
 //! One terminal's streams: screen ingestion, query filtering, the shared log and viewers.
 //!
 //! Every holder output chunk is ingested by the screen, its answered queries are
-//! filtered out, and the filtered bytes are appended once to the shared log. Viewers
+//! filtered out, graphics sequences pass the gate whole, and the result is appended
+//! once to the shared log. Viewers
 //! read the log at their own cursors; publishing never waits for any viewer. A viewer
 //! whose backlog passes its bound, or the largest ones while the session budget is
 //! exceeded, is resynchronized with a gap record and a fresh checkpoint.
@@ -22,6 +23,7 @@ use ovis_terminal_vt::{FirstPaint, OutputOffset};
 
 use super::error::StreamError;
 use super::filter::{QueryFilter, RawSlice};
+use super::graphics::{GraphicsGate, over_backlog};
 use super::journal::LeaseJournal;
 use super::limits::{SessionBacklog, StreamLimits};
 use super::log::OutputLog;
@@ -71,6 +73,7 @@ pub(super) enum Phase {
 #[derive(Debug)]
 pub(super) struct HubState {
     pub filter: QueryFilter,
+    pub gate: GraphicsGate,
     pub log: OutputLog,
     pub viewers: BTreeMap<StreamId, Viewer>,
     pub phase: Phase,
@@ -104,12 +107,14 @@ impl TerminalStreams {
                 .process_incarnation
                 .map(|process| Incarnation::new(process.get())),
         );
+        let caps = setup.limits.graphics;
         Arc::new(Self {
             screen,
             identity,
             setup,
             state: Mutex::new(HubState {
                 filter: QueryFilter::default(),
+                gate: GraphicsGate::new(caps),
                 log: OutputLog::default(),
                 viewers: BTreeMap::new(),
                 phase: Phase::Live,
@@ -154,7 +159,8 @@ impl TerminalStreams {
             answered: &answered,
         });
         let before = state.log.end();
-        state.log.append(filtered);
+        let gated = state.gate.apply(&filtered);
+        state.log.append(gated);
         let added = state.log.end().since(before);
         for viewer in state.viewers.values().filter(|viewer| !viewer.is_closed()) {
             viewer.report_queued(added);
@@ -173,7 +179,10 @@ impl TerminalStreams {
         let mut state = self.lock()?;
         self.screen.finish(exit)?;
         let flushed = state.filter.flush();
-        state.log.append(flushed);
+        let gated = state.gate.apply(&flushed);
+        state.log.append(gated);
+        let held = state.gate.flush();
+        state.log.append(held);
         let reason = if exit.signal.is_some() {
             StreamCloseReason::Killed
         } else {
@@ -261,10 +270,13 @@ impl TerminalStreams {
         Ok(self.lock()?.viewers.len())
     }
 
-    /// Releases held query bytes and paints the screen at exactly the log's raw end.
+    /// Releases held query bytes and paints the screen at the log's raw end. A graphics
+    /// unit still arriving stays held and follows the paint whole; the grid already
+    /// reflects it, and graphics bytes draw no cells.
     pub(super) fn fence(&self, state: &mut HubState) -> Result<Painted, StreamError> {
         let flushed = state.filter.flush();
-        state.log.append(flushed);
+        let gated = state.gate.apply(&flushed);
+        state.log.append(gated);
         let paint = self.screen.first_paint()?;
         let bytes = Arc::from(paint.bytes.as_slice());
         Ok(Painted { paint, bytes })
@@ -275,9 +287,7 @@ impl TerminalStreams {
         let mut over_stream: Vec<StreamId> = state
             .viewers
             .values()
-            .filter(|viewer| {
-                !viewer.is_closed() && viewer.backlog(&state.log) > limits.backlog_bytes
-            })
+            .filter(|viewer| !viewer.is_closed() && over_backlog(&state.log, viewer, limits))
             .map(|viewer| viewer.id.clone())
             .collect();
         let mut by_size: Vec<(u64, StreamId)> = Vec::new();
