@@ -18,6 +18,10 @@ pub(crate) enum FixtureKind {
 #[serde(deny_unknown_fields)]
 pub(crate) struct Serve {
     pub(crate) fixture: FixtureKind,
+    /// The assembled binary's `--qa-graphics-sequence-max-bytes`; its root is marked a QA
+    /// fixture root. The protocol fixture refuses it.
+    #[serde(default)]
+    pub(crate) qa_graphics_sequence_max_bytes: Option<crate::ids::Decimal>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

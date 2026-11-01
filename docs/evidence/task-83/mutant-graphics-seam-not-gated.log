@@ -1,0 +1,12 @@
+# mutant mutant-graphics-seam-not-gated: crates/ovis-terminal-cli/src/assembly/serve.rs
+#   - || plan.qa.graphics_sequence_max_bytes.is_some();
+#   + || false;
+$ cargo nextest run -p ovis-terminal-cli --locked a_qa_seam_is_refused
+        FAIL [   0.248s] (1/1) ovis-terminal-cli::assembly pending::a_qa_seam_is_refused_on_a_root_that_is_not_a_qa_fixture_root
+    test pending::a_qa_seam_is_refused_on_a_root_that_is_not_a_qa_fixture_root ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 41 filtered out; finished in 0.24s
+    thread 'pending::a_qa_seam_is_refused_on_a_root_that_is_not_a_qa_fixture_root' (3818291) panicked at crates/ovis-terminal-cli/tests/assembly/pending.rs:205:9:
+    assertion `left != right` failed: ["--qa-graphics-sequence-max-bytes", "4096"] Output { status: ExitStatus(unix_wait_status(0)), stdout: "{\"ready\":{\"bearer\":\"ovt1.c1.c9a00ec12143492cb749c3b60f938ad6e003b32ce1a24f1e98070d56b8624506\",\"observer\":\"ovt1.c2.6caf4fba950e472e84a9956eb1b91205783
+     Summary [   0.249s] 1 test run: 0 passed, 1 failed, 73 skipped
+        FAIL [   0.248s] (1/1) ovis-terminal-cli::assembly pending::a_qa_seam_is_refused_on_a_root_that_is_not_a_qa_fixture_root
+exit=100

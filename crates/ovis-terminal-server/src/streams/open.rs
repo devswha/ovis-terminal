@@ -132,6 +132,7 @@ impl TerminalStreams {
         let first = checkpoint(&painted.paint, StreamOffset::ZERO);
         let control = checkpoint_control(request.stream, first.clone());
         viewer.paint(control, (Arc::clone(&painted.bytes), state.log.end()));
+        viewer.skip_notices(state.log.notice_seq());
         if interact {
             viewer.interact = true;
             let at = viewer.next_offset().wire();

@@ -80,6 +80,11 @@ pub(super) struct ServeArgs {
     /// `--root` that holds a `qa-fixture` file.
     #[arg(long)]
     pub(super) qa_actor_hold: Option<std::path::PathBuf>,
+    /// QA seam: the largest graphics sequence attach streams pass whole, in bytes (the
+    /// advertised 8 MiB without it), so a test can cross the cap without writing 8 MiB
+    /// through a PTY. Accepted only with a `--root` that holds a `qa-fixture` file.
+    #[arg(long)]
+    pub(super) qa_graphics_sequence_max_bytes: Option<u64>,
 }
 
 /// The two published contracts.
