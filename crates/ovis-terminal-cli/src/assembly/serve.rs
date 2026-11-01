@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+use ovis_terminal_protocol::domain::recovery::CrashRecovery;
 use ovis_terminal_protocol::schema::limits::{Limits, TransportKind};
 use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::listen::{
@@ -15,6 +16,7 @@ use ovis_terminal_server::listen::{
 use ovis_terminal_server::streams::{
     AttachHandler, AttachLane, LeaseJournal, SessionBacklog, StreamLimits, StreamSetup,
 };
+use ovis_terminal_server::ws::WsServerHandle;
 use serde_json::{Value, json};
 use tokio::io::AsyncReadExt as _;
 use tokio::signal::unix::{SignalKind, signal};
@@ -24,6 +26,7 @@ use super::boot::{LeaseLog, boot};
 use super::directory::Directory;
 use super::handler::{Assembled, Served};
 use super::lifetime::Lifetime;
+use super::restart::StopSignal;
 use super::{AssemblyError, ServePlan};
 
 /// Session-wide bound on bytes queued for all attach viewers.
@@ -60,7 +63,7 @@ fn private_dir(path: &std::path::Path) -> Result<(), AssemblyError> {
         .map_err(AssemblyError::start("create the state directory"))
 }
 
-async fn stopped(stdin_lifetime: bool) -> Result<(), AssemblyError> {
+async fn stopped(stdin_lifetime: bool, stop: StopSignal) -> Result<(), AssemblyError> {
     let mut terminate =
         signal(SignalKind::terminate()).map_err(AssemblyError::start("watch SIGTERM"))?;
     let mut interrupt =
@@ -79,23 +82,56 @@ async fn stopped(stdin_lifetime: bool) -> Result<(), AssemblyError> {
         _ = terminate.recv() => {}
         _ = interrupt.recv() => {}
         () = stdin => {}
+        () = stop.wait() => {}
     }
     Ok(())
+}
+
+/// The ready line: endpoint, bearers, and what this boot recovered or listens on.
+fn ready(
+    socket: &std::path::Path,
+    bearers: &super::boot::Bearers,
+    (recovery, websocket): (Option<&CrashRecovery>, Option<&WsServerHandle>),
+) -> Result<Value, AssemblyError> {
+    let mut ready = json!({
+        "socket": socket,
+        "bearer": bearers.owner,
+        "observer": bearers.observer,
+        "writer": bearers.writer,
+    });
+    if let Value::Object(fields) = &mut ready {
+        if let Some(report) = recovery {
+            let report = serde_json::to_value(report)
+                .map_err(AssemblyError::start("encode the recovery report"))?;
+            fields.insert("recovery".to_owned(), report);
+        }
+        if let Some(listener) = websocket {
+            fields.insert(
+                "websocket".to_owned(),
+                json!(listener.local_addr().to_string()),
+            );
+        }
+    }
+    Ok(json!({ "ready": ready }))
 }
 
 /// Runs one server lifetime for [`super::serve`].
 pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(), AssemblyError> {
     let (socket, state) = paths(plan, env)?;
     private_dir(&state)?;
-    let booted = boot(&state)?;
+    let booted = boot(&state).await?;
+    let recovery =
+        super::recovery::recover_boot(&state, &booted.control, (&booted.boot, booted.inherited))
+            .await?;
     let directory = Arc::new(Directory::new(booted.identity.machine_id()));
     let lane = AttachLane::new(Arc::clone(&directory));
     let limits = StreamLimits::advertised(&Limits::v1());
     let backlog = Arc::new(SessionBacklog::new(SESSION_BACKLOG_BYTES));
     let journal: Arc<dyn LeaseJournal> = Arc::<LeaseLog>::clone(&booted.leases);
     let setup = StreamSetup::new(limits, backlog, journal);
+    let control = booted.control;
     let runtime = Runtime {
-        terminals: booted.terminals,
+        control: Arc::clone(&control),
         holder: booted.holder,
         identity: booted.identity,
         authority: Arc::clone(&booted.authority),
@@ -115,12 +151,15 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         authority: Arc::clone(&booted.authority),
         directory: Arc::clone(&directory),
         actor: actor.clone(),
+        control,
     })?;
+    let stop = StopSignal::default();
     let dispatch = Arc::new(dispatch);
     let served = Arc::new(Served {
         actor,
         lane: Arc::clone(&lane),
         dispatch: Arc::clone(&dispatch),
+        stop: stop.clone(),
     });
     let handler = Arc::new(Revalidated::new(
         Arc::clone(&booted.authority),
@@ -151,20 +190,12 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         ),
         None => None,
     };
-    let mut ready = json!({
-        "socket": socket,
-        "bearer": booted.bearers.owner,
-        "observer": booted.bearers.observer,
-        "writer": booted.bearers.writer,
-    });
-    if let (Some(listener), Value::Object(fields)) = (&websocket, &mut ready) {
-        fields.insert(
-            "websocket".to_owned(),
-            json!(listener.local_addr().to_string()),
-        );
-    }
-    announce(&json!({ "ready": ready }))?;
-    let waited = stopped(plan.stdin_lifetime).await;
+    announce(&ready(
+        &socket,
+        &booted.bearers,
+        (recovery.as_ref(), websocket.as_ref()),
+    )?)?;
+    let waited = stopped(plan.stdin_lifetime, stop).await;
     let lifetime = Lifetime {
         websocket,
         listener,

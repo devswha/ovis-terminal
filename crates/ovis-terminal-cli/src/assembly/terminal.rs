@@ -80,10 +80,8 @@ impl Runtime {
         let grid = params.geometry;
         let launch = launch(params).map_err(|error| terminal_refusal(&error))?;
         let name = launch.name.as_ref().map(|name| name.as_str().to_owned());
-        let record = self
-            .terminals
-            .run(Call::new(session, op_id), launch)
-            .map_err(|error| terminal_refusal(&error))?;
+        let record =
+            self.lifecycle(|terminals| terminals.run(Call::new(session, op_id), launch))?;
         let id = record.id();
         self.created.entry(id).or_insert(record.revision);
         if !self.live.contains_key(&id) {
@@ -97,10 +95,7 @@ impl Runtime {
             if !self.receive(Duration::from_millis(50)) {
                 break;
             }
-            record = self
-                .terminals
-                .get(session, id)
-                .map_err(|error| terminal_refusal(&error))?;
+            record = self.lifecycle(|terminals| terminals.get(session, id))?;
         }
         let spawn = match record.spawn {
             LaunchState::Spawned => "spawned",
@@ -113,10 +108,7 @@ impl Runtime {
     }
 
     pub(super) fn list_terminals(&self, session: &Session) -> Result<Value, BoundaryError> {
-        let records = self
-            .terminals
-            .list(session)
-            .map_err(|error| terminal_refusal(&error))?;
+        let records = self.lifecycle(|terminals| terminals.list(session))?;
         let terminals = records
             .iter()
             .map(|record| self.record_value(record))
@@ -135,10 +127,7 @@ impl Runtime {
         target: &Target,
     ) -> Result<Value, BoundaryError> {
         let id = self.resolve_id(target)?;
-        let record = self
-            .terminals
-            .get(session, id)
-            .map_err(|error| terminal_refusal(&error))?;
+        let record = self.lifecycle(|terminals| terminals.get(session, id))?;
         self.record_value(&record)
     }
 
@@ -147,10 +136,7 @@ impl Runtime {
         session: &Session,
         op_id: &OpId,
     ) -> Result<Value, BoundaryError> {
-        let record = self
-            .terminals
-            .operation(session, op_id)
-            .map_err(|error| terminal_refusal(&error))?;
+        let record = self.lifecycle(|terminals| terminals.operation(session, op_id))?;
         serde_json::to_value(record).map_err(|_| refusal("internal", "report the build"))
     }
 

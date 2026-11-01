@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 use std::io::{BufRead as _, BufReader, Write as _};
 use std::os::unix::net::UnixStream;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Output, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -57,6 +57,7 @@ pub struct Served {
     bearer: String,
     observer: String,
     websocket: Option<String>,
+    ready: Value,
 }
 
 impl Served {
@@ -93,6 +94,16 @@ impl Served {
         let unique = NEXT.fetch_add(1, Ordering::Relaxed);
         let root = PathBuf::from("/tmp").join(format!("ovt31a-{}-{unique}", std::process::id()));
         std::fs::create_dir_all(&root)?;
+        Self::start_at(&root, extra)
+    }
+
+    /// Starts `serve` on an existing `root`, as a later boot of the same state.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a process, socket or file step fails.
+    pub fn start_at(root: &Path, extra: &[&str]) -> TestResult<Self> {
+        let root = root.to_path_buf();
         let mut child = Command::new(BIN)
             .args(["serve", "--root"])
             .arg(&root)
@@ -135,7 +146,44 @@ impl Served {
             bearer: bearer.to_owned(),
             observer,
             websocket,
+            ready,
         })
+    }
+
+    /// The parsed ready line.
+    pub const fn ready(&self) -> &Value {
+        &self.ready
+    }
+
+    /// Kills the server process this test spawned and reaps it; its state stays.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the process cannot be signalled or reaped.
+    pub fn crash(mut self) -> TestResult<PathBuf> {
+        self.child.kill()?;
+        self.child.wait()?;
+        Ok(self.root)
+    }
+
+    /// Waits, with stdin still open, for the server to stop by itself and returns its
+    /// report line.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a process, socket or file step fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the server exits with a failure.
+    pub fn stopped_by_itself(mut self) -> TestResult<Value> {
+        let mut line = String::new();
+        self.stdout.read_line(&mut line)?;
+        let status = self.child.wait()?;
+        assert_eq!(status.code(), Some(0), "serve exited {status:?}: {line}");
+        drop(self.stdin.take());
+        std::fs::remove_dir_all(&self.root)?;
+        Ok(serde_json::from_str(&line)?)
     }
 
     /// Runs the binary with `--json` against this server's endpoint and bearer.

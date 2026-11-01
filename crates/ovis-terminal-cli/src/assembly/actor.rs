@@ -10,6 +10,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use ovis_terminal_authz::Authority;
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity, TerminalId};
+use ovis_terminal_core::restart::{Control, RestartError};
 use ovis_terminal_core::terminals::{TerminalError, Terminals};
 use ovis_terminal_holder::unix::Holder;
 use ovis_terminal_protocol::errors::BoundaryError;
@@ -33,7 +34,7 @@ type Job = Box<dyn FnOnce(&mut Runtime) + Send>;
 /// Everything the actor thread owns.
 #[derive(Debug)]
 pub(super) struct Runtime {
-    pub(super) terminals: Terminals,
+    pub(super) control: Arc<Control>,
     pub(super) holder: Holder,
     pub(super) identity: RuntimeIdentity,
     pub(super) authority: Arc<Authority<RegistryIdentities>>,
@@ -62,17 +63,39 @@ fn report(stage: &str, error: &dyn std::error::Error) {
 }
 
 impl Runtime {
+    /// Runs `work` on the lifecycle the restart control currently owns.
+    pub(super) fn lifecycle<R>(
+        &self,
+        work: impl FnOnce(&mut Terminals) -> Result<R, TerminalError>,
+    ) -> Result<R, BoundaryError> {
+        self.control
+            .with_terminals(|terminals, _| work(terminals))
+            .map_err(|error| match error {
+                RestartError::Terminal(error) => super::terminal::terminal_refusal(&error),
+                other => super::error::refusal(other.kind(), other.hint()),
+            })
+    }
+
     /// Applies at most one holder message; `false` once the holder link is gone.
     pub(super) fn receive(&mut self, wait: Duration) -> bool {
-        match self.terminals.receive_message(wait) {
+        let received = self
+            .control
+            .with_terminals(|terminals, _| terminals.receive_message(wait));
+        match received {
             Ok(Some(message)) => {
                 if let Err(error) = self.follow(&message) {
                     report("follow holder message", error.as_ref());
                 }
                 true
             }
-            Ok(None) | Err(TerminalError::Notification(RecvTimeoutError::Timeout)) => true,
-            Err(TerminalError::Notification(RecvTimeoutError::Disconnected)) => false,
+            Ok(None)
+            | Err(RestartError::Terminal(TerminalError::Notification(RecvTimeoutError::Timeout))) => {
+                true
+            }
+            Err(
+                RestartError::Terminal(TerminalError::Notification(RecvTimeoutError::Disconnected))
+                | RestartError::ControlStopped,
+            ) => false,
             Err(error) => {
                 report("apply holder message", &error);
                 true
@@ -82,7 +105,8 @@ impl Runtime {
 
     fn close(self) -> Result<(), AssemblyError> {
         drop(self.live);
-        self.terminals
+        Arc::try_unwrap(self.control)
+            .map_err(|_| AssemblyError::stop("release the restart control")("still shared"))?
             .close()
             .map_err(AssemblyError::stop("release the terminal lifecycle"))?;
         self.holder

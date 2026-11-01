@@ -98,6 +98,7 @@ pub(super) struct Hosting<'a> {
     pub(super) authority: Arc<Authority<RegistryIdentities>>,
     pub(super) directory: Arc<Directory>,
     pub(super) actor: super::actor::Actor,
+    pub(super) control: Arc<ovis_terminal_core::restart::Control>,
 }
 
 fn stage<E: Into<super::StageSource>>(stage: &'static str) -> impl FnOnce(E) -> AssemblyError {
@@ -112,6 +113,7 @@ pub(super) fn host(hosting: Hosting<'_>) -> Result<(Dispatch, Arc<DispatchLog>),
         authority,
         directory,
         actor,
+        control,
     } = hosting;
     let store = Store::open(&state.join("dispatch.db"), StoreOptions::default())
         .map_err(stage("open the dispatch store"))?;
@@ -133,6 +135,7 @@ pub(super) fn host(hosting: Hosting<'_>) -> Result<(Dispatch, Arc<DispatchLog>),
         .register(RevokeCredential::new(&credentials))
         .map_err(stage("register credential.revoke"))?;
     let machine = identity.machine_id();
+    super::restart::register(&mut dispatch, control, machine)?;
     documents_retention::register(&mut dispatch, identity).map_err(stage("register documents"))?;
     std::fs::create_dir_all(state.join("plugins")).map_err(stage("create the plugin root"))?;
     let (list, invoke, run) =

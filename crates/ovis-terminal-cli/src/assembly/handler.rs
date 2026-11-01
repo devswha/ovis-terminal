@@ -63,6 +63,7 @@ pub(super) struct Served {
     pub(super) actor: Actor,
     pub(super) lane: Arc<Lane>,
     pub(super) dispatch: Arc<Dispatch>,
+    pub(super) stop: super::restart::StopSignal,
 }
 
 impl RequestHandler for Served {
@@ -132,6 +133,11 @@ impl RequestHandler for Served {
                     .leases(&params.target)
                     .map_err(|error| error.boundary())?;
                 serde_json::to_value(leases).map_err(|_| refusal("internal", "report the build"))
+            }
+            "server.stop" => {
+                let stopped = self.dispatch.call(call).await?;
+                self.stop.stopped();
+                Ok(stopped)
             }
             _ => self.dispatch.call(call).await,
         }

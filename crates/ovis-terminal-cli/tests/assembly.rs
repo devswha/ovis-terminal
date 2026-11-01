@@ -4,6 +4,8 @@
 
 #[path = "assembly/lanes.rs"]
 mod lanes;
+#[path = "assembly/restart.rs"]
+mod restart;
 #[path = "assembly/support.rs"]
 pub mod support;
 #[path = "assembly/websocket.rs"]
@@ -50,6 +52,7 @@ fn hello_advertises_exactly_the_routed_methods_and_the_rest_is_method_not_found(
         "prompt.list",
         "prompt.open",
         "server.status",
+        "server.stop",
         "status.clear",
         "status.get",
         "status.report",
@@ -73,6 +76,7 @@ fn hello_advertises_exactly_the_routed_methods_and_the_rest_is_method_not_found(
     for unrouted in [
         "layout.get",
         "machine.list",
+        "server.restart",
         "template.list",
         "update.query",
     ] {
