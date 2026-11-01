@@ -318,12 +318,6 @@ impl Served {
         Ok(serde_json::from_str(&line)?)
     }
 
-    /// The server process's pid.
-    #[must_use]
-    pub fn server_pid(&self) -> u32 {
-        self.child.id()
-    }
-
     /// The method list hello advertises to the owner.
     ///
     /// # Errors
