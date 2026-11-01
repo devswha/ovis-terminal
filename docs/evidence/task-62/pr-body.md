@@ -1,6 +1,6 @@
 Plan todo 62 (wave 14): `ovis-terminal terminal attach`, a plain interactive attach client without multiplexer chrome.
 
-**Stacked on #57 (todo 31, `lane/t31-assembly`).** This branch starts at b276c50 on that lane, which builds the binary and the first attach client. The todo-62 commits are 9e009f4, 33bc03a, bd0f933, the round-2 commits 2926824 and fe95709, the evidence commits and the authorized integration merge fe8f4de; the earlier commits in this diff belong to #57.
+**Base: origin/integration 93d7fb7.** #57 (todo 31) landed as 93d7fb7 and is merged into this branch (bcf3d3c), so the diff against `integration` is todo 62 alone. Earlier rounds were stacked on `lane/t31-assembly` (b276c50); the todo-62 commits are 9e009f4, 33bc03a, bd0f933, round 2 (2926824, fe95709), round 3 (c34080d), the integration merges and round 4 (bcf3d3c, 0af15ca).
 
 Closes GAP-039, GAP-040, GAP-041, GAP-042, GAP-043, GAP-044, GAP-045, GAP-056, GAP-057, GAP-058, GAP-059, GAP-145, GAP-148, GAP-149.
 Delivers IDEAL-028, IDEAL-029, IDEAL-030, IDEAL-031, IDEAL-033, IDEAL-037, IDEAL-038, IDEAL-039, IDEAL-046, IDEAL-055, IDEAL-103.
@@ -95,7 +95,7 @@ Socket requests in the same case:
 - An ordinary `attach.open` while held returns `outcome: held`, `holder.holder: cli`, `holder.epoch: "1"`, `retry.on: lease_released`, `retry.event: lease.revoked`, `lease.role: observe` and `displaced: null`.
 - A following `attach.leases` shows `cli` still holding the interact lease (no eviction).
 
-**The plan's literal inject.** `attach.takeover` *is* a released method (`schema/released.openrpc.json`; `AttachTakeoverParams` = `op_id`, `stream_id`, `target`, `takeover{lease_epoch, reason}`; its errors include `lease_epoch_mismatch`). The assembled dispatcher does not serve it yet and answers `method_not_found`; serving it is a todo-31 follow-up, and core `TerminalLeases::take_over` already returns `EpochMismatch{current}`. The plan's literal inject could not produce `lease_epoch_mismatch` even if it were routed: the runner merges it over the case's base params, which gives `{op_id, target, role, client_id, geometry, stream_mode, takeover:null, lease_epoch:"0"}`. That lacks the required `stream_id` and `takeover` object and violates `additionalProperties:false`, so a correct server answers `invalid_params`. The failure case therefore plans the literal request and asserts the binary's actual reply (`method_not_found`), the same way #50 and #37 handled their literal injects. The plan's intent, `lease_epoch_mismatch` with the current epoch, is enforced in the same case by the CLI `--takeover 7` step and the canonical `attach.open` inject below.
+**The plan's literal inject (round 4: superseded, see the round-4 section).** Rounds 1-3 recorded `method_not_found` for `attach.takeover`. The composed daemon (93d7fb7) now serves `attach.takeover`, and the literal inject merged over the case's attach.open base is answered `invalid_params`: it carries unknown fields, and `lease_epoch` belongs inside `takeover`. The scenario plans that request and asserts the actual reply. It also asserts a correctly shaped `attach.takeover` at stale epoch 7 on the relay's held stream, which returns `lease_epoch_mismatch`. Earlier text (kept for the record): `attach.takeover` *is* a released method (`schema/released.openrpc.json`; `AttachTakeoverParams` = `op_id`, `stream_id`, `target`, `takeover{lease_epoch, reason}`; its errors include `lease_epoch_mismatch`). The assembled dispatcher does not serve it yet and answers `method_not_found`; serving it is a todo-31 follow-up, and core `TerminalLeases::take_over` already returns `EpochMismatch{current}`. The plan's literal inject could not produce `lease_epoch_mismatch` even if it were routed: the runner merges it over the case's base params, which gives `{op_id, target, role, client_id, geometry, stream_mode, takeover:null, lease_epoch:"0"}`. That lacks the required `stream_id` and `takeover` object and violates `additionalProperties:false`, so a correct server answers `invalid_params`. The failure case therefore plans the literal request and asserts the binary's actual reply (`method_not_found`), the same way #50 and #37 handled their literal injects. The plan's intent, `lease_epoch_mismatch` with the current epoch, is enforced in the same case by the CLI `--takeover 7` step and the canonical `attach.open` inject below.
 - The canonical form, `--inject '{"method":"attach.open","params":{"takeover":{"lease_epoch":"7","reason":"stale takeover epoch"}}}'`, passes: exit 0, 49 assertions (`qa-failure-canonical.log`). It asserts `lease_epoch_mismatch`, and the CLI step of the same case asserts the current epoch `"1"`.
 - An inject the case does not plan fails the run: `--inject '{"method":"attach.takeover","params":{"lease_epoch":"9"}}'` exits 1 on `inject/planned` (`qa-failure-unplanned-probe.log`).
 
@@ -258,6 +258,58 @@ PR CI runs all of the above except the mutants.
 - `disconnect-by-label`: `leases/table.rs` `take_owned` matches principal and label only. It must fail `leases::connections` test 2.
 - `observer-reads-geometry`: `attach/session.rs` `plan.observe && false`. It must fail `interactive_owners` test 2: the observer's resize under the operator's geometry lease is refused, so the observer exits non-zero.
 
+
+## Round 4: merge of origin/integration 93d7fb7 (T31 composed daemon; authorized)
+
+Two commits on top of round-3/merge head 3360142.
+
+**bcf3d3c, the merge.** Conflicts and how each was resolved:
+- `assembly/{boot,serve,terminal}.rs` and `tests/assembly.rs`: integration's version. These are T31's scope; the lane only carried the old #57 bridge.
+- `conformance/scenarios/part-a/task-31.json`: integration's rewritten scenario, with the lane's contract re-applied: `lease_held` becomes `lease_conflict`, and `--client-id cli` is pinned on the two interact attaches whose holder is asserted as `"cli"`. The default label is now `cli-<pid>`.
+- `conformance/src/runner_tests/suite.rs`: union of `cli/interactive-attach.json` and `client/package.json`.
+- Attach module: #57's final client changed attach in one way, and that change is ported into the lane's module.
+  - The server's `$/closing` revokes input readiness.
+  - It is kept on `AttachError::ConnectionLost { closing }` and reported as `error.closing` through `AttachError::details()`.
+  - An unreadable CLOSE body is a typed protocol error.
+  - #57's `attach/session/tests.rs` (readiness after `input_revoked` and `$/closing`; detach confirmed only by CLOSE) runs against the lane's `Attached`.
+  - `invocation/report.rs` keeps integration's `Restarted` and Windows `PipeBusy` arms.
+- One merged T31 observer test now expects the per-process `cli-<pid>` label.
+
+**0af15ca, adaptation to behaviour the composed daemon changed.**
+- `pty_expect.retry_type` is gone (T31 ae65701). The marker is now typed once, since bytes typed before `input_ready` are held. The resize is awaited through a WINCH trap, as in task-31.
+- `attach.takeover` is now routed:
+  - The plan's literal inject `{"method":"attach.takeover","params":{"lease_epoch":"0"}}` was `method_not_found`. Merged over the attach.open base, it is now `invalid_params`.
+  - A correctly shaped `attach.takeover` (`stream_id` captured from the relay's held attach.open, `takeover.lease_epoch` "7") returns `lease_epoch_mismatch`.
+- `interactive_transparency/viewer.rs`: the reply send result is handled explicitly. Integration's source-check (`dropped-result`) flagged the `.ok()`.
+
+**Gates at 0af15ca** (`bun ~/.agents/skills/dori-mode/scripts/src/cli.ts heavy t62-r4b -- bash <gate>`; host `Linux x86_64`; RAM target with `CARGO_INCREMENTAL=0` and line-tables-only debug info per the host policy, unlike CI's `debug = true`):
+- `bash scripts/check.sh`: exit 0. `cargo nextest run --workspace`: 1451 tests passed, 2 skipped. workspace-hygiene: 0 violations. source-check and evidence-audit: pass. Log: `check-summary-r4.log`.
+- `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked`: exit 0. The Windows clippy run with `-D warnings`: exit 0. Log: `windows-precheck-r4.log`.
+- Binary sha256 `235ec4077d9c56c5712f3d5b5b2277864c9c9037473160e8bc9bd101105a43d1` (`gate-r4.log`).
+
+```
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario cli/interactive-attach --isolated --case happy --evidence "$ATTEMPT_DIR/task-62-ovis-terminal-v1.json"
+exit 0; "result":"passed", assertions 41, failed 0, skipped 0          (qa-happy-r4.log)
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario cli/interactive-attach --isolated --case failure --inject '{"method":"attach.takeover","params":{"lease_epoch":"0"}}' --evidence "$ATTEMPT_DIR/task-62-ovis-terminal-v1.json" --append
+exit 0; "result":"passed", assertions 65, failed 0, skipped 0          (qa-failure-r4.log)
+$ ... --scenario cli/interactive-attach --isolated --case all ...
+exit 0; assertions 111, cases 2, failed 0, skipped 0                   (qa-all-r4.log)
+$ ... --scenario part-a/task-31 --isolated --case all ...
+exit 0; assertions 115, cases 2, failed 0                              (merge4-task31-r4.log)
+```
+`--binary` was `$CARGO_TARGET_DIR/debug/ovis-terminal` (the RAM target). The committed `task-62-ovis-terminal-v1.json` and `-all.json` are this round's evidence.
+
+What the failure case asserts with `--inject` (only the injected planned request runs inside the inject step; every other step runs):
+- The literal request is planned, and its reply is `invalid_params`.
+- The competing CLI attach exits 11 `lease_conflict`, naming holder `cli`, epoch "1" and the `lease.revoked` retry boundary.
+- `--takeover 7` exits 11 `lease_epoch_mismatch` with `current.epoch` "1".
+- The ordinary attach.open is `held`, with holder and retry and only an observe lease.
+- `attach.takeover` at stale epoch 7 returns `lease_epoch_mismatch`.
+- `attach.leases` afterwards still has holder `cli` at epoch "1": no eviction.
+- The holder detaches on Ctrl-\ with `leases_released: true`, and the program's launcher incarnation is unchanged.
+
+The macOS stress job was not re-dispatched this round (merge only). CI's macOS test job runs the attach tests on the push.
+
 ## Seams
 
 Files outside the write scope (`crates/ovis-terminal-cli/src/attach/`, `conformance/scenarios/cli/interactive-attach/`), and why:
@@ -314,7 +366,7 @@ No schema change, so the SDK was not regenerated.
 - The wire `lease_epoch_mismatch` error data names no current epoch; the server's error is outside this write scope. The CLI reads `attach.leases` after the mismatch and reports `current` (epoch and holder). That read is a separate request, so a lease change between the two calls would show the newer lease.
 - Hangup classification relies on raw mode (VMIN 1): only a hung-up terminal makes a read return zero bytes. The interact role requires a TTY on stdin and stdout, so the keyboard is always that raw terminal.
 - The attach client is unix-only (Unix socket transport). On Windows, `UnsupportedTransport` remains, as in #57.
-- `attach.takeover` is a released method that the assembled dispatcher does not serve yet (`method_not_found`). Serving it is a todo-31 follow-up outside this write scope; the CLI takes over through the `attach.open` takeover field.
+- Round 4: `attach.takeover` is now served by the composed daemon. A stale epoch on it returns `lease_epoch_mismatch` (asserted in `cli/interactive-attach` failure). The CLI's `--takeover` still uses the epoch-bound `attach.open` takeover field.
 - `hello.resume{connection_id}` is not implemented yet. When it lands, the resumed connection's `Session` must keep its `ConnectionId`, so that its leases survive the reconnect as spec 4.2 requires; today a reconnect is a new owner.
 - Persisted `LeaseEvent` records now carry `owner.connection`, and the core wire QA fixture shows the field. No production code reads lease events back, and lease liveness ends with the connection anyway.
 - Gate NOTE, not changed: `interactive_attach.rs` and `attach.rs` assert that observer typing is absent with a time-bounded negative check. Observe mode never reads stdin, which `observing_needs_no_tty_and_never_forwards_input` also covers. The round-2 refused-attach check orders causally: the refused process exits before the holder types its fence.

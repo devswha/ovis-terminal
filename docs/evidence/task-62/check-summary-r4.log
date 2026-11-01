@@ -1,0 +1,17 @@
+head 0af15ca4c0ee5e0d23bb9f9557995ceee49e840d (merge of integration 93d7fb7)
+==> tmp_space
+==> cargo +nightly fmt --all -- --check
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+     Summary [ 108.759s] 1451 tests run: 1451 passed (3 slow), 2 skipped
+==> cargo test --doc --workspace --all-features --locked
+==> cargo test --locked -p ovis-terminal-core --test subscriptions
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 1464 file(s) checked
+==> bash scripts/hygiene/manifests.sh
+==> bash scripts/hygiene/json.sh
+==> cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin source-check -- --roots crates packages/client-ts conformance bench probes --max-pure-loc 250 --max-params 3 --violations docs/research/violations.md --checklist docs/quality-checklist.md
+  "verdict": "pass"
+==> cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin evidence-audit -- --tree docs/evidence --exemptions probes/quality/evidence-exemptions.json
+  "verdict": "pass"
+CHECK_EXIT 0

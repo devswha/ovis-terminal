@@ -1,8 +1,8 @@
 {
   "binary": {
-    "bytes": "258142856",
-    "path": "target/debug/ovis-terminal",
-    "sha256": "08127fb8b4feeedadd88cf014537813b95a7f6091b08f7396a2e9c715c85e0ad"
+    "bytes": "145086680",
+    "path": "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
+    "sha256": "235ec4077d9c56c5712f3d5b5b2277864c9c9037473160e8bc9bd101105a43d1"
   },
   "case": "all",
   "cases": [
@@ -16,10 +16,16 @@
         },
         {
           "actual": [
+            "hello",
             "server.status",
+            "server.stop",
+            "server.restart",
+            "server.metrics",
             "op.get",
             "op.cancel",
+            "session.snapshot",
             "terminal.run",
+            "terminal.first_message",
             "terminal.list",
             "terminal.get",
             "terminal.kill",
@@ -36,12 +42,21 @@
             "input.keys",
             "input.raw",
             "input.paste",
+            "input.interrupt",
+            "input.barrier",
             "attach.open",
             "attach.resize",
+            "attach.release_geometry",
+            "attach.focus",
             "attach.repaint",
             "attach.credit",
             "attach.close",
+            "attach.takeover",
             "attach.leases",
+            "events.subscribe",
+            "events.update",
+            "events.unsubscribe",
+            "events.wait",
             "status.get",
             "status.report",
             "status.clear",
@@ -50,17 +65,46 @@
             "prompt.open",
             "prompt.answer",
             "prompt.close",
+            "turn.get",
+            "turn.wait",
             "agent.register",
             "agent.get",
             "agent.update_session",
+            "agent.children",
             "agent.conversation",
+            "agent.append_records",
+            "agent.records",
+            "agent.history",
+            "template.list",
+            "template.get",
+            "layout.get",
+            "layout.edit",
+            "selection.set",
+            "worktree.list",
+            "worktree.create",
+            "worktree.open",
+            "worktree.remove",
             "plugin.list",
             "plugin.invoke",
             "plugin.run_get",
             "doc.get",
             "doc.set",
+            "machine.add",
+            "machine.list",
             "machine.get",
-            "machine.rename"
+            "machine.rename",
+            "service.describe",
+            "update.stage",
+            "update.verify",
+            "update.activate",
+            "update.rollback",
+            "update.query",
+            "rpc.discover",
+            "schema.errors",
+            "schema.events",
+            "schema.capabilities",
+            "credential.rotate",
+            "credential.revoke"
           ],
           "check": "hello/result/methods",
           "expected": {
@@ -113,7 +157,7 @@
           "passed": true
         },
         {
-          "actual": 2366298,
+          "actual": 2982474,
           "check": "reply[before]/result/launcher/pid",
           "expected": {
             "$present": true
@@ -121,7 +165,7 @@
           "passed": true
         },
         {
-          "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:1640750",
+          "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:6397429",
           "check": "reply[before]/result/launcher/start_token",
           "expected": {
             "$present": true
@@ -188,6 +232,12 @@
           "expected": [
             "held"
           ],
+          "passed": true
+        },
+        {
+          "actual": "armed-4",
+          "check": "pty[outer]/shows",
+          "expected": "armed-4",
           "passed": true
         },
         {
@@ -293,7 +343,7 @@
           "passed": true
         },
         {
-          "actual": 2366298,
+          "actual": 2982474,
           "check": "reply[after]/result/launcher/pid",
           "expected": {
             "$present": true
@@ -301,7 +351,7 @@
           "passed": true
         },
         {
-          "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:1640750",
+          "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:6397429",
           "check": "reply[after]/result/launcher/start_token",
           "expected": {
             "$present": true
@@ -319,9 +369,9 @@
           "passed": true
         },
         {
-          "actual": "4032",
+          "actual": "4858",
           "check": "connection[control]/bytes_received=bytes_decoded",
-          "expected": "4032",
+          "expected": "4858",
           "passed": true
         },
         {
@@ -340,50 +390,50 @@
       "case": "happy",
       "connections": [
         {
-          "bytes_decoded": "4032",
-          "bytes_received": "4032",
+          "bytes_decoded": "4858",
+          "bytes_received": "4858",
           "bytes_sent": "981",
           "name": "control",
           "records_received": "6",
           "transcript": [
             {
-              "at_ms": "2",
+              "at_ms": "0",
               "bytes": "234",
               "direction": "sent",
               "offset": "0",
-              "sha256": "01be1776827c35235f7fe4baa0606713a6f9a1f061c2f28e1edfaabd743e49bb",
+              "sha256": "9643577bdce9535bf77198e73494f01c99905252d6ae1e56e5c8029616ac6c1a",
               "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
               "unit": "write"
             },
             {
-              "at_ms": "2",
-              "bytes": "1778",
+              "at_ms": "0",
+              "bytes": "2604",
               "direction": "received",
               "offset": "0",
-              "sha256": "046169650fe68a531a50bd5c5503109c80fa76f0ac6ab46790af39d7bf8da4d6",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a195dd-5029-728f-80e1-afe3faa8a5ce\",\"methods\":[\"server.status\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.get\",\"machine.rename\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793515671620\",\"version\":\"0.1.0\"}}",
+              "sha256": "f05dd06ec7e972b1cfaa0bfe7eaeddc7c49e14fb2d165b1df11393945cd3dcbf",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198b3-1f78-740f-8fa3-296650fe0d36\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793563238411\",\"version\":\"0.1.0\"}}",
               "unit": "line"
             },
             {
-              "at_ms": "5",
+              "at_ms": "1",
               "bytes": "356",
               "direction": "sent",
               "offset": "234",
-              "sha256": "b862deabf1175afe9aa7462ba9dd2973a6f8e17175af6abf34b04d805786bf40",
-              "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a195dd-5047-73ff-b97d-1a7d0e39766a\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
+              "sha256": "b9882c4b4cd1e5bd1e32631856c89dffcc9c26f1df3f7f295e5aced1aa45b16e",
+              "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a198b3-200b-74b8-8b54-b41adad87911\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
               "unit": "write"
             },
             {
-              "at_ms": "38",
+              "at_ms": "29",
               "bytes": "871",
               "direction": "received",
-              "offset": "1778",
-              "sha256": "4621eff602e3c9876a569f5ab250c7b206188cfbd7e9313653d09bf6885ea234",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a195dd-5029-728f-80e1-afe3faa8a5ce\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2366298,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1640750\",\"started_ms\":\"1793515671654\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
+              "offset": "2604",
+              "sha256": "0bc230ae52f0c57b809e9a51c95e14336030d280f5ba84fc40ce018047d93351",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a198b3-1f78-740f-8fa3-296650fe0d36\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2982474,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397429\",\"started_ms\":\"1793563238437\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
               "unit": "line"
             },
             {
-              "at_ms": "39",
+              "at_ms": "29",
               "bytes": "102",
               "direction": "sent",
               "offset": "590",
@@ -392,16 +442,16 @@
               "unit": "write"
             },
             {
-              "at_ms": "138",
+              "at_ms": "107",
               "bytes": "465",
               "direction": "received",
-              "offset": "2649",
-              "sha256": "695d6067cf6ea3f01a644b9e898560879def5ce1ade3e3f2d3941996e0e15c20",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"before\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2366298,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1640750\",\"started_ms\":\"1793515671654\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2366298,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1640750\",\"started_ms\":\"1793515671654\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
+              "offset": "3475",
+              "sha256": "16816e4788d0fddaca425918ceb210fb9f24b3f7f1056098568ef8d83997db82",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"before\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2982474,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397429\",\"started_ms\":\"1793563238437\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2982474,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397429\",\"started_ms\":\"1793563238437\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
               "unit": "line"
             },
             {
-              "at_ms": "201",
+              "at_ms": "155",
               "bytes": "92",
               "direction": "sent",
               "offset": "692",
@@ -410,16 +460,16 @@
               "unit": "write"
             },
             {
-              "at_ms": "202",
+              "at_ms": "156",
               "bytes": "288",
               "direction": "received",
-              "offset": "3114",
+              "offset": "3940",
               "sha256": "651911e0e1839ba9bfc047975095082cb049a7f1216dca124f186992743792f5",
               "text": "{\"jsonrpc\":\"2.0\",\"id\":\"held\",\"result\":{\"geometry_owner\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:3\",\"role\":\"interact\"},\"interact\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:2\",\"role\":\"interact\"},\"observers\":[{\"epoch\":\"1\",\"holder\":\"phone\",\"lease_id\":\"lease:1\",\"role\":\"observe\"}]}}",
               "unit": "line"
             },
             {
-              "at_ms": "293",
+              "at_ms": "229",
               "bytes": "96",
               "direction": "sent",
               "offset": "784",
@@ -428,16 +478,16 @@
               "unit": "write"
             },
             {
-              "at_ms": "293",
+              "at_ms": "230",
               "bytes": "166",
               "direction": "received",
-              "offset": "3402",
+              "offset": "4228",
               "sha256": "d3a88b68f0b416827b80f3601fb031579e484507eaf2a01f825f6262300b5a17",
               "text": "{\"jsonrpc\":\"2.0\",\"id\":\"released\",\"result\":{\"geometry_owner\":null,\"interact\":null,\"observers\":[{\"epoch\":\"1\",\"holder\":\"phone\",\"lease_id\":\"lease:1\",\"role\":\"observe\"}]}}",
               "unit": "line"
             },
             {
-              "at_ms": "293",
+              "at_ms": "230",
               "bytes": "101",
               "direction": "sent",
               "offset": "880",
@@ -446,12 +496,12 @@
               "unit": "write"
             },
             {
-              "at_ms": "385",
+              "at_ms": "304",
               "bytes": "464",
               "direction": "received",
-              "offset": "3568",
-              "sha256": "042aca50d3cd3b21688824e2bdbfb16149bbae9888031be9ab14cee2f37a30b0",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"after\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2366298,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1640750\",\"started_ms\":\"1793515671654\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2366298,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1640750\",\"started_ms\":\"1793515671654\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
+              "offset": "4394",
+              "sha256": "7f3186ce27deee607ec44036ef6290b35530834c29f3db4881c16b8814d1fbf8",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"after\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2982474,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397429\",\"started_ms\":\"1793563238437\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2982474,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397429\",\"started_ms\":\"1793563238437\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
               "unit": "line"
             }
           ],
@@ -459,8 +509,8 @@
           "writes": "6"
         },
         {
-          "bytes_decoded": "1778",
-          "bytes_received": "1778",
+          "bytes_decoded": "2604",
+          "bytes_received": "2604",
           "bytes_sent": "463",
           "name": "phone",
           "records_received": "1",
@@ -470,26 +520,26 @@
               "bytes": "234",
               "direction": "sent",
               "offset": "0",
-              "sha256": "01be1776827c35235f7fe4baa0606713a6f9a1f061c2f28e1edfaabd743e49bb",
+              "sha256": "9643577bdce9535bf77198e73494f01c99905252d6ae1e56e5c8029616ac6c1a",
               "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
               "unit": "write"
             },
             {
-              "at_ms": "1",
-              "bytes": "1778",
+              "at_ms": "0",
+              "bytes": "2604",
               "direction": "received",
               "offset": "0",
-              "sha256": "31721ed7064e4943909d880fb144fa8a95d843ed1897c287b518a813125098b3",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a195dd-5029-728f-80e1-afe3faa8a5ce\",\"methods\":[\"server.status\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.get\",\"machine.rename\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793515671759\",\"version\":\"0.1.0\"}}",
+              "sha256": "f00a05d2e41c7d6020d6c56d1f900e17d73d8f373b89f9a67bc81ef025a86cfc",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198b3-1f78-740f-8fa3-296650fe0d36\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793563238518\",\"version\":\"0.1.0\"}}",
               "unit": "line"
             },
             {
-              "at_ms": "2",
+              "at_ms": "0",
               "bytes": "229",
               "direction": "sent",
               "offset": "234",
-              "sha256": "02c3e30dabb35c86fee84362a6e86bf6d67dfb78f275b4222956e3ad414f602a",
-              "text": "{\"id\":\"watch\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"phone\",\"geometry\":null,\"op_id\":\"01a195dd-50d1-777b-a953-e94bfe8abe7a\",\"role\":\"observe\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+              "sha256": "bba4db02e0528a1ae22b43aa345fedc88fa10e03d850429c20a59fff1e00f42c",
+              "text": "{\"id\":\"watch\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"phone\",\"geometry\":null,\"op_id\":\"01a198b3-2077-7428-8fe5-8afe9ce0aa48\",\"role\":\"observe\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
               "unit": "write"
             }
           ],
@@ -550,9 +600,29 @@
         },
         {
           "descriptors": {
+            "bytes": "echo mark-$((30+1))\\r",
+            "pty": "outer"
+          },
+          "source": "pty_type"
+        },
+        {
+          "descriptors": {
             "output": "mark-31",
-            "pty": "outer",
-            "retry_type": "echo mark-$((30+1))\\r"
+            "pty": "outer"
+          },
+          "source": "pty_expect"
+        },
+        {
+          "descriptors": {
+            "bytes": "sh -c \\'sleep 600 & p=$!; trap \\\"stty size; kill $p; exit\\\" WINCH; echo armed-$((2+2)); wait\\'\\r",
+            "pty": "outer"
+          },
+          "source": "pty_type"
+        },
+        {
+          "descriptors": {
+            "output": "armed-4",
+            "pty": "outer"
           },
           "source": "pty_expect"
         },
@@ -566,8 +636,7 @@
         {
           "descriptors": {
             "output": "40 120",
-            "pty": "outer",
-            "retry_type": "stty size\\r"
+            "pty": "outer"
           },
           "source": "pty_expect"
         },
@@ -588,8 +657,7 @@
         {
           "descriptors": {
             "output": "^[[99;7~",
-            "pty": "outer",
-            "retry_type": ""
+            "pty": "outer"
           },
           "source": "pty_expect"
         },
@@ -610,8 +678,7 @@
         {
           "descriptors": {
             "output": "on-9",
-            "pty": "outer",
-            "retry_type": ""
+            "pty": "outer"
           },
           "source": "pty_expect"
         },
@@ -625,8 +692,7 @@
         {
           "descriptors": {
             "output": "\u001b[?1000l\u001b[?1006l\u001b[?2004l\u001b[?1049l\u001b[?25h\u001b[0m",
-            "pty": "outer",
-            "retry_type": ""
+            "pty": "outer"
           },
           "source": "pty_expect"
         },
@@ -639,7 +705,7 @@
           "source": "pty_exit"
         }
       ],
-      "elapsed_ms": "433",
+      "elapsed_ms": "595",
       "failure": null,
       "fixture": {
         "accepted": "3",
@@ -650,7 +716,7 @@
       "processes": [
         {
           "argv": [
-            "target/debug/ovis-terminal",
+            "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
             "terminal",
             "attach",
             "--target",
@@ -663,25 +729,25 @@
           "role": "attach",
           "stderr": {
             "bytes": "173",
-            "sha256": "532b930c8b1bb73a20afbdbb0dfa1cc9e876eea5637cca3ec2a8b94783d3d1c1",
-            "text": "{\"detached\":{\"displaced\":null,\"leases_held\":[],\"leases_released\":true,\"reason\":\"detach_key\",\"stream_closed\":true,\"stream_id\":\"stream:01a195dd-50e7-76eb-a1e7-521c01be36f6\"}}\n"
+            "sha256": "7c5f21858794134964c853a2aebecc60845413bbef4b64765207a94d8afe3669",
+            "text": "{\"detached\":{\"displaced\":null,\"leases_held\":[],\"leases_released\":true,\"reason\":\"detach_key\",\"stream_closed\":true,\"stream_id\":\"stream:01a198b3-2088-71de-a60c-81cc7e85d4a0\"}}\n"
           },
           "stdout": {
-            "bytes": "602",
-            "sha256": "c9bc14da8786536c07a57dfdb5ec208f255a6bac139b9b5e4307afe7f9d95393",
-            "text": "echo mark-$((30+1))\r\n\u001bc\u001b[1;1H\u001b[0;39;49m$\u001b[2;1H\u001b[3;1H\u001b[4;1H\u001b[5;1H\u001b[6;1H\u001b[7;1H\u001b[8;1H\u001b[9;1H\u001b[10;1H\u001b[11;1H\u001b[12;1H\u001b[13;1H\u001b[14;1H\u001b[15;1H\u001b[16;1H\u001b[17;1H\u001b[18;1H\u001b[19;1H\u001b[20;1H\u001b[21;1H\u001b[22;1H\u001b[23;1H\u001b[24;1H\u001b[1;1H\u001b[0;39;49m\u001b7\u001b[?25h\u001b[?1l\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1004l\u001b[?1005l\u001b[?1006l\u001b[?1007h\u001b[?1042h\u001b[?2004l\u001b[?6l\u001b[=0;1u\u001b[>4;0m\u001b[?9001l\u001b>\u001b[2 q\u001b[1;3H\u001b[?7h\u001b[4l\u001b[20l\u001b[0;39;49mecho mark-$((30+1))\r\nmark-31\r\n$ stty size\r\n40 120\r\n$ cat -v\r\n^[[99;7~\r\n^[[99;7~\r\nprintf '\\033[?1049h\\033[?1000;1006h\\033[?2004h\\033[?25l'; echo on-$((3*3))\r\n$ \u001b[?1049h\u001b[?1000;1006h\u001b[?2004h\u001b[?25lon-9\r\n$ \u001b[?1000l\u001b[?1006l\u001b[?2004l\u001b[?1049l\u001b[?25h\u001b[0m"
+            "bytes": "692",
+            "sha256": "a8f58cbabdda881363ec602c87078411554a9cc26ab24fc5966a92fd25000c2f",
+            "text": "echo mark-$((30+1))\r\n\u001bc\u001b[1;1H\u001b[0;39;49m$\u001b[2;1H\u001b[3;1H\u001b[4;1H\u001b[5;1H\u001b[6;1H\u001b[7;1H\u001b[8;1H\u001b[9;1H\u001b[10;1H\u001b[11;1H\u001b[12;1H\u001b[13;1H\u001b[14;1H\u001b[15;1H\u001b[16;1H\u001b[17;1H\u001b[18;1H\u001b[19;1H\u001b[20;1H\u001b[21;1H\u001b[22;1H\u001b[23;1H\u001b[24;1H\u001b[1;1H\u001b[0;39;49m\u001b7\u001b[?25h\u001b[?1l\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1004l\u001b[?1005l\u001b[?1006l\u001b[?1007h\u001b[?1042h\u001b[?2004l\u001b[?6l\u001b[=0;1u\u001b[>4;0m\u001b[?9001l\u001b>\u001b[2 q\u001b[1;3H\u001b[?7h\u001b[4l\u001b[20l\u001b[0;39;49mecho mark-$((30+1))\r\nmark-31\r\n$ sh -c 'sleep 600 & p=$!; trap \"stty size; kill $p; exit\" WINCH; echo armed-$((2+2)); wait'\r\narmed-4\r\n40 120\r\n$ cat -v\r\n^[[99;7~\r\n^[[99;7~\r\nprintf '\\033[?1049h\\033[?1000;1006h\\033[?2004h\\033[?25l'; echo on-$((3*3))\r\n$ \u001b[?1049h\u001b[?1000;1006h\u001b[?2004h\u001b[?25lon-9\r\n$ \u001b[?1000l\u001b[?1006l\u001b[?2004l\u001b[?1049l\u001b[?25h\u001b[0m"
           }
         },
         {
           "argv": [
-            "target/debug/ovis-terminal",
+            "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
             "serve",
             "--stdin-lifetime",
             "--root",
-            "/tmp/ovc-2362124-0/srv"
+            "/tmp/ovc-2981382-0/srv"
           ],
           "exit_code": 0,
-          "pid": "2366281",
+          "pid": "2982440",
           "role": "fixture",
           "stderr": {
             "bytes": "0",
@@ -708,10 +774,16 @@
         },
         {
           "actual": [
+            "hello",
             "server.status",
+            "server.stop",
+            "server.restart",
+            "server.metrics",
             "op.get",
             "op.cancel",
+            "session.snapshot",
             "terminal.run",
+            "terminal.first_message",
             "terminal.list",
             "terminal.get",
             "terminal.kill",
@@ -728,12 +800,21 @@
             "input.keys",
             "input.raw",
             "input.paste",
+            "input.interrupt",
+            "input.barrier",
             "attach.open",
             "attach.resize",
+            "attach.release_geometry",
+            "attach.focus",
             "attach.repaint",
             "attach.credit",
             "attach.close",
+            "attach.takeover",
             "attach.leases",
+            "events.subscribe",
+            "events.update",
+            "events.unsubscribe",
+            "events.wait",
             "status.get",
             "status.report",
             "status.clear",
@@ -742,17 +823,46 @@
             "prompt.open",
             "prompt.answer",
             "prompt.close",
+            "turn.get",
+            "turn.wait",
             "agent.register",
             "agent.get",
             "agent.update_session",
+            "agent.children",
             "agent.conversation",
+            "agent.append_records",
+            "agent.records",
+            "agent.history",
+            "template.list",
+            "template.get",
+            "layout.get",
+            "layout.edit",
+            "selection.set",
+            "worktree.list",
+            "worktree.create",
+            "worktree.open",
+            "worktree.remove",
             "plugin.list",
             "plugin.invoke",
             "plugin.run_get",
             "doc.get",
             "doc.set",
+            "machine.add",
+            "machine.list",
             "machine.get",
-            "machine.rename"
+            "machine.rename",
+            "service.describe",
+            "update.stage",
+            "update.verify",
+            "update.activate",
+            "update.rollback",
+            "update.query",
+            "rpc.discover",
+            "schema.errors",
+            "schema.events",
+            "schema.capabilities",
+            "credential.rotate",
+            "credential.revoke"
           ],
           "check": "hello/result/methods",
           "expected": {
@@ -947,9 +1057,9 @@
           "passed": true
         },
         {
-          "actual": "method_not_found",
+          "actual": "invalid_params",
           "check": "inject[2]/error/data/kind",
-          "expected": "method_not_found",
+          "expected": "invalid_params",
           "passed": true
         },
         {
@@ -1011,12 +1121,128 @@
           "passed": true
         },
         {
+          "actual": "stream:01a198b3-22d7-72a5-8e56-1034bf7222b7",
+          "check": "reply[held_open]/result/stream_id",
+          "expected": {
+            "$capture": "relay_stream"
+          },
+          "passed": true
+        },
+        {
           "actual": [
             "held_open"
           ],
           "check": "replies/exactly_one_per_id",
           "expected": [
             "held_open"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "lease_epoch_mismatch",
+          "check": "reply[stale_takeover]/error/data/kind",
+          "expected": "lease_epoch_mismatch",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[stale_takeover]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "stale_takeover"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "stale_takeover"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[twin_open]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "cli",
+          "check": "reply[twin_open]/result/holder/holder",
+          "expected": "cli",
+          "passed": true
+        },
+        {
+          "actual": "lease:1",
+          "check": "reply[twin_open]/result/holder/lease_id",
+          "expected": "lease:1",
+          "passed": true
+        },
+        {
+          "actual": "observe",
+          "check": "reply[twin_open]/result/lease/role",
+          "expected": "observe",
+          "passed": true
+        },
+        {
+          "actual": "held",
+          "check": "reply[twin_open]/result/outcome",
+          "expected": "held",
+          "passed": true
+        },
+        {
+          "actual": "lease.revoked",
+          "check": "reply[twin_open]/result/retry/event",
+          "expected": "lease.revoked",
+          "passed": true
+        },
+        {
+          "actual": "lease_released",
+          "check": "reply[twin_open]/result/retry/on",
+          "expected": "lease_released",
+          "passed": true
+        },
+        {
+          "actual": [
+            "twin_open"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "twin_open"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "no_lease",
+          "check": "reply[twin_write]/error/data/kind",
+          "expected": "no_lease",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[twin_write]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "twin_write"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "twin_write"
           ],
           "passed": true
         },
@@ -1073,7 +1299,7 @@
           "passed": true
         },
         {
-          "actual": 2366501,
+          "actual": 2983206,
           "check": "reply[alive]/result/launcher/pid",
           "expected": {
             "$present": true
@@ -1081,7 +1307,7 @@
           "passed": true
         },
         {
-          "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:1640793",
+          "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:6397488",
           "check": "reply[alive]/result/launcher/start_token",
           "expected": {
             "$present": true
@@ -1099,9 +1325,9 @@
           "passed": true
         },
         {
-          "actual": "3406",
+          "actual": "4299",
           "check": "connection[control]/bytes_received=bytes_decoded",
-          "expected": "3406",
+          "expected": "4299",
           "passed": true
         },
         {
@@ -1114,8 +1340,8 @@
       "case": "failure",
       "connections": [
         {
-          "bytes_decoded": "3406",
-          "bytes_received": "3406",
+          "bytes_decoded": "4299",
+          "bytes_received": "4299",
           "bytes_sent": "788",
           "name": "control",
           "records_received": "4",
@@ -1125,39 +1351,39 @@
               "bytes": "234",
               "direction": "sent",
               "offset": "0",
-              "sha256": "3185f24be6af2a76d12873ea4b440fb65a02805e53548584f9b6cdee555c799b",
+              "sha256": "5bac48af7582b620a6fcaf4e410d383222330986732e40ab691d58a20e39dda3",
               "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
               "unit": "write"
             },
             {
               "at_ms": "0",
-              "bytes": "1778",
+              "bytes": "2604",
               "direction": "received",
               "offset": "0",
-              "sha256": "75477d601af1f065f22ad6e060ed6f7e0da8320f78e3a0a59f265328c497a8e9",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a195dd-51d9-71f7-9165-7634030516a6\",\"methods\":[\"server.status\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.get\",\"machine.rename\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793515672049\",\"version\":\"0.1.0\"}}",
+              "sha256": "2a5b6b58bf688385bee793c318c37efb8dba3dfbfd4d5b59be4602c8e3890cc5",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198b3-21cc-773b-9a69-7cf59e770889\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793563239003\",\"version\":\"0.1.0\"}}",
               "unit": "line"
             },
             {
-              "at_ms": "1",
+              "at_ms": "0",
               "bytes": "356",
               "direction": "sent",
               "offset": "234",
-              "sha256": "09183ff00415c6bb032955d6ac802bf6da58c93c55231b0c14f0c06d5ce82c3a",
-              "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a195dd-51f2-7066-a7e0-97d137611d5b\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
+              "sha256": "0d9910dff67ca9c1af8452b55b21c759a794d9c4d80d71dfdf73ea9288654460",
+              "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a198b3-225c-723d-98ee-cfbc1f3e2f7d\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
               "unit": "write"
             },
             {
-              "at_ms": "33",
+              "at_ms": "30",
               "bytes": "871",
               "direction": "received",
-              "offset": "1778",
-              "sha256": "6e897ab5093410861fea80229b40ab91ba60a4b463fb4054794237df075c04d9",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a195dd-51d9-71f7-9165-7634030516a6\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2366501,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1640793\",\"started_ms\":\"1793515672078\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
+              "offset": "2604",
+              "sha256": "90c3951e23af52b7effecae614fe8f228cc4dc58d262b5e5073e71ef396c196b",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a198b3-21cc-773b-9a69-7cf59e770889\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2983206,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397488\",\"started_ms\":\"1793563239031\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
               "unit": "line"
             },
             {
-              "at_ms": "136",
+              "at_ms": "130",
               "bytes": "97",
               "direction": "sent",
               "offset": "590",
@@ -1166,16 +1392,16 @@
               "unit": "write"
             },
             {
-              "at_ms": "136",
-              "bytes": "293",
+              "at_ms": "130",
+              "bytes": "360",
               "direction": "received",
-              "offset": "2649",
-              "sha256": "6bffc39969d3af853ecd902890b0e3fa3588ff07b1c26d7089fe4ca3e1252e3c",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"unchanged\",\"result\":{\"geometry_owner\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:2\",\"role\":\"interact\"},\"interact\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"observers\":[{\"epoch\":\"1\",\"holder\":\"relay\",\"lease_id\":\"lease:7\",\"role\":\"observe\"}]}}",
+              "offset": "3475",
+              "sha256": "86703c9d868ccd6f90bb519ca978cb81493c3ded735a8f630bf4f0d278ec547d",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"unchanged\",\"result\":{\"geometry_owner\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:2\",\"role\":\"interact\"},\"interact\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"observers\":[{\"epoch\":\"1\",\"holder\":\"relay\",\"lease_id\":\"lease:7\",\"role\":\"observe\"},{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:9\",\"role\":\"observe\"}]}}",
               "unit": "line"
             },
             {
-              "at_ms": "141",
+              "at_ms": "136",
               "bytes": "101",
               "direction": "sent",
               "offset": "687",
@@ -1184,12 +1410,12 @@
               "unit": "write"
             },
             {
-              "at_ms": "228",
+              "at_ms": "209",
               "bytes": "464",
               "direction": "received",
-              "offset": "2942",
-              "sha256": "f1aacfa3126848b26a65fa67d843c89340739b0adacd1195d95d9454cc2fe8e3",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"alive\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2366501,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1640793\",\"started_ms\":\"1793515672078\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2366501,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1640793\",\"started_ms\":\"1793515672078\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
+              "offset": "3835",
+              "sha256": "926c53c643b145eeea42740545b3226ec7993c3e3c0786544d7964c72a154de1",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"alive\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2983206,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397488\",\"started_ms\":\"1793563239031\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2983206,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397488\",\"started_ms\":\"1793563239031\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
               "unit": "line"
             }
           ],
@@ -1197,46 +1423,46 @@
           "writes": "4"
         },
         {
-          "bytes_decoded": "4405",
-          "bytes_received": "4405",
-          "bytes_sent": "1286",
+          "bytes_decoded": "5511",
+          "bytes_received": "5511",
+          "bytes_sent": "1558",
           "name": "relay",
-          "records_received": "7",
+          "records_received": "8",
           "transcript": [
             {
               "at_ms": "0",
               "bytes": "234",
               "direction": "sent",
               "offset": "0",
-              "sha256": "3185f24be6af2a76d12873ea4b440fb65a02805e53548584f9b6cdee555c799b",
+              "sha256": "5bac48af7582b620a6fcaf4e410d383222330986732e40ab691d58a20e39dda3",
               "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
               "unit": "write"
             },
             {
               "at_ms": "0",
-              "bytes": "1778",
+              "bytes": "2604",
               "direction": "received",
               "offset": "0",
-              "sha256": "5dd255847bc212dac77539a52daa587f1ebde944ac79605f966b9070cae1c6a5",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a195dd-51d9-71f7-9165-7634030516a6\",\"methods\":[\"server.status\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.get\",\"machine.rename\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793515672180\",\"version\":\"0.1.0\"}}",
+              "sha256": "a048c71d01b9db11bb750becbb47e2b51a1cbf219b8bc57edfda4abea100fdee",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198b3-21cc-773b-9a69-7cf59e770889\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793563239124\",\"version\":\"0.1.0\"}}",
               "unit": "line"
             },
             {
-              "at_ms": "1",
+              "at_ms": "0",
               "bytes": "280",
               "direction": "sent",
               "offset": "234",
-              "sha256": "7dd70d5d740701ed4d73d7aeb6d3026a6bedbc2b8a23dd64c73173342736f781",
-              "text": "{\"id\":\"inject-0\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"op_id\":\"01a195dd-5274-7449-ae25-024b9b1f9411\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":{\"lease_epoch\":\"7\",\"reason\":\"stale takeover epoch\"},\"target\":{\"address\":\"t1\"}}}\n",
+              "sha256": "6324a9c7f607af8933936ad1fb26887842f0f9fa4e0f2bd4d777bca024dd2725",
+              "text": "{\"id\":\"inject-0\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"op_id\":\"01a198b3-22d5-70f3-9a6e-087fd492f65c\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":{\"lease_epoch\":\"7\",\"reason\":\"stale takeover epoch\"},\"target\":{\"address\":\"t1\"}}}\n",
               "unit": "write"
             },
             {
               "at_ms": "1",
               "bytes": "259",
               "direction": "received",
-              "offset": "1778",
-              "sha256": "3069bec8e8fed237ff3e748512ab3e82b75e283253c669e99a4b4df660df0b69",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-0\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"lease_epoch_mismatch\",\"hint\":\"read the current lease and retry the takeover at its epoch\",\"retryable\":false,\"op_id\":\"01a195dd-5274-7449-ae25-024b9b1f9411\"}}}",
+              "offset": "2604",
+              "sha256": "497cbada4b28c7b8edd2a418e47e311bb7a6c7ccafedd775467f6c17e2829fad",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-0\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"lease_epoch_mismatch\",\"hint\":\"read the current lease and retry the takeover at its epoch\",\"retryable\":false,\"op_id\":\"01a198b3-22d5-70f3-9a6e-087fd492f65c\"}}}",
               "unit": "line"
             },
             {
@@ -1244,17 +1470,17 @@
               "bytes": "283",
               "direction": "sent",
               "offset": "514",
-              "sha256": "7c25cea51cf830648880779da4ec08183e28a181c9e7a1cdf48bd0befb6732bd",
-              "text": "{\"id\":\"inject-1\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"op_id\":\"01a195dd-5275-701a-86ac-7fd69440ecdf\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":{\"lease_epoch\":\"0\",\"reason\":\"an epoch no lease holds\"},\"target\":{\"address\":\"t1\"}}}\n",
+              "sha256": "35113eb4280b4eaf78d780f11dda963bbaadaa26daa0ed5515963996f76be5ac",
+              "text": "{\"id\":\"inject-1\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"op_id\":\"01a198b3-22d6-72a7-88ce-5484846b08ec\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":{\"lease_epoch\":\"0\",\"reason\":\"an epoch no lease holds\"},\"target\":{\"address\":\"t1\"}}}\n",
               "unit": "write"
             },
             {
               "at_ms": "2",
               "bytes": "235",
               "direction": "received",
-              "offset": "2037",
-              "sha256": "856612da8956bb5334e467ab13de5af3abc155baec679bdaae48e0f6123a0927",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-1\",\"error\":{\"code\":-32602,\"message\":\"operation failed\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"send the epoch the current lease reports\",\"retryable\":false,\"op_id\":\"01a195dd-5275-701a-86ac-7fd69440ecdf\"}}}",
+              "offset": "2863",
+              "sha256": "5efa42f789ae3a11e1884d5e59380f11282947fb46ab15a519db3e51e4fb0817",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-1\",\"error\":{\"code\":-32602,\"message\":\"operation failed\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"send the epoch the current lease reports\",\"retryable\":false,\"op_id\":\"01a198b3-22d6-72a7-88ce-5484846b08ec\"}}}",
               "unit": "line"
             },
             {
@@ -1262,17 +1488,17 @@
               "bytes": "255",
               "direction": "sent",
               "offset": "797",
-              "sha256": "36991254294a0681f2a013e92385e684239ea9c92cad581e26835a82b6345439",
-              "text": "{\"id\":\"inject-2\",\"jsonrpc\":\"2.0\",\"method\":\"attach.takeover\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"lease_epoch\":\"0\",\"op_id\":\"01a195dd-5275-701a-86ac-7fd7b394eed0\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+              "sha256": "2382452ec76765b6f553e9cd9d31a06b57ba986928ef67680dc96ed80d9f26b2",
+              "text": "{\"id\":\"inject-2\",\"jsonrpc\":\"2.0\",\"method\":\"attach.takeover\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"lease_epoch\":\"0\",\"op_id\":\"01a198b3-22d6-72a7-88ce-548578d7b1ca\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
               "unit": "write"
             },
             {
               "at_ms": "2",
-              "bytes": "221",
+              "bytes": "236",
               "direction": "received",
-              "offset": "2272",
-              "sha256": "6fb74e47f4f9ae4edcec12693f27177e2cf735fb8844feaed41ecd74aed821c7",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-2\",\"error\":{\"code\":-32601,\"message\":\"no such JSON-RPC method\",\"data\":{\"kind\":\"method_not_found\",\"hint\":\"consult rpc.discover for supported methods\",\"retryable\":false,\"field_path\":\"method\"}}}",
+              "offset": "3098",
+              "sha256": "d8fdfc61c3d1d245d96f5daf661345ecc34e23bfaa3c702017e97c70e542c26c",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-2\",\"error\":{\"code\":-32602,\"message\":\"method parameters violate the closed schema\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"correct the method parameters\",\"retryable\":false,\"field_path\":\"params.client_id\"}}}",
               "unit": "line"
             },
             {
@@ -1280,40 +1506,141 @@
               "bytes": "234",
               "direction": "sent",
               "offset": "1052",
-              "sha256": "c96ae3411995fcdb97b784148fd0372d7881ead8f22c93526ca4cf6c58856224",
-              "text": "{\"id\":\"held_open\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"op_id\":\"01a195dd-5276-73e7-adc4-77136d4856ef\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+              "sha256": "af1a12fc4496bdcc0d4fad6d80708d02fe0cc9b454f524f85d96599567e485d4",
+              "text": "{\"id\":\"held_open\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"op_id\":\"01a198b3-22d7-72fc-adbc-3357b002cc32\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "4",
+              "bytes": "406",
+              "direction": "received",
+              "offset": "3334",
+              "sha256": "a26e2f4da7e0d8dc24984d9ef40f15b40e5d709b54a56da842a2172babeaa2c6",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"close\":null,\"kind\":\"checkpoint\",\"skipped\":null,\"stream_id\":\"stream:01a198b3-22d7-72a5-8e56-1034bf7222b7\",\"stream_offset\":\"0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "4",
+              "bytes": "681",
+              "direction": "received",
+              "offset": "3740",
+              "sha256": "dde98d1ee97b98508841f37f5ec80dfac57ad06b9d34fd0f2c3ae8257733a52f",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G2MbWzE7MUgbWzA7Mzk7NDltJCBlY2hvIHJlYWR5LSQoKDIrMykpG1syOzFIcmVhZHktNRtbMzsxSCQbWzQ7MUgbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzk7MUgbWzEwOzFIG1sxMTsxSBtbMTI7MUgbWzEzOzFIG1sxNDsxSBtbMTU7MUgbWzE2OzFIG1sxNzsxSBtbMTg7MUgbWzE5OzFIG1syMDsxSBtbMjE7MUgbWzIyOzFIG1syMzsxSBtbMjQ7MUgbWzI1OzFIG1syNjsxSBtbMjc7MUgbWzI4OzFIG1syOTsxSBtbMzA7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzM7M0gbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=\",\"offset\":\"0\",\"stream_id\":\"stream:01a198b3-22d7-72a5-8e56-1034bf7222b7\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "4",
+              "bytes": "825",
+              "direction": "received",
+              "offset": "4421",
+              "sha256": "a42ca4f9e7c3b17a59e88fd47c5dbf896bbb90fc4748bd438f4ad303e4c43743",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"held_open\",\"result\":{\"channel\":null,\"credit_initial\":\"262144\",\"displaced\":null,\"final_output_offset\":null,\"first_paint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"holder\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"lease\":{\"epoch\":\"1\",\"holder\":\"relay\",\"lease_id\":\"lease:7\",\"role\":\"observe\"},\"outcome\":\"held\",\"reason\":null,\"retry\":{\"event\":\"lease.revoked\",\"lease\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"on\":\"lease_released\"},\"stream_id\":\"stream:01a198b3-22d7-72a5-8e56-1034bf7222b7\",\"terminal\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "5",
+              "bytes": "272",
+              "direction": "sent",
+              "offset": "1286",
+              "sha256": "351d7e74960edab98ac1f9405259cd74472c31a99497ada75796b1a92ba5110e",
+              "text": "{\"id\":\"stale_takeover\",\"jsonrpc\":\"2.0\",\"method\":\"attach.takeover\",\"params\":{\"op_id\":\"01a198b3-22d9-743a-abeb-cb0bdc48f503\",\"stream_id\":\"stream:01a198b3-22d7-72a5-8e56-1034bf7222b7\",\"takeover\":{\"lease_epoch\":\"7\",\"reason\":\"stale takeover epoch\"},\"target\":{\"address\":\"t1\"}}}\n",
               "unit": "write"
             },
             {
               "at_ms": "5",
-              "bytes": "406",
+              "bytes": "265",
               "direction": "received",
-              "offset": "2493",
-              "sha256": "e69863c47b79b1cc01350018af89f723e84e658dea2da342a372332a1dacadff",
-              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"close\":null,\"kind\":\"checkpoint\",\"skipped\":null,\"stream_id\":\"stream:01a195dd-5276-743b-a316-fef4926d21bc\",\"stream_offset\":\"0\"}}",
-              "unit": "line"
-            },
-            {
-              "at_ms": "5",
-              "bytes": "681",
-              "direction": "received",
-              "offset": "2899",
-              "sha256": "833610fd74e4df706218fa03fbd286aae8af82c1187bac5a0655c1bb733749fa",
-              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G2MbWzE7MUgbWzA7Mzk7NDltJCBlY2hvIHJlYWR5LSQoKDIrMykpG1syOzFIcmVhZHktNRtbMzsxSCQbWzQ7MUgbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzk7MUgbWzEwOzFIG1sxMTsxSBtbMTI7MUgbWzEzOzFIG1sxNDsxSBtbMTU7MUgbWzE2OzFIG1sxNzsxSBtbMTg7MUgbWzE5OzFIG1syMDsxSBtbMjE7MUgbWzIyOzFIG1syMzsxSBtbMjQ7MUgbWzI1OzFIG1syNjsxSBtbMjc7MUgbWzI4OzFIG1syOTsxSBtbMzA7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzM7M0gbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=\",\"offset\":\"0\",\"stream_id\":\"stream:01a195dd-5276-743b-a316-fef4926d21bc\"}}",
-              "unit": "line"
-            },
-            {
-              "at_ms": "5",
-              "bytes": "825",
-              "direction": "received",
-              "offset": "3580",
-              "sha256": "a9aa5e1bed37d6d4f3027ddee4985ad2b1bbcf295935e3f1207dc0c137df1736",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"held_open\",\"result\":{\"channel\":null,\"credit_initial\":\"262144\",\"displaced\":null,\"final_output_offset\":null,\"first_paint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"holder\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"lease\":{\"epoch\":\"1\",\"holder\":\"relay\",\"lease_id\":\"lease:7\",\"role\":\"observe\"},\"outcome\":\"held\",\"reason\":null,\"retry\":{\"event\":\"lease.revoked\",\"lease\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"on\":\"lease_released\"},\"stream_id\":\"stream:01a195dd-5276-743b-a316-fef4926d21bc\",\"terminal\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\"}}}",
+              "offset": "5246",
+              "sha256": "3ff503385e639008b9ab982e2d4f7b0f83f97025eec72976a8f434cb8e1a64dc",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"stale_takeover\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"lease_epoch_mismatch\",\"hint\":\"read the current lease and retry the takeover at its epoch\",\"retryable\":false,\"op_id\":\"01a198b3-22d9-743a-abeb-cb0bdc48f503\"}}}",
               "unit": "line"
             }
           ],
           "via": "socket",
-          "writes": "5"
+          "writes": "6"
+        },
+        {
+          "bytes_decoded": "4712",
+          "bytes_received": "4712",
+          "bytes_sent": "684",
+          "name": "twin",
+          "records_received": "5",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "5bac48af7582b620a6fcaf4e410d383222330986732e40ab691d58a20e39dda3",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2604",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "81f8b379e799be0494ca2f8c74f809e133cc2dc494249b8accfbb56895db275c",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198b3-21cc-773b-9a69-7cf59e770889\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793563239130\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "232",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "6a82cb64bd8604f18cde0057502ca56dcd68c29e26d0805d85a26024c38aedb9",
+              "text": "{\"id\":\"twin_open\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"cli\",\"geometry\":null,\"op_id\":\"01a198b3-22da-755b-bed1-0548d503a01e\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "406",
+              "direction": "received",
+              "offset": "2604",
+              "sha256": "0133b080a9c15ceba636867deeb08e1e220db079b52f1053dc74b9992753caaa",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"close\":null,\"kind\":\"checkpoint\",\"skipped\":null,\"stream_id\":\"stream:01a198b3-22db-7137-84cf-7adcfe164c30\",\"stream_offset\":\"0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "681",
+              "direction": "received",
+              "offset": "3010",
+              "sha256": "5034b8f436f2925c9aa5951426e3394bd697cff6c2f60bc0fef1b500b702c3c7",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G2MbWzE7MUgbWzA7Mzk7NDltJCBlY2hvIHJlYWR5LSQoKDIrMykpG1syOzFIcmVhZHktNRtbMzsxSCQbWzQ7MUgbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzk7MUgbWzEwOzFIG1sxMTsxSBtbMTI7MUgbWzEzOzFIG1sxNDsxSBtbMTU7MUgbWzE2OzFIG1sxNzsxSBtbMTg7MUgbWzE5OzFIG1syMDsxSBtbMjE7MUgbWzIyOzFIG1syMzsxSBtbMjQ7MUgbWzI1OzFIG1syNjsxSBtbMjc7MUgbWzI4OzFIG1syOTsxSBtbMzA7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzM7M0gbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=\",\"offset\":\"0\",\"stream_id\":\"stream:01a198b3-22db-7137-84cf-7adcfe164c30\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "823",
+              "direction": "received",
+              "offset": "3691",
+              "sha256": "bfc8a0f882e1c225722f371a302b60c4d7ddec8cf2085596e5776d369f411355",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"twin_open\",\"result\":{\"channel\":null,\"credit_initial\":\"262144\",\"displaced\":null,\"final_output_offset\":null,\"first_paint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"holder\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"lease\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:9\",\"role\":\"observe\"},\"outcome\":\"held\",\"reason\":null,\"retry\":{\"event\":\"lease.revoked\",\"lease\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"on\":\"lease_released\"},\"stream_id\":\"stream:01a198b3-22db-7137-84cf-7adcfe164c30\",\"terminal\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "218",
+              "direction": "sent",
+              "offset": "466",
+              "sha256": "63ae6a84dfd1b9c4d23e6a05f8829e1508917b07e387388800c862227f118e87",
+              "text": "{\"id\":\"twin_write\",\"jsonrpc\":\"2.0\",\"method\":\"input.raw\",\"params\":{\"data_b64\":\"ZWNobyB0d2luLSQoKDErMSkpDQ==\",\"expect\":null,\"lease_id\":\"lease:1\",\"op_id\":\"01a198b3-22dd-75d9-873f-e84f6c697f16\",\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "198",
+              "direction": "received",
+              "offset": "4514",
+              "sha256": "7c7e1f8ad0036f0cf19ec8aa94ed9cf97a899928a61120566a70e32f149b99d2",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"twin_write\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"no_lease\",\"hint\":\"acquire the interact lease or present the one you hold\",\"retryable\":false}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "3"
         }
       ],
       "declared": {
@@ -1369,9 +1696,15 @@
         },
         {
           "descriptors": {
+            "bytes": "echo ready-$((2+3))\\r",
+            "pty": "holder"
+          },
+          "source": "pty_type"
+        },
+        {
+          "descriptors": {
             "output": "ready-5",
-            "pty": "holder",
-            "retry_type": "echo ready-$((2+3))\\r"
+            "pty": "holder"
           },
           "source": "pty_expect"
         },
@@ -1423,10 +1756,10 @@
           "source": "pty_exit"
         }
       ],
-      "elapsed_ms": "273",
+      "elapsed_ms": "500",
       "failure": null,
       "fixture": {
-        "accepted": "5",
+        "accepted": "6",
         "failures": {},
         "panicked": "0"
       },
@@ -1434,7 +1767,7 @@
       "processes": [
         {
           "argv": [
-            "target/debug/ovis-terminal",
+            "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
             "--json",
             "terminal",
             "attach",
@@ -1457,7 +1790,7 @@
         },
         {
           "argv": [
-            "target/debug/ovis-terminal",
+            "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
             "--json",
             "terminal",
             "attach",
@@ -1484,7 +1817,7 @@
         },
         {
           "argv": [
-            "target/debug/ovis-terminal",
+            "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
             "--json",
             "terminal",
             "attach",
@@ -1498,8 +1831,8 @@
           "role": "attach",
           "stderr": {
             "bytes": "173",
-            "sha256": "3ffce77b77bcd652713c6b0a47ea69e66c2b4e4a8bd2120fad4df28c2de59a47",
-            "text": "{\"detached\":{\"displaced\":null,\"leases_held\":[],\"leases_released\":true,\"reason\":\"detach_key\",\"stream_closed\":true,\"stream_id\":\"stream:01a195dd-5223-7311-ba87-ecb223016db1\"}}\n"
+            "sha256": "209eaa509d385c51ddc70e7b907044f1e2d97b3865380c380a2935b4331e5feb",
+            "text": "{\"detached\":{\"displaced\":null,\"leases_held\":[],\"leases_released\":true,\"reason\":\"detach_key\",\"stream_closed\":true,\"stream_id\":\"stream:01a198b3-228b-7447-9fae-32093f7a95eb\"}}\n"
           },
           "stdout": {
             "bytes": "394",
@@ -1509,14 +1842,14 @@
         },
         {
           "argv": [
-            "target/debug/ovis-terminal",
+            "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
             "serve",
             "--stdin-lifetime",
             "--root",
-            "/tmp/ovc-2362124-1/srv"
+            "/tmp/ovc-2981382-1/srv"
           ],
           "exit_code": 0,
-          "pid": "2366452",
+          "pid": "2983173",
           "role": "fixture",
           "stderr": {
             "bytes": "0",
@@ -1531,10 +1864,10 @@
         }
       ],
       "scenario": "cli/interactive-attach",
-      "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch) and 0 (invalid_params), the plan's literal attach.takeover (method_not_found: takeover is only an epoch-bound attach.open field) and a following ordinary attach.open (held with holder and retry, observe lease only) never evict the holder, which detaches cleanly with the program incarnation unchanged."
+      "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch) and 0 (invalid_params), the plan's literal attach.takeover inject (invalid_params: lease_epoch outside takeover), an attach.takeover at stale epoch 7 on the relay's held stream (lease_epoch_mismatch) and a following ordinary attach.open (held with holder and retry, observe lease only), and a second connection presenting the holder's own client id cli (held naming the holder; its input.raw under lease:1 refused no_lease) never evict the holder, which detaches cleanly with the program incarnation unchanged."
     }
   ],
-  "elapsed_ms": "9076",
+  "elapsed_ms": "1311",
   "error": null,
   "format": "ovis-conformance-evidence/1",
   "host": {
@@ -1547,7 +1880,7 @@
   "runner_version": "0.1.0",
   "scenario": "cli/interactive-attach",
   "totals": {
-    "assertions": "94",
+    "assertions": "111",
     "cases": "2",
     "declared_only": "0",
     "failed": "0",

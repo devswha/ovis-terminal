@@ -1,9 +1,9 @@
 [
   {
     "binary": {
-      "bytes": "258142856",
-      "path": "target/debug/ovis-terminal",
-      "sha256": "08127fb8b4feeedadd88cf014537813b95a7f6091b08f7396a2e9c715c85e0ad"
+      "bytes": "145086680",
+      "path": "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
+      "sha256": "235ec4077d9c56c5712f3d5b5b2277864c9c9037473160e8bc9bd101105a43d1"
     },
     "case": "happy",
     "cases": [
@@ -17,10 +17,16 @@
           },
           {
             "actual": [
+              "hello",
               "server.status",
+              "server.stop",
+              "server.restart",
+              "server.metrics",
               "op.get",
               "op.cancel",
+              "session.snapshot",
               "terminal.run",
+              "terminal.first_message",
               "terminal.list",
               "terminal.get",
               "terminal.kill",
@@ -37,12 +43,21 @@
               "input.keys",
               "input.raw",
               "input.paste",
+              "input.interrupt",
+              "input.barrier",
               "attach.open",
               "attach.resize",
+              "attach.release_geometry",
+              "attach.focus",
               "attach.repaint",
               "attach.credit",
               "attach.close",
+              "attach.takeover",
               "attach.leases",
+              "events.subscribe",
+              "events.update",
+              "events.unsubscribe",
+              "events.wait",
               "status.get",
               "status.report",
               "status.clear",
@@ -51,17 +66,46 @@
               "prompt.open",
               "prompt.answer",
               "prompt.close",
+              "turn.get",
+              "turn.wait",
               "agent.register",
               "agent.get",
               "agent.update_session",
+              "agent.children",
               "agent.conversation",
+              "agent.append_records",
+              "agent.records",
+              "agent.history",
+              "template.list",
+              "template.get",
+              "layout.get",
+              "layout.edit",
+              "selection.set",
+              "worktree.list",
+              "worktree.create",
+              "worktree.open",
+              "worktree.remove",
               "plugin.list",
               "plugin.invoke",
               "plugin.run_get",
               "doc.get",
               "doc.set",
+              "machine.add",
+              "machine.list",
               "machine.get",
-              "machine.rename"
+              "machine.rename",
+              "service.describe",
+              "update.stage",
+              "update.verify",
+              "update.activate",
+              "update.rollback",
+              "update.query",
+              "rpc.discover",
+              "schema.errors",
+              "schema.events",
+              "schema.capabilities",
+              "credential.rotate",
+              "credential.revoke"
             ],
             "check": "hello/result/methods",
             "expected": {
@@ -114,7 +158,7 @@
             "passed": true
           },
           {
-            "actual": 2368643,
+            "actual": 2979017,
             "check": "reply[before]/result/launcher/pid",
             "expected": {
               "$present": true
@@ -122,7 +166,7 @@
             "passed": true
           },
           {
-            "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:1641609",
+            "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:6397229",
             "check": "reply[before]/result/launcher/start_token",
             "expected": {
               "$present": true
@@ -189,6 +233,12 @@
             "expected": [
               "held"
             ],
+            "passed": true
+          },
+          {
+            "actual": "armed-4",
+            "check": "pty[outer]/shows",
+            "expected": "armed-4",
             "passed": true
           },
           {
@@ -294,7 +344,7 @@
             "passed": true
           },
           {
-            "actual": 2368643,
+            "actual": 2979017,
             "check": "reply[after]/result/launcher/pid",
             "expected": {
               "$present": true
@@ -302,7 +352,7 @@
             "passed": true
           },
           {
-            "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:1641609",
+            "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:6397229",
             "check": "reply[after]/result/launcher/start_token",
             "expected": {
               "$present": true
@@ -320,9 +370,9 @@
             "passed": true
           },
           {
-            "actual": "4032",
+            "actual": "4858",
             "check": "connection[control]/bytes_received=bytes_decoded",
-            "expected": "4032",
+            "expected": "4858",
             "passed": true
           },
           {
@@ -341,8 +391,8 @@
         "case": "happy",
         "connections": [
           {
-            "bytes_decoded": "4032",
-            "bytes_received": "4032",
+            "bytes_decoded": "4858",
+            "bytes_received": "4858",
             "bytes_sent": "981",
             "name": "control",
             "records_received": "6",
@@ -352,17 +402,17 @@
                 "bytes": "234",
                 "direction": "sent",
                 "offset": "0",
-                "sha256": "218aa08586c8ab1cb03cceeb1e708b71f4383ece423fab93b2a9afa87488fcf6",
+                "sha256": "fd287c7e67224f616c02e68754b36335b3e24789c17704c2edccbae704a0069e",
                 "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
                 "unit": "write"
               },
               {
                 "at_ms": "0",
-                "bytes": "1778",
+                "bytes": "2604",
                 "direction": "received",
                 "offset": "0",
-                "sha256": "27c4fb070e98856fbcad965eff76a31a165217568432d8626c049956572d9937",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a195dd-71c0-77ad-99aa-9e22c9511f55\",\"methods\":[\"server.status\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.get\",\"machine.rename\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793515680212\",\"version\":\"0.1.0\"}}",
+                "sha256": "655087902fdbc263220ff0776753cbc645dcabb0b85a1f7edee29b41e3c05739",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198b3-17a7-71d4-99c5-1a09b323e7c7\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793563236410\",\"version\":\"0.1.0\"}}",
                 "unit": "line"
               },
               {
@@ -370,21 +420,21 @@
                 "bytes": "356",
                 "direction": "sent",
                 "offset": "234",
-                "sha256": "e71b1fcb48c2fbb816c0c1b3aed45d92821ff67f869588534b997700f868ce3e",
-                "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a195dd-71d5-763f-81b5-c2e396eb7c8c\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
+                "sha256": "1c3d5ddee58e93d22e5d9d203ec4b4037b35d2b298ffd400e118814833ac27dc",
+                "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a198b3-183a-761b-8938-8baa1e085d81\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
                 "unit": "write"
               },
               {
                 "at_ms": "31",
                 "bytes": "871",
                 "direction": "received",
-                "offset": "1778",
-                "sha256": "9f47141304d696ca5de0dd195cd421cda2509fb69fcc785e7afafa4b6abd5ff8",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a195dd-71c0-77ad-99aa-9e22c9511f55\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2368643,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1641609\",\"started_ms\":\"1793515680241\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
+                "offset": "2604",
+                "sha256": "9b6251bb738bbae47f8433f68b0ec6e08ba297dde15362143aa6e73ed283eef2",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a198b3-17a7-71d4-99c5-1a09b323e7c7\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2979017,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397229\",\"started_ms\":\"1793563236437\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
                 "unit": "line"
               },
               {
-                "at_ms": "32",
+                "at_ms": "31",
                 "bytes": "102",
                 "direction": "sent",
                 "offset": "590",
@@ -393,16 +443,16 @@
                 "unit": "write"
               },
               {
-                "at_ms": "112",
+                "at_ms": "108",
                 "bytes": "465",
                 "direction": "received",
-                "offset": "2649",
-                "sha256": "d0a38a3d9d0d346707a5115e05fc4d9ab50ffb552566f4ee79505eb137020669",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"before\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2368643,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1641609\",\"started_ms\":\"1793515680241\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2368643,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1641609\",\"started_ms\":\"1793515680241\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
+                "offset": "3475",
+                "sha256": "88dbfe150f78b6626641e86810860a390d114581ccc36c2c3303e6d7f4f072df",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"before\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2979017,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397229\",\"started_ms\":\"1793563236437\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2979017,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397229\",\"started_ms\":\"1793563236437\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
                 "unit": "line"
               },
               {
-                "at_ms": "163",
+                "at_ms": "156",
                 "bytes": "92",
                 "direction": "sent",
                 "offset": "692",
@@ -411,16 +461,16 @@
                 "unit": "write"
               },
               {
-                "at_ms": "164",
+                "at_ms": "156",
                 "bytes": "288",
                 "direction": "received",
-                "offset": "3114",
+                "offset": "3940",
                 "sha256": "651911e0e1839ba9bfc047975095082cb049a7f1216dca124f186992743792f5",
                 "text": "{\"jsonrpc\":\"2.0\",\"id\":\"held\",\"result\":{\"geometry_owner\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:3\",\"role\":\"interact\"},\"interact\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:2\",\"role\":\"interact\"},\"observers\":[{\"epoch\":\"1\",\"holder\":\"phone\",\"lease_id\":\"lease:1\",\"role\":\"observe\"}]}}",
                 "unit": "line"
               },
               {
-                "at_ms": "242",
+                "at_ms": "231",
                 "bytes": "96",
                 "direction": "sent",
                 "offset": "784",
@@ -429,16 +479,16 @@
                 "unit": "write"
               },
               {
-                "at_ms": "242",
+                "at_ms": "231",
                 "bytes": "166",
                 "direction": "received",
-                "offset": "3402",
+                "offset": "4228",
                 "sha256": "d3a88b68f0b416827b80f3601fb031579e484507eaf2a01f825f6262300b5a17",
                 "text": "{\"jsonrpc\":\"2.0\",\"id\":\"released\",\"result\":{\"geometry_owner\":null,\"interact\":null,\"observers\":[{\"epoch\":\"1\",\"holder\":\"phone\",\"lease_id\":\"lease:1\",\"role\":\"observe\"}]}}",
                 "unit": "line"
               },
               {
-                "at_ms": "243",
+                "at_ms": "231",
                 "bytes": "101",
                 "direction": "sent",
                 "offset": "880",
@@ -447,12 +497,12 @@
                 "unit": "write"
               },
               {
-                "at_ms": "327",
+                "at_ms": "302",
                 "bytes": "464",
                 "direction": "received",
-                "offset": "3568",
-                "sha256": "946d6553822ce8aa5e9204c6c5cbd4c6d693c110d61790c8d8070b78d330a02c",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"after\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2368643,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1641609\",\"started_ms\":\"1793515680241\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2368643,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1641609\",\"started_ms\":\"1793515680241\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
+                "offset": "4394",
+                "sha256": "029c9a66474f1e5b1871a74403e06636f7b020272ba9d82e9739e0fed0dc93af",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"after\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2979017,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397229\",\"started_ms\":\"1793563236437\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2979017,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397229\",\"started_ms\":\"1793563236437\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
                 "unit": "line"
               }
             ],
@@ -460,8 +510,8 @@
             "writes": "6"
           },
           {
-            "bytes_decoded": "1778",
-            "bytes_received": "1778",
+            "bytes_decoded": "2604",
+            "bytes_received": "2604",
             "bytes_sent": "463",
             "name": "phone",
             "records_received": "1",
@@ -471,17 +521,17 @@
                 "bytes": "234",
                 "direction": "sent",
                 "offset": "0",
-                "sha256": "218aa08586c8ab1cb03cceeb1e708b71f4383ece423fab93b2a9afa87488fcf6",
+                "sha256": "fd287c7e67224f616c02e68754b36335b3e24789c17704c2edccbae704a0069e",
                 "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
                 "unit": "write"
               },
               {
                 "at_ms": "0",
-                "bytes": "1778",
+                "bytes": "2604",
                 "direction": "received",
                 "offset": "0",
-                "sha256": "c033e41d8d8ad7538145f9fa02ce4a246c38d2008bad03a4cd4e8f89e2cde3cb",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a195dd-71c0-77ad-99aa-9e22c9511f55\",\"methods\":[\"server.status\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.get\",\"machine.rename\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793515680325\",\"version\":\"0.1.0\"}}",
+                "sha256": "afd85a1e4696c59b08223872cbf6452585ab2948829896e8ae5166f248aeb5a6",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198b3-17a7-71d4-99c5-1a09b323e7c7\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793563236519\",\"version\":\"0.1.0\"}}",
                 "unit": "line"
               },
               {
@@ -489,8 +539,8 @@
                 "bytes": "229",
                 "direction": "sent",
                 "offset": "234",
-                "sha256": "f1700f306d1af0412df1bae497cbf98df920ea825686264048aecad8e0bcab4f",
-                "text": "{\"id\":\"watch\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"phone\",\"geometry\":null,\"op_id\":\"01a195dd-7246-70e4-a342-093651b9938f\",\"role\":\"observe\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+                "sha256": "300d8ac360ae18e97f1c220d4120b4182e9cc3d1402d2ec89c9ad1f8c41744f9",
+                "text": "{\"id\":\"watch\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"phone\",\"geometry\":null,\"op_id\":\"01a198b3-18a7-755b-88ad-12e9df5886d9\",\"role\":\"observe\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
                 "unit": "write"
               }
             ],
@@ -551,9 +601,29 @@
           },
           {
             "descriptors": {
+              "bytes": "echo mark-$((30+1))\\r",
+              "pty": "outer"
+            },
+            "source": "pty_type"
+          },
+          {
+            "descriptors": {
               "output": "mark-31",
-              "pty": "outer",
-              "retry_type": "echo mark-$((30+1))\\r"
+              "pty": "outer"
+            },
+            "source": "pty_expect"
+          },
+          {
+            "descriptors": {
+              "bytes": "sh -c \\'sleep 600 & p=$!; trap \\\"stty size; kill $p; exit\\\" WINCH; echo armed-$((2+2)); wait\\'\\r",
+              "pty": "outer"
+            },
+            "source": "pty_type"
+          },
+          {
+            "descriptors": {
+              "output": "armed-4",
+              "pty": "outer"
             },
             "source": "pty_expect"
           },
@@ -567,8 +637,7 @@
           {
             "descriptors": {
               "output": "40 120",
-              "pty": "outer",
-              "retry_type": "stty size\\r"
+              "pty": "outer"
             },
             "source": "pty_expect"
           },
@@ -589,8 +658,7 @@
           {
             "descriptors": {
               "output": "^[[99;7~",
-              "pty": "outer",
-              "retry_type": ""
+              "pty": "outer"
             },
             "source": "pty_expect"
           },
@@ -611,8 +679,7 @@
           {
             "descriptors": {
               "output": "on-9",
-              "pty": "outer",
-              "retry_type": ""
+              "pty": "outer"
             },
             "source": "pty_expect"
           },
@@ -626,8 +693,7 @@
           {
             "descriptors": {
               "output": "\u001b[?1000l\u001b[?1006l\u001b[?2004l\u001b[?1049l\u001b[?25h\u001b[0m",
-              "pty": "outer",
-              "retry_type": ""
+              "pty": "outer"
             },
             "source": "pty_expect"
           },
@@ -640,7 +706,7 @@
             "source": "pty_exit"
           }
         ],
-        "elapsed_ms": "368",
+        "elapsed_ms": "596",
         "failure": null,
         "fixture": {
           "accepted": "3",
@@ -651,7 +717,7 @@
         "processes": [
           {
             "argv": [
-              "target/debug/ovis-terminal",
+              "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
               "terminal",
               "attach",
               "--target",
@@ -664,25 +730,25 @@
             "role": "attach",
             "stderr": {
               "bytes": "173",
-              "sha256": "c6fbe8270e80676c17ab184c4d1ae1d67c7582e364ea41767e79280fd1a65aa9",
-              "text": "{\"detached\":{\"displaced\":null,\"leases_held\":[],\"leases_released\":true,\"reason\":\"detach_key\",\"stream_closed\":true,\"stream_id\":\"stream:01a195dd-7255-775f-93bf-cfd8576d523e\"}}\n"
+              "sha256": "12afb12b4319f8e01aedffe3027981d6f2b542769713f004da7ad03d0a14ff90",
+              "text": "{\"detached\":{\"displaced\":null,\"leases_held\":[],\"leases_released\":true,\"reason\":\"detach_key\",\"stream_closed\":true,\"stream_id\":\"stream:01a198b3-18b9-7203-a522-1166a4c84281\"}}\n"
             },
             "stdout": {
-              "bytes": "600",
-              "sha256": "ac2ba16341bc2c5bc5ea2e44e27026467f962dae134354948d3fd0654f0883b6",
-              "text": "echo mark-$((30+1))\r\n\u001bc\u001b[1;1H\u001b[0;39;49m$\u001b[2;1H\u001b[3;1H\u001b[4;1H\u001b[5;1H\u001b[6;1H\u001b[7;1H\u001b[8;1H\u001b[9;1H\u001b[10;1H\u001b[11;1H\u001b[12;1H\u001b[13;1H\u001b[14;1H\u001b[15;1H\u001b[16;1H\u001b[17;1H\u001b[18;1H\u001b[19;1H\u001b[20;1H\u001b[21;1H\u001b[22;1H\u001b[23;1H\u001b[24;1H\u001b[1;1H\u001b[0;39;49m\u001b7\u001b[?25h\u001b[?1l\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1004l\u001b[?1005l\u001b[?1006l\u001b[?1007h\u001b[?1042h\u001b[?2004l\u001b[?6l\u001b[=0;1u\u001b[>4;0m\u001b[?9001l\u001b>\u001b[2 q\u001b[1;3H\u001b[?7h\u001b[4l\u001b[20l\u001b[0;39;49mecho mark-$((30+1))\r\nmark-31\r\n$ stty size\r\n40 120\r\n$ cat -v\r\n^[[99;7~\r\n^[[99;7~\r\nprintf '\\033[?1049h\\033[?1000;1006h\\033[?2004h\\033[?25l'; echo on-$((3*3))\r\n$ \u001b[?1049h\u001b[?1000;1006h\u001b[?2004h\u001b[?25lon-9\r\n\u001b[?1000l\u001b[?1006l\u001b[?2004l\u001b[?1049l\u001b[?25h\u001b[0m"
+              "bytes": "692",
+              "sha256": "a8f58cbabdda881363ec602c87078411554a9cc26ab24fc5966a92fd25000c2f",
+              "text": "echo mark-$((30+1))\r\n\u001bc\u001b[1;1H\u001b[0;39;49m$\u001b[2;1H\u001b[3;1H\u001b[4;1H\u001b[5;1H\u001b[6;1H\u001b[7;1H\u001b[8;1H\u001b[9;1H\u001b[10;1H\u001b[11;1H\u001b[12;1H\u001b[13;1H\u001b[14;1H\u001b[15;1H\u001b[16;1H\u001b[17;1H\u001b[18;1H\u001b[19;1H\u001b[20;1H\u001b[21;1H\u001b[22;1H\u001b[23;1H\u001b[24;1H\u001b[1;1H\u001b[0;39;49m\u001b7\u001b[?25h\u001b[?1l\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1004l\u001b[?1005l\u001b[?1006l\u001b[?1007h\u001b[?1042h\u001b[?2004l\u001b[?6l\u001b[=0;1u\u001b[>4;0m\u001b[?9001l\u001b>\u001b[2 q\u001b[1;3H\u001b[?7h\u001b[4l\u001b[20l\u001b[0;39;49mecho mark-$((30+1))\r\nmark-31\r\n$ sh -c 'sleep 600 & p=$!; trap \"stty size; kill $p; exit\" WINCH; echo armed-$((2+2)); wait'\r\narmed-4\r\n40 120\r\n$ cat -v\r\n^[[99;7~\r\n^[[99;7~\r\nprintf '\\033[?1049h\\033[?1000;1006h\\033[?2004h\\033[?25l'; echo on-$((3*3))\r\n$ \u001b[?1049h\u001b[?1000;1006h\u001b[?2004h\u001b[?25lon-9\r\n$ \u001b[?1000l\u001b[?1006l\u001b[?2004l\u001b[?1049l\u001b[?25h\u001b[0m"
             }
           },
           {
             "argv": [
-              "target/debug/ovis-terminal",
+              "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
               "serve",
               "--stdin-lifetime",
               "--root",
-              "/tmp/ovc-2366590-0/srv"
+              "/tmp/ovc-2978858-0/srv"
             ],
             "exit_code": 0,
-            "pid": "2368632",
+            "pid": "2979001",
             "role": "fixture",
             "stderr": {
               "bytes": "0",
@@ -700,7 +766,7 @@
         "summary": "Real serve runs /bin/sh as t1 with a socket observer (phone) attached; ovis-terminal terminal attach --target t1 on a real outer PTY types a marker, follows a resize the inner PTY reports, passes an unknown escape sequence through unchanged, detaches on Ctrl-\\ after switching off the modes the program enabled; outer terminal settings equal the originals, every granted lease is released, the observer stays attached and the program incarnation is unchanged."
       }
     ],
-    "elapsed_ms": "8038",
+    "elapsed_ms": "812",
     "error": null,
     "format": "ovis-conformance-evidence/1",
     "host": {
@@ -713,7 +779,7 @@
     "runner_version": "0.1.0",
     "scenario": "cli/interactive-attach",
     "totals": {
-      "assertions": "40",
+      "assertions": "41",
       "cases": "1",
       "declared_only": "0",
       "failed": "0",
@@ -723,9 +789,9 @@
   },
   {
     "binary": {
-      "bytes": "258142856",
-      "path": "target/debug/ovis-terminal",
-      "sha256": "08127fb8b4feeedadd88cf014537813b95a7f6091b08f7396a2e9c715c85e0ad"
+      "bytes": "145086680",
+      "path": "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
+      "sha256": "235ec4077d9c56c5712f3d5b5b2277864c9c9037473160e8bc9bd101105a43d1"
     },
     "case": "failure",
     "cases": [
@@ -739,10 +805,16 @@
           },
           {
             "actual": [
+              "hello",
               "server.status",
+              "server.stop",
+              "server.restart",
+              "server.metrics",
               "op.get",
               "op.cancel",
+              "session.snapshot",
               "terminal.run",
+              "terminal.first_message",
               "terminal.list",
               "terminal.get",
               "terminal.kill",
@@ -759,12 +831,21 @@
               "input.keys",
               "input.raw",
               "input.paste",
+              "input.interrupt",
+              "input.barrier",
               "attach.open",
               "attach.resize",
+              "attach.release_geometry",
+              "attach.focus",
               "attach.repaint",
               "attach.credit",
               "attach.close",
+              "attach.takeover",
               "attach.leases",
+              "events.subscribe",
+              "events.update",
+              "events.unsubscribe",
+              "events.wait",
               "status.get",
               "status.report",
               "status.clear",
@@ -773,17 +854,46 @@
               "prompt.open",
               "prompt.answer",
               "prompt.close",
+              "turn.get",
+              "turn.wait",
               "agent.register",
               "agent.get",
               "agent.update_session",
+              "agent.children",
               "agent.conversation",
+              "agent.append_records",
+              "agent.records",
+              "agent.history",
+              "template.list",
+              "template.get",
+              "layout.get",
+              "layout.edit",
+              "selection.set",
+              "worktree.list",
+              "worktree.create",
+              "worktree.open",
+              "worktree.remove",
               "plugin.list",
               "plugin.invoke",
               "plugin.run_get",
               "doc.get",
               "doc.set",
+              "machine.add",
+              "machine.list",
               "machine.get",
-              "machine.rename"
+              "machine.rename",
+              "service.describe",
+              "update.stage",
+              "update.verify",
+              "update.activate",
+              "update.rollback",
+              "update.query",
+              "rpc.discover",
+              "schema.errors",
+              "schema.events",
+              "schema.capabilities",
+              "credential.rotate",
+              "credential.revoke"
             ],
             "check": "hello/result/methods",
             "expected": {
@@ -954,9 +1064,9 @@
             "passed": true
           },
           {
-            "actual": "method_not_found",
+            "actual": "invalid_params",
             "check": "inject[0]/error/data/kind",
-            "expected": "method_not_found",
+            "expected": "invalid_params",
             "passed": true
           },
           {
@@ -1018,12 +1128,128 @@
             "passed": true
           },
           {
+            "actual": "stream:01a198b3-1cd2-71d9-8a97-2cec6fb01fd4",
+            "check": "reply[held_open]/result/stream_id",
+            "expected": {
+              "$capture": "relay_stream"
+            },
+            "passed": true
+          },
+          {
             "actual": [
               "held_open"
             ],
             "check": "replies/exactly_one_per_id",
             "expected": [
               "held_open"
+            ],
+            "passed": true
+          },
+          {
+            "actual": "lease_epoch_mismatch",
+            "check": "reply[stale_takeover]/error/data/kind",
+            "expected": "lease_epoch_mismatch",
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[stale_takeover]/result",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": [
+              "stale_takeover"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "stale_takeover"
+            ],
+            "passed": true
+          },
+          {
+            "actual": "hello",
+            "check": "hello/id",
+            "expected": "hello",
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[twin_open]/error",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": "cli",
+            "check": "reply[twin_open]/result/holder/holder",
+            "expected": "cli",
+            "passed": true
+          },
+          {
+            "actual": "lease:1",
+            "check": "reply[twin_open]/result/holder/lease_id",
+            "expected": "lease:1",
+            "passed": true
+          },
+          {
+            "actual": "observe",
+            "check": "reply[twin_open]/result/lease/role",
+            "expected": "observe",
+            "passed": true
+          },
+          {
+            "actual": "held",
+            "check": "reply[twin_open]/result/outcome",
+            "expected": "held",
+            "passed": true
+          },
+          {
+            "actual": "lease.revoked",
+            "check": "reply[twin_open]/result/retry/event",
+            "expected": "lease.revoked",
+            "passed": true
+          },
+          {
+            "actual": "lease_released",
+            "check": "reply[twin_open]/result/retry/on",
+            "expected": "lease_released",
+            "passed": true
+          },
+          {
+            "actual": [
+              "twin_open"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "twin_open"
+            ],
+            "passed": true
+          },
+          {
+            "actual": "no_lease",
+            "check": "reply[twin_write]/error/data/kind",
+            "expected": "no_lease",
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[twin_write]/result",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": [
+              "twin_write"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "twin_write"
             ],
             "passed": true
           },
@@ -1080,7 +1306,7 @@
             "passed": true
           },
           {
-            "actual": 2372858,
+            "actual": 2979465,
             "check": "reply[alive]/result/launcher/pid",
             "expected": {
               "$present": true
@@ -1088,7 +1314,7 @@
             "passed": true
           },
           {
-            "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:1642496",
+            "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:6397331",
             "check": "reply[alive]/result/launcher/start_token",
             "expected": {
               "$present": true
@@ -1106,9 +1332,9 @@
             "passed": true
           },
           {
-            "actual": "3406",
+            "actual": "4299",
             "check": "connection[control]/bytes_received=bytes_decoded",
-            "expected": "3406",
+            "expected": "4299",
             "passed": true
           },
           {
@@ -1121,8 +1347,8 @@
         "case": "failure",
         "connections": [
           {
-            "bytes_decoded": "3406",
-            "bytes_received": "3406",
+            "bytes_decoded": "4299",
+            "bytes_received": "4299",
             "bytes_sent": "788",
             "name": "control",
             "records_received": "4",
@@ -1132,17 +1358,17 @@
                 "bytes": "234",
                 "direction": "sent",
                 "offset": "0",
-                "sha256": "2cb1a6c794f393f928f2412cba3bb491543f6f5240963ef5159d9155bfda1f3d",
+                "sha256": "c6dcc2129a6e0d68b69e6f3dff22025c8dd117406eef55ee79e4c0814cdd34b6",
                 "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
                 "unit": "write"
               },
               {
                 "at_ms": "0",
-                "bytes": "1778",
+                "bytes": "2604",
                 "direction": "received",
                 "offset": "0",
-                "sha256": "468d0380c7ff13cab2c9e9ab5454ce5f43dc0a8e9aac372854eb7fa7079ed4b2",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a195dd-945c-777e-b04f-c44cefca90ce\",\"methods\":[\"server.status\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.get\",\"machine.rename\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793515689073\",\"version\":\"0.1.0\"}}",
+                "sha256": "a5de2fd6326221819e340b4304a8795c024807e0d775c2cf1e88c9ffac886d62",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198b3-1ba9-7299-a65e-841f5ddb1c6a\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793563237435\",\"version\":\"0.1.0\"}}",
                 "unit": "line"
               },
               {
@@ -1150,21 +1376,21 @@
                 "bytes": "356",
                 "direction": "sent",
                 "offset": "234",
-                "sha256": "8ee93b0b337320d585fde6ea282ca58ed8d5d05ebd0e89013dc4ed850268f883",
-                "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a195dd-9472-7329-9315-8aeacd90524e\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
+                "sha256": "78d06c56503f817b5fa7c5ade20a9088f29b349a101b9237658d88fa8e1ae1c8",
+                "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a198b3-1c3c-7168-ac3a-695bf1d90f4a\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
                 "unit": "write"
               },
               {
-                "at_ms": "34",
+                "at_ms": "31",
                 "bytes": "871",
                 "direction": "received",
-                "offset": "1778",
-                "sha256": "9271f960397a23c5c1522c0063a9dac4aa40f14fb33e82f6edccb4f363b7a741",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a195dd-945c-777e-b04f-c44cefca90ce\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2372858,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1642496\",\"started_ms\":\"1793515689104\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
+                "offset": "2604",
+                "sha256": "abd02b3a079108a4a78f0ff8087af7db37b98a806ce4c13f614a7c88f4a8ed5a",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a198b3-1ba9-7299-a65e-841f5ddb1c6a\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2979465,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397331\",\"started_ms\":\"1793563237463\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
                 "unit": "line"
               },
               {
-                "at_ms": "138",
+                "at_ms": "161",
                 "bytes": "97",
                 "direction": "sent",
                 "offset": "590",
@@ -1173,16 +1399,16 @@
                 "unit": "write"
               },
               {
-                "at_ms": "138",
-                "bytes": "293",
+                "at_ms": "161",
+                "bytes": "360",
                 "direction": "received",
-                "offset": "2649",
-                "sha256": "01f3b496daf53fbcc4082f14d471a3c04a59032d169b40bb436c46b7cdf71571",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"unchanged\",\"result\":{\"geometry_owner\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:2\",\"role\":\"interact\"},\"interact\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"observers\":[{\"epoch\":\"1\",\"holder\":\"relay\",\"lease_id\":\"lease:5\",\"role\":\"observe\"}]}}",
+                "offset": "3475",
+                "sha256": "55859adb6ad133ef5a570d6272c307b38aade6dd6cabe73a59e75eb640f4cfbe",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"unchanged\",\"result\":{\"geometry_owner\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:2\",\"role\":\"interact\"},\"interact\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"observers\":[{\"epoch\":\"1\",\"holder\":\"relay\",\"lease_id\":\"lease:5\",\"role\":\"observe\"},{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:7\",\"role\":\"observe\"}]}}",
                 "unit": "line"
               },
               {
-                "at_ms": "144",
+                "at_ms": "170",
                 "bytes": "101",
                 "direction": "sent",
                 "offset": "687",
@@ -1191,12 +1417,12 @@
                 "unit": "write"
               },
               {
-                "at_ms": "225",
+                "at_ms": "252",
                 "bytes": "464",
                 "direction": "received",
-                "offset": "2942",
-                "sha256": "bed617952b7a1eb748c11161edc8ad83f3fe44a9d78b3e63d5509944f1151909",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"alive\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2372858,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1642496\",\"started_ms\":\"1793515689104\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2372858,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1642496\",\"started_ms\":\"1793515689104\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
+                "offset": "3835",
+                "sha256": "32a7c0cee6582ff3475c484fe75b8ec74e7b10876af5a4bf48e494421f132d91",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"alive\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2979465,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397331\",\"started_ms\":\"1793563237463\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2979465,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:6397331\",\"started_ms\":\"1793563237463\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
                 "unit": "line"
               }
             ],
@@ -1204,28 +1430,28 @@
             "writes": "4"
           },
           {
-            "bytes_decoded": "3911",
-            "bytes_received": "3911",
-            "bytes_sent": "723",
+            "bytes_decoded": "5017",
+            "bytes_received": "5017",
+            "bytes_sent": "995",
             "name": "relay",
-            "records_received": "5",
+            "records_received": "6",
             "transcript": [
               {
                 "at_ms": "0",
                 "bytes": "234",
                 "direction": "sent",
                 "offset": "0",
-                "sha256": "2cb1a6c794f393f928f2412cba3bb491543f6f5240963ef5159d9155bfda1f3d",
+                "sha256": "c6dcc2129a6e0d68b69e6f3dff22025c8dd117406eef55ee79e4c0814cdd34b6",
                 "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
                 "unit": "write"
               },
               {
-                "at_ms": "0",
-                "bytes": "1778",
+                "at_ms": "1",
+                "bytes": "2604",
                 "direction": "received",
                 "offset": "0",
-                "sha256": "20429758862c1932a04fdf7fbb979a48b5d0d7b3cf62b05b7c2903b13c007cb5",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a195dd-945c-777e-b04f-c44cefca90ce\",\"methods\":[\"server.status\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.get\",\"machine.rename\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793515689207\",\"version\":\"0.1.0\"}}",
+                "sha256": "9a3d39a306d5428c66ad39a7ef0bb219e3819bb2e9dbdd8bf2e0bd3df7f45796",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198b3-1ba9-7299-a65e-841f5ddb1c6a\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793563237584\",\"version\":\"0.1.0\"}}",
                 "unit": "line"
               },
               {
@@ -1233,781 +1459,71 @@
                 "bytes": "255",
                 "direction": "sent",
                 "offset": "234",
-                "sha256": "3e7ed0c3e088931a878021ad6e7813864fc72a9c7fe55eca152cc848a60905c8",
-                "text": "{\"id\":\"inject-0\",\"jsonrpc\":\"2.0\",\"method\":\"attach.takeover\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"lease_epoch\":\"0\",\"op_id\":\"01a195dd-94f8-7048-a6b5-66a347e22a8d\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+                "sha256": "c9209da5cf61b2834004788657fdadd5cf97c186545fe90ea9e409e4828f0e21",
+                "text": "{\"id\":\"inject-0\",\"jsonrpc\":\"2.0\",\"method\":\"attach.takeover\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"lease_epoch\":\"0\",\"op_id\":\"01a198b3-1cd1-707e-94a9-de1e859bea0b\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
                 "unit": "write"
               },
               {
-                "at_ms": "1",
-                "bytes": "221",
+                "at_ms": "2",
+                "bytes": "236",
                 "direction": "received",
-                "offset": "1778",
-                "sha256": "b79e06d8637bce1e5c62989d087aa08eff111479af9dc9808d1645de0413804e",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-0\",\"error\":{\"code\":-32601,\"message\":\"no such JSON-RPC method\",\"data\":{\"kind\":\"method_not_found\",\"hint\":\"consult rpc.discover for supported methods\",\"retryable\":false,\"field_path\":\"method\"}}}",
+                "offset": "2604",
+                "sha256": "78423e49b4ba6a45c776434a19df4f1d5a6fc09f1e5b9ba26371d32b3d599eb4",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-0\",\"error\":{\"code\":-32602,\"message\":\"method parameters violate the closed schema\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"correct the method parameters\",\"retryable\":false,\"field_path\":\"params.client_id\"}}}",
                 "unit": "line"
               },
               {
-                "at_ms": "1",
+                "at_ms": "2",
                 "bytes": "234",
                 "direction": "sent",
                 "offset": "489",
-                "sha256": "81649b87e594e6fd6e87975e4805fd2d6e9c2f437748f7e25237900ab978b7d0",
-                "text": "{\"id\":\"held_open\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"op_id\":\"01a195dd-94f8-7048-a6b5-66a4c5bfcf14\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+                "sha256": "64feeb9ac04c8b5740cc176a135db39b3f7f92595e9243d48dac34cdc624dc8d",
+                "text": "{\"id\":\"held_open\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"op_id\":\"01a198b3-1cd2-71e9-abbe-49c89990ba05\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
                 "unit": "write"
               },
               {
-                "at_ms": "4",
+                "at_ms": "6",
                 "bytes": "406",
                 "direction": "received",
-                "offset": "1999",
-                "sha256": "0c8d878f56cdcffafd034c747cee19227379f636a7a38b86805614b55108870a",
-                "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"close\":null,\"kind\":\"checkpoint\",\"skipped\":null,\"stream_id\":\"stream:01a195dd-94f8-7761-a371-431de9a1dafa\",\"stream_offset\":\"0\"}}",
+                "offset": "2840",
+                "sha256": "57bfaab21de101c296600d22d065534e222c02c7ffd6ed39d77a985d5c64e8aa",
+                "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"close\":null,\"kind\":\"checkpoint\",\"skipped\":null,\"stream_id\":\"stream:01a198b3-1cd2-71d9-8a97-2cec6fb01fd4\",\"stream_offset\":\"0\"}}",
                 "unit": "line"
               },
               {
-                "at_ms": "4",
+                "at_ms": "6",
                 "bytes": "681",
                 "direction": "received",
-                "offset": "2405",
-                "sha256": "f289cbdc422ee6001fad13eb8fdd554831d4ba9b29a698d85388522dde933c25",
-                "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G2MbWzE7MUgbWzA7Mzk7NDltJCBlY2hvIHJlYWR5LSQoKDIrMykpG1syOzFIcmVhZHktNRtbMzsxSCQbWzQ7MUgbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzk7MUgbWzEwOzFIG1sxMTsxSBtbMTI7MUgbWzEzOzFIG1sxNDsxSBtbMTU7MUgbWzE2OzFIG1sxNzsxSBtbMTg7MUgbWzE5OzFIG1syMDsxSBtbMjE7MUgbWzIyOzFIG1syMzsxSBtbMjQ7MUgbWzI1OzFIG1syNjsxSBtbMjc7MUgbWzI4OzFIG1syOTsxSBtbMzA7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzM7M0gbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=\",\"offset\":\"0\",\"stream_id\":\"stream:01a195dd-94f8-7761-a371-431de9a1dafa\"}}",
+                "offset": "3246",
+                "sha256": "fd5f71d6284a81c793e6aa1fe0cc715835d8f60eee8825451c77c44446af7503",
+                "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G2MbWzE7MUgbWzA7Mzk7NDltJCBlY2hvIHJlYWR5LSQoKDIrMykpG1syOzFIcmVhZHktNRtbMzsxSCQbWzQ7MUgbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzk7MUgbWzEwOzFIG1sxMTsxSBtbMTI7MUgbWzEzOzFIG1sxNDsxSBtbMTU7MUgbWzE2OzFIG1sxNzsxSBtbMTg7MUgbWzE5OzFIG1syMDsxSBtbMjE7MUgbWzIyOzFIG1syMzsxSBtbMjQ7MUgbWzI1OzFIG1syNjsxSBtbMjc7MUgbWzI4OzFIG1syOTsxSBtbMzA7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzM7M0gbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=\",\"offset\":\"0\",\"stream_id\":\"stream:01a198b3-1cd2-71d9-8a97-2cec6fb01fd4\"}}",
                 "unit": "line"
               },
               {
-                "at_ms": "4",
+                "at_ms": "6",
                 "bytes": "825",
                 "direction": "received",
-                "offset": "3086",
-                "sha256": "002028a505d0143072729f740e4c99c134458753380519c50004960659bb5c65",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"held_open\",\"result\":{\"channel\":null,\"credit_initial\":\"262144\",\"displaced\":null,\"final_output_offset\":null,\"first_paint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"holder\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"lease\":{\"epoch\":\"1\",\"holder\":\"relay\",\"lease_id\":\"lease:5\",\"role\":\"observe\"},\"outcome\":\"held\",\"reason\":null,\"retry\":{\"event\":\"lease.revoked\",\"lease\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"on\":\"lease_released\"},\"stream_id\":\"stream:01a195dd-94f8-7761-a371-431de9a1dafa\",\"terminal\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\"}}}",
-                "unit": "line"
-              }
-            ],
-            "via": "socket",
-            "writes": "3"
-          }
-        ],
-        "declared": {
-          "closes": [
-            "GAP-039",
-            "GAP-040",
-            "GAP-041",
-            "GAP-042",
-            "GAP-043",
-            "GAP-044",
-            "GAP-045",
-            "GAP-056",
-            "GAP-057",
-            "GAP-058",
-            "GAP-059",
-            "GAP-145",
-            "GAP-148",
-            "GAP-149"
-          ],
-          "delivers": [
-            "IDEAL-028",
-            "IDEAL-029",
-            "IDEAL-030",
-            "IDEAL-031",
-            "IDEAL-033",
-            "IDEAL-037",
-            "IDEAL-038",
-            "IDEAL-039",
-            "IDEAL-046",
-            "IDEAL-055",
-            "IDEAL-103"
-          ],
-          "excludes": [
-            "EXCL-001",
-            "EXCL-002",
-            "EXCL-004",
-            "EXCL-007",
-            "EXCL-016",
-            "EXCL-017",
-            "EXCL-019"
-          ],
-          "title": "Interactive attach without multiplexer chrome",
-          "todo": "62"
-        },
-        "descriptors": [
-          {
-            "descriptors": {
-              "args": "--json terminal attach --target t1 --client-id cli",
-              "grid": "100x30",
-              "pty": "holder"
-            },
-            "source": "pty_open"
-          },
-          {
-            "descriptors": {
-              "output": "ready-5",
-              "pty": "holder",
-              "retry_type": "echo ready-$((2+3))\\r"
-            },
-            "source": "pty_expect"
-          },
-          {
-            "descriptors": {
-              "args": "--json terminal attach --target t1",
-              "grid": "100x30",
-              "pty": "rival"
-            },
-            "source": "pty_open"
-          },
-          {
-            "descriptors": {
-              "exit": "11",
-              "pty": "rival",
-              "stderr": "Expect({\"/error/holder/epoch\": Exact(String(\"1\")), \"/error/holder/holder\": Exact(String(\"cli\")), \"/error/holder/role\": Exact(String(\"interact\")), \"/error/kind\": Exact(String(\"lease_conflict\")), \"/error/retry/event\": Exact(String(\"lease.revoked\")), \"/error/retry/lease/holder\": Exact(String(\"cli\")), \"/error/retry/on\": Exact(String(\"lease_released\"))})"
-            },
-            "source": "pty_exit"
-          },
-          {
-            "descriptors": {
-              "args": "--json terminal attach --target t1 --client-id bridge --takeover 7",
-              "grid": "100x30",
-              "pty": "stale"
-            },
-            "source": "pty_open"
-          },
-          {
-            "descriptors": {
-              "exit": "11",
-              "pty": "stale",
-              "stderr": "Expect({\"/error/current/epoch\": Exact(String(\"1\")), \"/error/current/holder\": Exact(String(\"cli\")), \"/error/expected_epoch\": Exact(String(\"7\")), \"/error/kind\": Exact(String(\"lease_epoch_mismatch\"))})"
-            },
-            "source": "pty_exit"
-          },
-          {
-            "descriptors": {
-              "bytes": "\\u{1c}",
-              "pty": "holder"
-            },
-            "source": "pty_type"
-          },
-          {
-            "descriptors": {
-              "exit": "0",
-              "pty": "holder",
-              "stderr": "Expect({\"/detached/leases_released\": Exact(Bool(true)), \"/detached/reason\": Exact(String(\"detach_key\"))})"
-            },
-            "source": "pty_exit"
-          }
-        ],
-        "elapsed_ms": "265",
-        "failure": null,
-        "fixture": {
-          "accepted": "5",
-          "failures": {},
-          "panicked": "0"
-        },
-        "outcome": "passed",
-        "processes": [
-          {
-            "argv": [
-              "target/debug/ovis-terminal",
-              "--json",
-              "terminal",
-              "attach",
-              "--target",
-              "t1"
-            ],
-            "exit_code": 11,
-            "pid": null,
-            "role": "attach",
-            "stderr": {
-              "bytes": "453",
-              "sha256": "f9b309efc937a7382339751dd0310e8629325297aa06423489e0d7d92e7905e5",
-              "text": "{\"error\":{\"exit_code\":11,\"hint\":\"watch with --observe, attach again after the retry event names the holder's lease, or pass --takeover with its epoch\",\"holder\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"kind\":\"lease_conflict\",\"message\":\"another client holds the interact lease\",\"origin\":\"cli\",\"retry\":{\"event\":\"lease.revoked\",\"lease\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"on\":\"lease_released\"}}}\n"
-            },
-            "stdout": {
-              "bytes": "0",
-              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-              "text": ""
-            }
-          },
-          {
-            "argv": [
-              "target/debug/ovis-terminal",
-              "--json",
-              "terminal",
-              "attach",
-              "--target",
-              "t1",
-              "--client-id",
-              "bridge",
-              "--takeover",
-              "7"
-            ],
-            "exit_code": 11,
-            "pid": null,
-            "role": "attach",
-            "stderr": {
-              "bytes": "340",
-              "sha256": "c653f99814a2a1d95bb8485752f5eb253e23f066e752e5bbd7ceaeb531cdfad9",
-              "text": "{\"error\":{\"current\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"exit_code\":11,\"expected_epoch\":\"7\",\"hint\":\"repeat with --takeover set to the epoch in current, or attach without takeover\",\"kind\":\"lease_epoch_mismatch\",\"message\":\"the takeover named epoch 7, which the interact lease no longer holds\",\"origin\":\"cli\"}}\n"
-            },
-            "stdout": {
-              "bytes": "0",
-              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-              "text": ""
-            }
-          },
-          {
-            "argv": [
-              "target/debug/ovis-terminal",
-              "--json",
-              "terminal",
-              "attach",
-              "--target",
-              "t1",
-              "--client-id",
-              "cli"
-            ],
-            "exit_code": 0,
-            "pid": null,
-            "role": "attach",
-            "stderr": {
-              "bytes": "173",
-              "sha256": "f2dfd6c358e2fdf94b770df9a641fe0a55501d4efbebeb5241d4d2f65a87467a",
-              "text": "{\"detached\":{\"displaced\":null,\"leases_held\":[],\"leases_released\":true,\"reason\":\"detach_key\",\"stream_closed\":true,\"stream_id\":\"stream:01a195dd-94a4-7709-a138-26ba7234ce17\"}}\n"
-            },
-            "stdout": {
-              "bytes": "394",
-              "sha256": "1e66a16af2796ecc248d9a12922b756ced65b0c7b384f49ebfee47f257a6b4e6",
-              "text": "echo ready-$((2+3))\r\n\u001bc\u001b[1;1H\u001b[0;39;49m$\u001b[2;1H\u001b[3;1H\u001b[4;1H\u001b[5;1H\u001b[6;1H\u001b[7;1H\u001b[8;1H\u001b[9;1H\u001b[10;1H\u001b[11;1H\u001b[12;1H\u001b[13;1H\u001b[14;1H\u001b[15;1H\u001b[16;1H\u001b[17;1H\u001b[18;1H\u001b[19;1H\u001b[20;1H\u001b[21;1H\u001b[22;1H\u001b[23;1H\u001b[24;1H\u001b[1;1H\u001b[0;39;49m\u001b7\u001b[?25h\u001b[?1l\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1004l\u001b[?1005l\u001b[?1006l\u001b[?1007h\u001b[?1042h\u001b[?2004l\u001b[?6l\u001b[=0;1u\u001b[>4;0m\u001b[?9001l\u001b>\u001b[2 q\u001b[1;3H\u001b[?7h\u001b[4l\u001b[20l\u001b[0;39;49mecho ready-$((2+3))\r\nready-5\r\n$ \u001b[0m"
-            }
-          },
-          {
-            "argv": [
-              "target/debug/ovis-terminal",
-              "serve",
-              "--stdin-lifetime",
-              "--root",
-              "/tmp/ovc-2368686-0/srv"
-            ],
-            "exit_code": 0,
-            "pid": "2372849",
-            "role": "fixture",
-            "stderr": {
-              "bytes": "0",
-              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-              "text": ""
-            },
-            "stdout": {
-              "bytes": "82",
-              "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
-              "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
-            }
-          }
-        ],
-        "scenario": "cli/interactive-attach",
-        "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch) and 0 (invalid_params), the plan's literal attach.takeover (method_not_found: takeover is only an epoch-bound attach.open field) and a following ordinary attach.open (held with holder and retry, observe lease only) never evict the holder, which detaches cleanly with the program incarnation unchanged."
-      }
-    ],
-    "elapsed_ms": "8537",
-    "error": null,
-    "format": "ovis-conformance-evidence/1",
-    "host": {
-      "arch": "x86_64",
-      "family": "unix",
-      "os": "linux"
-    },
-    "inventory": null,
-    "result": "passed",
-    "runner_version": "0.1.0",
-    "scenario": "cli/interactive-attach",
-    "totals": {
-      "assertions": "49",
-      "cases": "1",
-      "declared_only": "0",
-      "failed": "0",
-      "passed": "1",
-      "skipped": "0"
-    }
-  },
-  {
-    "binary": {
-      "bytes": "258142856",
-      "path": "target/debug/ovis-terminal",
-      "sha256": "08127fb8b4feeedadd88cf014537813b95a7f6091b08f7396a2e9c715c85e0ad"
-    },
-    "case": "failure",
-    "cases": [
-      {
-        "assertions": [
-          {
-            "actual": "hello",
-            "check": "hello/id",
-            "expected": "hello",
-            "passed": true
-          },
-          {
-            "actual": [
-              "server.status",
-              "op.get",
-              "op.cancel",
-              "terminal.run",
-              "terminal.list",
-              "terminal.get",
-              "terminal.kill",
-              "terminal.rm",
-              "terminal.keep",
-              "terminal.recover",
-              "terminal.label",
-              "terminal.rename",
-              "terminal.process_info",
-              "terminal.screen",
-              "terminal.output",
-              "terminal.wait_output",
-              "input.send",
-              "input.keys",
-              "input.raw",
-              "input.paste",
-              "attach.open",
-              "attach.resize",
-              "attach.repaint",
-              "attach.credit",
-              "attach.close",
-              "attach.leases",
-              "status.get",
-              "status.report",
-              "status.clear",
-              "prompt.list",
-              "prompt.get",
-              "prompt.open",
-              "prompt.answer",
-              "prompt.close",
-              "agent.register",
-              "agent.get",
-              "agent.update_session",
-              "agent.conversation",
-              "plugin.list",
-              "plugin.invoke",
-              "plugin.run_get",
-              "doc.get",
-              "doc.set",
-              "machine.get",
-              "machine.rename"
-            ],
-            "check": "hello/result/methods",
-            "expected": {
-              "$contains": [
-                "attach.open",
-                "attach.leases",
-                "attach.resize",
-                "attach.close",
-                "attach.credit",
-                "input.raw",
-                "terminal.process_info"
-              ]
-            },
-            "passed": true
-          },
-          {
-            "actual": null,
-            "check": "reply[run]/error",
-            "expected": {
-              "$present": false
-            },
-            "passed": true
-          },
-          {
-            "actual": "spawned",
-            "check": "reply[run]/result/spawn",
-            "expected": "spawned",
-            "passed": true
-          },
-          {
-            "actual": "t1",
-            "check": "reply[run]/result/terminal/address",
-            "expected": "t1",
-            "passed": true
-          },
-          {
-            "actual": [
-              "run"
-            ],
-            "check": "replies/exactly_one_per_id",
-            "expected": [
-              "run"
-            ],
-            "passed": true
-          },
-          {
-            "actual": "ready-5",
-            "check": "pty[holder]/shows",
-            "expected": "ready-5",
-            "passed": true
-          },
-          {
-            "actual": 11,
-            "check": "pty[rival]/exit",
-            "expected": 11,
-            "passed": true
-          },
-          {
-            "actual": true,
-            "check": "pty[rival]/terminal_settings_restored",
-            "expected": true,
-            "passed": true
-          },
-          {
-            "actual": "1",
-            "check": "pty/stderr/error/holder/epoch",
-            "expected": "1",
-            "passed": true
-          },
-          {
-            "actual": "cli",
-            "check": "pty/stderr/error/holder/holder",
-            "expected": "cli",
-            "passed": true
-          },
-          {
-            "actual": "interact",
-            "check": "pty/stderr/error/holder/role",
-            "expected": "interact",
-            "passed": true
-          },
-          {
-            "actual": "lease_conflict",
-            "check": "pty/stderr/error/kind",
-            "expected": "lease_conflict",
-            "passed": true
-          },
-          {
-            "actual": "lease.revoked",
-            "check": "pty/stderr/error/retry/event",
-            "expected": "lease.revoked",
-            "passed": true
-          },
-          {
-            "actual": "cli",
-            "check": "pty/stderr/error/retry/lease/holder",
-            "expected": "cli",
-            "passed": true
-          },
-          {
-            "actual": "lease_released",
-            "check": "pty/stderr/error/retry/on",
-            "expected": "lease_released",
-            "passed": true
-          },
-          {
-            "actual": 11,
-            "check": "pty[stale]/exit",
-            "expected": 11,
-            "passed": true
-          },
-          {
-            "actual": true,
-            "check": "pty[stale]/terminal_settings_restored",
-            "expected": true,
-            "passed": true
-          },
-          {
-            "actual": "1",
-            "check": "pty/stderr/error/current/epoch",
-            "expected": "1",
-            "passed": true
-          },
-          {
-            "actual": "cli",
-            "check": "pty/stderr/error/current/holder",
-            "expected": "cli",
-            "passed": true
-          },
-          {
-            "actual": "7",
-            "check": "pty/stderr/error/expected_epoch",
-            "expected": "7",
-            "passed": true
-          },
-          {
-            "actual": "lease_epoch_mismatch",
-            "check": "pty/stderr/error/kind",
-            "expected": "lease_epoch_mismatch",
-            "passed": true
-          },
-          {
-            "actual": "hello",
-            "check": "hello/id",
-            "expected": "hello",
-            "passed": true
-          },
-          {
-            "actual": {
-              "method": "attach.open",
-              "params": {
-                "takeover": {
-                  "lease_epoch": "7",
-                  "reason": "stale takeover epoch"
-                }
-              }
-            },
-            "check": "inject/planned",
-            "expected": {
-              "method": "attach.open",
-              "params": {
-                "takeover": {
-                  "lease_epoch": "7",
-                  "reason": "stale takeover epoch"
-                }
-              }
-            },
-            "passed": true
-          },
-          {
-            "actual": "inject-0",
-            "check": "inject[0]/id",
-            "expected": "inject-0",
-            "passed": true
-          },
-          {
-            "actual": "lease_epoch_mismatch",
-            "check": "inject[0]/error/data/kind",
-            "expected": "lease_epoch_mismatch",
-            "passed": true
-          },
-          {
-            "actual": null,
-            "check": "inject[0]/result",
-            "expected": {
-              "$present": false
-            },
-            "passed": true
-          },
-          {
-            "actual": null,
-            "check": "reply[held_open]/error",
-            "expected": {
-              "$present": false
-            },
-            "passed": true
-          },
-          {
-            "actual": null,
-            "check": "reply[held_open]/result/displaced",
-            "expected": null,
-            "passed": true
-          },
-          {
-            "actual": "1",
-            "check": "reply[held_open]/result/holder/epoch",
-            "expected": "1",
-            "passed": true
-          },
-          {
-            "actual": "cli",
-            "check": "reply[held_open]/result/holder/holder",
-            "expected": "cli",
-            "passed": true
-          },
-          {
-            "actual": "observe",
-            "check": "reply[held_open]/result/lease/role",
-            "expected": "observe",
-            "passed": true
-          },
-          {
-            "actual": "held",
-            "check": "reply[held_open]/result/outcome",
-            "expected": "held",
-            "passed": true
-          },
-          {
-            "actual": "lease.revoked",
-            "check": "reply[held_open]/result/retry/event",
-            "expected": "lease.revoked",
-            "passed": true
-          },
-          {
-            "actual": "lease_released",
-            "check": "reply[held_open]/result/retry/on",
-            "expected": "lease_released",
-            "passed": true
-          },
-          {
-            "actual": [
-              "held_open"
-            ],
-            "check": "replies/exactly_one_per_id",
-            "expected": [
-              "held_open"
-            ],
-            "passed": true
-          },
-          {
-            "actual": "1",
-            "check": "reply[unchanged]/result/interact/epoch",
-            "expected": "1",
-            "passed": true
-          },
-          {
-            "actual": "cli",
-            "check": "reply[unchanged]/result/interact/holder",
-            "expected": "cli",
-            "passed": true
-          },
-          {
-            "actual": [
-              "unchanged"
-            ],
-            "check": "replies/exactly_one_per_id",
-            "expected": [
-              "unchanged"
-            ],
-            "passed": true
-          },
-          {
-            "actual": 0,
-            "check": "pty[holder]/exit",
-            "expected": 0,
-            "passed": true
-          },
-          {
-            "actual": true,
-            "check": "pty[holder]/terminal_settings_restored",
-            "expected": true,
-            "passed": true
-          },
-          {
-            "actual": true,
-            "check": "pty/stderr/detached/leases_released",
-            "expected": true,
-            "passed": true
-          },
-          {
-            "actual": "detach_key",
-            "check": "pty/stderr/detached/reason",
-            "expected": "detach_key",
-            "passed": true
-          },
-          {
-            "actual": "1",
-            "check": "reply[alive]/result/launcher/incarnation",
-            "expected": "1",
-            "passed": true
-          },
-          {
-            "actual": 2376906,
-            "check": "reply[alive]/result/launcher/pid",
-            "expected": {
-              "$present": true
-            },
-            "passed": true
-          },
-          {
-            "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:1643368",
-            "check": "reply[alive]/result/launcher/start_token",
-            "expected": {
-              "$present": true
-            },
-            "passed": true
-          },
-          {
-            "actual": [
-              "alive"
-            ],
-            "check": "replies/exactly_one_per_id",
-            "expected": [
-              "alive"
-            ],
-            "passed": true
-          },
-          {
-            "actual": "3406",
-            "check": "connection[control]/bytes_received=bytes_decoded",
-            "expected": "3406",
-            "passed": true
-          },
-          {
-            "actual": "0",
-            "check": "fixture/panicked",
-            "expected": "0",
-            "passed": true
-          }
-        ],
-        "case": "failure",
-        "connections": [
-          {
-            "bytes_decoded": "3406",
-            "bytes_received": "3406",
-            "bytes_sent": "788",
-            "name": "control",
-            "records_received": "4",
-            "transcript": [
-              {
-                "at_ms": "0",
-                "bytes": "234",
-                "direction": "sent",
-                "offset": "0",
-                "sha256": "b90cea6e0d9460ddfe8d1d294be05b0c86ba55f818fca088be5a5df70769e656",
-                "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
-                "unit": "write"
-              },
-              {
-                "at_ms": "0",
-                "bytes": "1778",
-                "direction": "received",
-                "offset": "0",
-                "sha256": "8237698139a585b370434930fca4e9d9d95dde8c72ab93e0a441b417f1bedae2",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a195dd-b670-752d-a424-c4355788cbd4\",\"methods\":[\"server.status\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.get\",\"machine.rename\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793515697797\",\"version\":\"0.1.0\"}}",
+                "offset": "3927",
+                "sha256": "29e27d244221e76776316ec161083f216ee46eff0d4f69c55fa4f2c1bc707d0d",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"held_open\",\"result\":{\"channel\":null,\"credit_initial\":\"262144\",\"displaced\":null,\"final_output_offset\":null,\"first_paint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"holder\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"lease\":{\"epoch\":\"1\",\"holder\":\"relay\",\"lease_id\":\"lease:5\",\"role\":\"observe\"},\"outcome\":\"held\",\"reason\":null,\"retry\":{\"event\":\"lease.revoked\",\"lease\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"on\":\"lease_released\"},\"stream_id\":\"stream:01a198b3-1cd2-71d9-8a97-2cec6fb01fd4\",\"terminal\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\"}}}",
                 "unit": "line"
               },
               {
-                "at_ms": "1",
-                "bytes": "356",
+                "at_ms": "6",
+                "bytes": "272",
                 "direction": "sent",
-                "offset": "234",
-                "sha256": "3eae32e663e57d6135739a7888713553a368b917109e3a0ec720a3df037ec540",
-                "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a195dd-b685-73f0-b0a1-8d3873377358\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
+                "offset": "723",
+                "sha256": "e18681c9ca6f5803846a62896b5dfa39603e4e119ab922b59843dffd0e8ccaf0",
+                "text": "{\"id\":\"stale_takeover\",\"jsonrpc\":\"2.0\",\"method\":\"attach.takeover\",\"params\":{\"op_id\":\"01a198b3-1cd6-75c2-9051-464c702ef69d\",\"stream_id\":\"stream:01a198b3-1cd2-71d9-8a97-2cec6fb01fd4\",\"takeover\":{\"lease_epoch\":\"7\",\"reason\":\"stale takeover epoch\"},\"target\":{\"address\":\"t1\"}}}\n",
                 "unit": "write"
               },
               {
-                "at_ms": "33",
-                "bytes": "871",
+                "at_ms": "7",
+                "bytes": "265",
                 "direction": "received",
-                "offset": "1778",
-                "sha256": "c07b78f75ea2307fbc76734d25c3012ee3afe7c2cb849aad371e509e2aff018b",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a195dd-b670-752d-a424-c4355788cbd4\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2376906,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1643368\",\"started_ms\":\"1793515697826\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
-                "unit": "line"
-              },
-              {
-                "at_ms": "132",
-                "bytes": "97",
-                "direction": "sent",
-                "offset": "590",
-                "sha256": "c76f5514a752387df23096a50b3e4d7c8871995f16219addca908de0e2987f31",
-                "text": "{\"id\":\"unchanged\",\"jsonrpc\":\"2.0\",\"method\":\"attach.leases\",\"params\":{\"target\":{\"address\":\"t1\"}}}\n",
-                "unit": "write"
-              },
-              {
-                "at_ms": "132",
-                "bytes": "293",
-                "direction": "received",
-                "offset": "2649",
-                "sha256": "0d07a2566ea5d9a873747413d4296c9687eeecf68bc53da7ebab58ea969401e0",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"unchanged\",\"result\":{\"geometry_owner\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:2\",\"role\":\"interact\"},\"interact\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"observers\":[{\"epoch\":\"1\",\"holder\":\"relay\",\"lease_id\":\"lease:6\",\"role\":\"observe\"}]}}",
-                "unit": "line"
-              },
-              {
-                "at_ms": "137",
-                "bytes": "101",
-                "direction": "sent",
-                "offset": "687",
-                "sha256": "ea3f78d3c3b741a0db47799223bbbad4754b7b120d3fe0c939962d6ed9379960",
-                "text": "{\"id\":\"alive\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.process_info\",\"params\":{\"target\":{\"address\":\"t1\"}}}\n",
-                "unit": "write"
-              },
-              {
-                "at_ms": "225",
-                "bytes": "464",
-                "direction": "received",
-                "offset": "2942",
-                "sha256": "6404c86cc6a26e53820d38acfb377e5088b5bb3478201c47cf1e413ec2f6d0a2",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"alive\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2376906,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1643368\",\"started_ms\":\"1793515697826\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2376906,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:1643368\",\"started_ms\":\"1793515697826\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
+                "offset": "4752",
+                "sha256": "86ed4618ce2147d3299e8c5b4039e75de86a16fb8ea63dd966d3a6f81c98b1aa",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"stale_takeover\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"lease_epoch_mismatch\",\"hint\":\"read the current lease and retry the takeover at its epoch\",\"retryable\":false,\"op_id\":\"01a198b3-1cd6-75c2-9051-464c702ef69d\"}}}",
                 "unit": "line"
               }
             ],
@@ -2015,10 +1531,10 @@
             "writes": "4"
           },
           {
-            "bytes_decoded": "3949",
-            "bytes_received": "3949",
-            "bytes_sent": "748",
-            "name": "relay",
+            "bytes_decoded": "4712",
+            "bytes_received": "4712",
+            "bytes_sent": "684",
+            "name": "twin",
             "records_received": "5",
             "transcript": [
               {
@@ -2026,71 +1542,71 @@
                 "bytes": "234",
                 "direction": "sent",
                 "offset": "0",
-                "sha256": "b90cea6e0d9460ddfe8d1d294be05b0c86ba55f818fca088be5a5df70769e656",
+                "sha256": "c6dcc2129a6e0d68b69e6f3dff22025c8dd117406eef55ee79e4c0814cdd34b6",
                 "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
                 "unit": "write"
               },
               {
                 "at_ms": "0",
-                "bytes": "1778",
+                "bytes": "2604",
                 "direction": "received",
                 "offset": "0",
-                "sha256": "a3dc674a439935708de07f9f678a9af9bc6ff6734771cd62f4b72fc60e14f9fe",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a195dd-b670-752d-a424-c4355788cbd4\",\"methods\":[\"server.status\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.get\",\"machine.rename\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793515697925\",\"version\":\"0.1.0\"}}",
+                "sha256": "6d572dfd38c1bebaec069f0877a95428159b390d8f03458499654de6a7b93610",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a198b3-1ba9-7299-a65e-841f5ddb1c6a\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793563237591\",\"version\":\"0.1.0\"}}",
                 "unit": "line"
               },
               {
                 "at_ms": "0",
-                "bytes": "280",
+                "bytes": "232",
                 "direction": "sent",
                 "offset": "234",
-                "sha256": "bc7ffdf40fc990856644b3dfeed7bd38d8102b6b484384ed455af389e0e03717",
-                "text": "{\"id\":\"inject-0\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"op_id\":\"01a195dd-b705-7183-a52a-06275870b38d\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":{\"lease_epoch\":\"7\",\"reason\":\"stale takeover epoch\"},\"target\":{\"address\":\"t1\"}}}\n",
+                "sha256": "0cbc09e656d7d67e9001b8407dd8fbefc6c689d1f0c6b6c81b5d5d76d660d7de",
+                "text": "{\"id\":\"twin_open\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"cli\",\"geometry\":null,\"op_id\":\"01a198b3-1cd7-730b-9c49-00ea260a5a29\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
                 "unit": "write"
               },
               {
-                "at_ms": "1",
-                "bytes": "259",
-                "direction": "received",
-                "offset": "1778",
-                "sha256": "8027741ea85b34374feeeadee06da968a3af887f0ae71bcbc8243111109f10d5",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-0\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"lease_epoch_mismatch\",\"hint\":\"read the current lease and retry the takeover at its epoch\",\"retryable\":false,\"op_id\":\"01a195dd-b705-7183-a52a-06275870b38d\"}}}",
-                "unit": "line"
-              },
-              {
-                "at_ms": "1",
-                "bytes": "234",
-                "direction": "sent",
-                "offset": "514",
-                "sha256": "2efcd63644e1248c0d353f6b4e5240d97b53e41642990df3b7b006eb7f12478b",
-                "text": "{\"id\":\"held_open\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"relay\",\"geometry\":null,\"op_id\":\"01a195dd-b706-77dd-a197-6a9ae4e5702a\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
-                "unit": "write"
-              },
-              {
-                "at_ms": "4",
+                "at_ms": "3",
                 "bytes": "406",
                 "direction": "received",
-                "offset": "2037",
-                "sha256": "da0dba5671820a5feb16d7c97ccc365ff81a9e16d215b0839d58fc0d6f4676d5",
-                "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"close\":null,\"kind\":\"checkpoint\",\"skipped\":null,\"stream_id\":\"stream:01a195dd-b706-71ad-a5e7-8983dc9af277\",\"stream_offset\":\"0\"}}",
+                "offset": "2604",
+                "sha256": "ef4dcea10efd88da25ad685b3ff8bb987610d01f8f8ea3bd46ee45ee9355f126",
+                "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"close\":null,\"kind\":\"checkpoint\",\"skipped\":null,\"stream_id\":\"stream:01a198b3-1cd8-729e-9193-1489d4563d8d\",\"stream_offset\":\"0\"}}",
                 "unit": "line"
               },
               {
-                "at_ms": "4",
+                "at_ms": "3",
                 "bytes": "681",
                 "direction": "received",
-                "offset": "2443",
-                "sha256": "4be03c3e5927a1aa4f44e10e4df7c31d423160f9370f0b39ba433140e090dba8",
-                "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G2MbWzE7MUgbWzA7Mzk7NDltJCBlY2hvIHJlYWR5LSQoKDIrMykpG1syOzFIcmVhZHktNRtbMzsxSCQbWzQ7MUgbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzk7MUgbWzEwOzFIG1sxMTsxSBtbMTI7MUgbWzEzOzFIG1sxNDsxSBtbMTU7MUgbWzE2OzFIG1sxNzsxSBtbMTg7MUgbWzE5OzFIG1syMDsxSBtbMjE7MUgbWzIyOzFIG1syMzsxSBtbMjQ7MUgbWzI1OzFIG1syNjsxSBtbMjc7MUgbWzI4OzFIG1syOTsxSBtbMzA7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzM7M0gbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=\",\"offset\":\"0\",\"stream_id\":\"stream:01a195dd-b706-71ad-a5e7-8983dc9af277\"}}",
+                "offset": "3010",
+                "sha256": "d4347bede6ea252ca6b1cacca799dd79b1ee35b74098ec4da5e94487ed8d0686",
+                "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G2MbWzE7MUgbWzA7Mzk7NDltJCBlY2hvIHJlYWR5LSQoKDIrMykpG1syOzFIcmVhZHktNRtbMzsxSCQbWzQ7MUgbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzk7MUgbWzEwOzFIG1sxMTsxSBtbMTI7MUgbWzEzOzFIG1sxNDsxSBtbMTU7MUgbWzE2OzFIG1sxNzsxSBtbMTg7MUgbWzE5OzFIG1syMDsxSBtbMjE7MUgbWzIyOzFIG1syMzsxSBtbMjQ7MUgbWzI1OzFIG1syNjsxSBtbMjc7MUgbWzI4OzFIG1syOTsxSBtbMzA7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzM7M0gbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=\",\"offset\":\"0\",\"stream_id\":\"stream:01a198b3-1cd8-729e-9193-1489d4563d8d\"}}",
                 "unit": "line"
               },
               {
-                "at_ms": "4",
-                "bytes": "825",
+                "at_ms": "3",
+                "bytes": "823",
                 "direction": "received",
-                "offset": "3124",
-                "sha256": "86f6c89578c1a183317317dcf27d696d510cd13fc87cae66f2671b40d5c955a0",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"held_open\",\"result\":{\"channel\":null,\"credit_initial\":\"262144\",\"displaced\":null,\"final_output_offset\":null,\"first_paint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"holder\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"lease\":{\"epoch\":\"1\",\"holder\":\"relay\",\"lease_id\":\"lease:6\",\"role\":\"observe\"},\"outcome\":\"held\",\"reason\":null,\"retry\":{\"event\":\"lease.revoked\",\"lease\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"on\":\"lease_released\"},\"stream_id\":\"stream:01a195dd-b706-71ad-a5e7-8983dc9af277\",\"terminal\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\"}}}",
+                "offset": "3691",
+                "sha256": "4641b38975c51d1f76303962d7be396cb77bd1705901aaaf2610650590c8ee47",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"twin_open\",\"result\":{\"channel\":null,\"credit_initial\":\"262144\",\"displaced\":null,\"final_output_offset\":null,\"first_paint\":{\"cursor\":{\"col\":2,\"row\":2,\"visible\":true},\"geometry\":{\"cols\":100,\"rows\":30},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"34\",\"revision\":\"35\",\"stream_offset\":\"0\"},\"holder\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"lease\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:7\",\"role\":\"observe\"},\"outcome\":\"held\",\"reason\":null,\"retry\":{\"event\":\"lease.revoked\",\"lease\":{\"epoch\":\"1\",\"holder\":\"cli\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"on\":\"lease_released\"},\"stream_id\":\"stream:01a198b3-1cd8-729e-9193-1489d4563d8d\",\"terminal\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\"}}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "3",
+                "bytes": "218",
+                "direction": "sent",
+                "offset": "466",
+                "sha256": "76a646fb751ff68e168123fb9965102b62c0273b1249b99af5956bf4ebafe803",
+                "text": "{\"id\":\"twin_write\",\"jsonrpc\":\"2.0\",\"method\":\"input.raw\",\"params\":{\"data_b64\":\"ZWNobyB0d2luLSQoKDErMSkpDQ==\",\"expect\":null,\"lease_id\":\"lease:1\",\"op_id\":\"01a198b3-1cdb-72e6-8294-93d933796937\",\"target\":{\"address\":\"t1\"}}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "5",
+                "bytes": "198",
+                "direction": "received",
+                "offset": "4514",
+                "sha256": "7c7e1f8ad0036f0cf19ec8aa94ed9cf97a899928a61120566a70e32f149b99d2",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"twin_write\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"no_lease\",\"hint\":\"acquire the interact lease or present the one you hold\",\"retryable\":false}}}",
                 "unit": "line"
               }
             ],
@@ -2151,9 +1667,15 @@
           },
           {
             "descriptors": {
+              "bytes": "echo ready-$((2+3))\\r",
+              "pty": "holder"
+            },
+            "source": "pty_type"
+          },
+          {
+            "descriptors": {
               "output": "ready-5",
-              "pty": "holder",
-              "retry_type": "echo ready-$((2+3))\\r"
+              "pty": "holder"
             },
             "source": "pty_expect"
           },
@@ -2205,10 +1727,10 @@
             "source": "pty_exit"
           }
         ],
-        "elapsed_ms": "265",
+        "elapsed_ms": "548",
         "failure": null,
         "fixture": {
-          "accepted": "5",
+          "accepted": "6",
           "failures": {},
           "panicked": "0"
         },
@@ -2216,7 +1738,7 @@
         "processes": [
           {
             "argv": [
-              "target/debug/ovis-terminal",
+              "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
               "--json",
               "terminal",
               "attach",
@@ -2239,7 +1761,7 @@
           },
           {
             "argv": [
-              "target/debug/ovis-terminal",
+              "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
               "--json",
               "terminal",
               "attach",
@@ -2266,7 +1788,7 @@
           },
           {
             "argv": [
-              "target/debug/ovis-terminal",
+              "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
               "--json",
               "terminal",
               "attach",
@@ -2280,8 +1802,8 @@
             "role": "attach",
             "stderr": {
               "bytes": "173",
-              "sha256": "840c0129a999128414a5d99bd29459c55cc81fff5afa44e1730687008236295c",
-              "text": "{\"detached\":{\"displaced\":null,\"leases_held\":[],\"leases_released\":true,\"reason\":\"detach_key\",\"stream_closed\":true,\"stream_id\":\"stream:01a195dd-b6b6-7025-a4d9-df1a45e5ba03\"}}\n"
+              "sha256": "26e2da3a6e740f86767941f176a6806adeb785448ffc3775b717a2b9eae97b9a",
+              "text": "{\"detached\":{\"displaced\":null,\"leases_held\":[],\"leases_released\":true,\"reason\":\"detach_key\",\"stream_closed\":true,\"stream_id\":\"stream:01a198b3-1c6f-70a4-80c0-71545d118d62\"}}\n"
             },
             "stdout": {
               "bytes": "394",
@@ -2291,14 +1813,14 @@
           },
           {
             "argv": [
-              "target/debug/ovis-terminal",
+              "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
               "serve",
               "--stdin-lifetime",
               "--root",
-              "/tmp/ovc-2372946-0/srv"
+              "/tmp/ovc-2979031-0/srv"
             ],
             "exit_code": 0,
-            "pid": "2376896",
+            "pid": "2979223",
             "role": "fixture",
             "stderr": {
               "bytes": "0",
@@ -2313,10 +1835,10 @@
           }
         ],
         "scenario": "cli/interactive-attach",
-        "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch) and 0 (invalid_params), the plan's literal attach.takeover (method_not_found: takeover is only an epoch-bound attach.open field) and a following ordinary attach.open (held with holder and retry, observe lease only) never evict the holder, which detaches cleanly with the program incarnation unchanged."
+        "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch) and 0 (invalid_params), the plan's literal attach.takeover inject (invalid_params: lease_epoch outside takeover), an attach.takeover at stale epoch 7 on the relay's held stream (lease_epoch_mismatch) and a following ordinary attach.open (held with holder and retry, observe lease only), and a second connection presenting the holder's own client id cli (held naming the holder; its input.raw under lease:1 refused no_lease) never evict the holder, which detaches cleanly with the program incarnation unchanged."
       }
     ],
-    "elapsed_ms": "8505",
+    "elapsed_ms": "763",
     "error": null,
     "format": "ovis-conformance-evidence/1",
     "host": {
@@ -2329,7 +1851,7 @@
     "runner_version": "0.1.0",
     "scenario": "cli/interactive-attach",
     "totals": {
-      "assertions": "49",
+      "assertions": "65",
       "cases": "1",
       "declared_only": "0",
       "failed": "0",
