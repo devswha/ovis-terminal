@@ -11,7 +11,7 @@ use super::input::split_detach;
 use super::open::{geometry_lease, open, still_held};
 use super::screen::Screen;
 use super::signals::{Interrupt, Signals};
-use super::tty::{self, keyboard, typed_or_never};
+use super::tty::{self, Typed, keyboard, typed_or_never};
 use super::{AttachError, AttachPlan};
 
 /// Bound on waiting for the stream's CLOSE after asking to detach.
@@ -196,15 +196,23 @@ impl Attached {
             tokio::select! {
                 notice = notices.recv() => match notice {
                     None => return Err(AttachError::ConnectionLost),
-                    Some(notice) => if let Some(end) = self.notice(notice).await? {
-                        return Ok(end);
+                    Some(notice) => match self.notice(notice).await {
+                        Ok(None) => {}
+                        Ok(Some(end)) => return Ok(end),
+                        Err(AttachError::TerminalGone) => {
+                            return Ok(self.detach((notices, signals), "hangup").await);
+                        }
+                        Err(error) => return Err(error),
                     },
                 },
                 typed = typed_or_never(keyboard.as_mut()) => match typed {
-                    None => return Ok(self.detach((notices, signals), "stdin_closed").await),
-                    Some(bytes) => if self.typed(&bytes).await? {
+                    Typed::Bytes(bytes) => if self.typed(&bytes).await? {
                         return Ok(self.detach((notices, signals), "detach_key").await);
                     },
+                    Typed::HungUp => return Ok(self.detach((notices, signals), "hangup").await),
+                    Typed::Failed(source) => {
+                        return Err(AttachError::Io { operation: "read the keyboard", source });
+                    }
                 },
                 delivered = signals.next() => match delivered {
                     Interrupt::Resize => self.resize().await?,

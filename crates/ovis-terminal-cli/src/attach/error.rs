@@ -52,6 +52,9 @@ pub(crate) enum AttachError {
         /// The signal's name.
         signal: &'static str,
     },
+    /// The outer terminal hung up while the screen was being drawn on it.
+    #[error("the outer terminal hung up")]
+    TerminalGone,
     /// More was typed than may be held while the stream is not input-ready.
     #[error("input was typed faster than the stream became input-ready")]
     InputNotReady,
@@ -93,6 +96,7 @@ impl AttachError {
             Self::Recovering => "recovering",
             Self::Ended { .. } => "finished",
             Self::Interrupted { .. } => "interrupted",
+            Self::TerminalGone => "terminal_hung_up",
             Self::InputNotReady => "not_ready",
             Self::ConnectionLost => "connection_lost",
             Self::Server(_) => "server_refused",
@@ -116,6 +120,7 @@ impl AttachError {
             Self::Recovering => "retry after the terminal recovers",
             Self::Ended { .. } => "read the final screen with --observe or terminal get",
             Self::Interrupted { .. } => "attach again; nothing was left attached",
+            Self::TerminalGone => "attach again from a terminal that stays open",
             Self::InputNotReady => "attach again and type once the screen appears",
             Self::ConnectionLost => "check that the server is still running, then attach again",
             Self::Server(_) => "see the server's error kind and hint",
@@ -144,6 +149,7 @@ impl AttachError {
             }
             Self::NotATty
             | Self::Recovering
+            | Self::TerminalGone
             | Self::InputNotReady
             | Self::ConnectionLost
             | Self::Server(_)

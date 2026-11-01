@@ -415,7 +415,7 @@
     },
     {
       "case": "failure",
-      "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch) and 0 (invalid_params) and a following ordinary attach.open (held with holder and retry, observe lease only) never evict the holder, which detaches cleanly with the program incarnation unchanged.",
+      "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch) and 0 (invalid_params), the plan's literal attach.takeover (method_not_found: takeover is only an epoch-bound attach.open field) and a following ordinary attach.open (held with holder and retry, observe lease only) never evict the holder, which detaches cleanly with the program incarnation unchanged.",
       "steps": [
         {
           "serve": {
@@ -640,6 +640,20 @@
                 },
                 "expect": {
                   "/error/data/kind": "invalid_params",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "attach.takeover",
+                  "params": {
+                    "lease_epoch": "0"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "method_not_found",
                   "/result": {
                     "$present": false
                   }
