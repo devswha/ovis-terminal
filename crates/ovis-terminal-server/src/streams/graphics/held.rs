@@ -1,6 +1,11 @@
 //! Filtered bytes held back with the removed queries among them, and the gate's output.
 
-use ovis_terminal_protocol::domain::graphics::GraphicsDroppedData;
+use std::sync::Arc;
+
+use ovis_terminal_core::terminals::images::ReleasedUnit;
+use ovis_terminal_protocol::domain::graphics::{
+    GraphicsDroppedData, GraphicsEvictedData, GraphicsProtocol,
+};
 use ovis_terminal_vt::OutputOffset;
 
 use super::super::filter::Filtered;
@@ -70,14 +75,17 @@ pub(in crate::streams) struct Gated {
     pub graphics: u64,
     /// Dropped sequences: (index in `filtered.bytes` they stood before, notice).
     pub dropped: Vec<(usize, GraphicsDroppedData)>,
+    /// Released graphics units: (index in `filtered.bytes` just past them, unit).
+    pub units: Vec<(usize, ReleasedUnit)>,
+    /// Store evictions: (index in `filtered.bytes` they stand before, notice).
+    pub evicted: Vec<(usize, GraphicsEvictedData)>,
 }
 
 impl From<Filtered> for Gated {
     fn from(filtered: Filtered) -> Self {
         Self {
             filtered,
-            graphics: 0,
-            dropped: Vec::new(),
+            ..Self::default()
         }
     }
 }
@@ -109,5 +117,15 @@ impl Gated {
 
     pub(super) fn notice(&mut self, notice: GraphicsDroppedData) {
         self.dropped.push((self.filtered.bytes.len(), notice));
+    }
+
+    /// Releases a whole graphics unit and reports it for the terminal's image store.
+    pub(super) fn release_unit(&mut self, held: Held, unit: (u64, GraphicsProtocol)) {
+        let bytes: Arc<[u8]> = Arc::from(held.bytes.as_slice());
+        self.graphics = self.graphics.saturating_add(width(bytes.len()));
+        self.release(held);
+        let (key, protocol) = unit;
+        let unit = ReleasedUnit::new(OutputOffset::new(key), protocol, bytes);
+        self.units.push((self.filtered.bytes.len(), unit));
     }
 }

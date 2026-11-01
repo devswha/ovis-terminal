@@ -1,0 +1,57 @@
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 12.11s
+────────────
+ Nextest run ID b1a43db8-963e-4241-bc7b-5feee0879dcb with nextest profile: default
+    Starting 24 tests across 9 binaries (225 tests skipped)
+        PASS [   0.036s] ( 1/24) ovis-terminal-server streams::graphics::replay::tests::a_paint_shares_the_store_bytes_where_its_images_go
+        PASS [   0.037s] ( 2/24) ovis-terminal-server streams::graphics::replay::tests::sixel_parameters_are_read_up_to_63_bytes
+        PASS [   0.037s] ( 3/24) ovis-terminal-server streams::graphics::tests::a_unit_still_arriving_stays_held_across_a_fence
+        FAIL [   0.037s] ( 4/24) ovis-terminal-server streams::graphics::replay::tests::an_osc_1337_that_is_not_an_inline_file_is_not_graphics
+  stdout ───
+
+    running 1 test
+    test streams::graphics::replay::tests::an_osc_1337_that_is_not_an_inline_file_is_not_graphics ... FAILED
+
+    failures:
+
+    failures:
+        streams::graphics::replay::tests::an_osc_1337_that_is_not_an_inline_file_is_not_graphics
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 153 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'streams::graphics::replay::tests::an_osc_1337_that_is_not_an_inline_file_is_not_graphics' (3171074) panicked at crates/ovis-terminal-server/src/streams/graphics/replay/tests.rs:64:5:
+    assertion `left == right` failed
+      left: [(0, 25)]
+     right: []
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.039s] ( 5/24) ovis-terminal-server streams::graphics::replay::tests::kitty_keys_are_read_up_to_256_bytes_for_the_continuation_flag
+        PASS [   0.039s] ( 6/24) ovis-terminal-server streams::graphics::tests::a_sixel_is_released_whole_at_every_split
+        PASS [   0.040s] ( 7/24) ovis-terminal-server streams::graphics::tests::dropped::a_dropped_series_never_holds_more_than_its_cap
+        PASS [   0.044s] ( 8/24) ovis-terminal-server streams::graphics::tests::dropped::chunks_after_the_drop_belong_to_the_dropped_series
+        PASS [   0.045s] ( 9/24) ovis-terminal-server streams::graphics::tests::an_iterm2_image_is_released_whole_at_every_split
+        PASS [   0.052s] (10/24) ovis-terminal-server streams::graphics::tests::dropped::an_over_cap_sequence_is_dropped_whole_wherever_reads_split
+        PASS [   0.053s] (11/24) ovis-terminal-server streams::graphics::tests::an_answered_query_beside_an_image_is_still_removed
+        PASS [   0.053s] (12/24) ovis-terminal-server streams::graphics::tests::config::served_streams_pass_a_sequence_of_the_advertised_8_mib
+        PASS [   0.056s] (13/24) ovis-terminal-server streams::graphics::tests::config::the_qa_cap_replaces_only_the_sequence_cap
+        PASS [   0.057s] (14/24) ovis-terminal-server streams::graphics::tests::a_kitty_chunk_series_is_released_whole_at_every_split
+        PASS [   0.057s] (15/24) ovis-terminal-server streams::graphics::replay::tests::an_interrupted_kitty_series_is_one_key_measured_against_the_cap_together
+        PASS [   0.021s] (16/24) ovis-terminal-server streams::graphics::tests::other_strings_and_queries_pass_through_untouched
+        PASS [   0.027s] (17/24) ovis-terminal-server streams::graphics::tests::dropped::every_protocol_over_its_cap_is_dropped_whole
+        PASS [   0.023s] (18/24) ovis-terminal-server streams::graphics::tests::text_between_chunks_ends_the_series_without_reordering
+        PASS [   0.027s] (19/24) ovis-terminal-server streams::graphics::tests::dropped::the_cap_is_admitted_and_one_byte_more_is_dropped_whole
+        PASS [   0.043s] (20/24) ovis-terminal-server::streams graphics_three_protocols_reach_a_live_viewer_byte_identical
+        PASS [   0.053s] (21/24) ovis-terminal-server streams::graphics::tests::every_byte_arrives_in_order_wherever_reads_split
+        PASS [   0.092s] (22/24) ovis-terminal-server streams::graphics::tests::arbitrary_output_is_never_lost_or_reordered
+        PASS [   1.557s] (23/24) ovis-terminal-server::streams graphics_an_over_cap_series_is_replaced_by_one_typed_notice
+        PASS [   1.783s] (24/24) ovis-terminal-server::streams graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog
+────────────
+     Summary [   1.827s] 24 tests run: 23 passed, 1 failed, 225 skipped
+        FAIL [   0.037s] ( 4/24) ovis-terminal-server streams::graphics::replay::tests::an_osc_1337_that_is_not_an_inline_file_is_not_graphics
+error: test run failed
+
+# mutant mutant-t83-osc1337-any-is-iterm2: crates/ovis-terminal-server/src/streams/graphics/introducer.rs
+# - if rest.starts_with(ITERM2_FILE) {
+# + if rest.starts_with(b"1337;") {

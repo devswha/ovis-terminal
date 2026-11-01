@@ -3,7 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::graphics::GraphicsDroppedData;
+use crate::domain::graphics::{GraphicsDroppedData, GraphicsEvictedData, GraphicsReplayedData};
 use crate::schema::events::StreamCloseReason;
 use crate::schema::ids::StreamId;
 use crate::schema::records::{Checkpoint, LeaseRecord};
@@ -26,6 +26,10 @@ pub enum ControlKind {
     Close,
     /// A whole graphics sequence over its cap was dropped where this record stands.
     GraphicsDropped,
+    /// Retaining a graphics sequence evicted the terminal's oldest retained ones.
+    GraphicsEvicted,
+    /// The checkpoint paint re-sent the retained graphics still shown.
+    GraphicsReplayed,
 }
 
 /// Raw output the stream skipped when it was resynchronized.
@@ -101,6 +105,12 @@ pub struct AttachControl {
     /// The dropped sequence, for `graphics_dropped`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub graphics_dropped: Option<GraphicsDroppedData>,
+    /// What the store evicted, for `graphics_evicted`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub graphics_evicted: Option<GraphicsEvictedData>,
+    /// What the paint re-sent and what was released, for `graphics_replayed`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub graphics_replayed: Option<GraphicsReplayedData>,
 }
 
 impl AttachControl {
@@ -115,6 +125,8 @@ impl AttachControl {
             skipped: None,
             close: None,
             graphics_dropped: None,
+            graphics_evicted: None,
+            graphics_replayed: None,
         }
     }
 }

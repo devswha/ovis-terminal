@@ -13,17 +13,18 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use ovis_terminal_core::health::Health;
 use ovis_terminal_core::leases::TerminalLeases;
 use ovis_terminal_core::screen::{QueryReply, ReplyBatch, Screen};
+use ovis_terminal_core::terminals::images::ImageStore;
 use ovis_terminal_holder::protocol::{Exit, Output};
 use ovis_terminal_protocol::schema::events::StreamCloseReason;
 use ovis_terminal_protocol::schema::ids::{StreamId, TerminalId};
 use ovis_terminal_protocol::schema::records::{AttachedTerminal, StreamClose};
 use ovis_terminal_protocol::schema::scalar::{ByteOffset, Incarnation};
 use ovis_terminal_store::OpId;
-use ovis_terminal_vt::{FirstPaint, OutputOffset};
+use ovis_terminal_vt::OutputOffset;
 
 use super::error::StreamError;
 use super::filter::{QueryFilter, RawSlice};
-use super::graphics::{GraphicsGate, over_backlog};
+use super::graphics::{GraphicsGate, Painted, admit, over_backlog, painted};
 use super::journal::LeaseJournal;
 use super::limits::{SessionBacklog, StreamLimits};
 use super::log::OutputLog;
@@ -78,12 +79,8 @@ pub(super) struct HubState {
     pub viewers: BTreeMap<StreamId, Viewer>,
     pub phase: Phase,
     pub leases: TerminalLeases,
-}
-
-/// A fenced paint shared by every viewer resynchronized at the same boundary.
-pub(super) struct Painted {
-    pub paint: FirstPaint,
-    pub bytes: Arc<[u8]>,
+    /// Graphics still shown, kept to be re-sent after a paint.
+    pub images: ImageStore,
 }
 
 /// The attach streams of one terminal incarnation.
@@ -119,6 +116,7 @@ impl TerminalStreams {
                 viewers: BTreeMap::new(),
                 phase: Phase::Live,
                 leases,
+                images: ImageStore::new(caps),
             }),
         })
     }
@@ -144,6 +142,7 @@ impl TerminalStreams {
     pub fn publish(&self, output: &Output) -> Result<ReplyBatch, StreamError> {
         let mut state = self.lock()?;
         self.screen.ingest(output)?;
+        let shown = self.screen.images()?;
         let replies = self.screen.drain_replies()?;
         let answered: Vec<OutputOffset> = replies
             .replies
@@ -160,7 +159,7 @@ impl TerminalStreams {
         });
         let before = state.log.end();
         let gated = state.gate.apply(&filtered);
-        state.log.append(gated);
+        admit(&mut state, gated, &shown);
         let added = state.log.end().since(before);
         for viewer in state.viewers.values().filter(|viewer| !viewer.is_closed()) {
             viewer.report_queued(added);
@@ -178,11 +177,12 @@ impl TerminalStreams {
     pub fn finish(&self, exit: &Exit) -> Result<(), StreamError> {
         let mut state = self.lock()?;
         self.screen.finish(exit)?;
+        let shown = self.screen.images()?;
         let flushed = state.filter.flush();
         let gated = state.gate.apply(&flushed);
-        state.log.append(gated);
+        admit(&mut state, gated, &shown);
         let held = state.gate.flush();
-        state.log.append(held);
+        admit(&mut state, held, &shown);
         let reason = if exit.signal.is_some() {
             StreamCloseReason::Killed
         } else {
@@ -276,10 +276,9 @@ impl TerminalStreams {
     pub(super) fn fence(&self, state: &mut HubState) -> Result<Painted, StreamError> {
         let flushed = state.filter.flush();
         let gated = state.gate.apply(&flushed);
-        state.log.append(gated);
+        admit(state, gated, &self.screen.images()?);
         let paint = self.screen.first_paint()?;
-        let bytes = Arc::from(paint.bytes.as_slice());
-        Ok(Painted { paint, bytes })
+        Ok(painted(paint, &state.images))
     }
 
     fn rebalance(&self, state: &mut HubState) -> Result<(), StreamError> {
@@ -293,7 +292,7 @@ impl TerminalStreams {
         let mut by_size: Vec<(u64, StreamId)> = Vec::new();
         let mut over_session = 0;
         for viewer in state.viewers.values() {
-            let backlog = viewer.backlog(&state.log);
+            let backlog = viewer.charged_backlog(&state.log);
             over_session = self.setup.backlog.set(&viewer.id, backlog)?;
             by_size.push((backlog, viewer.id.clone()));
         }
@@ -310,7 +309,9 @@ impl TerminalStreams {
             for id in &over_stream {
                 if let Some(viewer) = state.viewers.get_mut(id) {
                     super::resync::resync(&state.log, viewer, &painted);
-                    self.setup.backlog.set(id, viewer.backlog(&state.log))?;
+                    self.setup
+                        .backlog
+                        .set(id, viewer.charged_backlog(&state.log))?;
                 }
             }
         }
@@ -320,7 +321,7 @@ impl TerminalStreams {
             .map(Viewer::cursor)
             .min()
             .unwrap_or_else(|| state.log.end());
-        state.log.trim(keep);
+        state.log.trim(keep, state.viewers.is_empty());
         for viewer in state.viewers.values() {
             viewer.wake.notify_one();
         }

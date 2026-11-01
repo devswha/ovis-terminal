@@ -1,0 +1,162 @@
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.73s
+────────────
+ Nextest run ID d65cd738-1e7c-405c-828e-222e32dfe659 with nextest profile: default
+    Starting 12 tests across 9 binaries (237 tests skipped)
+        PASS [   0.020s] ( 1/12) ovis-terminal-server streams::graphics::replay::tests::sixel_parameters_are_read_up_to_63_bytes
+        PASS [   0.023s] ( 2/12) ovis-terminal-server streams::graphics::replay::tests::an_osc_1337_that_is_not_an_inline_file_is_not_graphics
+        PASS [   0.023s] ( 3/12) ovis-terminal-server streams::graphics::replay::tests::an_interrupted_kitty_series_is_one_key_measured_against_the_cap_together
+        PASS [   0.025s] ( 4/12) ovis-terminal-server streams::graphics::replay::tests::kitty_keys_are_read_up_to_256_bytes_for_the_continuation_flag
+        FAIL [   0.025s] ( 5/12) ovis-terminal-server streams::graphics::replay::tests::a_paint_shares_the_store_bytes_where_its_images_go
+  stdout ───
+
+    running 1 test
+    test streams::graphics::replay::tests::a_paint_shares_the_store_bytes_where_its_images_go ... FAILED
+
+    failures:
+
+    failures:
+        streams::graphics::replay::tests::a_paint_shares_the_store_bytes_where_its_images_go
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 153 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'streams::graphics::replay::tests::a_paint_shares_the_store_bytes_where_its_images_go' (3133695) panicked at crates/ovis-terminal-server/src/streams/graphics/replay/tests.rs:131:5:
+    assertion `left == right` failed: the Kitty image the store lacks is skipped
+      left: [27, 99, 27, 91, 49, 59, 49, 72, 27, 91, 48, 59, 51, 57, 59, 52, 57, 109, 116, 111, 112, 27, 91, 50, 59, 49, 72, 27, 91, 51, 59, 49, 72, 27, 91, 52, 59, 49, 72, 27, 91, 49, 59, 49, 72, 27, 91, 48, 59, 51, 57, 59, 52, 57, 109, 27, 55, 27, 91, 63, 50, 53, 104, 27, 91, 63, 49, 108, 27, 91, 63, 49, 48, 48, 48, 108, 27, 91, 63, 49, 48, 48, 50, 108, 27, 91, 63, 49, 48, 48, 51, 108, 27, 91, 63, 49, 48, 48, 52, 108, 27, 91, 63, 49, 48, 48, 53, 108, 27, 91, 63, 49, 48, 48, 54, 108, 27, 91, 63, 49, 48, 48, 55, 104, 27, 91, 63, 49, 48, 52, 50, 104, 27, 91, 63, 50, 48, 48, 52, 108, 27, 91, 63, 54, 108, 27, 91, 61, 48, 59, 49, 117, 27, 91, 62, 52, 59, 48, 109, 27, 91, 63, 57, 48, 48, 49, 108, 27, 62, 27, 91, 50, 32, 113, 27, 91, 51, 59, 49, 72, 27, 91, 63, 55, 104, 27, 91, 52, 108, 27, 91, 50, 48, 108, 27, 91, 48, 59, 51, 57, 59, 52, 57, 109]
+     right: [27, 99, 27, 91, 49, 59, 49, 72, 27, 91, 48, 59, 51, 57, 59, 52, 57, 109, 116, 111, 112, 27, 91, 50, 59, 49, 72, 27, 91, 51, 59, 49, 72, 27, 91, 52, 59, 49, 72, 27, 91, 50, 59, 49, 72, 27, 80, 48, 59, 49, 59, 48, 113, 34, 49, 59, 49, 59, 54, 59, 54, 35, 48, 59, 50, 59, 49, 48, 48, 59, 48, 59, 48, 35, 48, 126, 126, 126, 126, 126, 126, 45, 27, 92, 27, 91, 49, 59, 49, 72, 27, 91, 48, 59, 51, 57, 59, 52, 57, 109, 27, 55, 27, 91, 63, 50, 53, 104, 27, 91, 63, 49, 108, 27, 91, 63, 49, 48, 48, 48, 108, 27, 91, 63, 49, 48, 48, 50, 108, 27, 91, 63, 49, 48, 48, 51, 108, 27, 91, 63, 49, 48, 48, 52, 108, 27, 91, 63, 49, 48, 48, 53, 108, 27, 91, 63, 49, 48, 48, 54, 108, 27, 91, 63, 49, 48, 48, 55, 104, 27, 91, 63, 49, 48, 52, 50, 104, 27, 91, 63, 50, 48, 48, 52, 108, 27, 91, 63, 54, 108, 27, 91, 61, 48, 59, 49, 117, 27, 91, 62, 52, 59, 48, 109, 27, 91, 63, 57, 48, 48, 49, 108, 27, 62, 27, 91, 50, 32, 113, 27, 91, 51, 59, 49, 72, 27, 91, 63, 55, 104, 27, 91, 52, 108, 27, 91, 50, 48, 108, 27, 91, 48, 59, 51, 57, 59, 52, 57, 109]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.034s] ( 6/12) ovis-terminal-server::streams replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach
+  stdout ───
+
+    running 1 test
+    <- {"jsonrpc":"2.0","id":"hello","result":{"boot_proof":null,"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":"10000","graphics_sequence_max_bytes":"8388608","graphics_terminal_store_max_bytes":"33554432","heartbeat_ms":"15000","history_lines":"100000","input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":"64","op_retention_ms":"86400000","output_ring_bytes":"67108864","queued_operations":"32","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["attach.open","attach.repaint","attach.credit","attach.close","attach.takeover"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793570923079","version":"0.1.0"}}
+
+    -> {"id":"open","jsonrpc":"2.0","method":"attach.open","params":{"client_id":"replay-1","geometry":null,"op_id":"replay-1","role":"observe","stream_mode":"plain","takeover":null,"target":{"terminal_id":"terminal:7"}}}
+    <- {"jsonrpc":"2.0","id":"open","result":{"channel":null,"credit_initial":"262144","displaced":null,"final_output_offset":null,"first_paint":{"cursor":{"col":5,"row":3,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"0","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"181","revision":"18","stream_offset":"0"},"holder":null,"lease":{"epoch":"1","holder":"replay-1","lease_id":"lease:1","role":"observe"},"outcome":"ready","reason":null,"retry":null,"stream_id":"stream:01a19928-6248-7118-8457-1c467d8b7ba1","terminal":{"process_incarnation":"1","terminal_id":"terminal:7","terminal_incarnation":"1"}}}
+
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":{"cursor":{"col":5,"row":3,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"0","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"181","revision":"18","stream_offset":"0"},"close":null,"kind":"checkpoint","skipped":null,"stream_id":"stream:01a19928-6248-7118-8457-1c467d8b7ba1","stream_offset":"0"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G2MbWzE7MUgbWzA7Mzk7NDltdG9wG1syOzFIG1szOzFIG1s0OzFIc2hvd24bWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzQ7NkgbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=","offset":"0","stream_id":"stream:01a19928-6248-7118-8457-1c467d8b7ba1"}}
+
+    -> {"id":"credit-1","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"233","stream_id":"stream:01a19928-6248-7118-8457-1c467d8b7ba1"}}
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"IGFmdGVy","offset":"233","stream_id":"stream:01a19928-6248-7118-8457-1c467d8b7ba1"}}
+
+    -> {"id":"credit-2","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"239","stream_id":"stream:01a19928-6248-7118-8457-1c467d8b7ba1"}}
+    test replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach ... FAILED
+
+    failures:
+
+    failures:
+        replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.01s
+
+  stderr ───
+    Error: "kitty image not replayed"
+
+        PASS [   0.037s] ( 7/12) ovis-terminal-server::streams replay_a_scrolled_off_image_is_not_replayed
+        FAIL [   0.038s] ( 8/12) ovis-terminal-server::streams replay_a_kitty_delete_removes_only_the_named_image
+  stdout ───
+
+    running 1 test
+    <- {"jsonrpc":"2.0","id":"hello","result":{"boot_proof":null,"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":"10000","graphics_sequence_max_bytes":"8388608","graphics_terminal_store_max_bytes":"33554432","heartbeat_ms":"15000","history_lines":"100000","input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":"64","op_retention_ms":"86400000","output_ring_bytes":"67108864","queued_operations":"32","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["attach.open","attach.repaint","attach.credit","attach.close","attach.takeover"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793570923082","version":"0.1.0"}}
+
+    -> {"id":"open","jsonrpc":"2.0","method":"attach.open","params":{"client_id":"replay-4","geometry":null,"op_id":"replay-4","role":"observe","stream_mode":"plain","takeover":null,"target":{"terminal_id":"terminal:7"}}}
+    <- {"jsonrpc":"2.0","id":"open","result":{"channel":null,"credit_initial":"262144","displaced":null,"final_output_offset":null,"first_paint":{"cursor":{"col":0,"row":2,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"0","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"276","revision":"9","stream_offset":"0"},"holder":null,"lease":{"epoch":"1","holder":"replay-4","lease_id":"lease:1","role":"observe"},"outcome":"ready","reason":null,"retry":null,"stream_id":"stream:01a19928-624b-74c0-bf7e-009591304b1e","terminal":{"process_incarnation":"1","terminal_id":"terminal:7","terminal_incarnation":"1"}}}
+
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":{"cursor":{"col":0,"row":2,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"0","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"276","revision":"9","stream_offset":"0"},"close":null,"kind":"checkpoint","skipped":null,"stream_id":"stream:01a19928-624b-74c0-bf7e-009591304b1e","stream_offset":"0"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G2MbWzE7MUgbWzI7MUgbWzM7MUgbWzQ7MUgbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzM7MUgbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=","offset":"0","stream_id":"stream:01a19928-624b-74c0-bf7e-009591304b1e"}}
+
+    -> {"id":"credit-1","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"215","stream_id":"stream:01a19928-624b-74c0-bf7e-009591304b1e"}}
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":null,"close":null,"graphics_replayed":{"released":[{"output_offset":"0","reason":"deleted"}],"replayed":[]},"kind":"graphics_replayed","skipped":null,"stream_id":"stream:01a19928-624b-74c0-bf7e-009591304b1e","stream_offset":"215"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"IGFmdGVy","offset":"215","stream_id":"stream:01a19928-624b-74c0-bf7e-009591304b1e"}}
+
+    -> {"id":"credit-2","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"221","stream_id":"stream:01a19928-624b-74c0-bf7e-009591304b1e"}}
+    test replay_a_kitty_delete_removes_only_the_named_image ... FAILED
+
+    failures:
+
+    failures:
+        replay_a_kitty_delete_removes_only_the_named_image
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.02s
+
+  stderr ───
+
+    thread 'replay_a_kitty_delete_removes_only_the_named_image' (3133672) panicked at crates/ovis-terminal-server/tests/../src/streams/graphics/replay/qa.rs:175:5:
+    assertion failed: position(&late.received, &two).is_some()
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.040s] ( 9/12) ovis-terminal-server::streams replay_a_full_store_evicts_the_oldest_with_typed_counts
+  stdout ───
+
+    running 1 test
+    <- {"jsonrpc":"2.0","id":"hello","result":{"boot_proof":null,"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":"10000","graphics_sequence_max_bytes":"8388608","graphics_terminal_store_max_bytes":"33554432","heartbeat_ms":"15000","history_lines":"100000","input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":"64","op_retention_ms":"86400000","output_ring_bytes":"67108864","queued_operations":"32","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["attach.open","attach.repaint","attach.credit","attach.close","attach.takeover"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793570923079","version":"0.1.0"}}
+
+    -> {"id":"open","jsonrpc":"2.0","method":"attach.open","params":{"client_id":"replay-5","geometry":null,"op_id":"replay-5","role":"observe","stream_mode":"plain","takeover":null,"target":{"terminal_id":"terminal:7"}}}
+    <- {"jsonrpc":"2.0","id":"open","result":{"channel":null,"credit_initial":"262144","displaced":null,"final_output_offset":null,"first_paint":{"cursor":{"col":0,"row":0,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"0","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"0","revision":"0","stream_offset":"0"},"holder":null,"lease":{"epoch":"1","holder":"replay-5","lease_id":"lease:1","role":"observe"},"outcome":"ready","reason":null,"retry":null,"stream_id":"stream:01a19928-6248-7300-bece-790c6ef882e3","terminal":{"process_incarnation":"1","terminal_id":"terminal:7","terminal_incarnation":"1"}}}
+
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":{"cursor":{"col":0,"row":0,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"0","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"0","revision":"0","stream_offset":"0"},"close":null,"kind":"checkpoint","skipped":null,"stream_id":"stream:01a19928-6248-7300-bece-790c6ef882e3","stream_offset":"0"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G2MbWzE7MUgbWzI7MUgbWzM7MUgbWzQ7MUgbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzE7MUgbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=","offset":"0","stream_id":"stream:01a19928-6248-7300-bece-790c6ef882e3"}}
+
+    -> {"id":"credit-1","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"215","stream_id":"stream:01a19928-6248-7300-bece-790c6ef882e3"}}
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G19HYT1ULGY9MTAwLGk9MSxtPTE7aVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUFFQUFBQUIbXBtfR209MDtDQVlBQUFBZkZjU0pBQUFBRFVsRVFWUjQybU5rK005UUR3QURoZ0dBV2pSOWF3QUFBQUJKUlU1RXJrSmdnZz09G1wNChtfR2E9VCxmPTEwMCxpPTIsbT0xO2lWQk9SdzBLR2dvQUFBQU5TVWhFVWdBQUFBRUFBQUFCG1wbX0dtPTA7Q0FZQUFBQWZGY1NKQUFBQURVbEVRVlI0Mm1OaytNOVFEd0FEaGdHQVdqUjlhd0FBQUFCSlJVNUVya0pnZ2c9PRtcDQobX0dhPVQsZj0xMDAsaT0zLG09MTtpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBQUVBQUFBQhtcG19HbT0wO0NBWUFBQUFmRmNTSkFBQUFEVWxFUVZSNDJtTmsrTTlRRHdBRGhnR0FXalI5YXdBQUFBQkpSVTVFcmtKZ2dnPT0bXA==","offset":"215","stream_id":"stream:01a19928-6248-7300-bece-790c6ef882e3"}}
+
+    -> {"id":"credit-2","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"603","stream_id":"stream:01a19928-6248-7300-bece-790c6ef882e3"}}
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":null,"close":null,"graphics_evicted":{"evicted_bytes":"128","evicted_sequences":"1","limit_bytes":"266","reason":"store_full","retained_bytes":"256"},"kind":"graphics_evicted","skipped":null,"stream_id":"stream:01a19928-6248-7300-bece-790c6ef882e3","stream_offset":"603"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"DQpkb25l","offset":"603","stream_id":"stream:01a19928-6248-7300-bece-790c6ef882e3"}}
+
+    -> {"id":"credit-3","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"609","stream_id":"stream:01a19928-6248-7300-bece-790c6ef882e3"}}
+    <- {"jsonrpc":"2.0","id":"hello","result":{"boot_proof":null,"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":"10000","graphics_sequence_max_bytes":"8388608","graphics_terminal_store_max_bytes":"33554432","heartbeat_ms":"15000","history_lines":"100000","input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":"64","op_retention_ms":"86400000","output_ring_bytes":"67108864","queued_operations":"32","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["attach.open","attach.repaint","attach.credit","attach.close","attach.takeover"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793570923085","version":"0.1.0"}}
+
+    -> {"id":"open","jsonrpc":"2.0","method":"attach.open","params":{"client_id":"replay-6","geometry":null,"op_id":"replay-6","role":"observe","stream_mode":"plain","takeover":null,"target":{"terminal_id":"terminal:7"}}}
+    <- {"jsonrpc":"2.0","id":"open","result":{"channel":null,"credit_initial":"262144","displaced":null,"final_output_offset":null,"first_paint":{"cursor":{"col":4,"row":3,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"0","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"394","revision":"16","stream_offset":"0"},"holder":null,"lease":{"epoch":"1","holder":"replay-6","lease_id":"lease:2","role":"observe"},"outcome":"ready","reason":null,"retry":null,"stream_id":"stream:01a19928-624e-71c3-a4f0-2f99083ff5c1","terminal":{"process_incarnation":"1","terminal_id":"terminal:7","terminal_incarnation":"1"}}}
+
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":{"cursor":{"col":4,"row":3,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"0","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"394","revision":"16","stream_offset":"0"},"close":null,"kind":"checkpoint","skipped":null,"stream_id":"stream:01a19928-624e-71c3-a4f0-2f99083ff5c1","stream_offset":"0"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G2MbWzE7MUgbWzI7MUgbWzM7MUgbWzQ7MUgbWzA7Mzk7NDltZG9uZRtbNTsxSBtbNjsxSBtbNzsxSBtbODsxSBtbMTsxSBtbMDszOTs0OW0bNxtbPzI1aBtbPzFsG1s/MTAwMGwbWz8xMDAybBtbPzEwMDNsG1s/MTAwNGwbWz8xMDA1bBtbPzEwMDZsG1s/MTAwN2gbWz8xMDQyaBtbPzIwMDRsG1s/NmwbWz0wOzF1G1s+NDswbRtbPzkwMDFsGz4bWzIgcRtbNDs1SBtbPzdoG1s0bBtbMjBsG1swOzM5OzQ5bQ==","offset":"0","stream_id":"stream:01a19928-624e-71c3-a4f0-2f99083ff5c1"}}
+
+    -> {"id":"credit-1","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"229","stream_id":"stream:01a19928-624e-71c3-a4f0-2f99083ff5c1"}}
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":null,"close":null,"graphics_replayed":{"released":[{"output_offset":"0","reason":"store_full"}],"replayed":[]},"kind":"graphics_replayed","skipped":null,"stream_id":"stream:01a19928-624e-71c3-a4f0-2f99083ff5c1","stream_offset":"229"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"IGFmdGVy","offset":"229","stream_id":"stream:01a19928-624e-71c3-a4f0-2f99083ff5c1"}}
+
+    -> {"id":"credit-2","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"235","stream_id":"stream:01a19928-624e-71c3-a4f0-2f99083ff5c1"}}
+    test replay_a_full_store_evicts_the_oldest_with_typed_counts ... FAILED
+
+    failures:
+
+    failures:
+        replay_a_full_store_evicts_the_oldest_with_typed_counts
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.02s
+
+  stderr ───
+
+    thread 'replay_a_full_store_evicts_the_oldest_with_typed_counts' (3133670) panicked at crates/ovis-terminal-server/tests/../src/streams/graphics/replay/qa.rs:220:5:
+    assertion `left == right` failed
+      left: Array []
+     right: Array [String("130"), String("260")]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.042s] (10/12) ovis-terminal-server::streams replay_a_cleared_screen_replays_no_image
+        PASS [   0.169s] (11/12) ovis-terminal-server::dispatch conversation_records::a_replayed_append_commits_once_and_publishes_its_receipt_as_the_event
+        PASS [   0.205s] (12/12) ovis-terminal-server::dispatch session_binding::a_replaced_programs_token_is_refused_and_a_replayed_branch_applies_once
+────────────
+     Summary [   0.206s] 12 tests run: 8 passed, 4 failed, 237 skipped
+        FAIL [   0.025s] ( 5/12) ovis-terminal-server streams::graphics::replay::tests::a_paint_shares_the_store_bytes_where_its_images_go
+        FAIL [   0.034s] ( 6/12) ovis-terminal-server::streams replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach
+        FAIL [   0.038s] ( 8/12) ovis-terminal-server::streams replay_a_kitty_delete_removes_only_the_named_image
+        FAIL [   0.040s] ( 9/12) ovis-terminal-server::streams replay_a_full_store_evicts_the_oldest_with_typed_counts
+error: test run failed
+
+# mutant mutant-replay-not-spliced: crates/ovis-terminal-server/src/streams/graphics/replay.rs
+# - let Some(runs) = store.pieces(splice.key) else {
+# + let Some(runs) = store.pieces(OutputOffset::new(u64::MAX)).or(None) else {

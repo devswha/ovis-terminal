@@ -1,0 +1,57 @@
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 11.52s
+────────────
+ Nextest run ID 03bf9cf6-35c7-4b1b-96d6-83618c2f5f21 with nextest profile: default
+    Starting 24 tests across 9 binaries (225 tests skipped)
+        PASS [   0.021s] ( 1/24) ovis-terminal-server streams::graphics::replay::tests::an_osc_1337_that_is_not_an_inline_file_is_not_graphics
+        PASS [   0.022s] ( 2/24) ovis-terminal-server streams::graphics::tests::config::served_streams_pass_a_sequence_of_the_advertised_8_mib
+        PASS [   0.023s] ( 3/24) ovis-terminal-server streams::graphics::replay::tests::an_interrupted_kitty_series_is_one_key_measured_against_the_cap_together
+        PASS [   0.025s] ( 4/24) ovis-terminal-server streams::graphics::replay::tests::sixel_parameters_are_read_up_to_63_bytes
+        FAIL [   0.023s] ( 5/24) ovis-terminal-server streams::graphics::replay::tests::kitty_keys_are_read_up_to_256_bytes_for_the_continuation_flag
+  stdout ───
+
+    running 1 test
+    test streams::graphics::replay::tests::kitty_keys_are_read_up_to_256_bytes_for_the_continuation_flag ... FAILED
+
+    failures:
+
+    failures:
+        streams::graphics::replay::tests::kitty_keys_are_read_up_to_256_bytes_for_the_continuation_flag
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 153 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'streams::graphics::replay::tests::kitty_keys_are_read_up_to_256_bytes_for_the_continuation_flag' (3189832) panicked at crates/ovis-terminal-server/src/streams/graphics/replay/tests.rs:71:5:
+    assertion `left == right` failed: 111 key bytes
+      left: 2
+     right: 1
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.029s] ( 6/24) ovis-terminal-server streams::graphics::tests::an_iterm2_image_is_released_whole_at_every_split
+        PASS [   0.030s] ( 7/24) ovis-terminal-server streams::graphics::replay::tests::a_paint_shares_the_store_bytes_where_its_images_go
+        PASS [   0.030s] ( 8/24) ovis-terminal-server streams::graphics::tests::config::the_qa_cap_replaces_only_the_sequence_cap
+        PASS [   0.030s] ( 9/24) ovis-terminal-server streams::graphics::tests::an_answered_query_beside_an_image_is_still_removed
+        PASS [   0.031s] (10/24) ovis-terminal-server streams::graphics::tests::a_unit_still_arriving_stays_held_across_a_fence
+        PASS [   0.031s] (11/24) ovis-terminal-server streams::graphics::tests::dropped::chunks_after_the_drop_belong_to_the_dropped_series
+        PASS [   0.032s] (12/24) ovis-terminal-server streams::graphics::tests::dropped::a_dropped_series_never_holds_more_than_its_cap
+        PASS [   0.033s] (13/24) ovis-terminal-server streams::graphics::tests::a_sixel_is_released_whole_at_every_split
+        PASS [   0.034s] (14/24) ovis-terminal-server streams::graphics::tests::a_kitty_chunk_series_is_released_whole_at_every_split
+        PASS [   0.036s] (15/24) ovis-terminal-server streams::graphics::tests::dropped::an_over_cap_sequence_is_dropped_whole_wherever_reads_split
+        PASS [   0.016s] (16/24) ovis-terminal-server streams::graphics::tests::dropped::every_protocol_over_its_cap_is_dropped_whole
+        PASS [   0.019s] (17/24) ovis-terminal-server streams::graphics::tests::dropped::the_cap_is_admitted_and_one_byte_more_is_dropped_whole
+        PASS [   0.016s] (18/24) ovis-terminal-server streams::graphics::tests::text_between_chunks_ends_the_series_without_reordering
+        PASS [   0.017s] (19/24) ovis-terminal-server streams::graphics::tests::other_strings_and_queries_pass_through_untouched
+        PASS [   0.029s] (20/24) ovis-terminal-server::streams graphics_three_protocols_reach_a_live_viewer_byte_identical
+        PASS [   0.038s] (21/24) ovis-terminal-server streams::graphics::tests::every_byte_arrives_in_order_wherever_reads_split
+        PASS [   0.065s] (22/24) ovis-terminal-server streams::graphics::tests::arbitrary_output_is_never_lost_or_reordered
+        PASS [   1.339s] (23/24) ovis-terminal-server::streams graphics_an_over_cap_series_is_replaced_by_one_typed_notice
+        PASS [   1.646s] (24/24) ovis-terminal-server::streams graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog
+────────────
+     Summary [   1.677s] 24 tests run: 23 passed, 1 failed, 225 skipped
+        FAIL [   0.023s] ( 5/24) ovis-terminal-server streams::graphics::replay::tests::kitty_keys_are_read_up_to_256_bytes_for_the_continuation_flag
+error: test run failed
+
+# mutant mutant-t83-kitty-header-32: crates/ovis-terminal-server/src/streams/graphics/introducer.rs
+# - const KITTY_HEADER: usize = 256;
+# + const KITTY_HEADER: usize = 32;

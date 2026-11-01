@@ -790,6 +790,28 @@
             ],
             "description": "The dropped sequence, for `graphics_dropped`."
           },
+          "graphics_evicted": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphicsEvictedData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the store evicted, for `graphics_evicted`."
+          },
+          "graphics_replayed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphicsReplayedData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the paint re-sent and what was released, for `graphics_replayed`."
+          },
           "kind": {
             "$ref": "#/components/schemas/ControlKind",
             "description": "Record kind.",
@@ -1991,6 +2013,16 @@
           {
             "const": "graphics_dropped",
             "description": "A whole graphics sequence over its cap was dropped where this record stands.",
+            "type": "string"
+          },
+          {
+            "const": "graphics_evicted",
+            "description": "Retaining a graphics sequence evicted the terminal's oldest retained ones.",
+            "type": "string"
+          },
+          {
+            "const": "graphics_replayed",
+            "description": "The checkpoint paint re-sent the retained graphics still shown.",
             "type": "string"
           }
         ]
@@ -3943,6 +3975,96 @@
             "type": "string"
           }
         ]
+      },
+      "GraphicsReleaseReason": {
+        "description": "Why a retained graphics sequence is no longer held.",
+        "oneOf": [
+          {
+            "const": "scrolled_out",
+            "description": "The row it was placed on left the visible screen.",
+            "type": "string"
+          },
+          {
+            "const": "erased",
+            "description": "The cell it was placed on was erased or overwritten, or its alternate screen\nwas left.",
+            "type": "string"
+          },
+          {
+            "const": "deleted",
+            "description": "A Kitty `a=d` command named it.",
+            "type": "string"
+          },
+          {
+            "const": "replaced",
+            "description": "A Kitty transmission reused its image id.",
+            "type": "string"
+          },
+          {
+            "const": "reset",
+            "description": "The terminal was reset (RIS).",
+            "type": "string"
+          },
+          {
+            "const": "limit",
+            "description": "The terminal retained more images than it tracks; the oldest went first.",
+            "type": "string"
+          },
+          {
+            "const": "store_full",
+            "description": "Retaining a newer sequence exceeded `graphics_terminal_store_max_bytes`.",
+            "type": "string"
+          },
+          {
+            "const": "expired",
+            "description": "It is no longer shown; the specific cause was not retained.",
+            "type": "string"
+          }
+        ]
+      },
+      "GraphicsReleased": {
+        "additionalProperties": false,
+        "description": "One released graphics sequence.",
+        "properties": {
+          "output_offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "Raw output offset where the sequence began."
+          },
+          "reason": {
+            "$ref": "#/components/schemas/GraphicsReleaseReason",
+            "description": "Why it left.",
+            "x-ovis-open-enum": true
+          }
+        },
+        "required": [
+          "output_offset",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "GraphicsReplayedData": {
+        "additionalProperties": false,
+        "description": "Data of a `graphics_replayed` record: the paint before it re-sent `replayed`.",
+        "properties": {
+          "released": {
+            "description": "The most recently released sequences, oldest first, at most 64.",
+            "items": {
+              "$ref": "#/components/schemas/GraphicsReleased"
+            },
+            "type": "array"
+          },
+          "replayed": {
+            "description": "Raw output offsets of the re-sent sequences, in the order the paint sent them.",
+            "items": {
+              "$ref": "#/components/schemas/ByteOffset"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "replayed",
+          "released"
+        ],
+        "type": "object"
       },
       "Heartbeat": {
         "description": "Idle heartbeat of one subscription.",

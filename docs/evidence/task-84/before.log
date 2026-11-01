@@ -1,0 +1,137 @@
+rc=0
+## alacritty_terminal 0.26.0 / vte 0.15.0 keep no image state (base 070871b)
+$ grep -rniE "sixel|graphic|image" alacritty_terminal-0.26.0/src
+alacritty_terminal-0.26.0/src/grid/mod.rs:41:    /// Currently configured graphic character sets.
+
+$ sed -n 375,378p vte-0.15.0/src/lib.rs   (ESC _ / ESC ^ enter SosPmApcString)
+                self.state = State::OscString
+            },
+            0x5E..=0x5F => self.state = State::SosPmApcString,
+            0x60..=0x7E => {
+
+$ sed -n 180,183p vte-0.15.0/src/lib.rs   (APC bytes only reach anywhere(), no Perform callback)
+            State::EscapeIntermediate => self.advance_esc_intermediate(performer, byte),
+            State::OscString => self.advance_osc_string(performer, byte),
+            State::SosPmApcString => self.anywhere(performer, byte),
+            State::Ground => unreachable!(),
+
+$ sed -n 1310,1326p vte-0.15.0/src/ansi.rs (DCS hook/put/unhook: sixel is unhandled)
+    #[inline]
+    fn hook(&mut self, params: &Params, intermediates: &[u8], ignore: bool, action: char) {
+        debug!(
+            "[unhandled hook] params={:?}, ints: {:?}, ignore: {:?}, action: {:?}",
+            params, intermediates, ignore, action
+        );
+    }
+
+    #[inline]
+    fn put(&mut self, byte: u8) {
+        debug!("[unhandled put] byte={:?}", byte);
+    }
+
+    #[inline]
+    fn unhook(&mut self) {
+        debug!("[unhandled unhook]");
+    }
+
+$ sed -n 1520,1524p vte-0.15.0/src/ansi.rs (any other OSC, including 1337 File=, is unhandled)
+            // Reset text cursor color.
+            b"112" => self.handler.reset_color(NamedColor::Cursor as usize),
+
+            _ => unhandled(params),
+        }
+
+$ sed -n 12,35p alacritty_terminal-0.26.0/src/term/cell.rs (Cell flags: no image field; bit 15 unused)
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    pub struct Flags: u16 {
+        const INVERSE                   = 0b0000_0000_0000_0001;
+        const BOLD                      = 0b0000_0000_0000_0010;
+        const ITALIC                    = 0b0000_0000_0000_0100;
+        const BOLD_ITALIC               = 0b0000_0000_0000_0110;
+        const UNDERLINE                 = 0b0000_0000_0000_1000;
+        const WRAPLINE                  = 0b0000_0000_0001_0000;
+        const WIDE_CHAR                 = 0b0000_0000_0010_0000;
+        const WIDE_CHAR_SPACER          = 0b0000_0000_0100_0000;
+        const DIM                       = 0b0000_0000_1000_0000;
+        const DIM_BOLD                  = 0b0000_0000_1000_0010;
+        const HIDDEN                    = 0b0000_0001_0000_0000;
+        const STRIKEOUT                 = 0b0000_0010_0000_0000;
+        const LEADING_WIDE_CHAR_SPACER  = 0b0000_0100_0000_0000;
+        const DOUBLE_UNDERLINE          = 0b0000_1000_0000_0000;
+        const UNDERCURL                 = 0b0001_0000_0000_0000;
+        const DOTTED_UNDERLINE          = 0b0010_0000_0000_0000;
+        const DASHED_UNDERLINE          = 0b0100_0000_0000_0000;
+        const ALL_UNDERLINES            = Self::UNDERLINE.bits() | Self::DOUBLE_UNDERLINE.bits()
+                                        | Self::UNDERCURL.bits() | Self::DOTTED_UNDERLINE.bits()
+                                        | Self::DASHED_UNDERLINE.bits();
+
+$ grep -n "Kitty\|kitty" crates/ovis-terminal-vt/src/engine.rs
+124:            kitty_keyboard: true,
+
+
+
+## Reattach transcript on base 070871b (no images)
+$ cargo nextest run -p ovis-terminal-server --locked --test streams replay_an_on_screen
+rc=0
+piling rustix-openpty v0.2.0
+   Compiling polling v3.11.0
+   Compiling tempfile v3.27.0
+   Compiling alacritty_terminal v0.26.0
+   Compiling rusty-fork v0.3.1
+   Compiling ovis-terminal-protocol v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-protocol)
+   Compiling proptest v1.12.0
+   Compiling ovis-terminal-store v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-store)
+   Compiling ovis-terminal-vt v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-vt)
+   Compiling ovis-terminal-holder v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-holder)
+   Compiling ovis-terminal-authz v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-authz)
+   Compiling ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-core)
+   Compiling ovis-terminal-agent v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-agent)
+   Compiling ovis-terminal-services v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-services)
+   Compiling ovis-terminal-remote v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-remote)
+   Compiling ovis-terminal-agent-adapters v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-agent-adapters)
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 28.64s
+────────────
+ Nextest run ID 439539dc-4b09-43cb-a7d6-1043e97553b8 with nextest profile: default
+    Starting 1 test across 1 binary (14 tests skipped)
+        FAIL [   0.022s] (1/1) ovis-terminal-server::streams replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach
+  stdout ───
+
+    running 1 test
+    <- {"jsonrpc":"2.0","id":"hello","result":{"boot_proof":null,"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":"10000","graphics_sequence_max_bytes":"8388608","graphics_terminal_store_max_bytes":"33554432","heartbeat_ms":"15000","history_lines":"100000","input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":"64","op_retention_ms":"86400000","output_ring_bytes":"67108864","queued_operations":"32","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["attach.open","attach.repaint","attach.credit","attach.close","attach.takeover"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793568759200","version":"0.1.0"}}
+
+    -> {"id":"open","jsonrpc":"2.0","method":"attach.open","params":{"client_id":"replay-1","geometry":null,"op_id":"replay-1","role":"observe","stream_mode":"plain","takeover":null,"target":{"terminal_id":"terminal:7"}}}
+    <- {"jsonrpc":"2.0","id":"open","result":{"channel":null,"credit_initial":"262144","displaced":null,"final_output_offset":null,"first_paint":{"cursor":{"col":5,"row":3,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"0","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"181","revision":"18","stream_offset":"0"},"holder":null,"lease":{"epoch":"1","holder":"replay-1","lease_id":"lease:1","role":"observe"},"outcome":"ready","reason":null,"retry":null,"stream_id":"stream:01a19907-5da1-776d-9d43-e46eee4fa20a","terminal":{"process_incarnation":"1","terminal_id":"terminal:7","terminal_incarnation":"1"}}}
+
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":{"cursor":{"col":5,"row":3,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"0","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"181","revision":"18","stream_offset":"0"},"close":null,"kind":"checkpoint","skipped":null,"stream_id":"stream:01a19907-5da1-776d-9d43-e46eee4fa20a","stream_offset":"0"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G2MbWzE7MUgbWzA7Mzk7NDltdG9wG1syOzFIG1szOzFIG1s0OzFIc2hvd24bWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzQ7NkgbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=","offset":"0","stream_id":"stream:01a19907-5da1-776d-9d43-e46eee4fa20a"}}
+
+    -> {"id":"credit-1","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"233","stream_id":"stream:01a19907-5da1-776d-9d43-e46eee4fa20a"}}
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"IGFmdGVy","offset":"233","stream_id":"stream:01a19907-5da1-776d-9d43-e46eee4fa20a"}}
+
+    -> {"id":"credit-2","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"239","stream_id":"stream:01a19907-5da1-776d-9d43-e46eee4fa20a"}}
+    test replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach ... FAILED
+
+    failures:
+
+    failures:
+        replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.01s
+
+  stderr ───
+    Error: "kitty image not replayed"
+
+  Cancelling due to test failure
+────────────
+     Summary [   0.023s] 1 test run: 0 passed, 1 failed, 14 skipped
+        FAIL [   0.022s] (1/1) ovis-terminal-server::streams replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach
+error: test run failed
+
+
+
+Decoded paint DATA (233 bytes) received by the late viewer; no ESC _ G and no DCS q in it:
+b'\x1bc\x1b[1;1H\x1b[0;39;49mtop\x1b[2;1H\x1b[3;1H\x1b[4;1Hshown\x1b[5;1H\x1b[6;1H\x1b[7;1H\x1b[8;1H\x1b[1;1H\x1b[0;39;49m\x1b7\x1b[?25h\x1b[?1l\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1004l\x1b[?1005l\x1b[?1006l\x1b[?1007h\x1b[?1042h\x1b[?2004l\x1b[?6l\x1b[=0;1u\x1b[>4;0m\x1b[?9001l\x1b>\x1b[2 q\x1b[4;6H\x1b[?7h\x1b[4l\x1b[20l\x1b[0;39;49m'

@@ -8,11 +8,14 @@
 //! one piece, so no viewer is ever handed a prefix. A unit that passes
 //! `graphics_sequence_max_bytes` is dropped whole the moment it does: its bytes are
 //! accounted as removed raw output, never buffered further, and one notice stands where
-//! it began. Payloads are never decoded; the VT has already drawn every raw byte.
+//! it began. A Kitty series that other output interrupts stays open until a chunk ends
+//! it, and its runs are measured against the cap together (plan todo 84). Payloads are
+//! never decoded; the VT has already drawn every raw byte.
 
 mod backlog;
 mod held;
 mod introducer;
+mod replay;
 #[cfg(test)]
 mod tests;
 mod unit;
@@ -24,7 +27,8 @@ pub(super) use self::backlog::over_backlog;
 pub(super) use self::held::Gated;
 use self::held::Held;
 use self::introducer::{Verdict, classify};
-use self::unit::Unit;
+pub(super) use self::replay::{Painted, Piece, admit, notice_record, painted};
+use self::unit::{Series, Start, Unit};
 use super::filter::{Filtered, Scan, Step, step};
 
 /// Holds graphics units whole between the query filter and the shared log.
@@ -39,6 +43,8 @@ pub(super) struct GraphicsGate {
     escape: Option<Held>,
     /// Raw end of everything the gate was given.
     seen_end: u64,
+    /// A Kitty series interrupted between chunks, continued by the next Kitty unit.
+    series: Option<Series>,
 }
 
 impl GraphicsGate {
@@ -50,6 +56,7 @@ impl GraphicsGate {
             prefix: None,
             escape: None,
             seen_end: 0,
+            series: None,
         }
     }
 
@@ -174,7 +181,13 @@ impl GraphicsGate {
             }
             _ => {
                 self.finish_unit(out);
-                self.unit = Some(Unit::begin(protocol, prefix, (caps, out)));
+                let series = if protocol == GraphicsProtocol::Kitty {
+                    self.series.take()
+                } else {
+                    None
+                };
+                let start = Start { protocol, series };
+                self.unit = Some(Unit::begin(start, prefix, (caps, out)));
             }
         }
     }
@@ -205,6 +218,9 @@ impl GraphicsGate {
 
     fn finish_unit(&mut self, out: &mut Gated) {
         if let Some(unit) = self.unit.take() {
+            if unit.protocol() == GraphicsProtocol::Kitty {
+                self.series = unit.carried();
+            }
             unit.finish(out);
         }
     }

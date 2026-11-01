@@ -1,0 +1,856 @@
+{
+  "binary": {
+    "bytes": "146890920",
+    "path": "/dev/shm/ovt-target-lane-t84/debug/ovis-terminal",
+    "sha256": "03c0c7613c4345b465a763e3077c23752b49922c9e512bf76c1953b9f6e1c051"
+  },
+  "case": "happy",
+  "cases": [
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": [
+            "hello",
+            "server.status",
+            "server.stop",
+            "server.restart",
+            "server.metrics",
+            "op.get",
+            "op.cancel",
+            "session.snapshot",
+            "terminal.run",
+            "terminal.first_message",
+            "terminal.list",
+            "terminal.get",
+            "terminal.kill",
+            "terminal.rm",
+            "terminal.keep",
+            "terminal.recover",
+            "terminal.label",
+            "terminal.rename",
+            "terminal.process_info",
+            "terminal.screen",
+            "terminal.output",
+            "terminal.wait_output",
+            "input.send",
+            "input.keys",
+            "input.raw",
+            "input.paste",
+            "input.interrupt",
+            "input.barrier",
+            "attach.open",
+            "attach.resize",
+            "attach.release_geometry",
+            "attach.focus",
+            "attach.repaint",
+            "attach.credit",
+            "attach.close",
+            "attach.takeover",
+            "attach.leases",
+            "events.subscribe",
+            "events.update",
+            "events.unsubscribe",
+            "events.wait",
+            "status.get",
+            "status.report",
+            "status.clear",
+            "prompt.list",
+            "prompt.get",
+            "prompt.open",
+            "prompt.answer",
+            "prompt.close",
+            "turn.get",
+            "turn.wait",
+            "agent.register",
+            "agent.get",
+            "agent.update_session",
+            "agent.children",
+            "agent.conversation",
+            "agent.append_records",
+            "agent.records",
+            "agent.history",
+            "template.list",
+            "template.get",
+            "layout.get",
+            "layout.edit",
+            "selection.set",
+            "worktree.list",
+            "worktree.create",
+            "worktree.open",
+            "worktree.remove",
+            "plugin.list",
+            "plugin.invoke",
+            "plugin.run_get",
+            "doc.get",
+            "doc.set",
+            "machine.add",
+            "machine.list",
+            "machine.get",
+            "machine.rename",
+            "service.describe",
+            "update.stage",
+            "update.verify",
+            "update.activate",
+            "update.rollback",
+            "update.query",
+            "rpc.discover",
+            "schema.errors",
+            "schema.events",
+            "schema.capabilities",
+            "credential.rotate",
+            "credential.revoke"
+          ],
+          "check": "hello/result/methods",
+          "expected": {
+            "$contains": [
+              "attach.open",
+              "input.raw",
+              "terminal.run",
+              "terminal.screen"
+            ]
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[run]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "spawned",
+          "check": "reply[run]/result/spawn",
+          "expected": "spawned",
+          "passed": true
+        },
+        {
+          "actual": "t1",
+          "check": "reply[run]/result/terminal/address",
+          "expected": "t1",
+          "passed": true
+        },
+        {
+          "actual": [
+            "run"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "run"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[open]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "lease:1",
+          "check": "reply[open]/result/lease/lease_id",
+          "expected": {
+            "$capture": "lease_viewer"
+          },
+          "passed": true
+        },
+        {
+          "actual": "interact",
+          "check": "reply[open]/result/lease/role",
+          "expected": "interact",
+          "passed": true
+        },
+        {
+          "actual": "ready",
+          "check": "reply[open]/result/outcome",
+          "expected": "ready",
+          "passed": true
+        },
+        {
+          "actual": "stream:01a19916-25df-74d2-9a3d-f4c931207909",
+          "check": "reply[open]/result/stream_id",
+          "expected": {
+            "$capture": "stream_viewer"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "open"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "open"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[go]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "go"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "go"
+          ],
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "graphics/data_offsets_contiguous",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": [
+            "checkpoint",
+            "input_ready"
+          ],
+          "check": "graphics/controls",
+          "expected": [
+            "checkpoint",
+            "input_ready"
+          ],
+          "passed": true
+        },
+        {
+          "actual": {
+            "bytes": "137",
+            "sha256": "3e509332b66029399f4c2e6ac8cf6e028dd9334b3550728d38cc5e5780fc0950"
+          },
+          "check": "graphics/contains[1_kitty_png_3_chunks]",
+          "expected": {
+            "bytes": "137",
+            "sha256": "3e509332b66029399f4c2e6ac8cf6e028dd9334b3550728d38cc5e5780fc0950"
+          },
+          "passed": true
+        },
+        {
+          "actual": {
+            "bytes": "39",
+            "sha256": "fad6a0e90431ffe0c3812390505b309e07c621be32a77d488ecb5b2bbc743194"
+          },
+          "check": "graphics/contains[2_sixel]",
+          "expected": {
+            "bytes": "39",
+            "sha256": "fad6a0e90431ffe0c3812390505b309e07c621be32a77d488ecb5b2bbc743194"
+          },
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "graphics/in_order",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[close]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "close"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "close"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[reopen]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "lease:2",
+          "check": "reply[reopen]/result/lease/lease_id",
+          "expected": {
+            "$capture": "lease_viewer2"
+          },
+          "passed": true
+        },
+        {
+          "actual": "interact",
+          "check": "reply[reopen]/result/lease/role",
+          "expected": "interact",
+          "passed": true
+        },
+        {
+          "actual": "ready",
+          "check": "reply[reopen]/result/outcome",
+          "expected": "ready",
+          "passed": true
+        },
+        {
+          "actual": "stream:01a19916-25f0-773d-82e2-52d014d3dbae",
+          "check": "reply[reopen]/result/stream_id",
+          "expected": {
+            "$capture": "stream_viewer2"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "reopen"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "reopen"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[again]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "again"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "again"
+          ],
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "graphics/data_offsets_contiguous",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": [
+            "checkpoint",
+            "graphics_replayed",
+            "input_ready"
+          ],
+          "check": "graphics/controls",
+          "expected": [
+            "checkpoint",
+            "graphics_replayed",
+            "input_ready"
+          ],
+          "passed": true
+        },
+        {
+          "actual": {
+            "bytes": "137",
+            "sha256": "3e509332b66029399f4c2e6ac8cf6e028dd9334b3550728d38cc5e5780fc0950"
+          },
+          "check": "graphics/contains[1_kitty_png_3_chunks]",
+          "expected": {
+            "bytes": "137",
+            "sha256": "3e509332b66029399f4c2e6ac8cf6e028dd9334b3550728d38cc5e5780fc0950"
+          },
+          "passed": true
+        },
+        {
+          "actual": {
+            "bytes": "39",
+            "sha256": "fad6a0e90431ffe0c3812390505b309e07c621be32a77d488ecb5b2bbc743194"
+          },
+          "check": "graphics/contains[2_sixel]",
+          "expected": {
+            "bytes": "39",
+            "sha256": "fad6a0e90431ffe0c3812390505b309e07c621be32a77d488ecb5b2bbc743194"
+          },
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "graphics/in_order",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": [],
+          "check": "graphics/replayed/graphics_replayed/released",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": [
+            "2",
+            "142"
+          ],
+          "check": "graphics/replayed/graphics_replayed/replayed",
+          "expected": [
+            "2",
+            "142"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "3825",
+          "check": "connection[control]/bytes_received=bytes_decoded",
+          "expected": "3825",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "happy",
+      "connections": [
+        {
+          "bytes_decoded": "3825",
+          "bytes_received": "3825",
+          "bytes_sent": "929",
+          "name": "control",
+          "records_received": "2",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "879232a51c2b93f6cfcbcbdc958906f8b0c9d943231e364e94e5be90aed0b6cc",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2604",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "2c99d0b6bda64bc359907c8e209a2d850ab2b0eecc1e23844d02f13fbf4934c6",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a19916-2525-736f-98f1-cf72d9f10ebc\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793569727934\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "695",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "8b03036716594d04687a136415882ccaf4e44ebbef9d7d5e78f6becd312d57e4",
+              "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"replay\",\"op_id\":\"01a19916-25be-730d-9e24-68f446cebf6e\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\",\"-c\",\"read go; printf '\\\\033_Ga=T,f=100,i=7,m=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB\\\\033\\\\\\\\\\\\033_Gm=1;CAYAAAAfFcSJAAAADUlEQVR42mNk+M9Q\\\\033\\\\\\\\\\\\033_Gm=0;DwADhgGAWjR9awAAAABJRU5ErkJggg==\\\\033\\\\\\\\'; printf '\\\\r\\\\n'; printf '\\\\033P0;1;0q\\\"1;1;6;6#0;2;100;0;0#0~~~~~~-\\\\033\\\\\\\\'; printf '\\\\r\\\\nimages-done'; read again; printf 'after-replay'; read done\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "32",
+              "bytes": "1221",
+              "direction": "received",
+              "offset": "2604",
+              "sha256": "bc5bdfd3967bcc39a68502b9ddb53acbce68f8d5960a684b04db98bd4caf0b3f",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a19916-2525-736f-98f1-cf72d9f10ebc\",\"name\":\"replay\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\",\"-c\",\"read go; printf '\\\\033_Ga=T,f=100,i=7,m=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB\\\\033\\\\\\\\\\\\033_Gm=1;CAYAAAAfFcSJAAAADUlEQVR42mNk+M9Q\\\\033\\\\\\\\\\\\033_Gm=0;DwADhgGAWjR9awAAAABJRU5ErkJggg==\\\\033\\\\\\\\'; printf '\\\\r\\\\n'; printf '\\\\033P0;1;0q\\\"1;1;6;6#0;2;100;0;0#0~~~~~~-\\\\033\\\\\\\\'; printf '\\\\r\\\\nimages-done'; read again; printf 'after-replay'; read done\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":1942523,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:7046381\",\"started_ms\":\"1793569727962\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "2"
+        },
+        {
+          "bytes_decoded": "5688",
+          "bytes_received": "5688",
+          "bytes_sent": "780",
+          "name": "viewer",
+          "records_received": "10",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "879232a51c2b93f6cfcbcbdc958906f8b0c9d943231e364e94e5be90aed0b6cc",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2604",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "cd561e88cf27767bd62a15cbf6b12d1158fdd64cb752eb4efc21df875c652cd4",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a19916-2525-736f-98f1-cf72d9f10ebc\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793569727966\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "236",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "21785c45442e5ce2b482ae0cd904adb08d2dc5d13082c24107bd651a5abd294f",
+              "text": "{\"id\":\"open\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"image-viewer\",\"geometry\":null,\"op_id\":\"01a19916-25df-741e-aad9-ad6601892e5e\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "403",
+              "direction": "received",
+              "offset": "2604",
+              "sha256": "fa1db8f630eeeb3b3aa98b71b0c579de16f42a553128eab8a29f44487b8c9514",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":{\"cursor\":{\"col\":0,\"row\":0,\"visible\":true},\"geometry\":{\"cols\":80,\"rows\":24},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"0\",\"revision\":\"0\",\"stream_offset\":\"0\"},\"close\":null,\"kind\":\"checkpoint\",\"skipped\":null,\"stream_id\":\"stream:01a19916-25df-74d2-9a3d-f4c931207909\",\"stream_offset\":\"0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "4",
+              "bytes": "573",
+              "direction": "received",
+              "offset": "3007",
+              "sha256": "c3a9d24355233c5da4b7dd80051d703ba54f478dff97d90f6a994907594ca975",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G2MbWzE7MUgbWzI7MUgbWzM7MUgbWzQ7MUgbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzk7MUgbWzEwOzFIG1sxMTsxSBtbMTI7MUgbWzEzOzFIG1sxNDsxSBtbMTU7MUgbWzE2OzFIG1sxNzsxSBtbMTg7MUgbWzE5OzFIG1syMDsxSBtbMjE7MUgbWzIyOzFIG1syMzsxSBtbMjQ7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzE7MUgbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=\",\"offset\":\"0\",\"stream_id\":\"stream:01a19916-25df-74d2-9a3d-f4c931207909\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "4",
+              "bytes": "202",
+              "direction": "received",
+              "offset": "3580",
+              "sha256": "a58a1fb846ccfb700eda1a2b9384256a2b706235a9d47ce10410a1e9cf1563d0",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":null,\"close\":null,\"kind\":\"input_ready\",\"skipped\":null,\"stream_id\":\"stream:01a19916-25df-74d2-9a3d-f4c931207909\",\"stream_offset\":\"326\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "4",
+              "bytes": "644",
+              "direction": "received",
+              "offset": "3782",
+              "sha256": "6b3fac85abef5e14bc09d258162c2c29520945a842a75a757c4134ae10a32ea6",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"open\",\"result\":{\"channel\":null,\"credit_initial\":\"262144\",\"displaced\":null,\"final_output_offset\":null,\"first_paint\":{\"cursor\":{\"col\":0,\"row\":0,\"visible\":true},\"geometry\":{\"cols\":80,\"rows\":24},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"0\",\"revision\":\"0\",\"stream_offset\":\"0\"},\"holder\":null,\"lease\":{\"epoch\":\"1\",\"holder\":\"image-viewer\",\"lease_id\":\"lease:1\",\"role\":\"interact\"},\"outcome\":\"ready\",\"reason\":null,\"retry\":null,\"stream_id\":\"stream:01a19916-25df-74d2-9a3d-f4c931207909\",\"terminal\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "4",
+              "bytes": "186",
+              "direction": "sent",
+              "offset": "470",
+              "sha256": "66baa458b213e579cbd6d3b1925c854c2d8cc3b57f4618a0a6b0626aaeec9249",
+              "text": "{\"id\":\"go\",\"jsonrpc\":\"2.0\",\"method\":\"input.raw\",\"params\":{\"data_b64\":\"DQ==\",\"expect\":null,\"lease_id\":\"lease:1\",\"op_id\":\"01a19916-25e2-767b-950f-6e73abf6e117\",\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "5",
+              "bytes": "376",
+              "direction": "received",
+              "offset": "4426",
+              "sha256": "9850a90d4d092235c93b1df282809eee013591c6d230c4d5420952547311c923",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"go\",\"result\":{\"receipt\":{\"admitted_bytes\":\"1\",\"mode_revision\":\"0\",\"op_id\":\"01a19916-25e2-767b-950f-6e73abf6e117\",\"output_cursor\":{\"offset\":\"0\"},\"queued_seq\":\"1\"},\"status_at_send\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "11",
+              "bytes": "143",
+              "direction": "received",
+              "offset": "4802",
+              "sha256": "8aa9e79461fb17c8a775135ab68f2969b4ee873fff8c93900ee7cbf57978ec05",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"DQo=\",\"offset\":\"326\",\"stream_id\":\"stream:01a19916-25df-74d2-9a3d-f4c931207909\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "15",
+              "bytes": "399",
+              "direction": "received",
+              "offset": "4945",
+              "sha256": "3036c9a15b077d640f44a70e1d82f93d3338e25a7d5145dbe4b4842adb379320",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G19HYT1ULGY9MTAwLGk9NyxtPTE7aVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUFFQUFBQUIbXBtfR209MTtDQVlBQUFBZkZjU0pBQUFBRFVsRVFWUjQybU5rK005URtcG19HbT0wO0R3QURoZ0dBV2pSOWF3QUFBQUJKUlU1RXJrSmdnZz09G1wNDQobUDA7MTswcSIxOzE7Njs2IzA7MjsxMDA7MDswIzB+fn5+fn4tG1wNDQppbWFnZXMtZG9uZQ==\",\"offset\":\"328\",\"stream_id\":\"stream:01a19916-25df-74d2-9a3d-f4c931207909\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "16",
+              "bytes": "124",
+              "direction": "sent",
+              "offset": "656",
+              "sha256": "e92806480cd4b57fc9ccecbfce9d68d866c66125af69be9df5c4afc80607374d",
+              "text": "{\"id\":\"close\",\"jsonrpc\":\"2.0\",\"method\":\"attach.close\",\"params\":{\"stream_id\":\"stream:01a19916-25df-74d2-9a3d-f4c931207909\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "16",
+              "bytes": "204",
+              "direction": "received",
+              "offset": "5344",
+              "sha256": "b6b4b7afd79232d82fbe3e01d5110a12df35a7b38d1c6b6bced2894e9e122176",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":null,\"close\":null,\"kind\":\"input_revoked\",\"skipped\":null,\"stream_id\":\"stream:01a19916-25df-74d2-9a3d-f4c931207909\",\"stream_offset\":\"521\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "16",
+              "bytes": "140",
+              "direction": "received",
+              "offset": "5548",
+              "sha256": "a7ff9f62cfa597e983a8ecdffcaae4a7f1f89775ea3482b5567da8afe47334bd",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"close\",\"result\":{\"checkpoint\":null,\"stream_id\":\"stream:01a19916-25df-74d2-9a3d-f4c931207909\",\"stream_offset\":\"521\"}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "4"
+        },
+        {
+          "bytes_decoded": "6361",
+          "bytes_received": "6361",
+          "bytes_sent": "661",
+          "name": "viewer2",
+          "records_received": "14",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "879232a51c2b93f6cfcbcbdc958906f8b0c9d943231e364e94e5be90aed0b6cc",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2604",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "39a28f7a5225df275e705687710ab299d413b1e25fcb9e2e6e1c140babd686c6",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a19916-2525-736f-98f1-cf72d9f10ebc\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793569727983\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "238",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "15e2e07181d059696c0a6f168b69ede549dee2d577aefe53542cc9cfdcfb57a0",
+              "text": "{\"id\":\"reopen\",\"jsonrpc\":\"2.0\",\"method\":\"attach.open\",\"params\":{\"client_id\":\"image-viewer\",\"geometry\":null,\"op_id\":\"01a19916-25ef-7040-a70c-fadc6af19299\",\"role\":\"interact\",\"stream_mode\":\"plain\",\"takeover\":null,\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "407",
+              "direction": "received",
+              "offset": "2604",
+              "sha256": "b6995be478accf7d40ea715846177762545e4340514d17fb4e4a9dc569f5faa5",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":{\"cursor\":{\"col\":11,\"row\":3,\"visible\":true},\"geometry\":{\"cols\":80,\"rows\":24},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"195\",\"revision\":\"24\",\"stream_offset\":\"0\"},\"close\":null,\"kind\":\"checkpoint\",\"skipped\":null,\"stream_id\":\"stream:01a19916-25f0-773d-82e2-52d014d3dbae\",\"stream_offset\":\"0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "381",
+              "direction": "received",
+              "offset": "3011",
+              "sha256": "0a9fe901568bb71cb0cd99102e1affa5f3dab3b806fe1bc4333ef980bbfee485",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G2MbWzE7MUgbWzI7MUgbWzM7MUgbWzQ7MUgbWzA7Mzk7NDltaW1hZ2VzLWRvbmUbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzk7MUgbWzEwOzFIG1sxMTsxSBtbMTI7MUgbWzEzOzFIG1sxNDsxSBtbMTU7MUgbWzE2OzFIG1sxNzsxSBtbMTg7MUgbWzE5OzFIG1syMDsxSBtbMjE7MUgbWzIyOzFIG1syMzsxSBtbMjQ7MUg=\",\"offset\":\"0\",\"stream_id\":\"stream:01a19916-25f0-773d-82e2-52d014d3dbae\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "147",
+              "direction": "received",
+              "offset": "3392",
+              "sha256": "706dfcd7c8961c0c72a8c1878af2d44ea3a7f4bb95d7c2344778d0c02b3543b1",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G1syOzFI\",\"offset\":\"182\",\"stream_id\":\"stream:01a19916-25f0-773d-82e2-52d014d3dbae\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "323",
+              "direction": "received",
+              "offset": "3539",
+              "sha256": "956793594d6964407afcd1fa118a6290eb6f11d9933cfd87be367b6b69ed4a8d",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G19HYT1ULGY9MTAwLGk9NyxtPTE7aVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUFFQUFBQUIbXBtfR209MTtDQVlBQUFBZkZjU0pBQUFBRFVsRVFWUjQybU5rK005URtcG19HbT0wO0R3QURoZ0dBV2pSOWF3QUFBQUJKUlU1RXJrSmdnZz09G1w=\",\"offset\":\"188\",\"stream_id\":\"stream:01a19916-25f0-773d-82e2-52d014d3dbae\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "147",
+              "direction": "received",
+              "offset": "3862",
+              "sha256": "79a40577462072fa8f2ed00f244c7c9820c1570bd45a3a909e8b4028773881c9",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G1szOzFI\",\"offset\":\"325\",\"stream_id\":\"stream:01a19916-25f0-773d-82e2-52d014d3dbae\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "191",
+              "direction": "received",
+              "offset": "4009",
+              "sha256": "674f984b33f53c0e791b68e9be32b5106222772f3cf6b9c7215123c9f3a2a2b4",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G1AwOzE7MHEiMTsxOzY7NiMwOzI7MTAwOzA7MCMwfn5+fn5+LRtc\",\"offset\":\"331\",\"stream_id\":\"stream:01a19916-25f0-773d-82e2-52d014d3dbae\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "363",
+              "direction": "received",
+              "offset": "4200",
+              "sha256": "579b0519db73e800caf77037ef84e5f4d4538a05421940371b2a9a405b4baa76",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"G1sxOzFIG1swOzM5OzQ5bRs3G1s/MjVoG1s/MWwbWz8xMDAwbBtbPzEwMDJsG1s/MTAwM2wbWz8xMDA0bBtbPzEwMDVsG1s/MTAwNmwbWz8xMDA3aBtbPzEwNDJoG1s/MjAwNGwbWz82bBtbPTA7MXUbWz40OzBtG1s/OTAwMWwbPhtbMiBxG1s0OzEySBtbPzdoG1s0bBtbMjBsG1swOzM5OzQ5bQ==\",\"offset\":\"370\",\"stream_id\":\"stream:01a19916-25f0-773d-82e2-52d014d3dbae\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "267",
+              "direction": "received",
+              "offset": "4563",
+              "sha256": "43f45f259e1f272ada787350c4e7f0f68abd8345569c5d7e5d45c393a148d09b",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":null,\"close\":null,\"graphics_replayed\":{\"released\":[],\"replayed\":[\"2\",\"142\"]},\"kind\":\"graphics_replayed\",\"skipped\":null,\"stream_id\":\"stream:01a19916-25f0-773d-82e2-52d014d3dbae\",\"stream_offset\":\"536\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "202",
+              "direction": "received",
+              "offset": "4830",
+              "sha256": "87eb2a67b6e0703e73e36e129c8a0573f3ac19a1008f6d9b94340d27ed086ce2",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.control\",\"params\":{\"checkpoint\":null,\"close\":null,\"kind\":\"input_ready\",\"skipped\":null,\"stream_id\":\"stream:01a19916-25f0-773d-82e2-52d014d3dbae\",\"stream_offset\":\"536\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "650",
+              "direction": "received",
+              "offset": "5032",
+              "sha256": "3e3a2bc1d8c6393ff34d6c5ba8e2bc83bf8733ef4065eed656c30c1c803cf272",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"reopen\",\"result\":{\"channel\":null,\"credit_initial\":\"262144\",\"displaced\":null,\"final_output_offset\":null,\"first_paint\":{\"cursor\":{\"col\":11,\"row\":3,\"visible\":true},\"geometry\":{\"cols\":80,\"rows\":24},\"history_lines\":\"0\",\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"195\",\"revision\":\"24\",\"stream_offset\":\"0\"},\"holder\":null,\"lease\":{\"epoch\":\"2\",\"holder\":\"image-viewer\",\"lease_id\":\"lease:2\",\"role\":\"interact\"},\"outcome\":\"ready\",\"reason\":null,\"retry\":null,\"stream_id\":\"stream:01a19916-25f0-773d-82e2-52d014d3dbae\",\"terminal\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "189",
+              "direction": "sent",
+              "offset": "472",
+              "sha256": "dc0845c89f2af2924e4ac7d4c3c1e4b312e2791bfe6bf7733ecbfa4ac61d3dc2",
+              "text": "{\"id\":\"again\",\"jsonrpc\":\"2.0\",\"method\":\"input.raw\",\"params\":{\"data_b64\":\"DQ==\",\"expect\":null,\"lease_id\":\"lease:2\",\"op_id\":\"01a19916-25f2-71ab-b97e-3b3efcf58bfc\",\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "5",
+              "bytes": "381",
+              "direction": "received",
+              "offset": "5682",
+              "sha256": "28dd0381a497485bb6f0b712d02bf87f01af7e45ba68ca3151d682dcca1aa0d6",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"again\",\"result\":{\"receipt\":{\"admitted_bytes\":\"1\",\"mode_revision\":\"0\",\"op_id\":\"01a19916-25f2-71ab-b97e-3b3efcf58bfc\",\"output_cursor\":{\"offset\":\"195\"},\"queued_seq\":\"2\"},\"status_at_send\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "10",
+              "bytes": "143",
+              "direction": "received",
+              "offset": "6063",
+              "sha256": "0b964ce7d0aff7aaf7a1e3fee1af7aa7aefa71b3676ef25b002750091494f9ff",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"DQo=\",\"offset\":\"536\",\"stream_id\":\"stream:01a19916-25f0-773d-82e2-52d014d3dbae\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "14",
+              "bytes": "155",
+              "direction": "received",
+              "offset": "6206",
+              "sha256": "c2b36b51e283e4636a69da6483e7ab42c87476360437eed8a008f5462d6102c4",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"attach.data\",\"params\":{\"data_b64\":\"YWZ0ZXItcmVwbGF5\",\"offset\":\"538\",\"stream_id\":\"stream:01a19916-25f0-773d-82e2-52d014d3dbae\"}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "3"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-152"
+        ],
+        "delivers": [
+          "IDEAL-119"
+        ],
+        "excludes": [],
+        "title": "Retained graphics are re-sent on reattach while their placement is on screen",
+        "todo": "84"
+      },
+      "descriptors": [],
+      "elapsed_ms": "354",
+      "failure": null,
+      "fixture": {
+        "accepted": "3",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-t84/debug/ovis-terminal",
+            "serve",
+            "--stdin-lifetime",
+            "--root",
+            "/tmp/ovc-1942033-0/srv"
+          ],
+          "exit_code": 0,
+          "pid": "1942366",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "graphics/replay",
+      "summary": "Real ovis-terminal serve runs a shell as t1; an interact viewer types go, the program draws a 3-chunk Kitty f=100 PNG and, one row below, a sixel, and the viewer receives both live; it closes its stream (attach.close), a second viewer attaches interact, and its paint re-sends both sequences byte-identical (SHA-256), Kitty before sixel, followed by one graphics_replayed record naming raw offsets 2 and 142 with nothing released, then input_ready."
+    }
+  ],
+  "elapsed_ms": "577",
+  "error": null,
+  "format": "ovis-conformance-evidence/1",
+  "host": {
+    "arch": "x86_64",
+    "family": "unix",
+    "os": "linux"
+  },
+  "inventory": null,
+  "result": "passed",
+  "runner_version": "0.1.0",
+  "scenario": "graphics/replay",
+  "totals": {
+    "assertions": "40",
+    "cases": "1",
+    "declared_only": "0",
+    "failed": "0",
+    "passed": "1",
+    "skipped": "0"
+  }
+}

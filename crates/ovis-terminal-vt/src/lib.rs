@@ -12,11 +12,12 @@ pub use engine::{
     CHECKPOINT_ENGINE, CHECKPOINT_FORMAT, CHECKPOINT_VERSION, Checkpoint, CheckpointVersion,
     ClientFact, ContentRevision, CursorShape, CursorState, EditingModes, FeedOutcome, Fidelity,
     FirstPaint, Geometry, HistoryCompleteness, HistoryLimit, HistoryRead, HistoryUnavailableReason,
-    InexactReason, KeyEncoding, KeyboardModes, LineSpan, MIN_COLUMNS, ModeRevision,
-    ModifyOtherKeys, MouseEncoding, MouseModes, MouseTracking, OSC_FIELD_LIMIT, OSC_RECORD_LIMIT,
-    OscContent, OscFault, OscRecord, OscTerminator, OutputOffset, PasteMode, QueryOutcome,
-    ReadFormat, ReadSource, ScreenBuffer, ScreenLine, ScreenModes, ScreenRead, SearchMatch,
-    TerminalModes, TerminalQuery, Vt, VtConfig, VtError,
+    IMAGE_LIMIT, ImagePlace, ImageRelease, ImageSet, ImageSplice, InexactReason, KeyEncoding,
+    KeyboardModes, LineSpan, MIN_COLUMNS, ModeRevision, ModifyOtherKeys, MouseEncoding, MouseModes,
+    MouseTracking, OSC_FIELD_LIMIT, OSC_RECORD_LIMIT, OscContent, OscFault, OscRecord,
+    OscTerminator, OutputOffset, PasteMode, QueryOutcome, ReadFormat, ReadSource, RetainedImage,
+    ScreenBuffer, ScreenLine, ScreenModes, ScreenRead, SearchMatch, TerminalModes, TerminalQuery,
+    Vt, VtConfig, VtError,
 };
 pub use shard::{ParseBudget, PendingCap, Shard, ShardError, Turn};
 

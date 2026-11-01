@@ -45,8 +45,9 @@ const EXECUTABLE: &[&str] = &[
 ];
 
 /// Executable scenarios whose server is the assembled binary itself (plan todo 31).
-const ASSEMBLED: [&str; 7] = [
+const ASSEMBLED: [&str; 8] = [
     "graphics/passthrough.json",
+    "graphics/replay.json",
     "part-a/task-22.json",
     "part-a/task-26.json",
     "part-a/task-27.json",

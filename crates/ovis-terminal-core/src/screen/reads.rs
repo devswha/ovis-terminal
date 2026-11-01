@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use ovis_terminal_vt::{ContentRevision, FirstPaint, LineSpan};
+use ovis_terminal_vt::{ContentRevision, FirstPaint, ImageSet, LineSpan};
 
 use super::error::ScreenError;
 use super::frozen::Frozen;
@@ -180,5 +180,14 @@ impl Screen {
     /// Returns [`ScreenError::Poisoned`] when the state lock is poisoned.
     pub fn first_paint(&self) -> Result<FirstPaint, ScreenError> {
         Ok(self.lock()?.vt.first_paint())
+    }
+
+    /// The graphics sequences the engine retains and where each is placed now.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ScreenError::Poisoned`] when the state lock is poisoned.
+    pub fn images(&self) -> Result<ImageSet, ScreenError> {
+        Ok(self.lock()?.vt.images())
     }
 }
