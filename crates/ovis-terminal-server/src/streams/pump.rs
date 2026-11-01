@@ -50,7 +50,7 @@ fn encode(
     }
 }
 
-fn detach_op() -> OpId {
+pub(super) fn detach_op() -> OpId {
     OpId::new(uuid::Uuid::now_v7().to_string())
 }
 

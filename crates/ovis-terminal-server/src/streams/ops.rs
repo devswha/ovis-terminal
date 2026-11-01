@@ -58,6 +58,11 @@ impl TerminalStreams {
         viewer.close_now(StreamClose::new(StreamCloseReason::ClientClosed, at.wire()));
         viewer.wake.notify_one();
         drop(state);
+        // The reply must not precede the revocation: from the moment `attach.close`
+        // answers, a write presenting this stream's lease is refused. `attach.close` carries
+        // no op id, so the release is journaled under a minted one, as the pump's detach is;
+        // that later detach finds nothing left to revoke.
+        self.release(stream, super::pump::detach_op())?;
         Ok(at)
     }
 
@@ -167,3 +172,6 @@ fn stall_close(viewer: &mut Viewer) {
     ));
     viewer.wake.notify_one();
 }
+
+#[cfg(test)]
+mod tests;
