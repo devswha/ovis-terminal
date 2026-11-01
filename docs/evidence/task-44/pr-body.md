@@ -135,3 +135,19 @@ Merge commits `45a401e` (8cab061: the handler.rs/serve.rs union with T55's `proc
   - Windows `cargo check`/`clippy -D warnings` exit 0.
   - `remote/isolation --case all` exit 0 (111 assertions, failed 0, skipped 0).
   - `all/all` exit 0 (44 passed, 1823 assertions, failed 0, skipped 0).
+
+## Addendum - merge round 3 (integration 76a173b, then 1d2f0af)
+
+- **`4b3ce12`** merges 76a173b (T47).
+  - `conformance/src/fixture/handler.rs` keeps T47's `fixture.update` route next to this lane's `fixture.remote`, `fixture.machine`, `fixture.remote_child` and `$/orphanedAck` routes.
+  - `probe-stress-macos.yml` is integration's file plus `machine-actor` as the last option and the last job. It parses with 35 options and 35 jobs; the `platform` option vs `stress` job naming is pre-existing on integration.
+  - The union pushed `fixture::serve::serve` to 102 lines (clippy `too_many_lines`). It was fixed structurally by moving the store/coordinator open into `open_core`, with no behaviour change.
+- **`48954ad`** merges 1d2f0af. It includes 7183f34, which maps IDEAL-118..121 and GAP-151..154 in the traceability ledger. On 76a173b alone, `traceability::every_ledger_id_is_mapped_exactly_once_to_known_todos` failed on integration's side; that is fixed upstream and passes 2/2 here (`r5-traceability.log`).
+- **OpenRPC:** `openrpc write` is byte-identical and `openrpc compat schema/released.openrpc.json` exits 0.
+- **client-ts:** `bun install --frozen-lockfile && bun run generate && bun run generate:check && bun run typecheck && bun test` exits 0 (30 pass, 0 fail). `src/generated` is unchanged because this lane adds no OpenRPC methods, so there is no SDK commit (`r5-client-ts.log`).
+- **Gates on 48954ad** (Linux x86_64, binary sha256 `f17f967b53fb343a8fb716d714f32b1e66899e8ea617551e5786ebec1498ae9d`):
+  - `with-slot.sh bash scripts/check.sh` exit 0 (`1168 tests run: 1168 passed (1 slow), 1 skipped`; hygiene `0 violation(s) in 1161 file(s)`).
+  - `remote/isolation --case all` exit 0 (111 assertions, failed 0, skipped 0).
+  - `all/all` exit 0 (46 passed, 1960 assertions, 37 declared-only, failed 0, skipped 0).
+  - The Windows `cargo check`/`clippy -D warnings` exit 0 was run on 4b3ce12, the code merge; 48954ad adds only docs, traceability and client-ts.
+- **Timing fix (restated):** step 16 (`deliver-frozen`) reads `health.deadline_exceeded` only after the replay has returned `stopped: deadline_exceeded`. The actor now counts every expiry in health before it answers the expired caller, so both deadlines (step 12's and the replay's) are counted before that reply is built. Proof: 25/25 pinned to `taskset -c 0-1` with 8 busy loops on those cores (`r3-stress25.log`), and the mutant with the old order fails `an_expiry_is_counted_before_its_caller_hears_of_it` (`r3-mutant-old-order.log`).
