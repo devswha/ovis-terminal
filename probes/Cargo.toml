@@ -13,12 +13,30 @@ keywords.workspace = true
 categories.workspace = true
 publish.workspace = true
 
+[[bin]]
+name = "windows-smoke"
+path = "platform-qa/windows_smoke.rs"
+
+[[bin]]
+name = "verify-ci"
+path = "platform-qa/verify_ci.rs"
+
+[[test]]
+name = "platform_qa"
+path = "platform-qa/tests/platform_qa.rs"
+
+[[test]]
+name = "pipe_smoke"
+path = "platform-qa/tests/pipe_smoke.rs"
+
 [dependencies]
+clap = { workspace = true }
 ovis-terminal-holder = { workspace = true }
 ovis-terminal-vt = { workspace = true }
 portable-pty = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 
@@ -28,9 +46,29 @@ tokio = { workspace = true }
 [dev-dependencies]
 proptest = { workspace = true }
 
-# Used by probes/platform/, which src/lib.rs loads through #[path]; machete scans only src/.
+# probes/platform-qa/tests/pipe_smoke.rs serves the production pipe listener.
+[target.'cfg(windows)'.dev-dependencies]
+ovis-terminal-authz = { workspace = true }
+ovis-terminal-core = { workspace = true }
+ovis-terminal-protocol = { workspace = true }
+ovis-terminal-server = { workspace = true }
+
+# Used by probes/platform/ and probes/platform-qa/, which src/lib.rs and the [[bin]] and
+# [[test]] targets load through paths outside src/; machete scans only src/.
 [package.metadata.cargo-machete]
-ignored = ["portable-pty", "serde", "serde_json", "thiserror", "tracing"]
+ignored = [
+    "clap",
+    "ovis-terminal-authz",
+    "ovis-terminal-core",
+    "ovis-terminal-protocol",
+    "ovis-terminal-server",
+    "portable-pty",
+    "serde",
+    "serde_json",
+    "sha2",
+    "thiserror",
+    "tracing",
+]
 
 [lints]
 workspace = true
