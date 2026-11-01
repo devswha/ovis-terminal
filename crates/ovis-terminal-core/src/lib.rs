@@ -6,6 +6,7 @@
 pub mod docs;
 pub mod events;
 pub mod geometry;
+pub mod health;
 pub mod input;
 pub mod launch;
 pub mod layout;

@@ -12,6 +12,9 @@ pub mod socket;
 #[path = "../src/streams/qa/fixture.rs"]
 pub mod fixture;
 
+#[path = "../src/streams/qa/recorder.rs"]
+pub mod recorder;
+
 #[path = "../src/streams/qa/viewer.rs"]
 pub mod viewer;
 
@@ -26,6 +29,14 @@ pub mod fence;
 
 #[path = "../src/streams/qa/stall.rs"]
 pub mod stall;
+
+#[path = "../src/streams/qa/health.rs"]
+pub mod health;
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_real_stalled_viewer_reports_its_backlog_and_resynced_ranges() -> TestResult {
+    health::a_real_stalled_viewer_reports_its_backlog_and_resynced_ranges().await
+}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn happy() -> TestResult {

@@ -74,6 +74,13 @@ impl<D, P> Subscriptions<D, P> {
         self.shared.limits
     }
 
+    /// Reports every later subscription's backlog, losses and resyncs to `health`.
+    ///
+    /// Returns false, and changes nothing, when the hub already reports somewhere.
+    pub fn report_to(&self, health: Arc<crate::health::Health>) -> bool {
+        self.shared.health.set(health).is_ok()
+    }
+
     pub(super) fn stopped(&self) -> bool {
         self.shared.stopped.load(Ordering::SeqCst)
     }

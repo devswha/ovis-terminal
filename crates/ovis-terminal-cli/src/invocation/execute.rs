@@ -53,8 +53,9 @@ fn idle_status(state: &str) -> Result<Value, Failure> {
         "runtime_lifetime": null,
         "server_boot_id": null,
         "uptime_ms": null,
-        "holder_count": 0,
-        "live_terminals": 0,
+        "holder_count": null,
+        "live_terminals": null,
+        "census": "not_reported",
     }))
 }
 
@@ -144,8 +145,9 @@ mod tests {
             "runtime_lifetime": "lifetime-7",
             "server_boot_id": "boot-1",
             "uptime_ms": uptime,
-            "holder_count": 1,
-            "live_terminals": 0,
+            "holder_count": "1",
+            "live_terminals": "0",
+            "census": "reported",
         })
     }
 

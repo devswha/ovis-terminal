@@ -8,7 +8,9 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 
+use ovis_terminal_core::health::ConsumerGauge;
 use ovis_terminal_core::leases::Owner;
+use ovis_terminal_protocol::domain::health::LossRange;
 use ovis_terminal_protocol::schema::ids::StreamId;
 use ovis_terminal_protocol::schema::records::{AttachControl, ControlKind, StreamClose};
 use tokio::sync::Notify;
@@ -48,9 +50,33 @@ pub(super) struct Viewer {
     closing: Option<(LogOffset, StreamClose)>,
     closed: bool,
     progress: Instant,
+    gauge: Option<ConsumerGauge>,
 }
 
 impl Viewer {
+    /// Reports this viewer's backlog to `gauge` from now on.
+    pub(super) fn report_to(&mut self, gauge: ConsumerGauge) {
+        self.gauge = Some(gauge);
+    }
+
+    /// `bytes` more were queued for this viewer.
+    pub(super) fn report_queued(&self, bytes: u64) {
+        if let Some(gauge) = &self.gauge {
+            gauge.queued_now(bytes);
+        }
+    }
+
+    /// A resync dropped `skipped` unsent bytes and replaced `range` with a checkpoint.
+    pub(super) fn report_resync(&self, skipped: u64, range: Option<LossRange>) {
+        if let Some(gauge) = &self.gauge {
+            gauge.skipped(skipped);
+            if let Some(range) = range {
+                gauge.lost(range);
+                gauge.resynced(range);
+            }
+        }
+    }
+
     pub(super) fn new(id: StreamId, owner: Owner, window: u64) -> Self {
         Self {
             id,
@@ -63,6 +89,7 @@ impl Viewer {
             closing: None,
             closed: false,
             progress: Instant::now(),
+            gauge: None,
         }
     }
 
@@ -193,6 +220,9 @@ impl Viewer {
     fn data(&mut self, bytes: Shared) -> Delivery {
         let offset = self.credit.sent();
         self.credit.record(bytes.len());
+        if let Some(gauge) = &self.gauge {
+            gauge.written(u64::try_from(bytes.len()).unwrap_or(u64::MAX));
+        }
         Delivery::Data { offset, bytes }
     }
 

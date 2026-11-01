@@ -31,3 +31,12 @@ of the baseline after the change. The last `current` must match the file.
 - reason: the todo-4 shape could not name a target, carry a checked digest or expose verification, activation and rollback outcomes (GAP-127, IDEAL-100); generation 1 has no released client of update.*
 - previous: sha256:362980ac3f118f9866ae95f33defb0a5542b4d8a20825432a0a580ec809ae971
 - current: sha256:53782aabf6c5ff8bbbe0a9fd28357dc5eb26f02359d7d660647fc627f3fa206d
+
+## 2026-11-01 health counters become decimal-string counts
+
+- date: 2026-11-01
+- pr: #66 (todo 59)
+- fields: server.status holder_count and live_terminals (components.schemas.ServerStatusResult) change from integer {format uint32, minimum 0} to a required $ref Count or null (null when no census was reported); server.metrics streams and subscriptions (components.schemas.ServerMetricsResult) and consumers[].resynced_events (components.schemas.ConsumerQueue) change from integer {format uint32, minimum 0} to $ref Count
+- reason: every counter on the wire is a canonical decimal string; these five were the last JSON-number counters in server.status and server.metrics, and an unreported census must read as null rather than a fabricated zero; generation 1 has no released client of either method
+- previous: sha256:53782aabf6c5ff8bbbe0a9fd28357dc5eb26f02359d7d660647fc627f3fa206d
+- current: sha256:0cf8102b13654baf1e681941253c6b25f985982b692b96e7c7e099802cc973bd

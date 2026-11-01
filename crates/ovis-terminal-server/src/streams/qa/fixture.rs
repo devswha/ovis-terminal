@@ -3,15 +3,15 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use ovis_terminal_authz::{
     EndpointPolicy, FileEvidence, Grant, Issuance, IssueRequest, LocalAccount, PeerEvidence,
     Permission, Presentation, PrincipalId, ResolvedTarget, ResourceScope, ScopeResource,
     TargetResource, UnixSocketEvidence, UnixUid,
 };
-use ovis_terminal_core::events::{Coordinator, EventError, Filter, SnapshotProducer};
-use ovis_terminal_core::leases::{LeaseEvent, TerminalLeases, Transition};
+use ovis_terminal_core::events::Coordinator;
+use ovis_terminal_core::health::Health;
+use ovis_terminal_core::leases::TerminalLeases;
 use ovis_terminal_core::registry::{TargetResolutionError, TerminalGeneration, TerminalId};
 use ovis_terminal_core::screen::{ReplyBatch, Screen, ScreenBounds, ScreenConfig};
 use ovis_terminal_holder::protocol::{
@@ -25,64 +25,18 @@ use ovis_terminal_server::conn::{Call, RequestHandler};
 use ovis_terminal_server::dispatch::lanes::agent_status::{ResolvedTerminal, TerminalDirectory};
 use ovis_terminal_server::listen::ServerHandle;
 use ovis_terminal_server::streams::{
-    AttachHandler, AttachLane, LeaseJournal, SessionBacklog, StreamError, StreamLimits,
-    StreamSetup, TerminalStreams,
+    AttachHandler, AttachLane, SessionBacklog, StreamLimits, StreamSetup, TerminalStreams,
 };
-use ovis_terminal_store::{OpId, Snapshot, Store, StoreOptions};
+use ovis_terminal_store::{Store, StoreOptions};
 use ovis_terminal_vt::{Geometry, HistoryLimit, VtConfig};
 use serde_json::Value;
-use tokio::sync::watch;
 
 use super::TestResult;
+use super::recorder::{Core, NoSections, Recorder};
 use super::socket::{self, Client, runtime};
 
 /// The terminal every scenario attaches to.
 pub(crate) const TERMINAL: &str = "terminal:7";
-const WAIT: Duration = Duration::from_secs(15);
-
-#[derive(Debug)]
-pub(crate) struct NoSections;
-
-impl SnapshotProducer for NoSections {
-    type Sections = ();
-
-    fn capture(&self, _snapshot: &Snapshot, _filter: &Filter) -> Result<(), EventError> {
-        Ok(())
-    }
-}
-
-type Core = Coordinator<LeaseEvent, NoSections>;
-
-/// Commits through the real coordinator, then publishes what it committed.
-#[derive(Debug)]
-pub(crate) struct Recorder {
-    core: Arc<Core>,
-    committed: watch::Sender<Vec<LeaseEvent>>,
-}
-
-impl LeaseJournal for Recorder {
-    fn record(&self, op: OpId, transition: Transition) -> Result<(), StreamError> {
-        self.core.record(op, transition.clone())?;
-        self.committed
-            .send_modify(|events| events.extend(transition.events));
-        Ok(())
-    }
-}
-
-impl Recorder {
-    /// Waits for a committed revocation of a lease held by client `label`.
-    pub(crate) async fn revoked(&self, label: &str) -> TestResult {
-        let mut committed = self.committed.subscribe();
-        let wait = committed.wait_for(|events| {
-            events.iter().any(|event| match event {
-                LeaseEvent::Revoked { lease, .. } => lease.owner.client.as_str() == label,
-                _ => false,
-            })
-        });
-        tokio::time::timeout(WAIT, wait).await??;
-        Ok(())
-    }
-}
 
 #[derive(Debug)]
 pub(crate) struct Directory(ResolvedTerminal);
@@ -129,15 +83,28 @@ pub(crate) fn vt_config() -> TestResult<VtConfig> {
 
 impl Fixture {
     pub(crate) async fn new(limits: StreamLimits, session_cap: u64) -> TestResult<Self> {
+        Self::build(limits, session_cap, None).await
+    }
+
+    /// Like [`Fixture::new`], with every stream reporting to `health`.
+    pub(crate) async fn reporting(
+        limits: StreamLimits,
+        session_cap: u64,
+        health: Arc<Health>,
+    ) -> TestResult<Self> {
+        Self::build(limits, session_cap, Some(health)).await
+    }
+
+    async fn build(
+        limits: StreamLimits,
+        session_cap: u64,
+        health: Option<Arc<Health>>,
+    ) -> TestResult<Self> {
         let socket = socket::Fixture::new()?;
         let identity = runtime(1)?;
         let store = Store::open(&socket.path("db"), StoreOptions::default())?;
         let core = Arc::new(Coordinator::new(store, identity, NoSections));
-        let (committed, _) = watch::channel(Vec::new());
-        let journal = Arc::new(Recorder {
-            core: Arc::clone(&core),
-            committed,
-        });
+        let journal = Arc::new(Recorder::new(Arc::clone(&core)));
         let terminal = TerminalId::try_from(7)?;
         let generation = TerminalGeneration::new(1)?;
         let resolved = ResolvedTerminal::new(identity.machine_id(), terminal, generation);
@@ -167,6 +134,10 @@ impl Fixture {
             Arc::clone(&backlog),
             Arc::<Recorder>::clone(&journal),
         );
+        let setup = match health {
+            Some(health) => setup.reporting_to(health),
+            None => setup,
+        };
         let hub = TerminalStreams::new(screen, leases, setup);
         let lane = AttachLane::new(Directory(resolved));
         lane.install((terminal, generation), Arc::clone(&hub))?;
