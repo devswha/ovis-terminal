@@ -33,6 +33,7 @@ impl Session<'_> {
                 Step::Send(send) => self.send(send).await,
                 Step::SendWire(wire) => self.send_wire(wire).await,
                 Step::Replies(replies) => self.replies(replies).await,
+                Step::PollReply(poll) => self.poll_reply(poll).await,
                 Step::Notification(notification) => self.notification(notification).await,
                 Step::Closed(closed) => self.closed(&closed.conn).await,
                 Step::Hangup(hangup) => self.conn(&hangup.conn)?.hangup().await,
@@ -58,6 +59,7 @@ impl Session<'_> {
                 Step::PtyOpen(_)
                 | Step::PtyType(_)
                 | Step::PtyExpect(_)
+                | Step::PtyAbsent(_)
                 | Step::PtyResize(_)
                 | Step::PtyExit(_) => self.pty(step).await,
             }

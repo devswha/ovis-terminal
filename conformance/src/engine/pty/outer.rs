@@ -168,6 +168,16 @@ impl OuterPty {
         tokio::time::timeout(within, wait).await.unwrap_or(false)
     }
 
+    /// Whether `needle` is in everything delivered so far, without waiting for more.
+    pub(crate) fn delivered_contains(&mut self, needle: &str) -> bool {
+        while let Ok(chunk) = self.output.try_recv() {
+            self.seen.extend(chunk);
+        }
+        self.seen
+            .windows(needle.len())
+            .any(|window| window == needle.as_bytes())
+    }
+
     /// Awaits the exit: its code, stderr bytes, whether the settings are the original ones,
     /// and the process record with the drawn screen as its stdout.
     pub(crate) async fn exit(mut self) -> Result<Exited, RunnerError> {

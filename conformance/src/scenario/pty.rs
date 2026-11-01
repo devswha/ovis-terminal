@@ -33,6 +33,15 @@ pub(crate) struct PtyExpect {
     pub(crate) retry_type: Option<String>,
 }
 
+/// Require that `output` never appeared on the outer terminal in what it delivered so
+/// far; place it after a `pty_expect` fence that the absent output would precede.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct PtyAbsent {
+    pub(crate) pty: String,
+    pub(crate) output: String,
+}
+
 /// Change the outer terminal's grid; the kernel signals the client's foreground group.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -94,6 +103,13 @@ impl PtyExpect {
             ("output", self.output.clone()),
             ("retry_type", retry),
         ])
+    }
+}
+
+impl PtyAbsent {
+    /// What this step does, recorded in the evidence on every platform.
+    pub(crate) fn planned(&self) -> Descriptors {
+        planned([("pty", self.pty.clone()), ("absent", self.output.clone())])
     }
 }
 

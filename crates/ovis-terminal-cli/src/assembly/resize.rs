@@ -17,7 +17,7 @@ use serde_json::{Value, json};
 use super::actor::{Runtime, now};
 use super::boot::GeometryLog;
 use super::error::refusal;
-use super::input::{live_terminal, owned_client};
+use super::input::{live_terminal, presented_client};
 use super::live::Live;
 
 fn internal<E: std::fmt::Debug>(cause: E) -> BoundaryError {
@@ -89,7 +89,7 @@ impl Runtime {
             .hub
             .with_leases(TerminalLeases::view)
             .map_err(internal)?;
-        let client = owned_client(&view, (session, lease))?;
+        let client = presented_client(&view, (session, lease));
         let caller = Caller::new(session, &client, now().map_err(internal)?);
         let admitted = live
             .hub

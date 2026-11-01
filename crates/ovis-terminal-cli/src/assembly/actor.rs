@@ -47,6 +47,8 @@ pub(super) struct Runtime {
     pub(super) launches: BTreeMap<TerminalId, (Geometry, Option<String>)>,
     pub(super) created: BTreeMap<TerminalId, Revision>,
     pub(super) started: Instant,
+    /// Process tokens handed to spawned programs, shared with the agent lanes.
+    pub(super) status: Arc<ovis_terminal_agent::status::StatusService>,
 }
 
 /// The current wall-clock time in milliseconds.

@@ -108,6 +108,8 @@ pub(crate) enum Step {
     Stop(Stop),
     /// Splice the steps of another scenario's case.
     Include(Include),
+    /// Resend one read until its reply matches, a bounded number of times.
+    PollReply(PollReply),
     /// Require the inner step to fail with this kind.
     ExpectFailure(ExpectFailure),
     /// Send planned requests, or only the one `--inject` names, and check each reply.
@@ -118,6 +120,8 @@ pub(crate) enum Step {
     PtyType(super::pty::PtyType),
     /// Require output on an outer PTY.
     PtyExpect(super::pty::PtyExpect),
+    /// Require output to be absent from what an outer PTY delivered so far.
+    PtyAbsent(super::pty::PtyAbsent),
     /// Resize an outer PTY.
     PtyResize(super::pty::PtyResize),
     /// Await the PTY client's exit and check its terminal settings.
@@ -231,6 +235,17 @@ pub(crate) struct Replies {
     /// `connect`; the reply must carry one.
     #[serde(default)]
     pub(crate) keep_bearer: BTreeMap<String, String>,
+}
+
+/// One read resent until its reply satisfies `expect`, at most `attempts` times.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct PollReply {
+    pub(crate) conn: ConnName,
+    pub(crate) id: String,
+    pub(crate) request: Value,
+    pub(crate) expect: Expect,
+    pub(crate) attempts: u32,
 }
 
 #[derive(Debug, Clone, Deserialize)]

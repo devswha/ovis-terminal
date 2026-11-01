@@ -80,6 +80,7 @@ pub(super) struct Hosting<'a> {
     pub(super) directory: Arc<Directory>,
     pub(super) actor: super::actor::Actor,
     pub(super) control: Arc<ovis_terminal_core::restart::Control>,
+    pub(super) status: Arc<ovis_terminal_agent::status::StatusService>,
 }
 
 fn stage<E: Into<super::StageSource>>(stage: &'static str) -> impl FnOnce(E) -> AssemblyError {

@@ -4,6 +4,8 @@
 
 #[path = "assembly/lanes.rs"]
 mod lanes;
+#[path = "assembly/prompts.rs"]
+mod prompts;
 #[path = "assembly/restart.rs"]
 mod restart;
 #[path = "assembly/support.rs"]

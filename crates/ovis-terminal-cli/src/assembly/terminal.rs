@@ -5,12 +5,15 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use ovis_terminal_agent::status::ProcessOwner;
 use ovis_terminal_authz::Session;
 use ovis_terminal_core::registry::{ResourceName, TerminalId};
 use ovis_terminal_core::terminals::{Call, Launch, LaunchState, Program, TerminalError};
 use ovis_terminal_protocol::errors::{BoundaryError, OpId};
 use ovis_terminal_protocol::schema::common::Target;
+use ovis_terminal_protocol::schema::ids::ProcessToken;
 use ovis_terminal_protocol::schema::methods::terminal::{LaunchProgram, TerminalRunParams};
+use ovis_terminal_protocol::schema::scalar::Incarnation;
 use ovis_terminal_server::dispatch::lanes::agent_status::TerminalDirectory as _;
 use serde_json::{Value, json};
 
@@ -25,7 +28,10 @@ pub(super) fn terminal_refusal(error: &TerminalError) -> BoundaryError {
     refusal(error.kind(), error.hint())
 }
 
-fn launch(params: TerminalRunParams) -> Result<Launch, TerminalError> {
+/// The environment variable a spawned program finds its process token in.
+const PROCESS_TOKEN_VAR: &str = "OVIS_TERMINAL_PROCESS_TOKEN";
+
+fn launch(params: TerminalRunParams) -> Result<(Launch, ProcessToken), TerminalError> {
     let unsupported = params.parent.is_some()
         || params.child_policy.is_some()
         || params.first_message.is_some()
@@ -44,7 +50,9 @@ fn launch(params: TerminalRunParams) -> Result<Launch, TerminalError> {
         Some(cwd) => PathBuf::from(cwd),
         None => std::env::current_dir().map_err(TerminalError::Cwd)?,
     };
-    let env: BTreeMap<String, String> = params.env.unwrap_or_default();
+    let mut env: BTreeMap<String, String> = params.env.unwrap_or_default();
+    let token = ProcessToken::new(uuid::Uuid::new_v4().simple().to_string());
+    env.insert(PROCESS_TOKEN_VAR.to_owned(), token.as_str().to_owned());
     let mut launch = Launch::new(Program::new(argv, cwd, env)?, params.geometry)?;
     launch.name = params
         .name
@@ -52,7 +60,7 @@ fn launch(params: TerminalRunParams) -> Result<Launch, TerminalError> {
         .transpose()?;
     launch.labels = params.labels.unwrap_or_default();
     launch.keep = params.keep.unwrap_or(false);
-    Ok(launch)
+    Ok((launch, token))
 }
 
 impl Runtime {
@@ -78,7 +86,7 @@ impl Runtime {
     ) -> Result<Value, BoundaryError> {
         let op_id: OpId = params.op_id.clone();
         let grid = params.geometry;
-        let launch = launch(params).map_err(|error| terminal_refusal(&error))?;
+        let (launch, token) = launch(params).map_err(|error| terminal_refusal(&error))?;
         let name = launch.name.as_ref().map(|name| name.as_str().to_owned());
         let record =
             self.lifecycle(|terminals| terminals.run(Call::new(session, op_id), launch))?;
@@ -96,6 +104,13 @@ impl Runtime {
                 break;
             }
             record = self.lifecycle(|terminals| terminals.get(session, id))?;
+        }
+        if let Some(process) = record.lifecycle.process() {
+            let owner = ProcessOwner::new(id, Incarnation::new(process.generation().get()));
+            self.status
+                .tokens()
+                .bind(&token, owner)
+                .map_err(|error| refusal(error.kind(), error.hint()))?;
         }
         let spawn = match record.spawn {
             LaunchState::Spawned => "spawned",

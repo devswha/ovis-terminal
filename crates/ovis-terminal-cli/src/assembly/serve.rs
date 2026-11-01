@@ -7,7 +7,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use ovis_terminal_protocol::domain::recovery::CrashRecovery;
 use ovis_terminal_protocol::schema::limits::{Limits, TransportKind};
 use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::listen::{
@@ -26,6 +25,7 @@ use super::boot::{LeaseLog, boot};
 use super::directory::Directory;
 use super::handler::{Assembled, Served};
 use super::lifetime::Lifetime;
+use super::recovery::Started;
 use super::restart::StopSignal;
 use super::{AssemblyError, ServePlan};
 
@@ -91,7 +91,7 @@ async fn stopped(stdin_lifetime: bool, stop: StopSignal) -> Result<(), AssemblyE
 fn ready(
     socket: &std::path::Path,
     bearers: &super::boot::Bearers,
-    (recovery, websocket): (Option<&CrashRecovery>, Option<&WsServerHandle>),
+    (started, websocket): (&Started, Option<&WsServerHandle>),
 ) -> Result<Value, AssemblyError> {
     let mut ready = json!({
         "socket": socket,
@@ -100,10 +100,15 @@ fn ready(
         "writer": bearers.writer,
     });
     if let Value::Object(fields) = &mut ready {
-        if let Some(report) = recovery {
+        if let Some(report) = &started.recovery {
             let report = serde_json::to_value(report)
                 .map_err(AssemblyError::start("encode the recovery report"))?;
             fields.insert("recovery".to_owned(), report);
+        }
+        if let Some(warning) = &started.warning {
+            let warning = serde_json::to_value(warning)
+                .map_err(AssemblyError::start("encode the start-up warning"))?;
+            fields.insert("warnings".to_owned(), json!([warning]));
         }
         if let Some(listener) = websocket {
             fields.insert(
@@ -124,6 +129,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         super::recovery::recover_boot(&state, &booted.control, (&booted.boot, booted.inherited))
             .await?;
     let directory = Arc::new(Directory::new(booted.identity.machine_id()));
+    directory.recorded(&booted.recorded);
     let lane = AttachLane::new(Arc::clone(&directory));
     let limits = StreamLimits::advertised(&Limits::v1());
     let backlog = Arc::new(SessionBacklog::new(SESSION_BACKLOG_BYTES));
@@ -143,6 +149,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         launches: BTreeMap::new(),
         created: BTreeMap::new(),
         started: Instant::now(),
+        status: Arc::clone(&booted.status),
     };
     let (actor, thread) = Actor::spawn(runtime)?;
     let (dispatch, dispatch_log) = super::lanes::host(&super::lanes::Hosting {
@@ -152,6 +159,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         directory: Arc::clone(&directory),
         actor: actor.clone(),
         control,
+        status: Arc::clone(&booted.status),
     })?;
     let stop = StopSignal::default();
     let dispatch = Arc::new(dispatch);
@@ -193,7 +201,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
     announce(&ready(
         &socket,
         &booted.bearers,
-        (recovery.as_ref(), websocket.as_ref()),
+        (&recovery, websocket.as_ref()),
     )?)?;
     let waited = stopped(plan.stdin_lifetime, stop).await;
     let lifetime = Lifetime {

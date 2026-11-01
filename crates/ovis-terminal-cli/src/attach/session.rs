@@ -13,6 +13,9 @@ use super::open::{geometry_lease, open};
 use super::tty::{self, RawMode, keyboard, typed_or_never};
 use super::{AttachError, AttachPlan};
 
+#[cfg(test)]
+mod tests;
+
 /// The detach key: Ctrl-\ (FS, 0x1c), read as a byte while the terminal is raw.
 const DETACH_KEY: u8 = 0x1c;
 /// Bound on waiting for the stream's CLOSE after asking to detach.
@@ -119,7 +122,8 @@ impl Attached {
                     OpenEnum::Known(ControlKind::InputRevoked) => self.input_ready = false,
                     OpenEnum::Known(ControlKind::Close) => {
                         self.input_ready = false;
-                        let close = serde_json::to_value(&control.close).unwrap_or(Value::Null);
+                        let close = serde_json::to_value(&control.close)
+                            .map_err(unreadable("attach.control close"))?;
                         return Ok(Some(
                             json!({"closed": {"stream_id": self.stream, "close": close}}),
                         ));

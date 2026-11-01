@@ -8,7 +8,9 @@ use std::path::Path;
 use std::sync::Arc;
 
 use ovis_terminal_core::events::Coordinator;
-use ovis_terminal_core::recovery::{GroupId, Recorded, RecoveryPlan, read_os_boot, recover};
+use ovis_terminal_core::recovery::{
+    GroupId, OsBootId, Recorded, RecoveryError, RecoveryPlan, read_os_boot, recover,
+};
 use ovis_terminal_core::registry::{RuntimeIdentity, TerminalState};
 use ovis_terminal_core::restart::{Boot, Control};
 use ovis_terminal_core::terminals::{LifecycleEvent, Producer, Record};
@@ -17,6 +19,7 @@ use ovis_terminal_protocol::domain::recovery::CrashRecovery;
 use ovis_terminal_protocol::schema::ids::{RuntimeLifetimeId, ServerBootId};
 use ovis_terminal_store::{Store, StoreOptions};
 use ovis_terminal_vt::{Geometry, HistoryLimit, VtConfig};
+use serde::Serialize;
 
 use super::AssemblyError;
 
@@ -93,7 +96,7 @@ pub(super) async fn recover_boot(
     state: &Path,
     control: &Arc<Control>,
     (boot, inherited): (&Boot, Vec<Recorded>),
-) -> Result<Option<CrashRecovery>, AssemblyError> {
+) -> Result<Started, AssemblyError> {
     let (state, control) = (state.to_path_buf(), Arc::clone(control));
     let inherited = if matches!(boot, Boot::Unplanned) {
         inherited
@@ -109,19 +112,62 @@ fn recover_blocking(
     state: &Path,
     control: &Control,
     inherited: &[Recorded],
-) -> Result<Option<CrashRecovery>, AssemblyError> {
+) -> Result<Started, AssemblyError> {
     std::fs::create_dir_all(state.join("recovery"))
         .map_err(AssemblyError::start("create the recovery state"))?;
     let plan = plan(state, control)?;
     if !inherited.is_empty() {
         let recovered = recover(&plan, &[], inherited)
             .map_err(AssemblyError::start("recover the previous boot"))?;
-        return Ok(Some(recovered.report));
+        return Ok(Started {
+            recovery: Some(recovered.report),
+            warning: None,
+        });
     }
-    if let Ok(current) = read_os_boot() {
-        plan.stamp()
-            .record(&current)
-            .map_err(AssemblyError::start("stamp the operating-system boot"))?;
-    }
-    Ok(None)
+    let warning = stamp_boot(&plan, read_os_boot())?;
+    Ok(Started {
+        recovery: None,
+        warning,
+    })
 }
+
+/// A start-up fact the server could not establish, reported on the ready line.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub(super) struct StartWarning {
+    stage: &'static str,
+    kind: &'static str,
+    hint: &'static str,
+}
+
+/// What start-up recovery found: the crash report, or a warning when the boot could not
+/// be stamped.
+#[derive(Debug, Default)]
+pub(super) struct Started {
+    pub(super) recovery: Option<CrashRecovery>,
+    pub(super) warning: Option<StartWarning>,
+}
+
+/// Stamps `current` as the boot this server runs under; an unreadable operating-system
+/// boot is a typed warning, since the next unplanned boot then cannot tell a core crash
+/// from a host reboot.
+fn stamp_boot(
+    plan: &RecoveryPlan,
+    current: Result<OsBootId, RecoveryError>,
+) -> Result<Option<StartWarning>, AssemblyError> {
+    match current {
+        Ok(current) => {
+            plan.stamp()
+                .record(&current)
+                .map_err(AssemblyError::start("stamp the operating-system boot"))?;
+            Ok(None)
+        }
+        Err(error) => Ok(Some(StartWarning {
+            stage: "stamp the operating-system boot",
+            kind: error.kind(),
+            hint: error.hint(),
+        })),
+    }
+}
+
+#[cfg(test)]
+mod tests;

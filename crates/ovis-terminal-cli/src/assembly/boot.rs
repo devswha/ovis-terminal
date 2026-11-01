@@ -87,6 +87,8 @@ pub(super) struct Booted {
     pub(super) control: Arc<Control>,
     pub(super) boot: Boot,
     pub(super) inherited: Vec<ovis_terminal_core::recovery::Recorded>,
+    pub(super) recorded: Vec<ovis_terminal_core::terminals::Record>,
+    pub(super) status: Arc<ovis_terminal_agent::status::StatusService>,
     pub(super) leases: Arc<LeaseLog>,
     pub(super) geometry: GeometryLog,
 }
@@ -186,6 +188,9 @@ fn boot_blocking(state: &Path) -> Result<Booted, AssemblyError> {
     let identity = control
         .identity()
         .map_err(AssemblyError::start("read the boot identity"))?;
+    let recorded = control
+        .with_terminals(|terminals, session| terminals.list(session))
+        .map_err(AssemblyError::start("read the recorded terminals"))?;
     let leases = Arc::new(Coordinator::new(
         store(state, "leases.db")?,
         identity,
@@ -200,6 +205,10 @@ fn boot_blocking(state: &Path) -> Result<Booted, AssemblyError> {
         control: Arc::new(control),
         boot,
         inherited,
+        recorded,
+        status: Arc::new(ovis_terminal_agent::status::StatusService::new(
+            identity.runtime_id(),
+        )),
         leases,
         geometry,
     })

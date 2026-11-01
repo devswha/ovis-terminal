@@ -75,7 +75,7 @@ pub(super) fn register(
     log: &DispatchLog,
 ) -> Result<(), AssemblyError> {
     let runtime = hosting.identity.runtime_id();
-    let status = Arc::new(StatusService::new(runtime));
+    let status = Arc::clone(&hosting.status);
     status_routes(dispatch, hosting, &status)?;
     let prompts = Arc::new(PromptService::new(runtime, Arc::clone(&status)));
     log.read_view(|snapshot| prompts.recover(snapshot))
