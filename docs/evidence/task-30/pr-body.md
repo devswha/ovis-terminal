@@ -117,7 +117,7 @@ The VT engine (`ovis-terminal-vt`) already computes checkpoint `Fidelity` and `I
 
 ### Tests and gates (literal commands, exit codes)
 
-- `cargo nextest run -p ovis-terminal-conformance`: exit 0, 33 tests passed, including `attach_input::happy`, `attach_input::failure` and the suite inventory with the three declarations (`nextest.log`). The literal `-p conformance` exits 101 (`nextest-literal-p-conformance.log`); see the amendment.
+- `cargo nextest run -p ovis-terminal-conformance`: exit 0, 34 tests passed (including the `$repeat:` labels test), among them `attach_input::happy`, `attach_input::failure` and the suite inventory with the three declarations (`nextest.log`). The literal `-p conformance` exits 101 (`nextest-literal-p-conformance.log`); see the amendment.
 - `cargo clippy -p ovis-terminal-conformance -p ovis-terminal-cli -p ovis-terminal-protocol -p ovis-terminal-server --all-targets -- -D warnings`: exit 0 (`clippy.log`).
 - `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh`: exit 0, `check.sh: all steps passed` (workspace fmt/clippy/nextest/doc tests, hygiene, source-check, evidence-audit with 0 findings) (`check.log`).
 - Windows: `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings`: both exit 0 (WINCHECK_EXIT=0, WINCLIPPY_EXIT=0) (`windows.log`).
@@ -158,12 +158,21 @@ The block's acceptance commands name `-p conformance`, but the package is `ovis-
 - `conformance/scenarios/declared.json`: three entries for the product-limited scenarios.
 - `conformance/src/runner_tests.rs`, `runner_tests/attach_input.rs` and `runner_tests/attach_input/oracle.rs` (new): the named tests and the VT oracle. `runner_tests/suite.rs`: the lane's own `ATTACH_INPUT` registration.
 - `conformance/src/scenario/serve.rs`, `engine/steps.rs`, `engine/steps/serve.rs`: `qa_output_ring_bytes` on the `serve` step.
+- `conformance/src/scenario/labels.rs`: the `$repeat:<count>:<text>` placeholder. It expands to `text` repeated `count` times, bounded at 128 MiB; a malformed or oversized spec stays literal. It has the unit test `repeat_placeholders_expand_and_malformed_ones_stay_as_written`.
 - `crates/ovis-terminal-cli/src/invocation/{args,plan}.rs`, `src/assembly.rs`, `src/assembly/{actor,serve,live}.rs`: the QA ring seam; `live.rs` also holds the N3 unit tests.
 - `crates/ovis-terminal-cli/src/assembly/reads.rs`: the floor resume (finding 3). `crates/ovis-terminal-cli/tests/assembly/pending.rs`: seam refusal.
 - `crates/ovis-terminal-protocol/src/schema/records{.rs,/lease.rs,/attach.rs}`, `crates/ovis-terminal-server/src/streams/records.rs`, `schema/ovis-terminal.openrpc.json`, `packages/client-ts/src/generated/`, `conformance/ideal-map.json`: the `checkpoint_inexact` contract change.
 - `probes/platform-qa/stress/attach-input.{json,sh}`: this lane's macOS stress lane, which keeps evidence as `*.evidence.log`.
 - `docs/evidence/task-30/`.
 - Merges of `origin/integration`: 1abcced (T70) and 60076f7 (F2a), authorized.
+
+## Landing
+
+Land with `git merge --squash` onto integration; the orchestrator deletes the lane branch at teardown.
+
+The lane branch history (commits bee84e2..dc685a1) carries two oversized scenario blobs that this head no longer has: `conformance/scenarios/attach-input/adversarial.json` (19 MB) and `capacity/session-budget.json` (69 MB). They held multi-megabyte input payloads as literal text. History is not rewritten (no force-push). The squash keeps the blobs out of integration's history.
+
+The head stores payloads as `$repeat:<count>:<text>` placeholders: the two files are now 64 KB and 32 KB, and no scenario file exceeds 200 KB.
 
 ## Risks
 
