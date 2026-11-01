@@ -14,7 +14,7 @@ use ovis_terminal_protocol::schema::openrpc_document;
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use serde_json::{Value, json};
 
-use super::{MUTATION_ROLES, admit_launch, required_action};
+use super::{CONTROL_METHODS, MUTATION_ROLES, admit_launch, is_control, required_action};
 use crate::dispatch::Method;
 use crate::dispatch::lanes::machine_identity::{MachineAdd, MachineLane};
 
@@ -24,14 +24,31 @@ fn field<'a>(value: &'a Value, pointer: &str) -> &'a Value {
     value.pointer(pointer).unwrap_or(&Value::Null)
 }
 
-fn published_mutations() -> Result<BTreeSet<String>, Box<dyn std::error::Error>> {
+fn published(effect: &str) -> Result<BTreeSet<String>, Box<dyn std::error::Error>> {
     let document = openrpc_document()?;
     let methods = field(&document, "/methods").as_array().ok_or("methods")?;
     Ok(methods
         .iter()
-        .filter(|method| field(method, "/x-effect") == "mutation")
+        .filter(|method| field(method, "/x-effect") == effect)
         .filter_map(|method| field(method, "/name").as_str().map(str::to_owned))
         .collect())
+}
+
+fn published_mutations() -> Result<BTreeSet<String>, Box<dyn std::error::Error>> {
+    published("mutation")
+}
+
+#[test]
+fn the_control_list_names_exactly_the_published_control_methods() -> TestResult {
+    let listed: BTreeSet<String> = CONTROL_METHODS
+        .iter()
+        .map(|name| (*name).to_owned())
+        .collect();
+
+    assert_eq!(listed, published("control")?);
+    assert!(CONTROL_METHODS.iter().all(|method| is_control(method)));
+    assert!(!is_control("terminal.get") && !is_control("attach.open"));
+    Ok(())
 }
 
 #[test]

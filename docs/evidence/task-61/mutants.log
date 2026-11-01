@@ -1,0 +1,45 @@
+## mutant 1: probes/quality/rules.rs
+- Expr::Path(_) | Expr::Lit(_) => true,
++ Expr::Path(_) | Expr::Lit(_) | Expr::Call(_) => true,
+$ cargo nextest run -p ovis-terminal-probes --lib -E 'test(rules::)'
+[exit 0]
+        FAIL [   0.008s] (4/6) ovis-terminal-probes quality::rules::tests::comparing_two_evaluations_of_a_call_is_a_real_check
+     Summary [   0.010s] 6 tests run: 5 passed, 1 failed, 8 skipped
+        FAIL [   0.008s] (4/6) ovis-terminal-probes quality::rules::tests::comparing_two_evaluations_of_a_call_is_a_real_check
+
+
+
+## mutant 2: probes/quality/evidence.rs
+- if check == "binary/exit" && !exits.contains(actual) {
++ if check == "binary/exit" && exits.is_empty() && !exits.contains(actual) {
+$ cargo nextest run -p ovis-terminal-probes --test quality_gates
+[exit 0]
+        FAIL [   0.027s] (4/4) ovis-terminal-probes::quality_gates every_seeded_defect_fails_its_gate_with_exit_one_and_its_rule
+     Summary [   0.028s] 4 tests run: 3 passed, 1 failed, 0 skipped
+        FAIL [   0.027s] (4/4) ovis-terminal-probes::quality_gates every_seeded_defect_fails_its_gate_with_exit_one_and_its_rule
+
+
+
+## mutant 3: probes/quality/scan.rs
+- if pure_loc > workspace_hygiene::MAX_PURE_LOC {
++ if pure_loc > workspace_hygiene::MAX_PURE_LOC.saturating_add(1) {
+$ cargo nextest run -p ovis-terminal-probes --test quality_gates
+[exit 0]
+        FAIL [   0.009s] (2/4) ovis-terminal-probes::quality_gates limits_may_be_tightened_but_never_loosened
+     Summary [   0.032s] 4 tests run: 3 passed, 1 failed, 0 skipped
+        FAIL [   0.009s] (2/4) ovis-terminal-probes::quality_gates limits_may_be_tightened_but_never_loosened
+
+
+
+## mutant 4: crates/ovis-terminal-server/src/dispatch/remote/route.rs
+- } else if is_control(method) {
+        Action::Subscribe
++ } else if is_control(method) && method.starts_with("attach.") {
+        Action::Subscribe
+$ cargo nextest run -p ovis-terminal-server --lib -E 'test(route::)'
+[exit 0]
+        FAIL [   0.014s] (1/1) ovis-terminal-server dispatch::remote::route::tests::a_remote_control_call_needs_the_observing_permission_not_a_read
+     Summary [   0.015s] 1 test run: 0 passed, 1 failed, 130 skipped
+        FAIL [   0.014s] (1/1) ovis-terminal-server dispatch::remote::route::tests::a_remote_control_call_needs_the_observing_permission_not_a_read
+
+

@@ -20,4 +20,4 @@ pub use audit::AuditTrail;
 pub use gate::BoundaryPolicy;
 pub use history::AgentHistory;
 pub use launch::{admit_launch, violation};
-pub use matrix::{MUTATION_ROLES, required_action};
+pub use matrix::{CONTROL_METHODS, MUTATION_ROLES, is_control, required_action};

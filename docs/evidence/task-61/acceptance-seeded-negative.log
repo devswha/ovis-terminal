@@ -1,0 +1,58 @@
+$ cargo run --locked --manifest-path probes/Cargo.toml --bin source-check -- --fixture oversized-file --max-pure-loc 250 --max-params 3
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running `/dev/shm/ovt-target-lane-t61/debug/source-check --fixture oversized-file --max-pure-loc 250 --max-params 3`
+{
+  "argv": [
+    "source-check",
+    "--fixture",
+    "oversized-file",
+    "--max-pure-loc",
+    "250",
+    "--max-params",
+    "3"
+  ],
+  "exit": 1,
+  "finding_count": "1",
+  "findings": [
+    {
+      "detail": "251 pure lines of code (limit 250)",
+      "location": "seed/oversized-file.rs:1",
+      "rule": "max-pure-loc"
+    }
+  ],
+  "fixture": {
+    "name": "oversized-file",
+    "path": "seed/oversized-file.rs"
+  },
+  "gate": "source-check",
+  "hint": "fix each finding structurally; limits are never raised and lints never silenced",
+  "host": {
+    "arch": "x86_64",
+    "os": "linux"
+  },
+  "kind": "quality_violation",
+  "limits": {
+    "max_params": "3",
+    "max_pure_loc": "250"
+  },
+  "rules": {
+    "cargo": [
+      "workspace-lints",
+      "member-lints",
+      "toolchain-pinned",
+      "cargo-deny-config",
+      "clippy-thresholds"
+    ],
+    "source": [
+      "syntax",
+      "max-pure-loc",
+      "max-parameters",
+      "dropped-result",
+      "allow-attribute",
+      "numeric-cast",
+      "tautological-assert"
+    ]
+  },
+  "verdict": "fail"
+}
+exit=1

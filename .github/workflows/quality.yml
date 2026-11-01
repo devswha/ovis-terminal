@@ -1,0 +1,82 @@
+name: quality
+
+# Quality gates (plan todo 61): source rules and the violations checklist, every gate's
+# seeded negative self-test, the matrices against the ledgers and the schema, and the
+# quality/gates scenario whose evidence is itself audited.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  gates:
+    name: quality gates (${{ matrix.image }})
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.image }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - name: source-check (250 pure LOC, 3 parameters, strict lints, checklist)
+        run: >-
+          cargo run --locked --manifest-path probes/Cargo.toml --bin source-check --
+          --roots crates packages/client-ts conformance bench probes --max-pure-loc 250 --max-params 3
+          --violations docs/research/violations.md --checklist docs/quality-checklist.md
+          --evidence quality-evidence/source-check.json
+      - name: every seeded defect fails its gate with exit 1
+        shell: bash
+        run: |
+          set -uo pipefail
+          expect() {
+            local want="$1"; shift
+            cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin "$@" > /dev/null
+            local got=$?
+            echo "$* -> exit $got (want $want)"
+            test "$got" -eq "$want"
+          }
+          status=0
+          for seed in oversized-file fourth-parameter dropped-result allow-attribute numeric-cast tautological-assert checklist-missing-rule; do
+            expect 1 source-check -- --fixture "$seed" || status=1
+          done
+          for seed in missing-receipt-and-pass-banner prose-pass-banner fake-exit-zero forged-assertion skipped-as-pass; do
+            expect 1 evidence-audit -- --fixture "$seed" || status=1
+          done
+          for seed in missing-qa unresolved-reference uncovered-gap overlapping-writes; do
+            expect 1 plan-audit -- --fixture "$seed" || status=1
+          done
+          for seed in unproved-ideal forged-proof; do
+            expect 1 ideal-audit -- --fixture "$seed" || status=1
+          done
+          expect 0 source-check -- --fixture clean-source || status=1
+          expect 0 evidence-audit -- --fixture clean-evidence || status=1
+          expect 0 plan-audit -- --fixture clean-plan || status=1
+          expect 0 ideal-audit -- --fixture clean-proof || status=1
+          exit "$status"
+      - name: matrices cover every ledger row and the schema keeps their contract
+        run: cargo run --locked --manifest-path probes/Cargo.toml --bin quality-matrix -- --mode verify
+      - name: quality/gates scenario, then audit its own evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+          cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario quality/gates --isolated --case all --evidence quality-evidence/task-61.json
+          cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario quality/gates --isolated --case failure --inject '{"fixture":"missing-receipt-and-pass-banner"}' --evidence quality-evidence/task-61.json --append
+          cargo run --locked --manifest-path probes/Cargo.toml --bin evidence-audit -- --input quality-evidence/task-61.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-evidence-${{ matrix.image }}-${{ github.run_id }}
+          path: quality-evidence/
+          if-no-files-found: warn

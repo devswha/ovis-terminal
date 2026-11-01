@@ -21,6 +21,7 @@ const terminal1 = { terminal_id: asId<TerminalId>("terminal:1") };
 async function withFixture(body: (fixture: Fixture, connect: (framed: boolean) => Promise<Client>) => Promise<void>): Promise<Record<string, unknown>> {
   const fixture = await Fixture.start();
   const clients: Client[] = [];
+  let report: Record<string, unknown> = {};
   try {
     await body(fixture, async (framed) => {
       const client = await Client.connect({ socketPath: fixture.ready.socket, credential: fixture.ready.bearer, framed });
@@ -29,8 +30,9 @@ async function withFixture(body: (fixture: Fixture, connect: (framed: boolean) =
     });
   } finally {
     for (const client of clients) client.close();
+    report = { ...(await fixture.stop()) };
   }
-  return { ...(await fixture.stop()) };
+  return report;
 }
 
 /** One framed connection carries concurrent correlated calls; u64 values stay exact. */

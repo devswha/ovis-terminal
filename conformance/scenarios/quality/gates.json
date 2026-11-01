@@ -1,0 +1,56 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "quality/gates",
+  "title": "Quality gates reject seeded defects and unsupported pass claims, accept clean inputs, and bind the runtime contract to the binary",
+  "todo": 61,
+  "closes": ["GAP-014", "GAP-139", "GAP-140", "GAP-142", "GAP-144"],
+  "delivers": ["IDEAL-008", "IDEAL-013", "IDEAL-107", "IDEAL-112", "IDEAL-113", "IDEAL-115", "IDEAL-117"],
+  "excludes": ["EXCL-006", "EXCL-020", "EXCL-021"],
+  "platforms": ["linux", "macos", "windows"],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "The binary's OpenRPC output equals the checked-in schema and an unknown flag is a typed usage error before any connection. source-check passes the repository (250 pure LOC, 3 parameters, strict Cargo lints, fresh 64-rule checklist) and quality-matrix verifies the IDEAL map against the ledgers and the schema. Each clean seed passes; the oversized file, fourth parameter, dropped Result, missing QA scenario and fake exit-zero evidence are each rejected with their rule.",
+      "steps": [
+        {"run": {"args": ["schema", "openrpc"], "exit": 0, "stdout": {"": {"$equals_file": "schema/ovis-terminal.openrpc.json"}}}},
+        {"run": {"args": ["--json", "schema", "openrpc", "--target", "focused"], "exit": 2, "stdout": {"": null}, "stderr": {"/error/kind": "usage", "/error/origin": "cli", "/error/exit_code": 2, "/error/hint": {"$present": true}}}},
+        {"gates": {"planned": [
+          {"request": {"repository": "source-check"}, "tool": "source-check", "args": ["--repo", "$repo", "--roots", "crates", "packages/client-ts", "conformance", "bench", "probes", "--max-pure-loc", "250", "--max-params", "3", "--violations", "docs/research/violations.md", "--checklist", "docs/quality-checklist.md"], "exit": 0,
+            "report": {"/verdict": "pass", "/kind": null, "/finding_count": "0", "/checklist/rule_ids": "64", "/checklist/v_rows": "5174", "/limits": {"max_pure_loc": "250", "max_params": "3"}, "/sources/files_checked": {"$at_least": "1000"}}},
+          {"request": {"repository": "quality-matrix"}, "tool": "quality-matrix", "args": ["--mode", "verify", "--ideals", "$repo/docs/design/ideal-state.md", "--gaps", "$repo/docs/design/gap-list.md", "--schema", "$repo/schema/ovis-terminal.openrpc.json", "--traceability", "$repo/conformance/traceability.json", "--ideal-map", "$repo/conformance/ideal-map.json"], "exit": 0,
+            "report": {"/verdict": "pass", "/finding_count": "0", "/ideals": {"$at_least": "117"}, "/gaps": {"$at_least": "150"}, "/exclusions": {"$at_least": "27"}, "/methods": {"$at_least": "1"}}},
+          {"request": {"fixture": "clean-source"}, "tool": "source-check", "exit": 0, "report": {"/verdict": "pass", "/finding_count": "0"}},
+          {"request": {"fixture": "oversized-file"}, "tool": "source-check", "exit": 1, "report": {"/kind": "quality_violation", "/finding_count": "1", "/findings/0/rule": "max-pure-loc", "/findings/0/location": "seed/oversized-file.rs:1"}},
+          {"request": {"fixture": "fourth-parameter"}, "tool": "source-check", "exit": 1, "report": {"/kind": "quality_violation", "/finding_count": "1", "/findings/0/rule": "max-parameters"}},
+          {"request": {"fixture": "dropped-result"}, "tool": "source-check", "exit": 1, "report": {"/kind": "quality_violation", "/finding_count": "1", "/findings/0/rule": "dropped-result", "/findings/0/location": "seed/dropped-result.rs:2"}},
+          {"request": {"fixture": "clean-plan"}, "tool": "plan-audit", "exit": 0, "report": {"/verdict": "pass", "/uncovered_ideals": [], "/uncovered_gaps": [], "/excluded_features": [], "/unresolved_refs": [], "/write_conflicts": [], "/missing_scenarios": []}},
+          {"request": {"fixture": "missing-qa"}, "tool": "plan-audit", "exit": 1, "report": {"/kind": "plan_invalid", "/finding_count": "1", "/findings/0/rule": "missing-scenario", "/missing_scenarios": ["todo 2 (line 11)"]}},
+          {"request": {"fixture": "clean-evidence"}, "tool": "evidence-audit", "exit": 0, "report": {"/verdict": "pass", "/runs": "1"}},
+          {"request": {"fixture": "fake-exit-zero"}, "tool": "evidence-audit", "exit": 1, "report": {"/kind": "evidence_invalid", "/finding_count": "1", "/findings/0/rule": "exit-forged"}},
+          {"request": {"fixture": "clean-proof"}, "tool": "ideal-audit", "exit": 0, "report": {"/verdict": "pass", "/proved": "2", "/missing": [], "/shortfalls": []}}
+        ]}}
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "Every seeded defect fails its gate with exit 1 and a typed kind: evidence with a PASS banner and no receipts, a prose banner, a forged exit or assertion and a skipped case claimed as a pass are evidence_invalid; an #[allow], an `as` cast, a self-comparing assertion and an undisposed Rule totals id are quality_violation; an unresolved reference, an uncovered GAP and overlapping same-wave writes are plan_invalid; unproved and forged IDEAL proofs are ideal_unproved. With --inject only the named fixture runs.",
+      "steps": [
+        {"gates": {"planned": [
+          {"request": {"fixture": "missing-receipt-and-pass-banner"}, "tool": "evidence-audit", "exit": 1, "report": {"/verdict": "fail", "/kind": "evidence_invalid", "/finding_count": "2", "/findings/0/rule": "binary-hash", "/findings/1/rule": "receipt-missing"}},
+          {"request": {"fixture": "prose-pass-banner"}, "tool": "evidence-audit", "exit": 1, "report": {"/kind": "evidence_invalid", "/finding_count": "1", "/findings/0/rule": "manifest-schema"}},
+          {"request": {"fixture": "forged-assertion"}, "tool": "evidence-audit", "exit": 1, "report": {"/kind": "evidence_invalid", "/finding_count": "1", "/findings/0/rule": "assertion-forged"}},
+          {"request": {"fixture": "skipped-as-pass"}, "tool": "evidence-audit", "exit": 1, "report": {"/kind": "evidence_invalid", "/finding_count": "1", "/findings/0/rule": "pass-claim-unsupported"}},
+          {"request": {"fixture": "allow-attribute"}, "tool": "source-check", "exit": 1, "report": {"/kind": "quality_violation", "/findings/0/rule": "allow-attribute"}},
+          {"request": {"fixture": "numeric-cast"}, "tool": "source-check", "exit": 1, "report": {"/kind": "quality_violation", "/findings/0/rule": "numeric-cast"}},
+          {"request": {"fixture": "tautological-assert"}, "tool": "source-check", "exit": 1, "report": {"/kind": "quality_violation", "/findings/0/rule": "tautological-assert"}},
+          {"request": {"fixture": "checklist-missing-rule"}, "tool": "source-check", "exit": 1, "report": {"/kind": "quality_violation", "/findings/0/rule": "checklist-disposition", "/findings/0/location": "UNLISTED-RULE"}},
+          {"request": {"fixture": "unresolved-reference"}, "tool": "plan-audit", "exit": 1, "report": {"/kind": "plan_invalid", "/unresolved_refs": ["todo 2: todo 9 does not exist", "todo 2: IDEAL-009 is not a ledger row"]}},
+          {"request": {"fixture": "uncovered-gap"}, "tool": "plan-audit", "exit": 1, "report": {"/kind": "plan_invalid", "/uncovered_gaps": ["GAP-002"]}},
+          {"request": {"fixture": "overlapping-writes"}, "tool": "plan-audit", "exit": 1, "report": {"/kind": "plan_invalid", "/findings/0/rule": "write-conflict"}},
+          {"request": {"fixture": "unproved-ideal"}, "tool": "ideal-audit", "exit": 1, "report": {"/kind": "ideal_unproved", "/proved": "1", "/missing": ["IDEAL-002"]}},
+          {"request": {"fixture": "forged-proof"}, "tool": "ideal-audit", "exit": 1, "report": {"/kind": "ideal_unproved", "/findings/0/rule": "evidence-invalid", "/missing": ["IDEAL-002"]}}
+        ]}}
+      ]
+    }
+  ]
+}
