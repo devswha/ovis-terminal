@@ -136,7 +136,7 @@ impl ExitStatus {
             ],
             Self::NeedsTarget => &["needs_target", "ambiguous_target"],
             Self::Blocked => &["blocked"],
-            Self::Cancelled => &["cancelled"],
+            Self::Cancelled => &["cancelled", "interrupted"],
             Self::Conflict => &[
                 "conflict",
                 "op_reused",
@@ -150,7 +150,7 @@ impl ExitStatus {
                 "foreign_registration",
                 "identity_mismatch",
                 "service_exists",
-                "lease_held",
+                "lease_epoch_mismatch",
             ],
             Self::Forbidden => &[
                 "forbidden",

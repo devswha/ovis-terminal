@@ -17,6 +17,7 @@ const EXECUTABLE: &[&str] = &[
     "agent/status.json",
     "agent/tree.json",
     "all/all.json",
+    "cli/interactive-attach.json",
     "client/package.json",
     "observability/health.json",
     "part-a/task-21.json",

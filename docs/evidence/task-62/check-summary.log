@@ -1,0 +1,13 @@
+# merge of origin/integration 26278c1 (first attempt: rustc EDQUOT on /dev/shm, os error 122; retried with CARGO_INCREMENTAL=0 after freeing this lane's incremental cache)
+==> cargo +nightly fmt --all -- --check
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+     Summary [ 138.255s] 1256 tests run: 1256 passed (3 slow), 1 skipped
+==> cargo test --doc --workspace --all-features --locked
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 1242 file(s) checked
+==> bash scripts/hygiene/manifests.sh
+manifests.sh: 16 member manifest(s) checked
+==> bash scripts/hygiene/json.sh
+json.sh: 158 JSON file(s) checked
+check.sh: all steps passed

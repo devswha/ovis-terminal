@@ -8,6 +8,7 @@ use super::kinds::ErrorKind;
 use crate::domain::conversation_records::Unavailable;
 use crate::domain::session_binding::HistoryHead;
 use crate::schema::ids::PromptId;
+use crate::schema::records::LeaseRecord;
 use crate::schema::scalar::{
     DurationMs, EventSeq, PrincipalEpoch, QueuePosition, RecordVersion, ReportSeq,
 };
@@ -71,6 +72,9 @@ pub struct ErrorData {
     /// Last remote sequence mirrored from a machine, present on a refusal of a call to it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_seen_seq: Option<EventSeq>,
+    /// The lease holding the slot now, present on a `lease_epoch_mismatch` refusal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current: Option<Box<LeaseRecord>>,
 }
 
 impl ErrorData {
@@ -95,6 +99,7 @@ impl ErrorData {
             unavailable: None,
             principal_epoch: None,
             last_seen_seq: None,
+            current: None,
         }
     }
 
