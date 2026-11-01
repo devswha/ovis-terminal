@@ -9,6 +9,7 @@ use ovis_terminal_authz::Session;
 use ovis_terminal_core::events::{EventData, SnapshotProducer};
 use ovis_terminal_core::ops::{OperationEvent, OperationSnapshot};
 use ovis_terminal_protocol::schema::common::MachineRef;
+use ovis_terminal_protocol::schema::ids::MachineId;
 use ovis_terminal_protocol::schema::methods::machine::MachineAddParams;
 use ovis_terminal_remote::actors::{ActorError, Line};
 use ovis_terminal_remote::identity::{IdentityError, Trust, fresh_challenge};
@@ -20,6 +21,9 @@ use serde::de::DeserializeOwned;
 use crate::dispatch::lanes::machine_actor::MachineActorLane;
 use crate::dispatch::lanes::machine_identity::{MachineAdd, MachineLane};
 use crate::dispatch::{Access, Completed, DispatchError, Execution, Method};
+
+/// How long an added machine's actor may take to report the line it was handed.
+const ATTACH_BOUND: Duration = Duration::from_secs(10);
 
 /// `machine.add` whose proven machine gets an actor driving the link the add opened.
 #[derive(Debug)]
@@ -100,8 +104,8 @@ where
             .take_link(&MachineRef::MachineId(machine.clone()))?;
         if let Some(link) = link {
             self.actors.actors().add(record).map_err(actor_failure)?;
-            self.actors
-                .attach(&machine, (self.line)(link))
+            let handed = ((self.line)(link), ATTACH_BOUND);
+            attach_applied(&self.actors, &machine, handed)
                 .await
                 .map_err(|error| DispatchError::Domain {
                     kind: error.kind(),
@@ -185,7 +189,38 @@ where
     let trusted = trust
         .admit(answer, challenge)
         .map_err(ReconnectError::Identity)?;
-    lane.attach(trusted.machine_id(), to_line(link))
+    attach_applied(lane, trusted.machine_id(), (to_line(link), bound))
         .await
         .map_err(ReconnectError::Actor)
+}
+
+/// Hands `line` to `machine`'s actor and returns only once the actor reports the new line
+/// (its line epoch advanced) within `bound`; the lane's attach alone only queues it.
+async fn attach_applied<L, D, P>(
+    lane: &MachineActorLane<L, D, P>,
+    machine: &MachineId,
+    (handed, bound): (L, Duration),
+) -> Result<Replayed, OrphanError>
+where
+    L: Line,
+    D: EventData
+        + From<AgentStatusEvent>
+        + Clone
+        + Serialize
+        + DeserializeOwned
+        + Send
+        + Sync
+        + 'static,
+    P: SnapshotProducer + Send + Sync + 'static,
+{
+    let mut health = lane.actors().watch_health(machine)?;
+    let before = health.borrow().line_epoch.get();
+    let replayed = lane.attach(machine, handed).await?;
+    let taken = health.wait_for(|health| health.line_epoch.get() > before);
+    match tokio::time::timeout(bound, taken).await {
+        Ok(Ok(_)) => Ok(replayed),
+        Ok(Err(_)) | Err(_) => Err(OrphanError::Actor(ActorError::Stopped {
+            machine: machine.clone(),
+        })),
+    }
 }

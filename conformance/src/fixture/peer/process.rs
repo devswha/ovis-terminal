@@ -1,6 +1,7 @@
 //! One process of the second private runtime: this runner re-run as `fixture --peer`.
 //!
-//! Only the pid captured at its own spawn is ever signalled, after checking it is above 1.
+//! Only the pid captured at its own spawn is ever signalled, after checking it is above 1,
+//! and never a process group.
 
 use std::os::unix::fs::DirBuilderExt as _;
 use std::path::{Path, PathBuf};
@@ -8,6 +9,7 @@ use std::process::Stdio;
 use std::time::Duration;
 
 use ovis_terminal_protocol::errors::BoundaryError;
+use rustix::process::{Pid, Signal, WaitOptions, kill_process, waitpid};
 use serde::Deserialize;
 use tokio::io::{AsyncBufReadExt as _, BufReader, Lines};
 use tokio::process::{Child, ChildStdin, ChildStdout};
@@ -80,18 +82,36 @@ impl Process {
         })
     }
 
-    /// Sends `signal` (`STOP` or `CONT`) to this process only.
-    pub(super) fn signal(&self, signal: &str) -> Result<(), BoundaryError> {
-        let status = std::process::Command::new("/bin/kill")
-            .arg(format!("-{signal}"))
-            .arg(self.pid.to_string())
-            .status()
+    /// The pid captured at spawn; never 0 or 1, so a signal can only reach this child.
+    fn target(&self) -> Result<Pid, BoundaryError> {
+        i32::try_from(self.pid)
+            .ok()
+            .filter(|pid| *pid > 1)
+            .and_then(Pid::from_raw)
+            .ok_or_else(|| internal("the peer pid is not a signallable child"))
+    }
+
+    /// Stops this process and returns once the kernel reports it stopped: `kill` only
+    /// queues SIGSTOP, so a peer may otherwise still answer the next request.
+    pub(super) async fn pause(&self) -> Result<(), BoundaryError> {
+        let pid = self.target()?;
+        kill_process(pid, Signal::STOP).map_err(internal)?;
+        let stopped =
+            tokio::task::spawn_blocking(move || waitpid(Some(pid), WaitOptions::UNTRACED));
+        let reported = tokio::time::timeout(BOUND, stopped)
+            .await
+            .map_err(internal)?
+            .map_err(internal)?
             .map_err(internal)?;
-        if status.success() {
-            Ok(())
-        } else {
-            Err(internal(status))
+        match reported {
+            Some((_, status)) if status.stopped() => Ok(()),
+            _ => Err(internal("the peer did not stop")),
         }
+    }
+
+    /// Resumes this process after [`Process::pause`].
+    pub(super) fn resume(&self) -> Result<(), BoundaryError> {
+        kill_process(self.target()?, Signal::CONT).map_err(internal)
     }
 
     /// Kills this process by its own handle and reaps it, bounded.
@@ -107,8 +127,8 @@ impl Process {
     /// Resumes a stopped process, closes its stdin and reaps it; past the bound it is killed.
     pub(super) async fn stop(mut self) -> Result<(), RunnerError> {
         if matches!(self.child.try_wait(), Ok(None)) {
-            self.signal("CONT")
-                .map_err(|_| at("resume the peer runtime")("kill -CONT failed"))?;
+            self.resume()
+                .map_err(|_| at("resume the peer runtime")("SIGCONT failed"))?;
         }
         drop(self.stdin.take());
         if tokio::time::timeout(BOUND, self.child.wait())

@@ -244,11 +244,9 @@ impl PeerSide {
                 "credential": process.bearer,
             })),
             (Action::Stop, Some(process)) => {
-                process.signal("STOP").map(|()| json!({"stopped": true}))
+                process.pause().await.map(|()| json!({"stopped": true}))
             }
-            (Action::Resume, Some(process)) => {
-                process.signal("CONT").map(|()| json!({"stopped": false}))
-            }
+            (Action::Resume, Some(process)) => process.resume().map(|()| json!({"stopped": false})),
             (Action::Crash, Some(process)) => self.crash(process).await,
             (Action::Restart, _) => self.restart(&mut slot).await,
             (_, None) => Err(internal("the peer runtime is not running")),
