@@ -5159,6 +5159,188 @@
           }
         ]
       },
+      "Observed_Array_of_ProcessSample": {
+        "description": "One process field: observed, or not reported for a stated reason.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "The field was observed.",
+            "properties": {
+              "state": {
+                "const": "known",
+                "type": "string"
+              },
+              "value": {
+                "description": "Observed value.",
+                "items": {
+                  "$ref": "#/components/schemas/ProcessSample"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "state",
+              "value"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The field was not observed; this says nothing about whether a process exited.",
+            "properties": {
+              "reason": {
+                "$ref": "#/components/schemas/UnsupportedReason",
+                "description": "Why it was not observed.",
+                "x-ovis-open-enum": true
+              },
+              "state": {
+                "const": "unsupported",
+                "type": "string"
+              }
+            },
+            "required": [
+              "state",
+              "reason"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "Observed_Array_of_string": {
+        "description": "One process field: observed, or not reported for a stated reason.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "The field was observed.",
+            "properties": {
+              "state": {
+                "const": "known",
+                "type": "string"
+              },
+              "value": {
+                "description": "Observed value.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "state",
+              "value"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The field was not observed; this says nothing about whether a process exited.",
+            "properties": {
+              "reason": {
+                "$ref": "#/components/schemas/UnsupportedReason",
+                "description": "Why it was not observed.",
+                "x-ovis-open-enum": true
+              },
+              "state": {
+                "const": "unsupported",
+                "type": "string"
+              }
+            },
+            "required": [
+              "state",
+              "reason"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "Observed_ProcessSample": {
+        "description": "One process field: observed, or not reported for a stated reason.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "The field was observed.",
+            "properties": {
+              "state": {
+                "const": "known",
+                "type": "string"
+              },
+              "value": {
+                "$ref": "#/components/schemas/ProcessSample",
+                "description": "Observed value."
+              }
+            },
+            "required": [
+              "state",
+              "value"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The field was not observed; this says nothing about whether a process exited.",
+            "properties": {
+              "reason": {
+                "$ref": "#/components/schemas/UnsupportedReason",
+                "description": "Why it was not observed.",
+                "x-ovis-open-enum": true
+              },
+              "state": {
+                "const": "unsupported",
+                "type": "string"
+              }
+            },
+            "required": [
+              "state",
+              "reason"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "Observed_string": {
+        "description": "One process field: observed, or not reported for a stated reason.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "The field was observed.",
+            "properties": {
+              "state": {
+                "const": "known",
+                "type": "string"
+              },
+              "value": {
+                "description": "Observed value.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "state",
+              "value"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The field was not observed; this says nothing about whether a process exited.",
+            "properties": {
+              "reason": {
+                "$ref": "#/components/schemas/UnsupportedReason",
+                "description": "Why it was not observed.",
+                "x-ovis-open-enum": true
+              },
+              "state": {
+                "const": "unsupported",
+                "type": "string"
+              }
+            },
+            "required": [
+              "state",
+              "reason"
+            ],
+            "type": "object"
+          }
+        ]
+      },
       "OpCancelResult": {
         "description": "Cancellation adds a typed outcome while preserving every released `OpRecord` field.",
         "properties": {
@@ -6029,6 +6211,35 @@
         ],
         "type": "object"
       },
+      "ProcessExpect": {
+        "additionalProperties": false,
+        "description": "Incarnations `terminal.process_info` must still find; a mismatch reports nothing.",
+        "properties": {
+          "process_incarnation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Incarnation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Expected program incarnation; a mismatch is `process_replaced`."
+          },
+          "terminal_incarnation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Incarnation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Expected terminal incarnation; a mismatch is `stale_target`."
+          }
+        },
+        "type": "object"
+      },
       "ProcessObservation": {
         "description": "Observed process outcome after an action was delivered.",
         "oneOf": [
@@ -6107,6 +6318,62 @@
           "incarnation",
           "argv",
           "started_ms"
+        ],
+        "type": "object"
+      },
+      "ProcessRoles": {
+        "description": "Shell, launcher, foreground and background processes of one terminal.",
+        "properties": {
+          "background": {
+            "$ref": "#/components/schemas/Observed_Array_of_ProcessSample",
+            "description": "Other processes of the terminal's session."
+          },
+          "foreground": {
+            "$ref": "#/components/schemas/Observed_Array_of_ProcessSample",
+            "description": "Members of the terminal's foreground process group."
+          },
+          "launcher": {
+            "$ref": "#/components/schemas/Observed_ProcessSample",
+            "description": "The program the holder launched."
+          },
+          "shell": {
+            "$ref": "#/components/schemas/Observed_ProcessSample",
+            "description": "The declared shell; never inferred from a process name."
+          }
+        },
+        "required": [
+          "shell",
+          "launcher",
+          "foreground",
+          "background"
+        ],
+        "type": "object"
+      },
+      "ProcessSample": {
+        "description": "One native process, named by PID and the start token that rules out PID reuse.",
+        "properties": {
+          "argv": {
+            "$ref": "#/components/schemas/Observed_Array_of_string",
+            "description": "Current argument vector."
+          },
+          "cwd": {
+            "$ref": "#/components/schemas/Observed_string",
+            "description": "Current working directory."
+          },
+          "pid": {
+            "$ref": "#/components/schemas/ProcessPid",
+            "description": "Operating-system process identifier."
+          },
+          "start_token": {
+            "$ref": "#/components/schemas/StartToken",
+            "description": "Start token read together with the PID."
+          }
+        },
+        "required": [
+          "pid",
+          "start_token",
+          "argv",
+          "cwd"
         ],
         "type": "object"
       },
@@ -9108,6 +9375,31 @@
         ],
         "type": "object"
       },
+      "TerminalProcessInfoParams": {
+        "additionalProperties": false,
+        "description": "Parameters of `terminal.process_info`.",
+        "properties": {
+          "expect": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProcessExpect"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Incarnations the caller holds."
+          },
+          "target": {
+            "$ref": "#/components/schemas/Target",
+            "description": "Terminal to inspect; there is no focused-terminal fallback."
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "type": "object"
+      },
       "TerminalProcessInfoResult": {
         "description": "Result of `terminal.process_info`.",
         "properties": {
@@ -9120,11 +9412,15 @@
                 "type": "null"
               }
             ],
-            "description": "Foreground process, when the platform reports it."
+            "description": "The launcher record while the launcher holds the foreground; `roles.foreground`\nlists every foreground process."
           },
           "launcher": {
             "$ref": "#/components/schemas/ProcessRecord",
             "description": "Program the terminal launched."
+          },
+          "roles": {
+            "$ref": "#/components/schemas/ProcessRoles",
+            "description": "Shell, launcher, foreground and background processes, each observed or\nexplicitly unsupported."
           },
           "supported_fields": {
             "description": "Fields this platform can report.",
@@ -9141,7 +9437,8 @@
         "required": [
           "terminal_id",
           "launcher",
-          "supported_fields"
+          "supported_fields",
+          "roles"
         ],
         "type": "object"
       },
@@ -9981,6 +10278,46 @@
           "timeout_ms"
         ],
         "type": "object"
+      },
+      "UnsupportedReason": {
+        "description": "Why a process field is not reported.",
+        "oneOf": [
+          {
+            "const": "platform",
+            "description": "The operating system does not expose the field to the runtime.",
+            "type": "string"
+          },
+          {
+            "const": "undeclared_role",
+            "description": "The launch did not declare this role; it is never guessed from a name.",
+            "type": "string"
+          },
+          {
+            "const": "process_unavailable",
+            "description": "The process has no readable native record.",
+            "type": "string"
+          },
+          {
+            "const": "raced",
+            "description": "Native evidence changed while it was read.",
+            "type": "string"
+          },
+          {
+            "const": "permission",
+            "description": "Native permissions refused the read.",
+            "type": "string"
+          },
+          {
+            "const": "encoding",
+            "description": "The native value is not representable as UTF-8 or has an unknown layout.",
+            "type": "string"
+          },
+          {
+            "const": "limit",
+            "description": "The process table exceeded the bounded inspection budget.",
+            "type": "string"
+          }
+        ]
       },
       "UpdateId": {
         "description": "Opaque identity string.",
@@ -12481,17 +12818,36 @@
         {
           "code": -32000,
           "message": "unsupported_field"
+        },
+        {
+          "code": -32000,
+          "message": "process_replaced"
         }
       ],
       "name": "terminal.process_info",
       "paramStructure": "by-name",
       "params": [
         {
+          "name": "expect",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProcessExpect"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Incarnations the caller holds."
+          }
+        },
+        {
           "name": "target",
           "required": true,
           "schema": {
             "$ref": "#/components/schemas/Target",
-            "description": "Terminal to read."
+            "description": "Terminal to inspect; there is no focused-terminal fallback."
           }
         }
       ],
@@ -12501,10 +12857,10 @@
           "$ref": "#/components/schemas/TerminalProcessInfoResult"
         }
       },
-      "summary": "Read launcher and foreground process facts.",
+      "summary": "Read shell, launcher, foreground and background process facts.",
       "x-effect": "query",
       "x-params": {
-        "$ref": "#/components/schemas/TerminalGetParams"
+        "$ref": "#/components/schemas/TerminalProcessInfoParams"
       },
       "x-targeting": "terminal"
     },

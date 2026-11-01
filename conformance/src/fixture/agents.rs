@@ -3,6 +3,8 @@
 //! `agent` (terminal:4), `shell` (terminal:5) and `rotation` (terminal:6) each run program
 //! incarnation 1 whose spawn token is known to the scenarios; `rotation`'s input goes
 //! through the real input sequencer instead of the echo stand-in.
+//! `proc` (terminal:1) is the real PTY program of the process fixture, which hands each
+//! later incarnation its own token.
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
@@ -35,8 +37,9 @@ pub mod directory;
 pub(crate) use directory::Directory;
 use directory::directory;
 
-/// Spawn tokens of the two fixture programs.
-const TERMINALS: [(u64, &str, &str); 3] = [
+/// Spawn tokens of the fixture programs' first incarnations.
+const TERMINALS: [(u64, &str, &str); 4] = [
+    (1, "proc", "fixture-process-token-proc-1"),
     (4, "agent", "fixture-process-token-agent"),
     (5, "shell", "fixture-process-token-shell"),
     (

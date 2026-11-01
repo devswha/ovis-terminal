@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart, template-launch, agent-tree, credential-rotation]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart, template-launch, agent-tree, credential-rotation, process-info]
 
 permissions:
   contents: read
@@ -981,4 +981,41 @@ jobs:
         with:
           name: credential-rotation-stress-macos-${{ github.run_id }}
           path: credential-rotation-stress-macos.log
+          if-no-files-found: error
+  process-info:
+    if: inputs.probe == 'process-info'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - name: repeat process inspection tests and the platform/process-info scenario 30 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+            cargo build --locked --manifest-path conformance/Cargo.toml --bin conformance
+            for iteration in $(seq 1 30); do
+              printf '\nITERATION %s/30\n' "$iteration"
+              cargo test --locked -q -p ovis-terminal-holder --lib process::
+              cargo test --locked -q -p ovis-terminal-core --lib process_info
+              cargo test --locked -q -p ovis-terminal-server --lib process_info
+              target/debug/conformance --binary target/debug/ovis-terminal --scenario platform/process-info \
+                --isolated --case all --evidence "process-info-$iteration.json"
+              printf 'PASS %s/30\n' "$iteration"
+            done
+            printf 'RESULT 30/30\n'
+          } 2>&1 | tee process-info-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: process-info-stress-macos-${{ github.run_id }}
+          path: |
+            process-info-stress-macos.log
+            process-info-*.json
           if-no-files-found: error
