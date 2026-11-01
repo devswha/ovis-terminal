@@ -82,6 +82,17 @@ Commits, each lane-tested and the batches gated before their push:
 - `44308bf`: `part-a/task-31` failure without polling (takeover-driven revocation, forced-EOF closing).
 - `45386d7` (T58): `BoundaryPolicy` composed, `agent.history` routed, launch bounds on `terminal.run`.
 
+### Linux CI finding at 4e4519f: a planned restart could silently unlink the runtime from the holder
+
+`test (ubuntu-latest)` failed `restart::a_planned_restart_keeps_the_program_and_its_lifetime_and_serves_the_successor_boot`: after the restart, `input.send` was admitted but `terminal.wait_output` never matched (macOS and Windows passed). Root cause, a product defect in core (`crates/ovis-terminal-core/src/restart/control.rs`, seam): `Control::with_terminals` (and `Control::stop`) checked readiness before taking the control lock. The runtime's actor thread could pass that check just as `server.restart` (on a dispatch task) took the lock, wait through the hand-over, and enter after `release()` dropped the old lifecycle and before `finish()` booted the successor. It then got `control_stopped`, which the actor rightly reads as "no holder message will follow" and stopped applying holder output for the rest of the server's life, silently (no warning, matching the empty stderr in the CI log). `Control::restart` itself already re-checked readiness under the lock.
+
+Fix: `with_terminals` and `stop` re-check readiness under the lock, so a caller racing a restart is told `restarting`. The actor maps `restarting` to a pause (it waits up to one poll for a job instead of spinning and logging), and only `control_stopped` or a disconnected holder ends the link (`assembly/actor.rs`, `Link`).
+
+Evidence:
+- New core test `restart::qa::readiness::a_caller_racing_a_planned_restart_is_told_restarting_never_control_stopped`: a reader holds the lifecycle while it waits for holder messages (as the actor does) across 20 planned restarts; every refusal must be `restarting`. On the unfixed core it failed 2 of 5 runs (`refusals during planned restarts: {"control_stopped", "restarting"}`); fixed, 5 of 5 pass, and the whole `restart::` QA module passes 20/20.
+- Planned-restart test 25× under load (`taskset -c 0-1`, 8 busy loops, heavy gate): **25/25 passed** (max 334 s). Cores 0-1 were also carrying another lane's identical load at the time, so this was heavier than the recipe. Details: `docs/evidence/task-31/r4-loaded/README.md`.
+- Update test (`update::an_activated_update_*`, batch B), routed to todo 61 as a finding: in the same loop it passed 23/25 (max 228 s). Alone on idle cores 124-125 with exactly 8 busy loops it passed 23/25: both failures are the first `update.query` exceeding the CLI's 10 s deadline (`r4-loaded/before-7.log`, `before-12.log`). That step does not legitimately take that long: timed alone under the same load on 25 fresh servers, the first `update.query` (which re-hashes the active 124 MB debug binary) took 0.16-0.37 s every time. So hashing is not the cause; no SHA-256 profile override and no wider bound were applied. The stall was not caught under gdb; one unverified hypothesis is unfair contention on `Control`'s mutex, which the runtime's actor holds while it waits up to 5 ms for each holder message.
+
 ### The planned restart boundary
 
 `server.restart` is routed (and `update.activate`/`update.rollback`, which restart control through `ControlRestart`). After such a call the serve loop compares the control's identity with the one it serves. On a successor boot it:
@@ -127,6 +138,7 @@ Output waits are armed under the control's `ArmedWaits`, so a restart ends them 
 
 ### Seams (outside the write scope, disclosed)
 
+- `crates/ovis-terminal-core/src/restart/control.rs`: `with_terminals` and `stop` re-check readiness under the control lock (the race above); new test `restart/qa/readiness.rs` registered in `restart/qa.rs`.
 - `crates/ovis-terminal-server/src/dispatch/lanes/health.rs` and `lanes/boundary_policy/gate.rs`: `Measured` and `BoundaryPolicy` delegate `RequestHandler::transports`. Without it, hello over WebSocket advertised only `unix` (caught by `tests/assembly/websocket.rs`).
 - `crates/ovis-terminal-server/src/streams/`: `takeover.rs` (new) serves `attach.takeover` onto the caller's held stream; `handler.rs` routes it with the same op-id replay table as `attach.open`; `open.rs` `displace` returns the displaced lease; `journal.rs` `LeaseJournal::record` returns the committed sequence (`Option<EventSeq>`), which the takeover result reports (implementors in `ws/qa/seams.rs` and `streams/qa/recorder.rs` updated). New `streams/qa/takeover.rs` test registered in `tests/streams.rs`.
 - `conformance/src/`: the `announced` step (`scenario/serve.rs`, `engine/announce.rs`, `fixture/launch.rs::announcement`), `recovery/restart.json` in the suite's `ASSEMBLED` list, `fixture/serve/registration.rs`.
