@@ -14,6 +14,15 @@ impl Session<'_> {
             return Err(RunnerError::UnsupportedPlatform);
         }
         let root = self.root.path();
+        // Each server starts in its isolated root, so a relative runner or binary path
+        // (as a caller in another directory passes it) is made absolute first.
+        let absolute = |path: &std::path::Path| {
+            std::path::absolute(path).map_err(|source| RunnerError::Spawn {
+                program: path.to_path_buf(),
+                source,
+            })
+        };
+        let (runner, binary) = (absolute(&self.ctx.runner)?, absolute(&self.ctx.binary)?);
         let started = match kind {
             FixtureKind::Protocol => {
                 let args = [
@@ -21,9 +30,9 @@ impl Session<'_> {
                     "--root".into(),
                     root.into(),
                     "--binary".into(),
-                    self.ctx.binary.as_os_str().to_owned(),
+                    binary.as_os_str().to_owned(),
                 ];
-                launch::start(&self.ctx.runner, &args, root).await?
+                launch::start(&runner, &args, root).await?
             }
             FixtureKind::Assembled => {
                 let args = [
@@ -32,7 +41,7 @@ impl Session<'_> {
                     "--root".into(),
                     root.join("srv").into(),
                 ];
-                launch::start(&self.ctx.binary, &args, root).await?
+                launch::start(&binary, &args, root).await?
             }
         };
         self.fixture = Some(started);
