@@ -1,0 +1,26 @@
+# mutant M1-incomplete-run-passes
+# file: bench/soak/verdict.rs
+# - 'if measured.elapsed < measured.duration {'
+# + 'if false && measured.elapsed < measured.duration {'
+# command: cargo nextest run -p ovis-terminal-bench --no-fail-fast soak::
+[exit 0]
+        PASS [   0.007s] ( 1/12) ovis-terminal-bench soak::tests::the_thirty_minute_run_crashes_twice_after_the_baseline_window
+        PASS [   0.008s] ( 2/12) ovis-terminal-bench soak::tests::judging::late_or_missing_control_replies_and_queue_overruns_fail
+        PASS [   0.008s] ( 3/12) ovis-terminal-bench soak::tests::judging::the_probe_must_lose_only_the_dedicated_terminal
+        PASS [   0.008s] ( 4/12) ovis-terminal-bench soak::tests::judging::an_output_offset_that_moves_backwards_is_a_regression
+        PASS [   0.009s] ( 5/12) ovis-terminal-bench soak::tests::sequences_are_decimal_strings_and_numbers_are_rejected
+        PASS [   0.009s] ( 6/12) ovis-terminal-bench soak::tests::judging::a_survivor_under_another_pid_or_an_unexcused_loss_is_counted
+        PASS [   0.009s] ( 7/12) ovis-terminal-bench soak::tests::disruptions_that_cannot_fit_are_refused_instead_of_squeezed_out
+        FAIL [   0.009s] ( 8/12) ovis-terminal-bench soak::tests::judging::a_complete_clean_run_passes_and_each_broken_fact_fails_its_own_rule
+    test soak::tests::judging::a_complete_clean_run_passes_and_each_broken_fact_fails_its_own_rule ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.00s
+    thread 'soak::tests::judging::a_complete_clean_run_passes_and_each_broken_fact_fails_its_own_rule' (2260114) panicked at bench/src/../soak/tests/judging.rs:75:5:
+    assertion `left == right` failed
+        PASS [   0.010s] ( 9/12) ovis-terminal-bench soak::tests::every_requested_disruption_lands_inside_the_window_spaced_apart
+        PASS [   0.010s] (10/12) ovis-terminal-bench soak::tests::judging::the_fixture_passes_only_without_exact_recovery_and_without_a_resend
+        PASS [   0.014s] (11/12) ovis-terminal-bench soak::control::tests::a_resumed_viewer_gets_an_explicit_gap_for_events_no_longer_retained
+        PASS [   0.035s] (12/12) ovis-terminal-bench soak::control::tests::a_stalled_viewer_is_cut_at_its_bound_while_a_reader_misses_nothing
+     Summary [   0.035s] 12 tests run: 11 passed, 1 failed, 18 skipped
+        FAIL [   0.009s] ( 8/12) ovis-terminal-bench soak::tests::judging::a_complete_clean_run_passes_and_each_broken_fact_fails_its_own_rule
+EXIT=100
+
