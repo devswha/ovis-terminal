@@ -90,13 +90,19 @@ fn verb(
             method: method.to_owned(),
         })?;
     match crate::commands::plan(spec, supplied, token).map_err(CliError::Command)? {
-        crate::commands::Planned::NeedsTarget => Ok(Plan::NeedsTarget),
-        crate::commands::Planned::Send { spec, params } => {
-            let request = envelope(spec.method, &params)?;
-            (spec.check)(&request).map_err(CliError::Params)?;
-            Ok(Plan::Call(request))
+        crate::commands::Planned::NeedsTarget { spec, probe } => {
+            checked(spec, &probe)?;
+            Ok(Plan::NeedsTarget)
         }
+        crate::commands::Planned::Send { spec, params } => Ok(Plan::Call(checked(spec, &params)?)),
     }
+}
+
+/// The verb's request for `params`, proven to decode as its closed params type.
+fn checked(spec: crate::commands::VerbSpec, params: &Value) -> Result<RpcRequest, CliError> {
+    let request = envelope(spec.method, params)?;
+    (spec.check)(&request).map_err(CliError::Params)?;
+    Ok(request)
 }
 
 /// Plans `cli`, or refuses it with nothing sent; `token` is the process token this

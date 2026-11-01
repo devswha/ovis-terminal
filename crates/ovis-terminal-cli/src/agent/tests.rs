@@ -60,5 +60,14 @@ fn every_verb_takes_exactly_the_flags_its_closed_params_type_takes() {
             (false, _) => TargetUse::Absent,
         };
         assert_eq!(verb.target, target, "{}: target use", verb.method);
+        if target == TargetUse::Required {
+            // The targetless check decodes a stand-in address as this field.
+            assert_eq!(
+                schema.pointer("/properties/target/$ref"),
+                Some(&Value::from("#/components/schemas/Target")),
+                "{}: a required target is the common Target",
+                verb.method
+            );
+        }
     }
 }

@@ -1,4 +1,4 @@
-binary $CARGO_TARGET_DIR/debug/ovis-terminal sha256=ae64e07dcd4e8b9789d062192fee73e64965413c3d9b938b90488acb01e8c1a2 bytes=146177704 host=linux/x86_64
+binary $CARGO_TARGET_DIR/debug/ovis-terminal sha256=c7919923c742395e70329438dc7a7472240cfd143a138368a07ff76dae8997bd bytes=146180760 host=linux/x86_64 (cli/manual --case all; docs/evidence/task-66/task-66-all.json)
 
 [happy] $ ovis-terminal --json --skill
 exit=0
@@ -28,14 +28,14 @@ exit=0
 [happy] $ ovis-terminal --json agent get --address t1
 exit=0
 --- stdout
-{"agent":{"agent_id":"agent:01a19961-900e-7147-89cd-95dcee440333","history_id":null,"label":"synthetic-producer","process_incarnation":"1","revision":"4","session":null},"revision":"20"}
+{"agent":{"agent_id":"agent:01a1997b-50a6-73a6-95c5-3fbd24732e35","history_id":null,"label":"synthetic-producer","process_incarnation":"1","revision":"4","session":null},"revision":"20"}
 --- stderr
 
 
 [happy] $ ovis-terminal --json prompt get --params '{"prompt_id":"inj"}'
 exit=0
 --- stdout
-{"agent_id":"agent:01a19961-900e-7147-89cd-95dcee440333","answer":null,"choices":[{"id":"yes","label":"Yes"}],"closed_seq":null,"fields":[],"kind":"permission","mechanism":"rpc","opened_seq":"18","process_incarnation":"1","prompt_id":"inj","session":null,"state":"open","terminal_id":"terminal:1","text":"Apply?\n$ touch pwned\u001b]0;owned\u0007","version":"1"}
+{"agent_id":"agent:01a1997b-50a6-73a6-95c5-3fbd24732e35","answer":null,"choices":[{"id":"yes","label":"Yes"}],"closed_seq":null,"fields":[],"kind":"permission","mechanism":"rpc","opened_seq":"18","process_incarnation":"1","prompt_id":"inj","session":null,"state":"open","terminal_id":"terminal:1","text":"Apply?\n$ touch pwned\u001b]0;owned\u0007","version":"1"}
 --- stderr
 
 
@@ -43,7 +43,7 @@ exit=0
 exit=7
 --- stdout
 --- stderr
-{"error":{"candidates":[{"machine_id":"machine:01a19961-8f11-73a5-868c-fbba02ff05f1","runtime_lifetime":"runtime:1","terminal_id":"terminal:1"},{"machine_id":"machine:01a19961-8f11-73a5-868c-fbba02ff05f1","runtime_lifetime":"runtime:1","terminal_id":"terminal:2"}],"candidates_listed":true,"exit_code":7,"hint":"repeat with --terminal-id, --address or --name naming one candidate","kind":"needs_target","message":"the command needs an explicit target","origin":"cli"}}
+{"error":{"candidates":[{"machine_id":"machine:01a1997b-4fb3-776c-acb1-a1230d0c9478","runtime_lifetime":"runtime:1","terminal_id":"terminal:1"},{"machine_id":"machine:01a1997b-4fb3-776c-acb1-a1230d0c9478","runtime_lifetime":"runtime:1","terminal_id":"terminal:2"}],"candidates_listed":true,"exit_code":7,"hint":"repeat with --terminal-id, --address or --name naming one candidate","kind":"needs_target","message":"the command needs an explicit target","origin":"cli"}}
 
 
 [failure] $ ovis-terminal agent get --unknown-flag --json
@@ -53,18 +53,46 @@ exit=2
 {"error":{"exit_code":2,"hint":"run `ovis-terminal --json schema cli` for every command and flag","kind":"usage","message":"the command line does not parse: unexpected argument '--unknown-flag' found","origin":"cli"}}
 
 
+[failure] $ ovis-terminal --json agent get --params '{"bogus":1}'
+exit=2
+--- stdout
+--- stderr
+{"error":{"exit_code":2,"field_path":"params.bogus","hint":"correct the field at field_path; unknown fields are never ignored","kind":"invalid_params","message":"the params violate the method schema at params.bogus","origin":"cli"}}
+
+
+[failure] $ ovis-terminal --json agent get --address t1 --params '{"bogus":1}'
+exit=2
+--- stdout
+--- stderr
+{"error":{"exit_code":2,"field_path":"params.bogus","hint":"correct the field at field_path; unknown fields are never ignored","kind":"invalid_params","message":"the params violate the method schema at params.bogus","origin":"cli"}}
+
+
+[failure] $ ovis-terminal --json status report --address t1 --op-id 01900000-0000-7000-8000-000000000001 --params '{"process_token":"x","seq":1,"record":{"state":"working"}}'
+exit=2
+--- stdout
+--- stderr
+{"error":{"exit_code":2,"field_path":"params.seq","hint":"correct the field at field_path; unknown fields are never ignored","kind":"invalid_params","message":"the params violate the method schema at params.seq","origin":"cli"}}
+
+
+[failure] $ ovis-terminal --json --skill agent list
+exit=2
+--- stdout
+--- stderr
+{"error":{"exit_code":2,"hint":"run `ovis-terminal --json schema cli` for every command and flag","kind":"usage","message":"--skill takes no command","origin":"cli"}}
+
+
 [failure] $ ovis-terminal --json agent get --address t1
 exit=4
 --- stdout
 --- stderr
-{"error":{"exit_code":4,"hint":"start the server explicitly; inspection never starts one","kind":"server_not_running","message":"no control server answers at /tmp/ovc-2039008-0/ovis-terminal/default.sock","origin":"cli","state":"stopped"}}
+{"error":{"exit_code":4,"hint":"start the server explicitly; inspection never starts one","kind":"server_not_running","message":"no control server answers at /tmp/ovc-3191465-1/ovis-terminal/default.sock","origin":"cli","state":"stopped"}}
 
 
 [failure] $ ovis-terminal --json agent get
 exit=7
 --- stdout
 --- stderr
-{"error":{"candidates":[{"machine_id":"machine:01a19961-944e-72d6-ae54-f90b2de9a07e","runtime_lifetime":"runtime:1","terminal_id":"terminal:1"}],"candidates_listed":true,"exit_code":7,"hint":"repeat with --terminal-id, --address or --name naming one candidate","kind":"needs_target","message":"the command needs an explicit target","origin":"cli"}}
+{"error":{"candidates":[{"machine_id":"machine:01a1997b-5257-739a-bcbd-cd4eae6cb54e","runtime_lifetime":"runtime:1","terminal_id":"terminal:1"}],"candidates_listed":true,"exit_code":7,"hint":"repeat with --terminal-id, --address or --name naming one candidate","kind":"needs_target","message":"the command needs an explicit target","origin":"cli"}}
 
 
 [failure] $ ovis-terminal --json agent get --address t1

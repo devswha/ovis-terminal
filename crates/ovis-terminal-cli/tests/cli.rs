@@ -114,6 +114,8 @@ async fn failure() -> TestResult {
         &["--json", "call", "terminal.list", "--params", "[1]"],
         &["--json", "call", "hello"],
         &["agent", "get", "--unknown-flag", "--json"],
+        &["--json", "agent", "get", "--params", "{\"bogus\":1}"],
+        &["--json", "turn", "wait"],
         &[
             "--json",
             "agent",

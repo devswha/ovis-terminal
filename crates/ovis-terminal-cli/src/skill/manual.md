@@ -76,7 +76,8 @@ Each verb sends one published method. Its flags are exactly what that method's c
 params type takes: `--op-id ID` for a mutation, one of `--terminal-id`, `--address` or
 `--name` for a terminal-scoped method, and `--params JSON` for every other field. A
 field given both as a flag and in `--params` is a usage error. A terminal-scoped verb
-without a target exits 7 with `needs_target` and `candidates`.
+whose other fields are valid but that names no target exits 7 with `needs_target` and
+`candidates`; a malformed one exits 2 first, before any connection.
 
 - Agents: `ovis-terminal agent register`, `ovis-terminal agent get`,
   `ovis-terminal agent list`, `ovis-terminal agent update-session`,

@@ -196,9 +196,20 @@ pub(crate) enum Planned {
         /// The merged params object.
         params: Value,
     },
-    /// The method needs a terminal and none was named.
-    NeedsTarget,
+    /// The method needs a terminal and none was named. `probe` is the merged params with a
+    /// stand-in target: it must pass `check` before candidates are listed, so a malformed
+    /// targetless invocation is refused as malformed. It is never sent.
+    NeedsTarget {
+        /// The verb's method and params type.
+        spec: VerbSpec,
+        /// The merged params with the stand-in address as the target.
+        probe: Value,
+    },
 }
+
+/// A terminal address every closed `target` accepts, standing in for the missing target
+/// while the supplied fields are checked.
+const STAND_IN_ADDRESS: &str = "t1";
 
 /// Why a verb's flags and params could not be merged; nothing was sent.
 #[derive(Debug, Error)]
@@ -263,7 +274,11 @@ pub(crate) fn plan(
         params.insert("process_token".to_owned(), Value::String(token.to_owned()));
     }
     if spec.target == TargetUse::Required && !params.contains_key("target") {
-        return Ok(Planned::NeedsTarget);
+        params.insert("target".to_owned(), json!({ "address": STAND_IN_ADDRESS }));
+        return Ok(Planned::NeedsTarget {
+            spec,
+            probe: Value::Object(params),
+        });
     }
     Ok(Planned::Send {
         spec,

@@ -55,3 +55,39 @@ error: test failed, to rerun pass `-p ovis-terminal-cli --lib`
 EXIT=101
 
 
+
+## M5 targetless verb skips the supplied-field check (Planned::NeedsTarget answered without checked(probe)) [round 3, review finding]
+$ (mutated crates/ovis-terminal-cli/src/invocation/plan.rs) cargo test --locked -p ovis-terminal-cli --lib a_targetless_verb; cargo test --locked -p ovis-terminal-cli --test cli failure; conformance --scenario cli/manual --isolated --case failure
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test invocation::manual_tests::a_targetless_verb_needs_a_target_only_when_every_supplied_field_is_valid ... FAILED
+thread 'invocation::manual_tests::a_targetless_verb_needs_a_target_only_when_every_supplied_field_is_valid' (3111746) panicked at crates/ovis-terminal-cli/src/invocation/manual_tests.rs:99:5:
+assertion `left == right` failed
+  left: Ok(true)
+ right: Err("invalid_params")
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 48 filtered out; finished in 0.01s
+UNIT_EXIT=101
+test failure ... FAILED
+Error: "ovis-terminal [\"--json\", \"agent\", \"get\", \"--params\", \"{\\\"bogus\\\":1}\"] exited Some(13), expected 2\nstdout: \nstderr: {\"error\":{\"exit_code\":13,\"hint\":\"inspect the operation; it may still be running\",\"kind\":\"deadline_exceeded\",\"message\":\"the server did not answer within 15000 ms\",\"origin\":\"cli\"}}\n"
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 15.11s
+PROCESS_EXIT=101
+{"case":"failure","error":null,"evidence":"/home/devswha/.ovis-run/scratch/lane-t66/m5-failure.json","evidence_error":null,"evidence_written":true,"result":"failed","scenario":"cli/manual","totals":{"assertions":"11","cases":"1","declared_only":"0","failed":"1","passed":"0","skipped":"0"}}
+CONFORMANCE_EXIT=1
+
+warning: fields `spec` and `probe` are never read
+   --> crates/ovis-terminal-cli/src/commands.rs:204:9
+    |
+202 |     NeedsTarget {
+    |     ----------- fields in this variant
+203 |         /// The verb's method and params type.
+204 |         spec: VerbSpec,
+    |         ^^^^
+205 |         /// The merged params with the stand-in address as the target.
+206 |         probe: Value,
+    |         ^^^^^
+    |
+    = note: `Planned` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+
+first failed conformance assertions: [{"actual": 7, "check": "binary/exit", "expected": 2, "passed": false}, {"actual": 7, "check": "binary/stderr/error/exit_code", "expected": 2, "passed": false}]

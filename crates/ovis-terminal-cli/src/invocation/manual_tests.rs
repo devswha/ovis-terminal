@@ -13,12 +13,13 @@ use crate::skill::MANUAL;
 const ONBOARDING: &str = include_str!("../../../../docs/producer-onboarding.md");
 
 /// Parses and plans `args` (without the program name) as an invocation inside a spawned
-/// program would, with an inherited process token, touching nothing.
-fn planned(args: &[&str]) -> Result<(), &'static str> {
+/// program would, with an inherited process token, touching nothing: whether the plan is
+/// `needs_target`, or the refusal's kind.
+fn planned(args: &[&str]) -> Result<bool, &'static str> {
     let cli = Cli::try_parse_from(std::iter::once(crate::BINARY_NAME).chain(args.iter().copied()))
         .map_err(|_| "usage")?;
     super::plan::plan(cli, Some("inherited-token"))
-        .map(drop)
+        .map(|plan| matches!(plan, super::plan::Plan::NeedsTarget))
         .map_err(|error| error.kind())
 }
 
@@ -85,8 +86,31 @@ fn every_example_command_parses_and_plans_against_this_build() {
     assert!(examples.len() >= 10, "{} examples", examples.len());
     for example in examples {
         let args: Vec<&str> = example.iter().map(String::as_str).collect();
-        assert_eq!(planned(&args), Ok(()), "{args:?}");
+        assert_eq!(planned(&args), Ok(false), "{args:?}");
     }
+}
+
+#[test]
+fn a_targetless_verb_needs_a_target_only_when_every_supplied_field_is_valid() {
+    assert_eq!(planned(&["agent", "get"]), Ok(true));
+    let wait = ["turn", "wait", "--params", r#"{"timeout_ms":"1000"}"#];
+    assert_eq!(planned(&wait), Ok(true));
+    let unknown = ["agent", "get", "--params", r#"{"bogus":1}"#];
+    assert_eq!(planned(&unknown), Err("invalid_params"));
+    let numeric = [
+        "status",
+        "report",
+        "--op-id",
+        "x",
+        "--params",
+        r#"{"seq":1,"record":{"state":"idle"}}"#,
+    ];
+    assert_eq!(planned(&numeric), Err("invalid_params"));
+    assert_eq!(
+        planned(&["turn", "wait"]),
+        Err("invalid_params"),
+        "timeout_ms is required"
+    );
 }
 
 #[test]

@@ -26,7 +26,7 @@ Piped `hc ls` prints JSON without `--json` while `run`/`read` print text: the ou
 
 ## After
 
-Linux x86_64, binary sha256 `ae64e07dcd4e8b9789d062192fee73e64965413c3d9b938b90488acb01e8c1a2` (`$CARGO_TARGET_DIR/debug/ovis-terminal`; the lane target lives on RAM, never `<worktree>/target`).
+Linux x86_64, binary sha256 `c7919923c742395e70329438dc7a7472240cfd143a138368a07ff76dae8997bd` (`$CARGO_TARGET_DIR/debug/ovis-terminal`; the lane target lives on RAM, never `<worktree>/target`).
 
 ```
 $ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal                      # exit 0
@@ -39,7 +39,7 @@ Acceptance (`docs/evidence/task-66/acceptance-all.log`):
 
 ```
 $ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario cli/manual --isolated --case all --evidence "$ATTEMPT_DIR/task-66-ovis-terminal-v1.json"
-{"case":"all",...,"result":"passed","scenario":"cli/manual","totals":{"assertions":"116","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
+{"case":"all",...,"result":"passed","scenario":"cli/manual","totals":{"assertions":"122","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
 EXIT=0
 ```
 
@@ -59,7 +59,7 @@ $ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance --
 EXIT=0
 ```
 
-Materialized CLI runs from the evidence (`binary-runs.log`; the raw runner evidence with every request, reply and process record is `docs/evidence/task-66/task-66-ovis-terminal-v1.json`, which the evidence audit checks):
+Materialized CLI runs from the evidence (`binary-runs.log`, generated from the complete `--case all` run in `docs/evidence/task-66/task-66-all.json`; the literal happy + inject runs are `docs/evidence/task-66/task-66-ovis-terminal-v1.json`; the evidence audit checks both):
 
 | argv | exit | channel |
 |---|---|---|
@@ -69,6 +69,7 @@ Materialized CLI runs from the evidence (`binary-runs.log`; the raw runner evide
 | `--json server status` (no server) | 0 | `{"state":"stopped","census":"not_reported",...}`, nothing started |
 | `agent get --unknown-flag --json` (injected; no server) | **2** | stdout empty; stderr `{"error":{"exit_code":2,"kind":"usage","origin":"cli","message":"the command line does not parse: unexpected argument '--unknown-flag' found",...}}` |
 | `--json agent get --address t1` (same absent endpoint) | 4 | `server_not_running`: what an attempted connection reports |
+| `--json agent get --params '{"bogus":1}'` (no target, no server; round 3) | **2** | stdout empty; stderr `{"error":{"kind":"invalid_params","field_path":"params.bogus","origin":"cli","exit_code":2,...}}`: refused before the `needs_target` path, no discovery |
 | `--json agent get` (served) | **7** | stderr `needs_target`, `candidates_listed: true`, `candidates[].terminal_id` = the live terminals |
 | `--json agent get --address t1` (registered producer, pipe) | 0 | `{"agent":{"label":"synthetic-producer",...}}`, stderr empty |
 | same under a PTY (`pty_open`) | 0 | same JSON on the PTY, stderr empty |
@@ -89,6 +90,13 @@ check.sh: all steps passed                                                     #
 $ RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked      # exit 0
 $ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings          # exit 0
 ```
+
+**Round 3 (adversarial review on 8905649):** a targetless `agent get --params '{"bogus":1}'` answered `needs_target` (exit 7) after candidate discovery instead of refusing the malformed params. Supplied fields are now checked first. `commands::plan` returns the merged params with a stand-in target (`{"address": "t1"}`; every required `target` of the typed verbs is the common `Target` type), and `invocation::plan::verb` decodes that probe as the method's closed params type before it answers `needs_target`. So only an otherwise valid targetless invocation lists candidates (IDEAL-111), and a malformed one exits 2 before any connection. Tests:
+- `invocation::manual_tests::a_targetless_verb_needs_a_target_only_when_every_supplied_field_is_valid` checks that `agent get` and `turn wait --params '{"timeout_ms":"1000"}'` give needs_target, while an unknown field, a numeric `seq` and a missing `timeout_ms` give invalid_params.
+- `tests/cli.rs` `failure` runs the targetless `agent get --params '{"bogus":1}'` and `turn wait` against a bound idle listener: exit 2, and `accept()` is still `WouldBlock`.
+- The `cli/manual` failure case has a targetless malformed run with no server: exit 2, `invalid_params` with `field_path`.
+
+Mutant M5 (answer `needs_target` without the check) fails all three: the unit test gets `Ok(true)` instead of `Err("invalid_params")`; the process test exits 13 `deadline_exceeded` after waiting 15 s on the idle listener's hello, which is the discovery side effect; and conformance exits 7 instead of 2. Lane gates for round 3 are in `gates.log`.
 
 **Round 2 (PR CI, windows-latest):** `the_shipped_contract_reference_is_the_one_this_build_renders` failed because the reference rendered this build's command table, and the Windows grammar differs (no `serve`, `hold` or `terminal attach`; other `service` verbs). It was fixed portably, with no cfg: the contract no longer carries per-platform commands (the manual and `schema cli` list them), and the new `the_contract_reference_does_not_depend_on_the_platform_grammar` renders the reference with and without the command list and requires identical bytes. The rest is platform-neutral by construction: the OpenRPC document (`crates/ovis-terminal-protocol/tests/schema.rs` pins it on every platform), the role and action constants, the exit-code table and the fixed environment names. Gate after the fix: `check.sh` exit 0 (1505 passed, 2 skipped), the Windows check and clippy exit 0. Then `origin/integration` 60076f7 was merged as instructed (conformance fixture only, `Cargo.lock` unchanged, `cargo metadata --locked` ok), and on the merged tree conformance clippy exits 0 and the three literal `cli/manual` runs exit 0 (116 / 71 / 29 assertions).
 

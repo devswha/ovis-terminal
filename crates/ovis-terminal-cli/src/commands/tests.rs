@@ -51,9 +51,15 @@ fn an_explicit_token_in_params_wins_over_the_inherited_one() {
 }
 
 #[test]
-fn a_missing_required_target_plans_needs_target_and_never_a_guess() {
-    let planned = plan(REPORT, supplied(None, "{}"), Some("tok"));
-    assert!(matches!(planned, Ok(Planned::NeedsTarget)));
+fn a_missing_required_target_plans_needs_target_with_every_supplied_field_to_check() {
+    let planned = plan(REPORT, supplied(None, r#"{"seq":"1"}"#), Some("tok"));
+    let Ok(Planned::NeedsTarget { probe, .. }) = planned else {
+        panic!("expected a needs-target plan");
+    };
+    assert_eq!(
+        probe,
+        json!({"seq": "1", "target": {"address": super::STAND_IN_ADDRESS}, "op_id": "op-1", "process_token": "tok"})
+    );
 }
 
 #[test]

@@ -626,7 +626,7 @@
     },
     {
       "case": "failure",
-      "summary": "With no server running, malformed invocations exit 2 with a structured usage error before any connection (a well-formed agent get against the same absent endpoint exits 4, so an attempted connection would have shown): an unknown flag, an unknown params field, a numeric u64 seq and --skill combined with a command. Against the real served binary a targetless agent get exits 7 with needs_target and the live candidate, a plain shell answers agent null and a missing terminal is not_found.",
+      "summary": "With no server running, malformed invocations exit 2 with a structured usage error before any connection (a well-formed agent get against the same absent endpoint exits 4, so an attempted connection would have shown): an unknown flag, an unknown params field with and without a target, a numeric u64 seq and --skill combined with a command. Against the real served binary a targetless agent get exits 7 with needs_target and the live candidate, a plain shell answers agent null and a missing terminal is not_found.",
       "steps": [
         {
           "commands": {
@@ -646,6 +646,27 @@
                   "/error/kind": "usage",
                   "/error/origin": "cli",
                   "/error/exit_code": 2
+                }
+              },
+              {
+                "args": [
+                  "--json",
+                  "agent",
+                  "get",
+                  "--params",
+                  "{\"bogus\":1}"
+                ],
+                "exit": 2,
+                "stdout": {
+                  "": null
+                },
+                "stderr": {
+                  "/error/kind": "invalid_params",
+                  "/error/origin": "cli",
+                  "/error/exit_code": 2,
+                  "/error/field_path": {
+                    "$present": true
+                  }
                 }
               },
               {
