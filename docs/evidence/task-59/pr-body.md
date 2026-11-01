@@ -97,4 +97,4 @@ Seams for later todos: the attach stream (todo 31) and subscription pumps should
 
 None: the conformance runner executes `observability/health` (happy, failure and all exit 0 above).
 
-macOS stress: MACOS_RUN
+macOS stress: `gh workflow run probe-stress-macos.yml -f probe=health --ref lane/t59-expose-read-only-health-and` dispatched once: https://github.com/devswha/ovis-terminal/actions/runs/41269440978 (25 iterations of the health lib tests plus the `observability/health` scenario; result recorded in the DoneClaim).
