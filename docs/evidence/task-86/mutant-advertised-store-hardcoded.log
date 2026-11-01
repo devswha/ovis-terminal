@@ -1,0 +1,15 @@
+mutant: mutant-advertised-store-hardcoded (round 2, on the shipped split test layout)
+file: crates/ovis-terminal-protocol/src/domain/graphics.rs
+- terminal_store_max_bytes: limits.graphics_terminal_store_max_bytes,
++ terminal_store_max_bytes: ByteCount::new(32 * 1024 * 1024),
+$ cargo nextest run -p ovis-terminal-protocol --locked --no-fail-fast
+exit=0
+        FAIL [   0.013s] ( 20/225) ovis-terminal-protocol domain::graphics::tests::the_caps_are_read_from_the_limits_a_hello_reply_carries
+    thread 'domain::graphics::tests::the_caps_are_read_from_the_limits_a_hello_reply_carries' (2058002) panicked at crates/ovis-terminal-protocol/src/domain/graphics/tests.rs:58:5:
+      left: (ByteCount(DecimalU64(7)), ByteCount(DecimalU64(33554432)))
+     right: (ByteCount(DecimalU64(7)), ByteCount(DecimalU64(11)))
+     Summary [   8.673s] 225 tests run: 224 passed, 1 failed, 0 skipped
+        FAIL [   0.013s] ( 20/225) ovis-terminal-protocol domain::graphics::tests::the_caps_are_read_from_the_limits_a_hello_reply_carries
+
+
+restored: yes (sha256 matches pre-mutant file)

@@ -16,6 +16,7 @@ use super::methods::update::UpdateRecord;
 use super::methods::worktree::WorktreeRecord;
 use super::records::{AgentBinding, StatusSnapshot, TerminalGeometry, TerminalRecord};
 use crate::domain::conversation_records::RecordsAppended;
+use crate::domain::graphics::{GraphicsDroppedData, GraphicsEvictedData};
 use crate::domain::session_binding::SessionBindingRecord;
 use crate::schema::events::GeometryEventData;
 
@@ -160,4 +161,14 @@ pub(super) const EVENTS: &[EventSpec] = &[
     event!("worktree.changed", "A checkout changed.", WorktreeRecord),
     event!("plugin.run", "A plugin run changed state.", PluginRunRecord),
     event!("update.progress", "An update changed state.", UpdateRecord),
+    event!(
+        "graphics.dropped",
+        "A graphics sequence exceeded its cap and was dropped whole.",
+        GraphicsDroppedData
+    ),
+    event!(
+        "graphics.evicted",
+        "A terminal's graphics store was full and its oldest sequences were evicted.",
+        GraphicsEvictedData
+    ),
 ];

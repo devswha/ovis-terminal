@@ -1,0 +1,155 @@
+{
+  "binary": {
+    "bytes": "169056376",
+    "path": "target/debug/ovis-terminal",
+    "sha256": "863f035920c5f57c582b12a30f4cc24e96a1e3cc8f5fdc53d89c567c3e104f71"
+  },
+  "case": "failure",
+  "cases": [
+    {
+      "assertions": [
+        {
+          "actual": {
+            "method": "hello",
+            "params": {
+              "limits": {
+                "graphics_sequence_max_bytes": 8388608
+              }
+            }
+          },
+          "check": "inject/planned",
+          "expected": {
+            "method": "hello",
+            "params": {
+              "limits": {
+                "graphics_sequence_max_bytes": 8388608
+              }
+            }
+          },
+          "passed": true
+        },
+        {
+          "actual": "inject-0",
+          "check": "inject[0]/id",
+          "expected": "inject-0",
+          "passed": true
+        },
+        {
+          "actual": "params.limits",
+          "check": "inject[0]/error/data/field_path",
+          "expected": "params.limits",
+          "passed": true
+        },
+        {
+          "actual": "invalid_params",
+          "check": "inject[0]/error/data/kind",
+          "expected": "invalid_params",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "inject[0]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        }
+      ],
+      "case": "failure",
+      "connections": [
+        {
+          "bytes_decoded": "233",
+          "bytes_received": "233",
+          "bytes_sent": "111",
+          "name": "client",
+          "records_received": "1",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "111",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "4707f57af93239d26de9d550312634673ee0cc9d1cf1865abb53f1bb6f48cbca",
+              "text": "{\"id\":\"inject-0\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"limits\":{\"graphics_sequence_max_bytes\":8388608}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "233",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "6dc8b9a651ec475b04a342874167ad73b6fca0ae01c710649b1db967d6d5c65f",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-0\",\"error\":{\"code\":-32602,\"message\":\"method parameters violate the closed schema\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"correct the method parameters\",\"retryable\":false,\"field_path\":\"params.limits\"}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "1"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-154"
+        ],
+        "delivers": [],
+        "excludes": [],
+        "title": "Graphics caps are advertised in hello as decimal strings",
+        "todo": "86"
+      },
+      "descriptors": [],
+      "elapsed_ms": "358",
+      "failure": null,
+      "fixture": {
+        "accepted": "1",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "/home/devswha/workspace/ovis-terminal-wt/lane-t86/target/debug/conformance",
+            "fixture",
+            "--root",
+            "/tmp/ovc-72454-0"
+          ],
+          "exit_code": 0,
+          "pid": "85224",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "part-a/task-86",
+      "summary": "The plan's hello with a numeric graphics_sequence_max_bytes inside params.limits is invalid_params at params.limits with no result: hello params are a closed schema that never carries limits, and the numeric form of the advertised cap is refused by Limits decoding (domain::graphics tests)."
+    }
+  ],
+  "elapsed_ms": "6204",
+  "error": null,
+  "format": "ovis-conformance-evidence/1",
+  "host": {
+    "arch": "x86_64",
+    "family": "unix",
+    "os": "linux"
+  },
+  "inventory": null,
+  "result": "passed",
+  "runner_version": "0.1.0",
+  "scenario": "part-a/task-86",
+  "totals": {
+    "assertions": "5",
+    "cases": "1",
+    "declared_only": "0",
+    "failed": "0",
+    "passed": "1",
+    "skipped": "0"
+  }
+}

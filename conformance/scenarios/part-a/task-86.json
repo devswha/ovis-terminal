@@ -1,0 +1,86 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "part-a/task-86",
+  "title": "Graphics caps are advertised in hello as decimal strings",
+  "todo": 86,
+  "closes": [
+    "GAP-154"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "hello advertises graphics_sequence_max_bytes as the decimal string 8388608 and graphics_terminal_store_max_bytes as 33554432.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "client",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "client",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021",
+              "/result/limits/graphics_sequence_max_bytes": "8388608",
+              "/result/limits/graphics_terminal_store_max_bytes": "33554432"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "The plan's hello with a numeric graphics_sequence_max_bytes inside params.limits is invalid_params at params.limits with no result: hello params are a closed schema that never carries limits, and the numeric form of the advertised cap is refused by Limits decoding (domain::graphics tests).",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "client",
+            "via": "socket"
+          }
+        },
+        {
+          "inject": {
+            "conn": "client",
+            "base": {},
+            "planned": [
+              {
+                "request": {
+                  "method": "hello",
+                  "params": {
+                    "limits": {
+                      "graphics_sequence_max_bytes": 8388608
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/result": {
+                    "$present": false
+                  },
+                  "/error/data/field_path": "params.limits"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

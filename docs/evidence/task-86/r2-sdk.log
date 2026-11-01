@@ -1,0 +1,30 @@
+== attempt 1 (stale prebuilt target/debug/conformance from round 1) ==
+$ bun scripts/generate.ts
+{"generated":"written","files":31,"changed":31}
+{"generated":"fresh","files":31}
+$ tsc --noEmit -p tsconfig.json
+ 29 pass
+ 1 fail
+ 3361 expect() calls
+Ran 30 tests across 5 files. [8.43s]
+EXIT=1
+
+cause: test/support/fixture.ts:11 runs the prebuilt target/debug/conformance; it predated the round-2 schema, so the real-socket happy test's served document lacked additionalProperties:false. CI rebuilds it first (.github/workflows/ci.yml:233).
+
+== prerequisite: cargo build --locked -p ovis-terminal-cli -p ovis-terminal-conformance ==
+exit=0
+   Compiling ovis-terminal-conformance v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t86/conformance)
+   Compiling ovis-terminal-cli v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t86/crates/ovis-terminal-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 13.14s
+
+
+== attempt 2 (single gate run on the rebuilt fixture) ==
+$ bun scripts/generate.ts
+{"generated":"written","files":31,"changed":0}
+{"generated":"fresh","files":31}
+$ tsc --noEmit -p tsconfig.json
+ 30 pass
+ 0 fail
+ 3365 expect() calls
+Ran 30 tests across 5 files. [8.51s]
+EXIT=0
