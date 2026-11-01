@@ -98,3 +98,21 @@ Seams for later todos: the attach stream (todo 31) and subscription pumps should
 None: the conformance runner executes `observability/health` (happy, failure and all exit 0 above).
 
 macOS stress: `gh workflow run probe-stress-macos.yml -f probe=health --ref lane/t59-expose-read-only-health-and` dispatched once: https://github.com/devswha/ovis-terminal/actions/runs/41269440978 (25 iterations of the health lib tests plus the `observability/health` scenario; result recorded in the DoneClaim).
+
+## Merge round (origin/integration 723d101, authorized)
+
+Conflicts were resolved keeping both sides:
+- `conformance/src/fixture/handler.rs`: integration's `Programs` probe plus the health stand-ins.
+- `conformance/src/fixture/serve.rs`: integration's `processes`/`update` registrations and holder shutdown, plus `health::register` and the `Measured` wrapper. The merged `serve()` reached 102 lines (`clippy::too_many_lines`), so the stdin wait moved into `runner_closed_stdin()` with no behaviour change.
+- `.github/workflows/probe-stress-macos.yml`: integration's file, with `health` appended last to the options list and its job appended last. It parses: the last jobs are `recovery, update, health`.
+- `schema/ovis-terminal.openrpc.json`: regenerated with `openrpc write`. `schema/released.openrpc.json` and `schema/BASELINE-AMENDMENTS.md` stay as on integration, because this lane amends no baseline and the ledger head stays `sha256:53782aab…`.
+
+`packages/client-ts` is untouched.
+
+Gates on the merged tree (`docs/evidence/task-59/merge-*.log`):
+- `openrpc write`, `check` and `compat schema/released.openrpc.json`: exit 0 (`merge-schema.log`).
+- `cargo fmt`: exit 0. Conformance clippy `-D warnings`: exit 0 (`merge-qa-2.log`).
+- `observability/health`: happy exit 0 (67 assertions), failure with `--inject '{"method":"server.metrics","params":{"reset":true}}' --append` exit 0 (21), `--case all` exit 0 (90, 2/2).
+- `all/all --case all`: exit 0, 46/46 cases, 1939 assertions, failed 0, skipped 0 (`merge-qa.log`).
+- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh`: exit 0, `1160 tests run: 1160 passed (1 slow), 1 skipped`, hygiene `0 violation(s) in 1139 file(s)` (`merge-check.log`).
+- Windows `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked`: exit 0. `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings`: exit 0 (`merge-windows.log`).

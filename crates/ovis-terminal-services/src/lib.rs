@@ -5,6 +5,7 @@
 
 pub mod plugins;
 pub mod templates;
+pub mod update;
 pub mod worktrees;
 
 /// Cargo package name of this crate, used by the workspace layering record.

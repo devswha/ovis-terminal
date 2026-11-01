@@ -21,7 +21,7 @@ use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::dispatch::lanes::health::Measured;
 use ovis_terminal_server::dispatch::lanes::prompt_bridge::{Gated, PromptBridgeGate};
-use ovis_terminal_server::listen::{ServerConfig, UnixEndpoint, serve_unix};
+use ovis_terminal_server::listen::{ServeReport, ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
 use tokio::io::AsyncReadExt as _;
@@ -94,12 +94,20 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     super::rotation::register(&mut dispatch, &authority, (runtime, Arc::clone(&sequenced)))?;
     let (status, directory) = (Arc::clone(&agents.0), Arc::clone(&agents.1));
     super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
+    let programs = super::processes::register(
+        &mut dispatch,
+        (root, runtime),
+        (&authority, issued.bearer(), &agents.0),
+    )
+    .await?;
     let parts = (&authority, &*core, agents.clone());
     let template = super::template_lane::register(&mut dispatch, (runtime, root), parts)?;
     let launch = (runtime, Arc::clone(&core), template);
     let tree = super::tree::register(&mut dispatch, (&agents, &gate), launch)?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
     let health = super::health::register(&mut dispatch, runtime, root)?;
+    let held = super::update::register(&mut dispatch, (root, &authority, issued.bearer()), runtime)
+        .await?;
     let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
     let writer = delegate(&authority, issued.bearer(), ("writer", WRITER))?;
     let prompts = Arc::clone(&gate.prompts);
@@ -111,6 +119,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         sequenced,
         tree,
         health: Arc::clone(&health),
+        programs,
     };
     let handler = Arc::new(FixtureHandler::new(
         Arc::new(dispatch),
@@ -132,22 +141,36 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     announce(&json!({"ready": {
         "socket": socket, "bearer": issued.bearer(), "observer": observer, "writer": writer,
     }}))?;
-    let mut sink = Vec::new();
-    tokio::io::stdin()
-        .read_to_end(&mut sink)
-        .await
-        .map_err(at("wait for the runner to close stdin"))?;
+    runner_closed_stdin().await?;
     let report = server
         .shutdown()
         .await
         .map_err(at("shut the server down"))?;
     handler.shutdown().await?;
     drop(handler);
+    tokio::task::spawn_blocking(move || held.shutdown())
+        .await
+        .map_err(at("join the update holder shutdown"))??;
     let core = Arc::try_unwrap(core).map_err(|_| at("release the coordinator")("still shared"))?;
     tokio::task::spawn_blocking(move || core.close())
         .await
         .map_err(at("join the store close"))?
         .map_err(at("close the store"))?;
+    announce_report(&report)
+}
+
+/// Returns once the runner closes the fixture's stdin, its signal to stop serving.
+async fn runner_closed_stdin() -> Result<(), RunnerError> {
+    let mut sink = Vec::new();
+    tokio::io::stdin()
+        .read_to_end(&mut sink)
+        .await
+        .map_err(at("wait for the runner to close stdin"))?;
+    Ok(())
+}
+
+/// The serve report line: accepted connections, failures by kind, panics.
+fn announce_report(report: &ServeReport) -> Result<(), RunnerError> {
     let failures: serde_json::Map<String, Value> = report
         .failures()
         .iter()
