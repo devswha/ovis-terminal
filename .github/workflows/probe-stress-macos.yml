@@ -7,7 +7,7 @@ on:
         description: Stress selection
         type: choice
         default: platform
-        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart, template-launch, agent-tree, credential-rotation, process-info, waits, client-ts, prompt-bridge, recovery, update, health]
+        options: [platform, holder-shutdown, screen, leases, layout, cli, encoding, input, conformance, plugins, agent-status, subscriptions, machine-identity, ops-cancel, unix-service, docs-retention, session-binding, conpty, ops-digest, ops-admission, connection, windows-service, prompts, geometry, restart, template-launch, agent-tree, credential-rotation, process-info, waits, client-ts, prompt-bridge, recovery, update, machine-actor, health]
 
 permissions:
   contents: read
@@ -1185,6 +1185,41 @@ jobs:
         with:
           name: update-stress-macos-${{ github.run_id }}
           path: update-stress-macos.log
+          if-no-files-found: error
+
+  machine-actor:
+    if: inputs.probe == 'machine-actor'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@nextest
+      - name: repeat machine actor tests and scenario 25 times
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+          {
+            uname -a
+            rustc --version
+            git rev-parse HEAD
+            for iteration in $(seq 1 25); do
+              printf '\nITERATION %s/25\n' "$iteration"
+              cargo nextest run -p ovis-terminal-remote --locked --no-tests=fail -E 'test(actors::) | test(mirror::) | test(orphans::)'
+              cargo nextest run -p ovis-terminal-protocol --locked --no-tests=fail -E 'test(machine_actor::)'
+              cargo nextest run -p ovis-terminal-server --lib --locked --no-tests=fail -E 'test(machine_actor::)'
+              cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario remote/isolation --isolated --case all --evidence "machine-actor-$iteration.json"
+              printf 'PASS %s/25\n' "$iteration"
+            done
+            printf 'RESULT 25/25\n'
+          } 2>&1 | tee machine-actor-stress-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: machine-actor-stress-macos-${{ github.run_id }}
+          path: machine-actor-stress-macos.log
           if-no-files-found: error
   health:
     if: inputs.probe == 'health'

@@ -217,3 +217,23 @@ The served binary has no assembly yet: todo 31 (`crates/ovis-terminal-cli/src/as
 - A subscription's reported loss range ends at the sequence that overflowed it (the last one known dropped); events dropped after that and before recovery are covered by the fresh snapshot but not listed.
 - The baseline amendment changes five released output types. Generation 1 has no released client of `server.status`/`server.metrics`, which follows the todo-22 and todo-47 precedents.
 
+## Merge round (origin/integration da5b456, authorized)
+
+Conflicts were resolved keeping both sides:
+- `conformance/src/fixture/handler.rs`: T44's `fixture.remote`, `fixture.machine`, `fixture.remote_child` and `$/orphanedAck` routes and the `Machines` probe, plus the health stand-ins.
+- `conformance/src/fixture/serve.rs`: T44's `machines` registration and `open_core`, plus `health::register`, the `Measured` wrapper and `runner_closed_stdin`.
+- `crates/ovis-terminal-protocol/src/domain.rs` and `crates/ovis-terminal-server/src/dispatch/lanes.rs`: `health` and `machine_actor` mod lines.
+- `.github/workflows/probe-stress-macos.yml`: integration's file, with `health` appended last to the options and the jobs. It parses: the last jobs are `update, machine-actor, health`.
+- The suite slice is sorted (25 entries).
+
+Integration changed neither `schema/released.openrpc.json` nor `schema/BASELINE-AMENDMENTS.md` after 1d2f0af, so this lane's entry still chains `53782aab…` to `0cf8102b…`.
+
+Gates on the merged tree (`docs/evidence/task-59/merge4-*`):
+- `openrpc write`, `check` and `compat`: exit 0.
+- SDK `bun install --frozen-lockfile && bun run generate && bun run generate:check && bun run typecheck && bun test`: exit 0, `{"generated":"fresh","files":31}`, 30 pass.
+- `cargo fmt --all --check` and conformance clippy `-D warnings`: exit 0.
+- `observability/health` happy: exit 0, 73 assertions.
+- `observability/health` failure with `--inject '{"method":"server.metrics","params":{"reset":true}}' --append`: exit 0, 21 assertions.
+- `all/all --case all`: exit 0, 48/48 cases, 2056 assertions, failed 0, skipped 0.
+- `with-slot.sh bash scripts/check.sh`: exit 0, `1193 tests run: 1193 passed (1 slow), 1 skipped`, hygiene `0 violation(s) in 1180 file(s)`.
+- Windows `cargo check` and `cargo clippy` for `x86_64-pc-windows-gnu` `-D warnings`: exit 0.

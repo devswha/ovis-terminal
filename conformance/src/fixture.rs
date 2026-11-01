@@ -18,6 +18,8 @@ pub mod launch;
 #[cfg(unix)]
 pub mod launches;
 #[cfg(unix)]
+pub mod machines;
+#[cfg(unix)]
 pub mod output;
 #[cfg(unix)]
 pub mod processes;

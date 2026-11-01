@@ -198,6 +198,8 @@ These exclusions remove runtime responsibilities or behaviors, not the human's a
 | EXCL-025 | Output wait watching only bytes after registration | Cursor-based or atomically armed waits preserve output produced during send. | RT-HC-02 |
 | EXCL-026 | Interrupt reporting stopped from status alone | Delivered interrupt and evidenced process or agent termination must remain separate facts. | RT-HC-03 |
 | EXCL-027 | Read-only server status auto-starting a core | Service creation is an explicit mutation, never a side effect of inspection. | RT-HC-04 |
+| EXCL-028 | Native Claude/Codex conversation-store parsers in the engine | Ovis already parses 15 conversation formats; the engine exposes typed records (todo 37) and leaves parsing to the client (user decision 2026-10-31: todo 38 removed). | owner decision 2026-10-31; todo 37 |
+| EXCL-029 | Native Pi/OmO/OpenCode conversation-store parsers in the engine | Same reason as EXCL-028 (todo 39 removed); one typed record contract serves every client-side parser. | owner decision 2026-10-31; todo 37 |
 
 ## Kept herdr and herdr-core designs
 
