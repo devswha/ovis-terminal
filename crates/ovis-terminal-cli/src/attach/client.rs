@@ -126,10 +126,10 @@ impl Client {
             .await
             .write_all(&line)
             .await
-            .map_err(|_| AttachError::ConnectionLost)?;
+            .map_err(|_| AttachError::ConnectionLost { closing: None })?;
         settled
             .await
-            .map_err(|_| AttachError::ConnectionLost)?
+            .map_err(|_| AttachError::ConnectionLost { closing: None })?
             .map_err(AttachError::Server)
     }
 }

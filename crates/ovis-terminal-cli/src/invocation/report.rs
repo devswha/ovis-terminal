@@ -113,6 +113,12 @@ fn cli_record(error: &CliError) -> Map<String, Value> {
             record.insert("holder".to_owned(), holder.clone());
         }
         #[cfg(unix)]
+        CliError::Attach(crate::attach::AttachError::ConnectionLost {
+            closing: Some(closing),
+        }) => {
+            record.insert("closing".to_owned(), closing.clone());
+        }
+        #[cfg(unix)]
         CliError::Attach(_) | CliError::Assembly(_) => {}
         CliError::Usage { .. }
         | CliError::MissingCommand

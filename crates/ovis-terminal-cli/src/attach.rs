@@ -74,7 +74,10 @@ pub(crate) enum AttachError {
     InputNotReady,
     /// The connection ended while attached.
     #[error("the connection to the server was lost")]
-    ConnectionLost,
+    ConnectionLost {
+        /// The server's `$/closing` record, when it announced the end first.
+        closing: Option<Value>,
+    },
     /// The server answered a request with a typed error.
     #[error("the server refused a request")]
     Server(Box<RpcErrorObject>),
@@ -109,7 +112,7 @@ impl AttachError {
             Self::Recovering => "recovering",
             Self::Ended { .. } => "finished",
             Self::InputNotReady => "not_ready",
-            Self::ConnectionLost => "connection_lost",
+            Self::ConnectionLost { .. } => "connection_lost",
             Self::Server(_) => "server_refused",
             Self::Io { .. } => "transport_failed",
             Self::Protocol { .. } => "invalid_response",
@@ -128,7 +131,9 @@ impl AttachError {
             Self::Recovering => "retry after the terminal recovers",
             Self::Ended { .. } => "read the final screen with --observe or terminal get",
             Self::InputNotReady => "attach again and type once the screen appears",
-            Self::ConnectionLost => "check that the server is still running, then attach again",
+            Self::ConnectionLost { .. } => {
+                "check that the server is still running, then attach again"
+            }
             Self::Server(_) => "see the server's error kind and hint",
             Self::Io { .. } => "check the endpoint and the terminal device",
             Self::Protocol { .. } => "check that the endpoint belongs to this generation",

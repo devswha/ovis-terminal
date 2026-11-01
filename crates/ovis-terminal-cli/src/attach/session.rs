@@ -49,6 +49,8 @@ struct Attached {
     acknowledged: u64,
     input_ready: bool,
     held: Vec<u8>,
+    /// The server's `$/closing` record; once it arrives input is no longer ready.
+    closing: Option<Value>,
 }
 
 impl Attached {
@@ -100,8 +102,14 @@ impl Attached {
         Ok(())
     }
 
-    /// Applies one notification; `Some` once the server closed the stream.
+    /// Applies one notification; `Some` once the server closed the stream. The server's
+    /// `$/closing` revokes input readiness: nothing typed afterwards is forwarded.
     async fn notice(&mut self, (method, params): Notice) -> Result<Option<Value>, AttachError> {
+        if method == "$/closing" {
+            self.input_ready = false;
+            self.closing = Some(params);
+            return Ok(None);
+        }
         if params.get("stream_id").and_then(Value::as_str) != Some(self.stream.as_str()) {
             return Ok(None);
         }
@@ -192,7 +200,9 @@ impl Attached {
         loop {
             tokio::select! {
                 notice = notices.recv() => match notice {
-                    None => return Err(AttachError::ConnectionLost),
+                    None => return Err(AttachError::ConnectionLost {
+                        closing: self.closing.take(),
+                    }),
                     Some(notice) => if let Some(end) = self.notice(notice).await? {
                         return Ok(end);
                     },
@@ -247,6 +257,7 @@ pub(super) async fn run(
         acknowledged: 0,
         input_ready: false,
         held: Vec::new(),
+        closing: None,
     };
     let raw = if plan.observe {
         None

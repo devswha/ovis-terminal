@@ -1,6 +1,6 @@
 //! The attached client against a scripted peer on a real Unix socket: readiness changes
-//! decide when typed bytes reach `input.raw`, and only a CLOSE the server sent counts as
-//! a confirmed detach.
+//! (including the server's `$/closing`) decide when typed bytes reach `input.raw`, and only
+//! a CLOSE the server sent counts as a confirmed detach.
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -131,6 +131,7 @@ async fn connected(
         acknowledged: 0,
         input_ready: false,
         held: Vec::new(),
+        closing: None,
     };
     Ok((attached, notices, received, dir))
 }
@@ -184,6 +185,28 @@ fn a_detach_is_confirmed_only_by_the_streams_close() -> TestResult {
             confirmed.pointer("/detached/stream_closed"),
             Some(&json!(true))
         );
+        Ok(())
+    })
+}
+
+#[test]
+fn a_closing_record_revokes_readiness_and_is_kept_for_the_loss_report() -> TestResult {
+    runtime()?.block_on(async {
+        let (mut attached, _notices, mut received, _dir) = connected(AfterClose::Confirm).await?;
+        attached.notice(notice(ControlKind::InputReady)?).await?;
+        attached.typed(b"a").await?;
+        assert_eq!(received.try_recv().ok(), Some(b"a".to_vec()));
+        let closing = json!({"reason": "server_shutdown", "hint": "reconnect later"});
+        attached
+            .notice(("$/closing".to_owned(), closing.clone()))
+            .await?;
+        attached.typed(b"b").await?;
+        assert!(
+            received.try_recv().is_err(),
+            "input reached input.raw after $/closing"
+        );
+        assert_eq!(attached.held, b"b".to_vec());
+        assert_eq!(attached.closing, Some(closing));
         Ok(())
     })
 }
