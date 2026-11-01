@@ -144,38 +144,29 @@ Evidence:
 
 Output waits are armed under the control's `ArmedWaits`, so a restart ends them `cancelled` with their resume cursor.
 
-### Methods hello does not advertise (36), each `method_not_found`
+### Methods hello does not advertise (16 after round 5), each `method_not_found`
+
+`tests/assembly.rs` `hello_advertises_every_schema_method_but_the_unimplemented_which_are_method_not_found` lists exactly these 16 as the allowed gap and fails on any other difference.
 
 | Methods | Why no route (plan todo 31: assemble "all implemented domain handlers"; "unsupported future methods are not falsely advertised") |
 |---|---|
-| `events.subscribe`, `events.update`, `events.unsubscribe`, `events.ack`, `events.wait` | The todo-22 hub subscribes to one coordinator, but `serve` keeps separate event logs (terminals inside `Control`, leases, geometry, dispatch), each with its own sequence. One `events.*` domain needs the shared commit coordinator of todo 42, which has not landed. |
-| `session.snapshot` | `layout::SessionProducer` reads the layout and terminal sections from one store transaction; the terminals live in `Control`'s own store. Same todo-42 dependency. |
-| `layout.get`, `layout.edit`, `selection.set` | No lane exists. `core::layout::Layouts` (todo 18) needs a coordinator whose snapshot carries `Layout`, and a creating edit needs a launcher bound to the runtime's live-terminal bookkeeping (screen, streams, sequencer, process token); launching through `Terminals` directly would create a terminal with no live screen or attach. |
-| `worktree.create`, `worktree.list`, `worktree.open`, `worktree.remove` | The todo-45 lane needs a `Workspaces` owner (the layout service above) and registered repositories; `serve` has neither. |
-| `template.list`, `template.get`, `terminal.first_message` | The todo-35 lane needs a `Launcher` (reserve, start, boundary, write) over the runtime. `terminal.run` in `serve` refuses templates and first messages (`unsupported_field`), so a served `terminal.first_message` could never find a launch. |
-| `machine.list` | The todo-44 roster is filled only by attaching lines to actors, while `machine.add` (served) records its link in the todo-43 identity registry. Joining the two is todo 52; served now, `machine.list` would report an empty roster contradicting `machine.get`. |
-| `turn.get`, `turn.wait`, `input.interrupt` | No lane exists. The todo-27 wait hub and interrupt evidence exist per incarnation, but declared status never reaches the runtime's `Waits` (status reports go only to `StatusService`), so a turn wait could never be satisfied and an interrupt could never prove a stop. |
-| `terminal.history`, `terminal.search` | No lane exists. `Screen::history`/`search` return snapshot-relative line indices without an evicted-line count, while the wire contract numbers lines absolutely (`first_line`, `floor_line`; absent `from_line` means the newest). |
-| `attach.focus`, `attach.release_geometry` | No lane exists. `GeometryController::focus` records focus without the lease event whose `seq` the result reports, and releasing geometry to the next requester must also settle the controller's in-flight resize (`lease_changed`), which no landed lane sequences. |
-| `agent.list`, `agent.note`, `agent.release`, `agent.wait_children`, `doc.list`, `machine.exec`, `machine.file`, `machine.login`, `machine.rm`, `server.start`, `service.install`, `service.remove` | No landed crate implements them: their params and result types appear only in the protocol crate. `service.install`/`remove` are todo 51's local `ovis-terminal service` verbs; its RPC lane is describe-only by design. |
+| `agent.list`, `agent.note`, `agent.release`, `agent.wait_children`, `doc.list`, `events.ack`, `machine.exec`, `machine.file`, `machine.login`, `machine.rm`, `server.start`, `service.install`, `service.remove` | No landed crate implements them: their params and result types appear only in the protocol crate. `service.install`/`remove` are todo 51's local `ovis-terminal service` verbs; its RPC lane is describe-only by design. `events.ack` has no counterpart in the todo-81 hub (`Subscriptions` has no acknowledgement). |
+| `terminal.history`, `terminal.search` | Wire-vs-core cursor mismatch: `Screen::history`/`search` return snapshot-relative line indices with no evicted-line count, while the wire contract numbers lines absolutely (`first_line`, `floor_line`; an absent `from_line` means the newest). Serving them would publish line numbers that shift as history is evicted. |
+| `terminal.first_message` | T35's handler is landed but answers only a message a template launch queued, and the daemon does not launch templates: `terminal.run` launches argv programs only (a `template` or `first_message` is `unsupported_field`). The missing route is `terminal.run {template}` through T35's `RunTerminal`, which needs a runtime `Launcher` (reserve, start, boundary, write). `template.list`/`template.get` are served. |
 
-### Declared scenarios (36 remain; `recovery/restart` was flipped)
+### Declared scenarios (32 remain after round 5; `part-a/task-22`, `-26`, `-27` and `services/worktrees` were flipped)
 
 | Scenario | Missing route or runner capability |
 |---|---|
 | part-a/task-1 to task-20, task-24, task-25, task-32 | Free-form descriptors written before the runner (no `format` marker, no steps). Each needs its owner's rewrite as `ovis-conformance/1`; for task-24 (leases, takeover) and task-25 (input, barrier) the routes are now served, so the rewrite is the only missing piece. |
-| part-a/task-22 | `events.subscribe`/`update`/`unsubscribe` (todo 42, above). |
 | part-a/task-23 | Routes served (`attach.open`/`credit`/`close`/`repaint`/`takeover`); the runner has no `holder_output` injection, no `operator`/`phone`/`bridge` principals and no never-acknowledging viewer step. |
-| part-a/task-26 | `attach.release_geometry` (above); its other geometry-lease steps (hand-on queue, coalescing) have no runner vocabulary. |
-| part-a/task-27 | `turn.wait`, `events.wait`, `input.interrupt` (above). |
 | part-a/task-28 | WebSocket is served; the runner has no ws transport, `ws_ping` or expired-credential step. |
 | performance/fairness | The todo-56 scheduler is not in `serve`'s output path. |
 | platform/conpty, platform/windows-service | Windows-only; `serve` is Unix-only. |
 | recovery/crash | Recovery runs at start-up (served); the runner has no step that SIGKILLs the assembled server and boots it again on the same root (`announced` follows only a planned restart). |
-| remote/identity | `machine.add` is served; the scenario joins two runtimes over an argv transport and the runner serves one fixture per case. |
+| remote/identity | `machine.add` is served (now T52's `MachineAddAttached`); the scenario joins two runtimes over an argv transport and the runner serves one fixture per case. |
 | services/docs-retention | `doc.get`/`doc.set` are served; the retention sweep, its virtual clock and `retention.floor_advanced` are not hosted. |
 | services/plugins | `plugin.*` is served; the runner has no plugin fixture files or principals. |
-| services/worktrees | `worktree.*` (above). |
 
 ### Seams (outside the write scope, disclosed)
 
@@ -215,6 +206,102 @@ Output waits are armed under the control's `ArmedWaits`, so a restart ends them 
 - The `server.restart` receipt is written by the connection before the hand-over closes it because the hand-over first revokes every stream with durable commits; the connection driver still aborts unjoined tasks on any ending, so this ordering, not the driver, guarantees delivery.
 - `update.*` opens its install root at every boot; the first open of a fresh root hashes the running executable.
 - T58's precheck answers an observe-only credential's `input.raw` `forbidden` before the route's own `raw_not_authorized`, and the core maps a missing takeover grant to `forbidden`, not the catalogued `takeover_not_authorized`; the scenarios assert what the binary answers.
+
+## Round 5 (gate review at f6cf0b0)
+
+### B1: the 20 landed handlers, routed and advertised
+
+| Methods | How the daemon serves them | Test on the real binary |
+|---|---|---|
+| `attach.focus`, `attach.release_geometry` | On the actor under the caller's lease: focus through the terminal's `GeometryController`; release through the new `AttachLane::release_geometry` (beside `acquire_geometry`), which releases only the current geometry lease and journals the transition. A resize is applied synchronously inside the actor, so no queued resize exists for `lease_changed` to fence. | `leases::focus_needs_a_held_lease_and_only_the_geometry_lease_is_released` |
+| `layout.get`, `layout.edit`, `selection.set` | Core `Layouts` on the runtime's own layout log (`layout.db`, reopened under the successor identity at a planned restart). `assembly/layout/wire.rs` maps core's binary splits to published nodes. A creating edit's program launches through the runtime's terminal lifecycle with `terminal.run`'s bounds, so the pane's terminal is served like any other. `rename` is `unsupported_field` (core layouts carry no names). | `layout::*` (2 tests) |
+| `worktree.list`, `create`, `open`, `remove` | T45's lane on the dispatch log (which gains a `Worktree` event variant). Repositories are registered in `<state>/worktrees.json`. The `Workspaces` port is a layout adapter: opening a checkout creates a layout workspace, and removal closes exactly its workspaces, under the control's own session. | `worktrees::a_checkout_opens_a_workspace_and_its_removal_closes_exactly_that_workspace` |
+| `events.subscribe`, `events.update`, `events.unsubscribe` | T81's `Subscriptions` hub per boot on the dispatch log (`report_to` the boot's health; `Request::for_client`). Each subscription is pulled by its own blocking task that writes `event`/`heartbeat`/`missed` on the subscribing connection. Only the subscribing principal may update or close it. | `events::a_subscription_receives_declared_status_and_only_its_owner_closes_it` |
+| `session.snapshot` | A dispatched read answered off the executor. Agent bindings come from the dispatch log's committed snapshot (new `StatusService::binding`); terminals, leases and layout are read in one actor job. One page; `page.limit` truncates the terminal list and says so. | `session::the_session_snapshot_holds_terminals_agents_leases_and_the_layout` |
+| `turn.get`, `turn.wait`, `events.wait`, `input.interrupt` | `turn.get` through the agent status lane (new `StatusService::turn`). The waits arm the terminal's wait hub on the actor under the control's armed waits and are awaited off it. Declared status reaches the hubs: the runtime drains `status.changed` from its boot's dispatch log between jobs. `events.wait` serves states and exit; `turn_after` and `cursor` are `unsupported_field`. | `turns::declared_status_drives_state_and_turn_waits_and_an_interrupt_reports_its_key` |
+| `template.list`, `template.get` | T35's lane as unrecorded reads of `<state>/templates`. The lane's launcher refuses every step and no registered method reaches it. `terminal.first_message` stays unadvertised (table above). | `templates::templates_in_the_state_directory_are_listed_and_read_by_name` |
+| `machine.list` (T52 landed) | T52's machine actor lane on the dispatch log. `machine.add` is now `MachineAddAttached`, so each proven machine's link is driven by its own actor. Calls naming another machine go through `RemoteDispatch`; the handler stack is `Revalidated(Measured(BoundaryPolicy(Gated(RemoteDispatch(Assembled)))))`. `ServiceLanes` is not used because the daemon already registers the plugin and update lanes it bundles. | `templates::machine_list_reads_the_actor_roster_which_starts_empty` |
+
+Flipped scenarios, each with happy and failure cases on the assembled binary (`serve: assembled`):
+- `part-a/task-22`: subscriptions.
+- `part-a/task-26`: resize, focus and release, plus the `forbidden` and `no_lease` refusals.
+- `part-a/task-27`: interrupt stop evidence, exit wait, and the typed wait refusals.
+- `services/worktrees`: a real Git repository registered by a program in the isolated root, a planned restart, then create, open, scope_required, group remove and checkout_dirty.
+
+Declared-status turn completion cannot be scripted, because no reply exposes the program's process token. The assembly test above asserts it instead, reading the token from the program's own screen.
+
+### B2: `attach.control close{server_restart}` before `$/closing`
+
+The restart hand-over closed every stream `server_restart`, but ended the listeners before the lane's delivery tasks had queued those closes. The hand-over now joins the lane's delivery tasks, bounded by the listener's 5 s grace and warning past it, before ending the listeners. `restart::an_attached_stream_is_closed_server_restart_before_the_connection_closes` asserts the order `input_revoked`, then `close{server_restart}`, then `$/closing`. It fails both without the join and with `Runtime::restarting` made a no-op (both mutants run).
+
+### B3: resize waits on the resize itself
+
+The inner shell runs a foreground job that prints the size when SIGWINCH reaches it (`trap … WINCH; wait`). That job is armed and acknowledged before the outer PTY is resized, and the size is then expected once within one bound. The runner's `retry_type` step (retype every second, up to 20 times) is removed, and `tests/attach.rs` uses the same reporter.
+
+### B4: the actor never waits under the control lock
+
+`serve` takes a hidden `--holder-poll-ms` (default 5). `control::a_spawn_and_a_lifecycle_read_are_served_while_the_runtime_waits_for_requests` stretches the idle wait to ten minutes, and a spawn and `update.query` are still answered at once. With the wait moved back under the control (`receive_message(self.poll)`), the spawn misses its deadline on every run.
+
+### Merge of origin/integration edfdb58 (T52)
+
+The fixture keeps the round-4 registration phases and gains T52's peer role, peer composition, `RemoteDispatch` wrap, peer stop and store release. The conformance launcher keeps one `start(program, args, root)` with T52's search path, and now starts each server in its isolated root. The schema was regenerated (write, check and compat all exit 0), the SDK was regenerated with `bun run generate`, and `Cargo.lock` was regenerated `--offline` and checked with `metadata --locked`.
+
+### Seams of round 5 (outside the write scope, disclosed)
+
+- `crates/ovis-terminal-server/src/streams/control.rs`: `AttachLane::release_geometry`. `streams/records.rs` and `streams.rs`: `lease_record` is public.
+- `crates/ovis-terminal-server/src/dispatch/lanes/agent_status.rs`: `GetTurn` (`turn.get`).
+- `crates/ovis-terminal-agent/src/status/service.rs`: `StatusService::turn` and `StatusService::binding`.
+- `crates/ovis-terminal-server/src/dispatch/remote.rs`: `RemoteDispatch` delegates `transports()`; without it the WebSocket transport disappears from hello.
+- `conformance/src/engine/pty.rs` and `scenario/pty.rs`: `retry_type` removed. `fixture/launch.rs`: `current_dir(root)`. `runner_tests/suite.rs`: four scenarios in `ASSEMBLED`.
+
+### Loaded-run findings of round 5 (root-caused from live captures, all fixed)
+
+1. **Lost restart wake (product).** The serve loop was woken by the restarting call's *return*. Under load, `server.restart`'s commit waited for the control lock: run 11 recorded `T31RESTART control_restarted 88369` ms. The dispatcher therefore answered its 10 s pending outcome first. The wake fired and `hand_over` found the control identity unchanged, so it did nothing. When control then restarted, no wake was left. The successor was never served or announced, and the test's `announcement()` waited for ever.
+
+   Fix: the serve loop hands over on control's own `Completed` restart boundary (`Control::boundaries`, forwarded by the `ovis-restarts` thread). It first waits until no restarting call is still answering, through a `watch` counter that remembers its value, so every reply still precedes the connection's `$/closing`.
+
+   Test: `pending::a_restart_answered_pending_is_still_handed_over_and_op_get_resolves_it`. With the control held through the QA FIFO, the restart answers pending with its op id. After the release, the successor is announced within a bounded read, and `op.get` resolves the restart op.
+2. **IDEAL-010: the op id must reach the caller (product).**
+   - `Limits::client_bound_ms` is defined once as the server deadline plus `REPLY_ALLOWANCE`, and the CLI uses it, so the server's deadline answer always arrives inside the client's wait.
+   - The actor-routed lifecycle mutations (`terminal.run`, `kill`, `rm`, `keep`, `rename`, `label`, `recover`) now answer `deadline_exceeded` with their op id at the server deadline. Before, they had no server deadline at all.
+   - `op.get` falls through to the dispatcher's ledger, so a `server.restart` op id resolves.
+
+   Tests: `pending::a_held_terminal_run_answers_pending_with_its_op_id_and_op_get_settles_it` and `pending::the_client_waits_longer_than_the_server_deadline`.
+3. **Harness hangs (tests).** In the racing test, the scoped query thread's `started` sender was owned by the test thread, so a query failing before its first answer left `first.recv()` waiting for ever. A failing restart call also never set the flag that stops the query loop, so the scope join waited for ever. Now the query thread owns the sender and the flag is set whatever the call's outcome. `Served::announcement` reads under a 60 s hang guard that names the server pid.
+4. **Ruled out with evidence.**
+   - The `tokio-rt-worker` in `anon_pipe_read` is the blocking-pool thread of the `--stdin-lifetime` read. A healthy idle server shows the same thread, and the executor is the current-thread runtime on the main thread.
+   - Planned restarts are in-process, so the server spawns no successor process.
+   - `stdio::a_launched_program_holds_none_of_the_servers_standard_streams` shows that programs hold none of the server's stdio pipes.
+   - No host memory or IO pressure appeared during the loops (PSI unchanged).
+   - The first loaded recipe also pinned nextest to the loaded cores, and its 48-260 s simultaneous stalls of pure unit tests were harness starvation. The final recipe pins only the product (`OVIS_TEST_PIN_CORES`, applied by the test support) to cores 124-125 with 8 busy loops, and keeps nextest and the test binaries on cores 100-123.
+
+**QA seams (disclosed).** `serve --qa-actor-hold <fifo>` makes the actor open the FIFO, holding the control, before its next `terminal.run`. `serve --qa-holder-poll-ms` sets the runtime's idle wait and replaces round 5's hidden `--holder-poll-ms`. Both are documented in `serve --help` and refused (`accept the QA seams`) unless `--root` holds a `qa-fixture` file. The test support marks every root it creates.
+
+**Merges.** `origin/integration` edfdb58 (T52) and 557af58 (T61) were merged.
+- 557af58: `quality-matrix --mode contract` passes.
+- The T61 `quality/gates` evidence was re-recorded on this tree; its `$equals_file` operand is this lane's schema.
+- `evidence-audit` passes with 0 findings and `source-check` passes.
+- This lane's code was brought under T61's `source-check`: a test support file split, a dropped `Result` reported instead of discarded, and an `as usize` removed.
+
+**Unreproduced.** After the stale task-31 `layout.get` assertion was fixed, one `cargo nextest run -p ovis-terminal-conformance` failed at `conformance/src/runner_tests/suite.rs:68` (`assert_eq!(ran.output.status.code(), Some(0), "{}", ran.explain())`). Its `explain()` text was lost: the test helper deletes its evidence directory, and that log was grep-filtered. Twenty reruns were all green:
+- 4 direct `all/all` runs,
+- 8 runs with two `all/all` processes in parallel,
+- 8 full nextest suites.
+
+Evidence: `/dev/shm/ovt-fixtures/t31-scratch/r5-all-*.json`, `r5-par-*.json`, `r5-nx-*.log` (copied under `docs/evidence/task-31/r5-loaded/`). It is listed as unmet, not fixed.
+
+### Verification of round 5 (Linux 7.0.0-38-generic x86_64)
+
+- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` at 12a92e5 (after the edfdb58 and 557af58 merges): **exit 0**, `1386 tests run: 1386 passed (3 slow), 1 skipped`, `workspace-hygiene: 0 violation(s) in 1404 file(s) checked`, source-check `pass`, evidence-audit `pass` (`docs/evidence/task-31/check-r5.log`).
+- Windows pre-check (`cargo check` and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked`, `-D warnings`): exit 0 (`windows-precheck-r5.log`).
+- `cargo nextest run -p ovis-terminal-cli`: 71/71 unloaded. `cargo nextest run -p ovis-terminal-conformance` with the real binary: 28/28, with `all/all` executing the four flipped scenarios and 32 declared.
+- Loaded runs, recipe `docs/evidence/task-31/r5-loaded/r5-25n.sh`: the product (server, holder, CLI and programs) pinned to cores 124-125 through `OVIS_TEST_PIN_CORES`, 8 busy loops there at `nice -n 10`, nextest and the test binaries on cores 100-123. Result: **25/25**, every run 71/71 in 11-13 s, no SLOW (`final25-nice10-summaries.log`).
+- Why the busy loops run at nice 10: with 8 loops at nice 0, `r5-loaded/stall-auto-3980869.txt` shows a just-started server runnable (`R`) with `utime=0 stime=0` after 62 s. It was never scheduled, and that alone produced the 54-258 s outliers.
+- Mutants:
+  - B2 fails without the delivery join and with `restarting` made a no-op.
+  - B4 fails with the wait moved under the control.
+  - The hand-over lost wake is reproduced deterministically by the held-control restart test.
+
 
 ## Contract checklist
 
