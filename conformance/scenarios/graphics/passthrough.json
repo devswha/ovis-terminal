@@ -223,11 +223,12 @@
     },
     {
       "case": "failure",
-      "summary": "--inject {\"graphics\":{\"bytes\":\"over_cap\"}}: the program writes text, a Kitty m=1 chunk of 8388609 payload bytes plus its m=0 final chunk, then text; the viewer receives exactly one graphics_dropped record (too_large, kitty, limit 8388608, sequence_bytes 8388609) between the two texts and none of the series' bytes, and terminal.screen shows the text joined on one row: the grid is what the VT drew from every raw byte.",
+      "summary": "--inject {\"graphics\":{\"bytes\":\"over_cap\"}}: serve runs with the QA seam --qa-graphics-sequence-max-bytes 4096 on a qa-fixture root, so crossing the cap does not depend on PTY throughput; the program writes text, a Kitty m=1 chunk of 4097 payload bytes plus its m=0 final chunk, then text; the viewer receives exactly one graphics_dropped record (too_large, kitty, limit 4096, sequence_bytes 4097, output_offset 13) between the two texts and none of the series' bytes, and terminal.screen shows the text joined on one row: the grid is what the VT drew from every raw byte. The advertised 8 MiB default is asserted on the stream config by unit tests.",
       "steps": [
         {
           "serve": {
-            "fixture": "assembled"
+            "fixture": "assembled",
+            "qa_graphics_sequence_max_bytes": "4096"
           }
         },
         {
@@ -267,7 +268,7 @@
                     "argv": [
                       "/bin/sh",
                       "-c",
-                      "read go; printf 'before-mark'; printf '\\033_Ga=T,f=100,i=9,m=1;'; head -c 8388609 /dev/zero | tr '\\000' A; printf '\\033\\\\'; printf '\\033_Gm=0;QQ\\033\\\\'; printf 'after-mark'; read done"
+                      "read go; printf 'before-mark'; printf '\\033_Ga=T,f=100,i=9,m=1;'; head -c 4097 /dev/zero | tr '\\000' A; printf '\\033\\\\'; printf '\\033_Gm=0;QQ\\033\\\\'; printf 'after-mark'; read done"
                     ]
                   },
                   "geometry": {
@@ -418,8 +419,9 @@
             "dropped": {
               "/graphics_dropped/reason": "too_large",
               "/graphics_dropped/protocol": "kitty",
-              "/graphics_dropped/limit_bytes": "8388608",
-              "/graphics_dropped/sequence_bytes": "8388609"
+              "/graphics_dropped/limit_bytes": "4096",
+              "/graphics_dropped/sequence_bytes": "4097",
+              "/graphics_dropped/output_offset": "13"
             }
           }
         },

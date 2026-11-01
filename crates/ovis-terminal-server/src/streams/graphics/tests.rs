@@ -8,6 +8,7 @@ use sha2::{Digest, Sha256};
 use super::super::filter::{QueryFilter, RawSlice};
 use super::{Gated, GraphicsGate};
 
+mod config;
 mod dropped;
 
 pub(super) const PNG: &[u8] = b"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
