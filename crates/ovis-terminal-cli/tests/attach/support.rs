@@ -7,10 +7,18 @@ use std::path::PathBuf;
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use rustix::termios::{self, Winsize};
 use serde_json::{Value, json};
+
+#[path = "drawn.rs"]
+mod drawn;
+#[path = "ids.rs"]
+mod ids;
+
+pub use drawn::Drawn;
+use ids::op_id;
 
 /// Result of a test step; any failure fails the test.
 pub type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
@@ -20,26 +28,6 @@ pub const BIN: &str = env!("CARGO_BIN_EXE_ovis-terminal");
 /// Bound on every awaited outcome.
 pub const WAIT: Duration = Duration::from_secs(15);
 static NEXT: AtomicU32 = AtomicU32::new(0);
-
-fn op_id() -> TestResult<String> {
-    let millis = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
-    let unique = u128::from(NEXT.fetch_add(1, Ordering::Relaxed));
-    let id = (millis << 80)
-        | (0x7 << 76)
-        | (0b10 << 62)
-        | (u128::from(std::process::id()) << 16)
-        | unique;
-    let hex = format!("{id:032x}");
-    let part = |from: usize, to: usize| hex.get(from..to).unwrap_or_default().to_owned();
-    Ok(format!(
-        "{}-{}-{}-{}-{}",
-        part(0, 8),
-        part(8, 12),
-        part(12, 16),
-        part(16, 20),
-        part(20, 32)
-    ))
-}
 
 /// A running `serve` with one `/bin/sh` launched as `t1`.
 #[derive(Debug)]
@@ -328,55 +316,5 @@ impl Outer {
         let restored = settings_of(&slave_path)? == original;
         drop(master);
         Ok((status?, record, restored))
-    }
-}
-
-/// What an observer drew on its stdout, read on a thread as it arrives.
-#[derive(Debug)]
-pub struct Drawn {
-    output: mpsc::Receiver<Vec<u8>>,
-    seen: Vec<u8>,
-}
-
-impl Drawn {
-    /// Follows `stdout` until it closes.
-    pub fn follow(mut stdout: ChildStdout) -> Self {
-        let (sender, output) = mpsc::channel();
-        std::thread::spawn(move || {
-            let mut chunk = [0_u8; 4096];
-            while let Ok(read) = stdout.read(&mut chunk) {
-                let Some(bytes) = chunk.get(..read).filter(|bytes| !bytes.is_empty()) else {
-                    break;
-                };
-                if sender.send(bytes.to_vec()).is_err() {
-                    break;
-                }
-            }
-        });
-        Self {
-            output,
-            seen: Vec::new(),
-        }
-    }
-
-    /// Waits, bounded by [`WAIT`], until `needle` was drawn.
-    pub fn shows(&mut self, needle: &str) -> bool {
-        let Some(deadline) = Instant::now().checked_add(WAIT) else {
-            return false;
-        };
-        loop {
-            if self
-                .seen
-                .windows(needle.len())
-                .any(|window| window == needle.as_bytes())
-            {
-                return true;
-            }
-            let left = deadline.saturating_duration_since(Instant::now());
-            match self.output.recv_timeout(left) {
-                Ok(chunk) => self.seen.extend(chunk),
-                Err(_) => return false,
-            }
-        }
     }
 }
