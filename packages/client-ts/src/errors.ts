@@ -20,6 +20,7 @@ export const clientErrorHints = {
   input_not_ready: "wait for input_ready on a live interact stream",
   draft_settled: "this draft already has an explicit decision",
   rpc_error: "the server refused the request; see its kind and hint",
+  unsupported_transport: "this build has no client transport for the platform's endpoint; use the CLI connect bridge",
 } as const;
 
 export type ClientErrorKind = keyof typeof clientErrorHints;

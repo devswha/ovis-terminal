@@ -1,0 +1,34 @@
+# host: Linux 7.0.0-38-generic x86_64 | bun: 1.4.3
+$ bun run --cwd packages/client-ts build && bun run --cwd packages/client-ts pack && bun test packages/client-ts/tests
+$ bun scripts/build.ts
+{"built":"dist","generated_files":31,"entries":["dist/index.js","dist/protocol.js"]}
+$ bun scripts/pack.ts
+{"tarball":"/home/devswha/workspace/ovis-terminal-wt/lane-t63/packages/client-ts/pack/ovis-terminal-client-0.1.0.tgz","sha256":"ed9f8c9bc24f32f69e31aa68083446554c9918d77c3c7a508824e68e18dc5963"}
+bun test v1.4.3 (c6da4a4d3)
+
+packages/client-ts/tests/consumer.test.ts:
+(pass) happy > every entry point resolves to the installed tarball's dist, outside the repository [57.26ms]
+(pass) happy > the consumer typechecks against the packed declarations and every misuse is rejected [1010.73ms]
+(pass) happy > one framed connection to the real server carries pipelined calls; future_status and u64 stay exact [549.16ms]
+(pass) happy > an additive output enum value is kept as received and the known fields are unchanged [41.38ms]
+(pass) happy > typed attach outcomes, isolated stream bytes and per-stream credit [39.88ms]
+(pass) happy > frames decode identically at every split, bytewise, and a truncated tail is typed [46.66ms]
+(pass) failure > an expired op_id is the server's typed op_expired, sent once and never resent [396.36ms]
+(pass) failure > a lost mutation reply is an inspectable draft; reconnect resends nothing [474.49ms]
+(pass) failure > stale state: a closed stream's ack grants nothing and the next credit belongs to the live stream [40.88ms]
+(pass) failure > stale state: reconnect resumes after the retained cursor and drops the replayed duplicate [40.90ms]
+(pass) failure > a malformed server frame fails the decoder once; the mutation becomes a draft and is not resent [40.89ms]
+(pass) failure > Windows named pipes are refused with a typed error; Unix platforms use sockets [43.10ms]
+
+packages/client-ts/tests/package.test.ts:
+(pass) the tarball carries only built output, the license, the readme and the manifest [6.51ms]
+(pass) the packed manifest's exports, types, files, engines and license resolve inside the tarball [11.94ms]
+(pass) the exported OpenRPC document is the Rust-emitted schema byte for byte [12.23ms]
+(pass) building and packing again reproduces the tarball byte for byte [1317.02ms]
+(pass) build refuses a schema the committed generated modules do not match, writing nothing [45.37ms]
+
+ 17 pass
+ 0 fail
+ 51 expect() calls
+Ran 17 tests across 2 files. [4.20s]
+exit=0

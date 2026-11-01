@@ -14,6 +14,18 @@ export interface Sink {
   closed(error: ClientError | undefined): void;
 }
 
+/**
+ * The endpoint transport this build opens on `platform`. Windows named pipes (with the bounded
+ * ERROR_PIPE_BUSY wait the CLI performs) are not part of this build, so they are refused
+ * with a typed error instead of being attempted as a Unix socket path.
+ */
+export function endpointTransport(platform: string): "unix" {
+  if (platform === "win32") {
+    throw new ClientError("unsupported_transport", "the Windows named-pipe transport is not part of this build");
+  }
+  return "unix";
+}
+
 /** One persistent Unix-socket connection: NDJSON, upgraded in place to framed mode. */
 export class Transport {
   private mode: "lines" | "framed" = "lines";
@@ -30,6 +42,7 @@ export class Transport {
   ) {}
 
   static async connect(path: string, sink: Sink): Promise<Transport> {
+    endpointTransport(process.platform);
     let transport: Transport | undefined;
     const socket = await Bun.connect({
       unix: path,

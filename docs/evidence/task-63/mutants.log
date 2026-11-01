@@ -1,0 +1,50 @@
+# mutants for todo 63: each is applied to src/, the tarball is rebuilt, and `bun test packages/client-ts/tests` must fail
+
+## auto-resend-on-reconnect (client.ts)
+- `this.current = { epoch: (this.current?.epoch ?? 0) + 1, hello };` -> `for (const draft of this.drafts()) void draft.retry().catch(() => undefined);`
+- bun test exit=1; 15 pass, 2 fail
+  (fail) failure > a lost mutation reply is an inspectable draft; reconnect resends nothing [466.44ms]
+  (fail) failure > a malformed server frame fails the decoder once; the mutation becomes a draft and is not resent [35.32ms]
+- verdict: KILLED
+
+## windows-pipe-not-refused (transport.ts)
+- `if (platform === "win32") {` -> `if (platform === "never") {`
+- bun test exit=1; 16 pass, 1 fail
+  (fail) failure > Windows named pipes are refused with a typed error; Unix platforms use sockets [40.73ms]
+- verdict: KILLED
+
+## closed-enum-on-output (schema.ts)
+- `raw["x-ovis-open-enum"] === true && typeof value === "string"` -> `raw["x-ovis-open-enum"] === false && typeof value === "string"`
+- bun test exit=1; 14 pass, 3 fail
+  (fail) happy > an additive output enum value is kept as received and the known fields are unchanged [33.09ms]
+  (fail) happy > typed attach outcomes, isolated stream bytes and per-stream credit [34.71ms]
+  (fail) failure > stale state: a closed stream's ack grants nothing and the next credit belongs to the live stream [33.58ms]
+- verdict: KILLED
+
+## stale-stream-ack-grants-credit (streams.ts)
+- `if (this.closedReason !== undefined) {` -> `throw new ClientError("stream_closed"`
+- bun test exit=1; 15 pass, 2 fail
+  (fail) happy > typed attach outcomes, isolated stream bytes and per-stream credit [34.90ms]
+  (fail) failure > stale state: a closed stream's ack grants nothing and the next credit belongs to the live stream [34.07ms]
+- verdict: KILLED
+
+## decoder-failure-not-surfaced (client.ts)
+- `this.lastFailure = error;` -> `this.lastFailure = undefined;`
+- bun test exit=0; 17 pass, 0 fail
+
+- verdict: SURVIVED
+
+# restored: src identical to the pre-mutant tree; rebuilt and repacked: {"tarball":"/home/devswha/workspace/ovis-terminal-wt/lane-t63/packages/client-ts/pack/ovis-terminal-client-0.1.0.tgz","sha256":"ed9f8c9bc24f32f69e31aa68083446554c9918d77c3c7a508824e68e18dc5963"}
+
+## round 2: decoder-failure-not-surfaced after adding the failure_while_down assertion (client.failure read before reconnect)
+- bun test exit=1; 16 pass, 1 fail
+  (fail) failure > a malformed server frame fails the decoder once; the mutation becomes a draft and is not resent [43.26ms]
+- verdict: KILLED
+
+# restored and rebuilt; clean run:
+{"tarball":"/home/devswha/workspace/ovis-terminal-wt/lane-t63/packages/client-ts/pack/ovis-terminal-client-0.1.0.tgz","sha256":"ed9f8c9bc24f32f69e31aa68083446554c9918d77c3c7a508824e68e18dc5963"}
+
+ 17 pass
+ 0 fail
+ 51 expect() calls
+Ran 17 tests across 2 files. [4.20s]

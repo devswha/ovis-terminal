@@ -1,0 +1,15 @@
+# host: Linux 7.0.0-38-generic x86_64 | rustc: rustc 1.99.1 (58cf8f9c3 2026-10-13) | bun: 1.4.3
+$ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.07s
+exit=0
+$ sha256sum target/debug/ovis-terminal
+74a2c2d7a7d59509e74865c9a4c5705cb3ac467abdb24f515307d79916bbce73  target/debug/ovis-terminal
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario client/package --isolated --case happy --evidence "$ATTEMPT_DIR/task-63-ovis-terminal-v1.json"
+{"case":"happy","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t63/.omo/evidence/ovis-terminal-v1/attempt.qa63/task-63-ovis-terminal-v1.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"client/package","totals":{"assertions":"28","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+exit=0
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario client/package --isolated --case failure --inject '{"method":"terminal.run","params":{"op_id":"expired-operation"}}' --evidence "$ATTEMPT_DIR/task-63-ovis-terminal-v1.json" --append
+{"case":"failure","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t63/.omo/evidence/ovis-terminal-v1/attempt.qa63/task-63-ovis-terminal-v1.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"client/package","totals":{"assertions":"27","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+exit=0
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario client/package --isolated --case all --evidence "$ATTEMPT_DIR/task-63-all.json"
+{"case":"all","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t63/.omo/evidence/ovis-terminal-v1/attempt.qa63/task-63-all.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"client/package","totals":{"assertions":"59","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
+exit=0

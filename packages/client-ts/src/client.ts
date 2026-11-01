@@ -41,7 +41,8 @@ export class Client {
   private readonly pending = new Map<string, Pending>();
   private readonly listeners = new Map<string, Set<Listener>>();
   private readonly frameListeners = new Set<(frame: Frame) => void>();
-  private readonly disconnectListeners = new Set<() => void>();
+  private readonly disconnectListeners = new Set<(failure: ClientError | undefined) => void>();
+  private lastFailure: ClientError | undefined;
   private readonly retained: Draft[] = [];
   private nextId = 1;
   private current: Connection | undefined;
@@ -61,6 +62,11 @@ export class Client {
     return this.current;
   }
 
+  /** Why the most recent connection ended, when a decode or transport error ended it. */
+  get failure(): ClientError | undefined {
+    return this.lastFailure;
+  }
+
   get framed(): boolean {
     return this.transport?.framed ?? false;
   }
@@ -72,6 +78,7 @@ export class Client {
 
   /** Opens a fresh connection and repeats hello; never resends a request of the old one. */
   async reconnect(): Promise<Connection> {
+    this.lastFailure = undefined;
     this.transport = await Transport.connect(this.options.socketPath, {
       record: (record) => this.record(record),
       frame: (frame) => this.frameListeners.forEach((listener) => listener(frame)),
@@ -117,7 +124,8 @@ export class Client {
     return () => this.frameListeners.delete(listener);
   }
 
-  onDisconnect(listener: () => void): () => void {
+  /** Called once per ended connection with the typed failure that ended it, if any. */
+  onDisconnect(listener: (failure: ClientError | undefined) => void): () => void {
     this.disconnectListeners.add(listener);
     return () => this.disconnectListeners.delete(listener);
   }
@@ -230,12 +238,13 @@ export class Client {
 
   private closed(error: ClientError | undefined): void {
     this.transport = undefined;
+    this.lastFailure = error;
     for (const id of [...this.pending.keys()]) {
       const entry = this.settle(id);
       if (entry === undefined) continue;
       const draft = this.draftOf(entry);
       entry.reject(draft === undefined ? new ClientError("disconnected", `${entry.method} lost its connection`, { cause: error }) : new OutcomeUnknown("outcome_unknown", draft));
     }
-    this.disconnectListeners.forEach((listener) => listener());
+    this.disconnectListeners.forEach((listener) => listener(error));
   }
 }
