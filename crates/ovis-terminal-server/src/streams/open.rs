@@ -13,6 +13,7 @@ use ovis_terminal_core::leases::{
     Acquire, Caller, ControlSlot, Granted, LeaseError, LeaseEvent, Owner, RevokeReason, Takeover,
 };
 use ovis_terminal_core::registry::LeaseId;
+use ovis_terminal_protocol::domain::health::ConsumerRef;
 use ovis_terminal_protocol::schema::events::StreamCloseReason;
 use ovis_terminal_protocol::schema::ids::StreamId;
 use ovis_terminal_protocol::schema::methods::attach::{
@@ -121,6 +122,12 @@ impl TerminalStreams {
     ) -> Result<(Arc<Notify>, Checkpoint), StreamError> {
         let window = self.setup.limits.credit_window();
         let mut viewer = Viewer::new(request.stream.clone(), request.owner.clone(), window);
+        let consumer = ConsumerRef::Stream {
+            stream_id: request.stream.clone(),
+            terminal_id: self.identity.terminal_id.clone(),
+        };
+        let health = self.setup.health.as_deref();
+        super::resync::track(&mut viewer, health, (request.owner, consumer));
         let painted = self.fence(state)?;
         let first = checkpoint(&painted.paint, StreamOffset::ZERO);
         let control = checkpoint_control(request.stream, first.clone());
@@ -134,6 +141,7 @@ impl TerminalStreams {
                 at,
             ));
         }
+        viewer.report_queued(viewer.backlog(&state.log));
         self.setup
             .backlog
             .set(request.stream, viewer.backlog(&state.log))?;

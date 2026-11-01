@@ -1521,6 +1521,21 @@
         ],
         "type": "object"
       },
+      "CensusState": {
+        "description": "Whether a status answer carries a holder and terminal census.",
+        "oneOf": [
+          {
+            "const": "reported",
+            "description": "The terminal service published `holder_count` and `live_terminals`.",
+            "type": "string"
+          },
+          {
+            "const": "not_reported",
+            "description": "Nothing published a census; both counts are null rather than zero.",
+            "type": "string"
+          }
+        ]
+      },
       "CheckoutId": {
         "description": "Opaque identity string.",
         "type": "string"
@@ -1732,6 +1747,25 @@
           }
         ]
       },
+      "ConsumerLoss": {
+        "additionalProperties": false,
+        "description": "One dropped range and whether the consumer was resynchronized past it.",
+        "properties": {
+          "range": {
+            "$ref": "#/components/schemas/LossRange",
+            "description": "What was dropped."
+          },
+          "resynced": {
+            "description": "A snapshot or resync replaced the dropped range.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "range",
+          "resynced"
+        ],
+        "type": "object"
+      },
       "ConsumerQueue": {
         "description": "Outbound backlog of one consumer.",
         "properties": {
@@ -1739,28 +1773,92 @@
             "$ref": "#/components/schemas/ClientId",
             "description": "Consumer client."
           },
+          "consumer": {
+            "$ref": "#/components/schemas/ConsumerRef",
+            "description": "The stream or subscription this backlog belongs to."
+          },
           "event_lag_ms": {
             "$ref": "#/components/schemas/DurationMs",
             "description": "Event delivery lag."
+          },
+          "losses": {
+            "description": "Retained dropped ranges, oldest first, each marked once resynchronized.",
+            "items": {
+              "$ref": "#/components/schemas/ConsumerLoss"
+            },
+            "type": "array"
+          },
+          "losses_omitted": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Older dropped ranges no longer retained."
           },
           "queue_bytes": {
             "$ref": "#/components/schemas/ByteCount",
             "description": "Queued outbound bytes."
           },
           "resynced_events": {
-            "description": "Events dropped and later resynchronized.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/components/schemas/Count",
+            "description": "Events dropped and later resynchronized."
           }
         },
         "required": [
           "client_id",
           "queue_bytes",
           "event_lag_ms",
-          "resynced_events"
+          "resynced_events",
+          "consumer",
+          "losses",
+          "losses_omitted"
         ],
         "type": "object"
+      },
+      "ConsumerRef": {
+        "description": "The outbound path one consumer reads.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "An attach output stream of one terminal.",
+            "properties": {
+              "kind": {
+                "const": "stream",
+                "type": "string"
+              },
+              "stream_id": {
+                "$ref": "#/components/schemas/StreamId",
+                "description": "The stream."
+              },
+              "terminal_id": {
+                "$ref": "#/components/schemas/TerminalId",
+                "description": "The terminal it carries."
+              }
+            },
+            "required": [
+              "kind",
+              "stream_id",
+              "terminal_id"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "An event subscription.",
+            "properties": {
+              "kind": {
+                "const": "subscription",
+                "type": "string"
+              },
+              "subscription_id": {
+                "$ref": "#/components/schemas/SubscriptionId",
+                "description": "The subscription."
+              }
+            },
+            "required": [
+              "kind",
+              "subscription_id"
+            ],
+            "type": "object"
+          }
+        ]
       },
       "ContentBlock": {
         "description": "One typed content block of a record.",
@@ -5092,6 +5190,59 @@
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "LossRange": {
+        "description": "An inclusive range a consumer did not receive in order.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "Event sequence numbers `first_seq..=last_seq`.",
+            "properties": {
+              "first_seq": {
+                "$ref": "#/components/schemas/EventSeq",
+                "description": "First lost event."
+              },
+              "last_seq": {
+                "$ref": "#/components/schemas/EventSeq",
+                "description": "Last lost event."
+              },
+              "unit": {
+                "const": "events",
+                "type": "string"
+              }
+            },
+            "required": [
+              "unit",
+              "first_seq",
+              "last_seq"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "Stream bytes `first_offset..=last_offset`.",
+            "properties": {
+              "first_offset": {
+                "$ref": "#/components/schemas/ByteOffset",
+                "description": "First lost byte offset."
+              },
+              "last_offset": {
+                "$ref": "#/components/schemas/ByteOffset",
+                "description": "Last lost byte offset."
+              },
+              "unit": {
+                "const": "bytes",
+                "type": "string"
+              }
+            },
+            "required": [
+              "unit",
+              "first_offset",
+              "last_offset"
+            ],
+            "type": "object"
+          }
+        ]
+      },
       "MachineAddParams": {
         "additionalProperties": false,
         "description": "Parameters of `machine.add`.",
@@ -5551,6 +5702,51 @@
             "type": "string"
           }
         ]
+      },
+      "MethodLatency": {
+        "additionalProperties": false,
+        "description": "Latency of one served method since this boot.",
+        "properties": {
+          "calls": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Settled calls."
+          },
+          "failures": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Calls settled with an error."
+          },
+          "last_ms": {
+            "$ref": "#/components/schemas/DurationMs",
+            "description": "Latency of the most recent call."
+          },
+          "max_ms": {
+            "$ref": "#/components/schemas/DurationMs",
+            "description": "Largest latency seen."
+          },
+          "method": {
+            "$ref": "#/components/schemas/MethodName",
+            "description": "The method."
+          },
+          "slowest_op": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Operation of the slowest call, when that call named one."
+          }
+        },
+        "required": [
+          "method",
+          "calls",
+          "failures",
+          "last_ms",
+          "max_ms"
+        ],
+        "type": "object"
       },
       "MethodName": {
         "description": "Opaque identity string.",
@@ -7834,6 +8030,56 @@
         ],
         "type": "object"
       },
+      "RecoveryPhase": {
+        "description": "Summary of what recovery found; reading it never clears it.",
+        "oneOf": [
+          {
+            "const": "clean",
+            "description": "No recovery and no incident was ever recorded.",
+            "type": "string"
+          },
+          {
+            "const": "recovered",
+            "description": "This lifetime recovered or recorded incidents, and every terminal is settled.",
+            "type": "string"
+          },
+          {
+            "const": "degraded",
+            "description": "Damaged material was recorded or a terminal's survival is still unknown.",
+            "type": "string"
+          }
+        ]
+      },
+      "RecoveryState": {
+        "additionalProperties": false,
+        "description": "Recovery state of the runtime, durable across reads.",
+        "properties": {
+          "corrupted": {
+            "description": "Damaged database, journal or checkpoint material was recorded.",
+            "type": "boolean"
+          },
+          "incidents": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Recorded incidents and quarantined store material."
+          },
+          "phase": {
+            "$ref": "#/components/schemas/RecoveryPhase",
+            "description": "Overall phase.",
+            "x-ovis-open-enum": true
+          },
+          "unsettled": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Terminals whose program survival is still unknown."
+          }
+        },
+        "required": [
+          "phase",
+          "corrupted",
+          "incidents",
+          "unsettled"
+        ],
+        "type": "object"
+      },
       "RejectReason": {
         "description": "Why a staged update was rejected; the active build is unchanged.",
         "oneOf": [
@@ -8311,12 +8557,20 @@
       "ServerMetricsResult": {
         "description": "Result of `server.metrics`; reading never clears recovery evidence.",
         "properties": {
+          "collected_ms": {
+            "$ref": "#/components/schemas/TimestampMs",
+            "description": "Collection time."
+          },
           "consumers": {
             "description": "Per-consumer backlog.",
             "items": {
               "$ref": "#/components/schemas/ConsumerQueue"
             },
             "type": "array"
+          },
+          "consumers_untracked": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Consumers refused tracking because the bounded table was full."
           },
           "latest_seq": {
             "$ref": "#/components/schemas/EventSeq",
@@ -8329,17 +8583,32 @@
             },
             "type": "array"
           },
+          "recovery_state": {
+            "$ref": "#/components/schemas/RecoveryState",
+            "description": "Recovery summary; reading it never acknowledges or clears it."
+          },
+          "rpc_latency": {
+            "description": "Per-method latency since this boot.",
+            "items": {
+              "$ref": "#/components/schemas/MethodLatency"
+            },
+            "type": "array"
+          },
+          "runtime_lifetime": {
+            "$ref": "#/components/schemas/RuntimeLifetimeId",
+            "description": "Holder-supervisor lifetime the metrics were collected under."
+          },
+          "server_boot_id": {
+            "$ref": "#/components/schemas/ServerBootId",
+            "description": "Control-server boot the metrics were collected under."
+          },
           "streams": {
-            "description": "Active attach streams.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/components/schemas/Count",
+            "description": "Active attach streams."
           },
           "subscriptions": {
-            "description": "Active event subscriptions.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/components/schemas/Count",
+            "description": "Active event subscriptions."
           }
         },
         "required": [
@@ -8347,7 +8616,13 @@
           "subscriptions",
           "consumers",
           "latest_seq",
-          "recovery"
+          "recovery",
+          "runtime_lifetime",
+          "server_boot_id",
+          "collected_ms",
+          "consumers_untracked",
+          "rpc_latency",
+          "recovery_state"
         ],
         "type": "object"
       },
@@ -8416,17 +8691,44 @@
       "ServerStatusResult": {
         "description": "Result of `server.status`; observing never starts a server.",
         "properties": {
+          "census": {
+            "$ref": "#/components/schemas/CensusState",
+            "default": "not_reported",
+            "description": "Whether `holder_count` and `live_terminals` were reported; absent from an\nanswer that predates it, which reported no census either.",
+            "x-ovis-open-enum": true
+          },
           "holder_count": {
-            "description": "Live holder processes.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Count"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Live holder processes; null when no census was reported."
           },
           "live_terminals": {
-            "description": "Live terminals.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Count"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Live terminals; null when no census was reported."
+          },
+          "recovery_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecoveryState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Recovery summary, reported by a running server; absent when nothing answers."
           },
           "runtime_lifetime": {
             "anyOf": [

@@ -220,8 +220,9 @@ impl RequestHandler for Fixture {
                 "runtime_lifetime": "lifetime-7",
                 "server_boot_id": "boot-1",
                 "uptime_ms": u64::MAX.to_string(),
-                "holder_count": 1,
-                "live_terminals": 2,
+                "holder_count": "1",
+                "live_terminals": "2",
+                "census": "reported",
             })),
             _ => Ok(json!({
                 "terminals": [
