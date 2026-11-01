@@ -3,6 +3,7 @@
 use thiserror::Error;
 
 use super::{ErrorData, ErrorKind, ExceededBound, FieldPath, JsonRpcCode, OpId, TargetId};
+use crate::domain::conversation_records::Unavailable;
 use crate::domain::session_binding::HistoryHead;
 use crate::schema::ids::PromptId;
 use crate::schema::scalar::{PrincipalEpoch, QueuePosition, RecordVersion, ReportSeq};
@@ -228,6 +229,13 @@ impl BoundaryError {
     #[must_use]
     pub fn with_history(mut self, history: HistoryHead) -> Self {
         self.data_mut().history = Some(Box::new(history));
+        self
+    }
+
+    /// Adds why no structured conversation exists and what was consulted.
+    #[must_use]
+    pub fn with_unavailable(mut self, unavailable: Unavailable) -> Self {
+        self.data_mut().unavailable = Some(Box::new(unavailable));
         self
     }
 

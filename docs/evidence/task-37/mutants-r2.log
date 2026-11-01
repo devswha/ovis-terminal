@@ -1,0 +1,24 @@
+## M1-record-limit-off-by-one: service.rs: `if count > RECORD_LIMIT ||` -> `if count > RECORD_LIMIT + 1 ||`
+exit=101
+test conversation::records::qa::bounds::the_10000th_record_is_accepted_and_the_10001st_is_refused_as_too_large ... FAILED
+test result: FAILED. 17 passed; 1 failed; 0 ignored; 0 measured; 62 filtered out; finished in 31.50s
+test result: FAILED. 17 passed; 1 failed; 0 ignored; 0 measured; 62 filtered out; finished in 31.50s
+
+## M2-text-limit-off-by-one: validate.rs: `ContentBlock::Text { text } if text.len() > TEXT_LIMIT =>` -> `ContentBlock::Text { text } if text.len() > TEXT_LIMIT + 1 =>`
+exit=101
+test conversation::records::qa::bounds::a_64_kib_text_is_accepted_and_one_byte_more_is_refused_at_its_path ... FAILED
+test result: FAILED. 17 passed; 1 failed; 0 ignored; 0 measured; 62 filtered out; finished in 29.51s
+test result: FAILED. 17 passed; 1 failed; 0 ignored; 0 measured; 62 filtered out; finished in 29.51s
+
+## M3-byte-limit-loosened: service.rs: `|| bytes > BYTE_LIMIT {` -> `|| bytes > BYTE_LIMIT + 300 * 1024 {`
+exit=101
+test conversation::records::qa::bounds::records_beyond_8_mib_are_refused_as_too_large_with_counters_unchanged ... FAILED
+test result: FAILED. 17 passed; 1 failed; 0 ignored; 0 measured; 62 filtered out; finished in 31.66s
+test result: FAILED. 17 passed; 1 failed; 0 ignored; 0 measured; 62 filtered out; finished in 31.66s
+
+## M4-digest-ignores-records: service.rs: `hasher.update(&record.bytes);` -> `let _ = &record.bytes;`
+exit=101
+test conversation::records::qa::bounds::a_64_kib_text_is_accepted_and_one_byte_more_is_refused_at_its_path ... FAILED
+test conversation::records::qa::append::mixed_records_link_results_to_calls_and_the_event_matches_every_read ... FAILED
+test result: FAILED. 16 passed; 2 failed; 0 ignored; 0 measured; 62 filtered out; finished in 32.65s
+test result: FAILED. 16 passed; 2 failed; 0 ignored; 0 measured; 62 filtered out; finished in 32.65s

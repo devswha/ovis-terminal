@@ -257,3 +257,26 @@ Report: `.omo/evidence/ovis-terminal-v1-task-59-gate-review.md#round-2`. Test-on
   - `cargo test --locked -p ovis-terminal-core --test subscriptions`: 22 passed.
   - `cargo clippy --locked -p ovis-terminal-core -p ovis-terminal-server --all-targets -- -D warnings`: exit 0.
   - `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh`: exit 0, `1193 tests run: 1193 passed (1 slow), 1 skipped`, hygiene `0 violation(s) in 1180 file(s)` (`r3-check.log`).
+
+## Merge round (origin/integration 8ac8489, authorized)
+
+T37 (conversation records) landed.
+
+Conflicts:
+- `.github/workflows/probe-stress-macos.yml`: integration's file, with `health` appended last to the options and the jobs. It parses: the last jobs are `machine-actor, conversation-records, health`.
+- `schema/ovis-terminal.openrpc.json` and the 31 `packages/client-ts/src/generated/*` files: semantic conflicts, not hand-resolved. Both were regenerated from the merged code.
+
+Checked after the merge:
+- The auto-merged hand-written unions hold: protocol `domain.rs` and server `lanes.rs` carry `conversation_records`, `health` and `machine_actor`, and the suite slice is sorted (26 unique entries, including `observability/health.json`).
+- Integration has not touched `schema/released.openrpc.json` or `schema/BASELINE-AMENDMENTS.md` since 1d2f0af, so this lane's entry still chains `53782aab…` to `0cf8102b…`.
+- `Cargo.lock` is not in conflict and is byte-identical to integration's. `cargo metadata --locked --offline` exits 0, so no `generate-lockfile` was needed.
+
+Gates (`docs/evidence/task-59/merge5-*`):
+- `openrpc write`, `check` and `compat`: exit 0.
+- SDK `bun install --frozen-lockfile && bun run generate && bun run generate:check && bun run typecheck && bun test`: exit 0, `{"generated":"fresh","files":31}`, 30 pass, 0 fail.
+- `cargo fmt --all --check`: exit 0.
+- `cargo test --locked -p ovis-terminal-core -p ovis-terminal-protocol -p ovis-terminal-server -p ovis-terminal-cli --all-targets --no-fail-fast`: exit 0, 777 passed, 0 failed.
+- Lane clippy and conformance clippy `-D warnings`: exit 0.
+- `observability/health`: happy exit 0 (73 assertions); failure with `--inject '{"method":"server.metrics","params":{"reset":true}}' --append` exit 0 (21).
+- `all/all --case all`: exit 0, 50/50 cases, 2186 assertions.
+- `with-slot.sh bash scripts/check.sh`: exit 0, `1223 tests run: 1223 passed (1 slow), 1 skipped`, hygiene `0 violation(s) in 1198 file(s)`, `json.sh: 152 JSON file(s) checked`.

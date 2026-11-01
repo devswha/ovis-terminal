@@ -244,6 +244,13 @@
           "revision": {
             "$ref": "#/components/schemas/HistoryRevision",
             "description": "Observed history revision every record of the page belongs to."
+          },
+          "turns": {
+            "description": "Status turns of the page's reported records, in turn order.",
+            "items": {
+              "$ref": "#/components/schemas/ConversationTurn"
+            },
+            "type": "array"
           }
         },
         "required": [
@@ -388,6 +395,42 @@
         "required": [
           "note_id",
           "outcome"
+        ],
+        "type": "object"
+      },
+      "AgentRecordsParams": {
+        "additionalProperties": false,
+        "description": "Parameters of `agent.records`.",
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationCursor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Position bound to the records' identity and revision; absent starts at the first."
+          },
+          "page": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PageRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Continuation from a previous page."
+          },
+          "target": {
+            "$ref": "#/components/schemas/Target",
+            "description": "Terminal of the agent."
+          }
+        },
+        "required": [
+          "target"
         ],
         "type": "object"
       },
@@ -659,6 +702,49 @@
             "type": "string"
           }
         ]
+      },
+      "AppendRecordsParams": {
+        "additionalProperties": false,
+        "description": "Parameters of `agent.append_records`.",
+        "properties": {
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Client-minted operation identity."
+          },
+          "process_token": {
+            "$ref": "#/components/schemas/ProcessToken",
+            "description": "Token handed to the program at spawn."
+          },
+          "records": {
+            "default": [],
+            "description": "Records to append, in order.",
+            "items": {
+              "$ref": "#/components/schemas/RecordInput"
+            },
+            "type": "array"
+          },
+          "target": {
+            "$ref": "#/components/schemas/Target",
+            "description": "Terminal of the reporting program."
+          },
+          "turn": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TurnMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Metadata of the turn the status root is working on."
+          }
+        },
+        "required": [
+          "op_id",
+          "target",
+          "process_token"
+        ],
+        "type": "object"
       },
       "AttachControl": {
         "description": "Params of the `attach.control` notification.",
@@ -1375,6 +1461,10 @@
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "CallId": {
+        "description": "Opaque identity string.",
+        "type": "string"
+      },
       "CancelOutcome": {
         "description": "What cancellation can truthfully guarantee.",
         "oneOf": [
@@ -1770,6 +1860,87 @@
           }
         ]
       },
+      "ContentBlock": {
+        "description": "One typed content block of a record.",
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "description": "Plain text.",
+            "properties": {
+              "text": {
+                "description": "The text.",
+                "type": "string"
+              },
+              "type": {
+                "const": "text",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "text"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "A tool invocation the assistant made.",
+            "properties": {
+              "call_id": {
+                "$ref": "#/components/schemas/CallId",
+                "description": "Call identity, unique within the agent's records."
+              },
+              "input": {
+                "description": "Tool input as the provider reported it."
+              },
+              "name": {
+                "description": "Tool name as the provider reported it.",
+                "type": "string"
+              },
+              "type": {
+                "const": "tool_call",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "call_id",
+              "name",
+              "input"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "description": "The result of an earlier tool call.",
+            "properties": {
+              "call_id": {
+                "$ref": "#/components/schemas/CallId",
+                "description": "Identity of the call this result answers."
+              },
+              "is_error": {
+                "description": "Whether the tool reported a failure.",
+                "type": "boolean"
+              },
+              "output": {
+                "description": "Result text.",
+                "type": "string"
+              },
+              "type": {
+                "const": "tool_result",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "call_id",
+              "output",
+              "is_error"
+            ],
+            "type": "object"
+          }
+        ]
+      },
       "ControlKind": {
         "description": "Kind of an `attach.control` record; control never travels as terminal bytes.",
         "oneOf": [
@@ -1838,9 +2009,29 @@
       "ConversationRecord": {
         "description": "One conversation record with provenance.",
         "properties": {
+          "at_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimestampMs"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Time the provider recorded for the record."
+          },
           "blocks": {
-            "description": "Typed block content as read from the provider store.",
-            "items": true,
+            "description": "Content blocks; reported records carry only typed blocks.",
+            "items": {
+              "$ref": "#/components/schemas/RecordBlock"
+            },
+            "type": "array"
+          },
+          "links": {
+            "description": "Records whose calls this record's tool results answer, in block order.",
+            "items": {
+              "$ref": "#/components/schemas/ToolLink"
+            },
             "type": "array"
           },
           "parent": {
@@ -1854,8 +2045,20 @@
             ],
             "description": "Record this one continues; absent for a chain root."
           },
+          "phase": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MessagePhase",
+                "x-ovis-open-enum": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Phase of assistant text, when the provider recorded one."
+          },
           "provenance": {
-            "description": "Provider store the record came from.",
+            "description": "Provider store the record came from, or `records` for reported records.",
             "type": "string"
           },
           "record_id": {
@@ -1865,6 +2068,17 @@
           "role": {
             "description": "Record role, such as user or assistant.",
             "type": "string"
+          },
+          "turn": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TurnNumber"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Status turn that was running when the record was reported."
           }
         },
         "required": [
@@ -1872,6 +2086,105 @@
           "role",
           "blocks",
           "provenance"
+        ],
+        "type": "object"
+      },
+      "ConversationSource": {
+        "description": "The structured source a conversation read consulted.",
+        "oneOf": [
+          {
+            "const": "records",
+            "description": "Typed records the owning process reported with `agent.append_records`.",
+            "type": "string"
+          }
+        ]
+      },
+      "ConversationTurn": {
+        "description": "One status turn as conversation records see it.\n\nBoundaries, outcome and times come from the agent status turn; model and reasoning\nare what the provider recorded. Every unknown fact is null, never estimated.",
+        "properties": {
+          "ended_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimestampMs"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Acceptance time of the report that ended the turn."
+          },
+          "ended_seq": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventSeq"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Status event that ended the turn."
+          },
+          "model": {
+            "description": "Model the provider recorded.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TurnOutcome",
+                "x-ovis-open-enum": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How the turn ended, once known."
+          },
+          "reasoning": {
+            "description": "Reasoning effort the provider recorded.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "started_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimestampMs"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Acceptance time of the report that started the turn."
+          },
+          "started_seq": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventSeq"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Status event that started the turn."
+          },
+          "state": {
+            "$ref": "#/components/schemas/TurnState",
+            "description": "Whether the turn still runs.",
+            "x-ovis-open-enum": true
+          },
+          "turn": {
+            "$ref": "#/components/schemas/TurnNumber",
+            "description": "Status turn number."
+          }
+        },
+        "required": [
+          "turn",
+          "state"
         ],
         "type": "object"
       },
@@ -2297,6 +2610,9 @@
           },
           "target": {
             "$ref": "#/components/schemas/TargetId"
+          },
+          "unavailable": {
+            "$ref": "#/components/schemas/Unavailable"
           }
         },
         "required": [
@@ -2467,7 +2783,8 @@
           "decision_mismatch",
           "grant_exceeds_issuer",
           "endpoint_insecure",
-          "peer_rejected"
+          "peer_rejected",
+          "invalid_records"
         ],
         "type": "string",
         "x-ovis-open-enum": true
@@ -5298,6 +5615,21 @@
           }
         ]
       },
+      "MessagePhase": {
+        "description": "Whether assistant text is progress commentary or the turn's final answer.",
+        "oneOf": [
+          {
+            "const": "commentary",
+            "description": "Progress prose written while the turn continues.",
+            "type": "string"
+          },
+          {
+            "const": "final",
+            "description": "The answer that closes the turn.",
+            "type": "string"
+          }
+        ]
+      },
       "MethodLatency": {
         "additionalProperties": false,
         "description": "Latency of one served method since this boot.",
@@ -7298,6 +7630,42 @@
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "Provenance": {
+        "description": "What a conversation read consulted before finding nothing structured.",
+        "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Agent of the terminal's current program; null for a plain program."
+          },
+          "session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Session that agent declared, when it declared one."
+          },
+          "source": {
+            "$ref": "#/components/schemas/ConversationSource",
+            "description": "The source that was read.",
+            "x-ovis-open-enum": true
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "type": "object"
+      },
       "QueuePosition": {
         "description": "QueuePosition carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
@@ -7387,6 +7755,18 @@
         ],
         "type": "object"
       },
+      "RecordBlock": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/ContentBlock",
+            "description": "A block of the typed record contract; every reported record carries only these."
+          },
+          {
+            "description": "A transcript block outside the typed contract, unchanged."
+          }
+        ],
+        "description": "A record block: typed, or provider content a transcript carried as it was."
+      },
       "RecordCount": {
         "description": "RecordCount carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
@@ -7396,14 +7776,151 @@
         "description": "Opaque identity string.",
         "type": "string"
       },
+      "RecordInput": {
+        "additionalProperties": false,
+        "description": "One record as the owning process reports it.",
+        "properties": {
+          "at_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimestampMs"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Time the provider recorded for the record, when it recorded one."
+          },
+          "blocks": {
+            "description": "Content blocks in provider order, text and tool results side by side.",
+            "items": {
+              "$ref": "#/components/schemas/ContentBlock"
+            },
+            "type": "array"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MessagePhase"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Phase of assistant text, when the provider recorded one."
+          },
+          "record_id": {
+            "$ref": "#/components/schemas/RecordId",
+            "description": "Record identity, unique within the agent's records."
+          },
+          "role": {
+            "$ref": "#/components/schemas/RecordRole",
+            "description": "Who the record speaks for."
+          }
+        },
+        "required": [
+          "record_id",
+          "role",
+          "blocks"
+        ],
+        "type": "object"
+      },
       "RecordPosition": {
         "description": "RecordPosition carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "RecordRole": {
+        "description": "Who a record speaks for.",
+        "oneOf": [
+          {
+            "const": "user",
+            "description": "The person driving the agent; text and tool results.",
+            "type": "string"
+          },
+          {
+            "const": "assistant",
+            "description": "The agent; text and tool calls.",
+            "type": "string"
+          },
+          {
+            "const": "tool",
+            "description": "A tool's own record; tool results only.",
+            "type": "string"
+          }
+        ]
+      },
       "RecordVersion": {
         "description": "RecordVersion carried as a canonical decimal string.",
         "pattern": "^(0|[1-9][0-9]{0,19})$",
+        "type": "string"
+      },
+      "RecordsAppended": {
+        "description": "Payload of `agent.records_appended` and result of `agent.append_records`.\n\nIt names the appended records by identity, count and digest; their bodies are read\nwith `agent.records`, so the receipt stays small whatever the records hold.",
+        "properties": {
+          "agent_id": {
+            "$ref": "#/components/schemas/AgentId",
+            "description": "Agent whose records grew."
+          },
+          "digest": {
+            "$ref": "#/components/schemas/RecordsDigest",
+            "description": "`sha256:` over the stored encodings of the appended records, concatenated in order;\nthe wire reply of `agent.records` is a different serialization."
+          },
+          "first_position": {
+            "$ref": "#/components/schemas/RecordPosition",
+            "description": "Position of the first appended record."
+          },
+          "history_id": {
+            "$ref": "#/components/schemas/HistoryId",
+            "description": "Identity of the agent's record history."
+          },
+          "process_incarnation": {
+            "$ref": "#/components/schemas/Incarnation",
+            "description": "Program incarnation that reported them."
+          },
+          "record_ids": {
+            "description": "Identities of the appended records, in order.",
+            "items": {
+              "$ref": "#/components/schemas/RecordId"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/HistoryRevision",
+            "description": "History revision after the append."
+          },
+          "total_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Stored bytes of the agent's records after the append."
+          },
+          "total_records": {
+            "$ref": "#/components/schemas/RecordCount",
+            "description": "Records the agent holds after the append."
+          },
+          "turns": {
+            "description": "Turns the appended records or metadata belong to.",
+            "items": {
+              "$ref": "#/components/schemas/ConversationTurn"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "agent_id",
+          "process_incarnation",
+          "history_id",
+          "revision",
+          "record_ids",
+          "first_position",
+          "total_records",
+          "total_bytes",
+          "digest",
+          "turns"
+        ],
+        "type": "object"
+      },
+      "RecordsDigest": {
+        "description": "`sha256:` and the lowercase hex SHA-256 of the appended records' stored encoding.",
         "type": "string"
       },
       "RecoveryEvidence": {
@@ -10664,6 +11181,24 @@
         "pattern": "^(0|[1-9][0-9]{0,19})$",
         "type": "string"
       },
+      "ToolLink": {
+        "description": "The record that made the call a tool result answers.",
+        "properties": {
+          "call_id": {
+            "$ref": "#/components/schemas/CallId",
+            "description": "The answered call."
+          },
+          "call_record": {
+            "$ref": "#/components/schemas/RecordId",
+            "description": "The record carrying the call."
+          }
+        },
+        "required": [
+          "call_id",
+          "call_record"
+        ],
+        "type": "object"
+      },
       "TransportKind": {
         "description": "Transport a runtime endpoint can speak.",
         "oneOf": [
@@ -10688,6 +11223,27 @@
             "type": "string"
           }
         ]
+      },
+      "TurnMetadata": {
+        "additionalProperties": false,
+        "description": "Model and reasoning metadata the provider recorded for the running turn.",
+        "properties": {
+          "model": {
+            "description": "Model name as recorded.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reasoning": {
+            "description": "Reasoning effort as recorded.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
       },
       "TurnNumber": {
         "description": "TurnNumber carried as a canonical decimal string.",
@@ -10868,6 +11424,21 @@
         ],
         "type": "object"
       },
+      "TurnState": {
+        "description": "Whether a turn is still running.",
+        "oneOf": [
+          {
+            "const": "open",
+            "description": "The status root is still working on the turn.",
+            "type": "string"
+          },
+          {
+            "const": "ended",
+            "description": "The status root left working; outcome and end are known only when recorded.",
+            "type": "string"
+          }
+        ]
+      },
       "TurnWaitParams": {
         "additionalProperties": false,
         "description": "Parameters of `turn.wait`, bound to a send or a turn.",
@@ -10908,6 +11479,40 @@
           "timeout_ms"
         ],
         "type": "object"
+      },
+      "Unavailable": {
+        "description": "Data of a `conversation_unavailable` refusal: the reason and what was consulted.",
+        "properties": {
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance",
+            "description": "What the read consulted."
+          },
+          "reason": {
+            "$ref": "#/components/schemas/UnavailableReason",
+            "description": "Why nothing structured exists.",
+            "x-ovis-open-enum": true
+          }
+        },
+        "required": [
+          "reason",
+          "provenance"
+        ],
+        "type": "object"
+      },
+      "UnavailableReason": {
+        "description": "Why no structured conversation can be read.",
+        "oneOf": [
+          {
+            "const": "no_agent",
+            "description": "The terminal runs a plain program with no registered agent.",
+            "type": "string"
+          },
+          {
+            "const": "not_reported",
+            "description": "The agent never reported typed records.",
+            "type": "string"
+          }
+        ]
       },
       "UnsupportedReason": {
         "description": "Why a process field is not reported.",
@@ -18663,6 +19268,271 @@
         },
         {
           "code": -32000,
+          "message": "ambiguous_target"
+        },
+        {
+          "code": -32000,
+          "message": "stale_target"
+        },
+        {
+          "code": -32000,
+          "message": "machine_unreachable"
+        },
+        {
+          "code": -32000,
+          "message": "not_found"
+        },
+        {
+          "code": -32000,
+          "message": "unauthenticated"
+        },
+        {
+          "code": -32000,
+          "message": "forbidden"
+        },
+        {
+          "code": -32000,
+          "message": "deadline_exceeded"
+        },
+        {
+          "code": -32000,
+          "message": "cancelled"
+        },
+        {
+          "code": -32000,
+          "message": "backpressure"
+        },
+        {
+          "code": -32000,
+          "message": "op_expired"
+        },
+        {
+          "code": -32000,
+          "message": "op_reused"
+        },
+        {
+          "code": -32000,
+          "message": "persistence_failed"
+        },
+        {
+          "code": -32000,
+          "message": "outcome_unknown"
+        },
+        {
+          "code": -32000,
+          "message": "not_owner"
+        },
+        {
+          "code": -32000,
+          "message": "invalid_records"
+        },
+        {
+          "code": -32000,
+          "message": "too_large"
+        }
+      ],
+      "name": "agent.append_records",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "op_id",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Client-minted operation identity."
+          }
+        },
+        {
+          "name": "process_token",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/ProcessToken",
+            "description": "Token handed to the program at spawn."
+          }
+        },
+        {
+          "name": "records",
+          "required": false,
+          "schema": {
+            "default": [],
+            "description": "Records to append, in order.",
+            "items": {
+              "$ref": "#/components/schemas/RecordInput"
+            },
+            "type": "array"
+          }
+        },
+        {
+          "name": "target",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/Target",
+            "description": "Terminal of the reporting program."
+          }
+        },
+        {
+          "name": "turn",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TurnMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Metadata of the turn the status root is working on."
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/RecordsAppended"
+        }
+      },
+      "summary": "Append typed conversation records as the owning process.",
+      "x-effect": "mutation",
+      "x-params": {
+        "$ref": "#/components/schemas/AppendRecordsParams"
+      },
+      "x-targeting": "terminal"
+    },
+    {
+      "errors": [
+        {
+          "code": -32602,
+          "message": "invalid_params"
+        },
+        {
+          "code": -32000,
+          "message": "unavailable"
+        },
+        {
+          "code": -32603,
+          "message": "internal"
+        },
+        {
+          "code": -32000,
+          "message": "ambiguous_target"
+        },
+        {
+          "code": -32000,
+          "message": "stale_target"
+        },
+        {
+          "code": -32000,
+          "message": "machine_unreachable"
+        },
+        {
+          "code": -32000,
+          "message": "not_found"
+        },
+        {
+          "code": -32000,
+          "message": "unauthenticated"
+        },
+        {
+          "code": -32000,
+          "message": "forbidden"
+        },
+        {
+          "code": -32000,
+          "message": "deadline_exceeded"
+        },
+        {
+          "code": -32000,
+          "message": "cancelled"
+        },
+        {
+          "code": -32000,
+          "message": "backpressure"
+        },
+        {
+          "code": -32000,
+          "message": "cursor_expired"
+        },
+        {
+          "code": -32000,
+          "message": "history_changed"
+        },
+        {
+          "code": -32000,
+          "message": "conversation_unavailable"
+        }
+      ],
+      "name": "agent.records",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationCursor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Position bound to the records' identity and revision; absent starts at the first."
+          }
+        },
+        {
+          "name": "page",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PageRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Continuation from a previous page."
+          }
+        },
+        {
+          "name": "target",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/Target",
+            "description": "Terminal of the agent."
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/AgentConversationResult"
+        }
+      },
+      "summary": "Read the typed records and turns an agent's owning process reported.",
+      "x-effect": "query",
+      "x-params": {
+        "$ref": "#/components/schemas/AgentRecordsParams"
+      },
+      "x-targeting": "terminal"
+    },
+    {
+      "errors": [
+        {
+          "code": -32602,
+          "message": "invalid_params"
+        },
+        {
+          "code": -32000,
+          "message": "unavailable"
+        },
+        {
+          "code": -32603,
+          "message": "internal"
+        },
+        {
+          "code": -32000,
           "message": "unauthenticated"
         },
         {
@@ -22767,6 +23637,11 @@
       "code": -32000,
       "description": "The connecting peer is not the account that owns the endpoint.",
       "kind": "peer_rejected"
+    },
+    {
+      "code": -32000,
+      "description": "A reported conversation record breaks the typed record contract.",
+      "kind": "invalid_records"
     }
   ],
   "x-events": [
@@ -22930,6 +23805,13 @@
         "$ref": "#/components/schemas/SessionBindingRecord"
       },
       "summary": "An owning process bound, resumed, branched or replaced its session."
+    },
+    {
+      "name": "agent.records_appended",
+      "schema": {
+        "$ref": "#/components/schemas/RecordsAppended"
+      },
+      "summary": "An owning process appended typed conversation records."
     },
     {
       "name": "agent.released",

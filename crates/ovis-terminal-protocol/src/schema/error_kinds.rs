@@ -258,4 +258,6 @@ pub enum DomainErrorKind {
     EndpointInsecure,
     /// The connecting peer is not the account that owns the endpoint.
     PeerRejected,
+    /// A reported conversation record breaks the typed record contract.
+    InvalidRecords,
 }
