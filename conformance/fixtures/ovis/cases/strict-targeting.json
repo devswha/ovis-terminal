@@ -1,0 +1,147 @@
+{
+  "format": "ovis-replay/1",
+  "id": "strict-targeting",
+  "server": "assembled",
+  "kind": "failure",
+  "ideals": [
+    "IDEAL-008",
+    "IDEAL-009"
+  ],
+  "gaps": [
+    "GAP-008",
+    "GAP-009"
+  ],
+  "excludes": [
+    "EXCL-005",
+    "EXCL-006"
+  ],
+  "adversarial": [
+    "malformed_input",
+    "misleading_success"
+  ],
+  "steps": [
+    {
+      "call": {
+        "conn": "desk",
+        "id": "create",
+        "method": "layout.edit",
+        "params": {
+          "op_id": "$op:create",
+          "edit": {
+            "op": "create_workspace",
+            "name": "ovis",
+            "program": null
+          }
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/created/0/workspace_id": {
+            "$capture": "ws"
+          },
+          "/result/created/1/tab_id": {
+            "$capture": "tab"
+          },
+          "/result/created/2/pane_id": {
+            "$capture": "pane"
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "select",
+        "method": "selection.set",
+        "params": {
+          "op_id": "$op:select",
+          "client_id": "desk",
+          "workspace_id": "$value:ws",
+          "tab_id": "$value:tab",
+          "pane_id": "$value:pane"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/layout/revision": {
+            "$capture": "rev"
+          },
+          "/result/layout/selections": {
+            "$capture": "selections"
+          }
+        }
+      }
+    },
+    {
+      "legacy": {
+        "conn": "desk",
+        "id": "split-typo",
+        "method": "pane.split",
+        "params": {
+          "pane_id_typo": "other-pane",
+          "direction": "right"
+        },
+        "expect": {
+          "/error/data/kind": "invalid_params",
+          "/error/data/field_path": "params.pane_id_typo",
+          "/result": {
+            "$present": false
+          }
+        },
+        "inject": true
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "process-typo",
+        "method": "terminal.process_info",
+        "params": {
+          "pane_typo": "p2"
+        },
+        "expect": {
+          "/error/data/kind": "invalid_params",
+          "/error/data/field_path": "params.pane_typo",
+          "/result": {
+            "$present": false
+          }
+        },
+        "inject": true
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "unchanged",
+        "method": "layout.get",
+        "params": {},
+        "expect": {
+          "/result/revision": "$value:rev",
+          "/result/selections": "$value:selections"
+        }
+      }
+    },
+    {
+      "legacy": {
+        "conn": "desk",
+        "id": "split-explicit",
+        "method": "pane.split",
+        "params": {
+          "pane_id": "$value:pane",
+          "direction": "right"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/created/1/pane_id": {
+            "$present": true
+          },
+          "/result/layout/selections": "$value:selections"
+        }
+      }
+    }
+  ]
+}

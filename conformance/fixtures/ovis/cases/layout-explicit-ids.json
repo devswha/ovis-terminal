@@ -1,0 +1,291 @@
+{
+  "format": "ovis-replay/1",
+  "id": "layout-explicit-ids",
+  "server": "assembled",
+  "kind": "happy",
+  "ideals": [
+    "IDEAL-023",
+    "IDEAL-024",
+    "IDEAL-084",
+    "IDEAL-085",
+    "IDEAL-086"
+  ],
+  "gaps": [
+    "GAP-036",
+    "GAP-069",
+    "GAP-112"
+  ],
+  "excludes": [
+    "EXCL-022"
+  ],
+  "adversarial": [
+    "stale_state",
+    "misleading_success",
+    "repeated_interruptions",
+    "dirty_worktree"
+  ],
+  "steps": [
+    {
+      "call": {
+        "conn": "desk",
+        "id": "fresh",
+        "method": "layout.get",
+        "params": {},
+        "expect": {
+          "/result/revision": "0",
+          "/result/workspaces": [],
+          "/result/selections": []
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "create",
+        "method": "layout.edit",
+        "params": {
+          "op_id": "$op:create",
+          "edit": {
+            "op": "create_workspace",
+            "name": "ovis",
+            "program": null
+          }
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/created/0/workspace_id": {
+            "$capture": "ws"
+          },
+          "/result/created/1/tab_id": {
+            "$capture": "tab"
+          },
+          "/result/created/2/pane_id": {
+            "$capture": "pane"
+          },
+          "/result/spawn": null,
+          "/result/layout/revision": {
+            "$capture": "rev1"
+          },
+          "/result/seq": {
+            "$capture": "seq1"
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "create-again",
+        "method": "layout.edit",
+        "params": {
+          "op_id": "$op:create",
+          "edit": {
+            "op": "create_workspace",
+            "name": "ovis",
+            "program": null
+          }
+        },
+        "expect": {
+          "/result/created/0/workspace_id": "$value:ws",
+          "/result/layout/revision": "$value:rev1",
+          "/result/seq": "$value:seq1"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "select-desk",
+        "method": "selection.set",
+        "params": {
+          "op_id": "$op:select-desk",
+          "client_id": "desk",
+          "workspace_id": "$value:ws",
+          "tab_id": "$value:tab",
+          "pane_id": "$value:pane"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "phone",
+        "id": "select-phone",
+        "method": "selection.set",
+        "params": {
+          "op_id": "$op:select-phone",
+          "client_id": "phone",
+          "workspace_id": "$value:ws",
+          "tab_id": "$value:tab",
+          "pane_id": "$value:pane"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/layout/revision": {
+            "$capture": "rev2"
+          },
+          "/result/layout/selections": {
+            "$capture": "selections"
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "phone",
+        "id": "split",
+        "method": "layout.edit",
+        "params": {
+          "op_id": "$op:split",
+          "edit": {
+            "op": "split_pane",
+            "pane_id": "$value:pane",
+            "axis": "vertical",
+            "program": null
+          },
+          "expect_revision": "$value:rev2"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/created/0/node_id": {
+            "$capture": "node"
+          },
+          "/result/created/1/pane_id": {
+            "$capture": "pane2"
+          },
+          "/result/layout/selections": "$value:selections",
+          "/result/layout/revision": {
+            "$capture": "rev3"
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "split-stale",
+        "method": "layout.edit",
+        "params": {
+          "op_id": "$op:split-stale",
+          "edit": {
+            "op": "split_pane",
+            "pane_id": "$value:pane",
+            "axis": "vertical",
+            "program": null
+          },
+          "expect_revision": "$value:rev2"
+        },
+        "expect": {
+          "/error/data/kind": "revision_mismatch",
+          "/result": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "split-unknown",
+        "method": "layout.edit",
+        "params": {
+          "op_id": "$op:split-unknown",
+          "edit": {
+            "op": "split_pane",
+            "pane_id": "pane:404",
+            "axis": "vertical",
+            "program": null
+          }
+        },
+        "expect": {
+          "/error/data/kind": "not_found",
+          "/result": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "ratio-out-of-range",
+        "method": "layout.edit",
+        "params": {
+          "op_id": "$op:ratio",
+          "edit": {
+            "op": "set_ratio",
+            "node_id": "$value:node",
+            "ratio_permille": 1500
+          }
+        },
+        "expect": {
+          "/error/data/kind": "invalid_geometry",
+          "/result": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "unchanged",
+        "method": "layout.get",
+        "params": {},
+        "expect": {
+          "/result/revision": "$value:rev3",
+          "/result/selections": "$value:selections"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "swap",
+        "method": "layout.edit",
+        "params": {
+          "op_id": "$op:swap",
+          "edit": {
+            "op": "swap_panes",
+            "first": "$value:pane",
+            "second": "$value:pane2"
+          },
+          "expect_revision": "$value:rev3"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/created": [],
+          "/result/removed": [],
+          "/result/layout/selections": "$value:selections",
+          "/result/layout/revision": {
+            "$capture": "rev4"
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "snapshot",
+        "method": "session.snapshot",
+        "params": {},
+        "expect": {
+          "/result/layout/revision": "$value:rev4",
+          "/result/layout/selections": "$value:selections"
+        }
+      }
+    }
+  ]
+}

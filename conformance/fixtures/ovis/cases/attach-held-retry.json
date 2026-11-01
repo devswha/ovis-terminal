@@ -1,0 +1,235 @@
+{
+  "format": "ovis-replay/1",
+  "id": "attach-held-retry",
+  "server": "assembled",
+  "kind": "happy",
+  "ideals": [
+    "IDEAL-028",
+    "IDEAL-034",
+    "IDEAL-048"
+  ],
+  "gaps": [
+    "GAP-039",
+    "GAP-043",
+    "GAP-048",
+    "GAP-070"
+  ],
+  "excludes": [
+    "EXCL-016",
+    "EXCL-023"
+  ],
+  "adversarial": [
+    "cancel_resume",
+    "stale_state"
+  ],
+  "steps": [
+    {
+      "call": {
+        "conn": "desk",
+        "id": "run",
+        "method": "terminal.run",
+        "params": {
+          "op_id": "$op:run-held",
+          "program": {
+            "argv": [
+              "/bin/sh",
+              "-c",
+              "printf 'ready\\n'; exec cat"
+            ]
+          },
+          "geometry": {
+            "cols": 80,
+            "rows": 24
+          },
+          "name": "held",
+          "cwd": null
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/spawn": "spawned",
+          "/result/terminal/terminal_id": {
+            "$capture": "terminal"
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "open-desk",
+        "method": "attach.open",
+        "params": {
+          "op_id": "$op:attach-desk-interact",
+          "target": {
+            "name": "held"
+          },
+          "client_id": "desk",
+          "role": "interact",
+          "stream_mode": "plain"
+        },
+        "expect": {
+          "/result/outcome": "ready",
+          "/result/lease/role": "interact",
+          "/result/lease/holder": "desk",
+          "/result/lease/lease_id": {
+            "$capture": "lease"
+          },
+          "/result/stream_id": {
+            "$capture": "stream"
+          },
+          "/result/terminal/terminal_id": "$value:terminal"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "phone",
+        "id": "open-phone",
+        "method": "attach.open",
+        "params": {
+          "op_id": "$op:attach-phone-interact",
+          "target": {
+            "name": "held"
+          },
+          "client_id": "phone",
+          "role": "interact",
+          "stream_mode": "plain"
+        },
+        "expect": {
+          "/result/outcome": "held",
+          "/result/holder/lease_id": "$value:lease",
+          "/result/holder/holder": "desk",
+          "/result/retry/on": "lease_released",
+          "/result/retry/event": "lease.revoked",
+          "/result/retry/lease/lease_id": "$value:lease",
+          "/result/lease/role": "observe",
+          "/result/stream_id": {
+            "$capture": "phone_stream"
+          },
+          "/result/terminal/terminal_id": "$value:terminal"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "phone",
+        "id": "send-without-lease",
+        "method": "input.send",
+        "params": {
+          "op_id": "$op:send-without",
+          "target": {
+            "name": "held"
+          },
+          "text": "x",
+          "submit": "none"
+        },
+        "expect": {
+          "/error/data/kind": "no_lease",
+          "/result": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "close-desk",
+        "method": "attach.close",
+        "params": {
+          "stream_id": "$value:stream"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/stream_id": "$value:stream"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "send-released-lease",
+        "method": "input.send",
+        "params": {
+          "op_id": "$op:send-released",
+          "target": {
+            "name": "held"
+          },
+          "text": "x",
+          "submit": "none",
+          "lease_id": "$value:lease"
+        },
+        "expect": {
+          "/error/data/kind": "no_lease",
+          "/result": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "phone",
+        "id": "close-phone",
+        "method": "attach.close",
+        "params": {
+          "stream_id": "$value:phone_stream"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "phone",
+        "id": "retry-phone",
+        "method": "attach.open",
+        "params": {
+          "op_id": "$op:attach-phone-retry",
+          "target": {
+            "name": "held"
+          },
+          "client_id": "phone",
+          "role": "interact",
+          "stream_mode": "plain"
+        },
+        "expect": {
+          "/result/outcome": "ready",
+          "/result/lease/role": "interact",
+          "/result/lease/holder": "phone",
+          "/result/lease/lease_id": {
+            "$capture": "phone_lease"
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "phone",
+        "id": "send-with-lease",
+        "method": "input.send",
+        "params": {
+          "op_id": "$op:send-with",
+          "target": {
+            "name": "held"
+          },
+          "text": "x",
+          "submit": "none",
+          "lease_id": "$value:phone_lease"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          }
+        }
+      }
+    }
+  ]
+}

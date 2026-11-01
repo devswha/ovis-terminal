@@ -131,6 +131,15 @@ pub(crate) enum Step {
     PtyExit(super::pty::PtyExit),
     /// Run planned quality gates in-process, or only the one `--inject` names.
     Gates(super::gates::Gates),
+    /// Audit the Ovis consumer fixture set and replay its cases of one kind.
+    Replay(Replay),
+}
+
+/// Replays every fixture case of `kind`, each against a fresh server in a fresh root.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Replay {
+    pub(crate) kind: ovis_terminal_replay::CaseKind,
 }
 
 /// How a connection reaches the endpoint.

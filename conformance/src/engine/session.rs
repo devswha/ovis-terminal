@@ -25,6 +25,8 @@ pub(crate) struct Context {
     pub(crate) runner: PathBuf,
     /// The `--inject` request, which a failure case's inject step must plan.
     pub(crate) inject: Option<Value>,
+    /// The `--fixtures` directory a `replay` step reads instead of `fixtures/ovis`.
+    pub(crate) fixtures: Option<PathBuf>,
 }
 
 pub(crate) struct Session<'a> {

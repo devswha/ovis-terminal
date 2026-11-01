@@ -1,0 +1,207 @@
+{
+  "format": "ovis-replay/1",
+  "id": "prompt-cards",
+  "server": "protocol",
+  "kind": "happy",
+  "ideals": [
+    "IDEAL-057",
+    "IDEAL-058"
+  ],
+  "gaps": [
+    "GAP-080"
+  ],
+  "excludes": [
+    "EXCL-023"
+  ],
+  "adversarial": [
+    "stale_state"
+  ],
+  "steps": [
+    {
+      "call": {
+        "conn": "agent",
+        "id": "register",
+        "method": "agent.register",
+        "params": {
+          "op_id": "$op:register",
+          "target": {
+            "name": "$bind:agent"
+          },
+          "process_token": "$bind:process_token",
+          "label": "ovis-fixture"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/agent/label": "ovis-fixture"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "agent",
+        "id": "working",
+        "method": "status.report",
+        "params": {
+          "op_id": "$op:working",
+          "target": {
+            "name": "$bind:agent"
+          },
+          "process_token": "$bind:process_token",
+          "seq": "1",
+          "record": {
+            "state": "working"
+          }
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "agent",
+        "id": "open",
+        "method": "prompt.open",
+        "params": {
+          "op_id": "$op:open",
+          "target": {
+            "name": "$bind:agent"
+          },
+          "process_token": "$bind:process_token",
+          "prompt_id": "p1",
+          "prompt": {
+            "kind": "permission",
+            "text": "Proceed?",
+            "choices": [
+              {
+                "id": "yes",
+                "label": "Yes"
+              },
+              {
+                "id": "no",
+                "label": "No"
+              }
+            ],
+            "mechanism": "rpc"
+          }
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/prompt_id": "p1",
+          "/result/version": "1",
+          "/result/state": "open",
+          "/result/kind": "permission",
+          "/result/mechanism": "rpc",
+          "/result/process_incarnation": {
+            "$present": true
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "ovis",
+        "id": "get",
+        "method": "prompt.get",
+        "params": {
+          "prompt_id": "p1"
+        },
+        "expect": {
+          "/result/state": "open",
+          "/result/version": {
+            "$capture": "version"
+          },
+          "/result/choices/0/id": "yes"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "ovis",
+        "id": "answer-stale",
+        "method": "prompt.answer",
+        "params": {
+          "op_id": "$op:answer-stale",
+          "prompt_id": "p1",
+          "version": "0",
+          "answer": {
+            "choice": "yes"
+          }
+        },
+        "expect": {
+          "/result": {
+            "$present": false
+          },
+          "/error/data/kind": "version_conflict"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "ovis",
+        "id": "answer",
+        "method": "prompt.answer",
+        "params": {
+          "op_id": "$op:answer",
+          "prompt_id": "p1",
+          "version": "$value:version",
+          "answer": {
+            "choice": "yes"
+          }
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/state": "answered",
+          "/result/answer/answer": {
+            "choice": "yes"
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "ovis",
+        "id": "answer-again",
+        "method": "prompt.answer",
+        "params": {
+          "op_id": "$op:answer-again",
+          "prompt_id": "p1",
+          "version": "$value:version",
+          "answer": {
+            "choice": "no"
+          }
+        },
+        "expect": {
+          "/result": {
+            "$present": false
+          },
+          "/error/data/kind": "version_conflict"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "ovis",
+        "id": "answered",
+        "method": "prompt.get",
+        "params": {
+          "prompt_id": "p1"
+        },
+        "expect": {
+          "/result/state": "answered",
+          "/result/answer/answer": {
+            "choice": "yes"
+          }
+        }
+      }
+    }
+  ]
+}

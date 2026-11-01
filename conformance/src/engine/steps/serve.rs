@@ -6,7 +6,7 @@ use crate::fixture::launch;
 use crate::scenario::model::FixtureKind;
 
 impl Session<'_> {
-    pub(super) async fn serve(&mut self, kind: FixtureKind) -> Result<(), RunnerError> {
+    pub(crate) async fn serve(&mut self, kind: FixtureKind) -> Result<(), RunnerError> {
         if self.fixture.is_some() {
             return Err(RunnerError::FixtureState);
         }

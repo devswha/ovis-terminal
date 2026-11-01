@@ -1,0 +1,175 @@
+{
+  "format": "ovis-replay/1",
+  "id": "history-store",
+  "server": "protocol",
+  "kind": "failure",
+  "ideals": [
+    "IDEAL-078"
+  ],
+  "gaps": [
+    "GAP-055",
+    "GAP-099"
+  ],
+  "excludes": [],
+  "adversarial": [
+    "malformed_input",
+    "stale_state"
+  ],
+  "steps": [
+    {
+      "call": {
+        "conn": "agent",
+        "id": "register",
+        "method": "agent.register",
+        "params": {
+          "op_id": "$op:register",
+          "target": {
+            "name": "$bind:agent"
+          },
+          "process_token": "$bind:process_token",
+          "label": "ovis-fixture"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/agent/label": "ovis-fixture"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "agent",
+        "id": "unlisted-store",
+        "method": "agent.update_session",
+        "params": {
+          "op_id": "$op:unlisted",
+          "target": {
+            "name": "$bind:agent"
+          },
+          "process_token": "$bind:process_token",
+          "session": {
+            "source": "unlisted-store",
+            "kind": "path",
+            "value": "one.jsonl"
+          },
+          "history_id": "h1"
+        },
+        "expect": {
+          "/error/data/kind": "invalid_session",
+          "/error/data/field_path": "params.session.source",
+          "/result": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "agent",
+        "id": "climbing",
+        "method": "agent.update_session",
+        "params": {
+          "op_id": "$op:climbing",
+          "target": {
+            "name": "$bind:agent"
+          },
+          "process_token": "$bind:process_token",
+          "session": {
+            "source": "fixture-store",
+            "kind": "path",
+            "value": "../outside.jsonl"
+          },
+          "history_id": "h1"
+        },
+        "expect": {
+          "/error/data/kind": "conversation_unavailable",
+          "/result": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "agent",
+        "id": "bind-id",
+        "method": "agent.update_session",
+        "params": {
+          "op_id": "$op:bind-id",
+          "target": {
+            "name": "$bind:agent"
+          },
+          "process_token": "$bind:process_token",
+          "session": {
+            "source": "fixture-store",
+            "kind": "id",
+            "value": "provider-session-1"
+          },
+          "history_id": "h1"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/agent/session/kind": "id",
+          "/result/agent/history_id": "h1"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "ovis",
+        "id": "conversation",
+        "method": "agent.conversation",
+        "params": {
+          "target": {
+            "name": "$bind:agent"
+          }
+        },
+        "expect": {
+          "/error/data/kind": "conversation_unavailable",
+          "/error/data/retryable": false,
+          "/result": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "ovis",
+        "id": "history-escape",
+        "method": "agent.history",
+        "params": {
+          "store": "../"
+        },
+        "expect": {
+          "/error/data/kind": "forbidden",
+          "/result": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "ovis",
+        "id": "history",
+        "method": "agent.history",
+        "params": {},
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/sessions": {
+            "$present": true
+          },
+          "/result/page": {
+            "$present": true
+          }
+        }
+      }
+    }
+  ]
+}
