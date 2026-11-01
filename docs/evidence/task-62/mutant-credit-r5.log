@@ -1,0 +1,105 @@
+mutant: attach.credit is never sent (session.rs::data drops the credit call; acknowledged still advances locally)
+diff --git a/crates/ovis-terminal-cli/src/attach/session.rs b/crates/ovis-terminal-cli/src/attach/session.rs
+index fef8d15..2fb94af 100644
+--- a/crates/ovis-terminal-cli/src/attach/session.rs
++++ b/crates/ovis-terminal-cli/src/attach/session.rs
+@@ -14,6 +14,8 @@ use super::signals::{Interrupt, Signals};
+ use super::tty::{self, Typed, keyboard, typed_or_never};
+ use super::{AttachError, AttachPlan};
+ 
++#[cfg(test)]
++mod credit_tests;
+ #[cfg(test)]
+ mod tests;
+ 
+@@ -103,7 +105,7 @@ impl Attached {
+         let end = data.offset.get().saturating_add(length);
+         if end.saturating_sub(self.acknowledged) >= self.window / 2 {
+             let credit = json!({"stream_id": self.stream, "acknowledged": end.to_string()});
+-            self.client.call("attach.credit", credit).await?;
++            drop(credit);
+             self.acknowledged = end;
+         }
+         Ok(())
+   Compiling ovis-terminal-cli v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t62/crates/ovis-terminal-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.77s
+────────────
+ Nextest run ID 305fe7c0-3514-46fa-aefe-0ab1233faf21 with nextest profile: default
+    Starting 50 tests across 7 binaries
+        PASS [   0.008s] ( 1/50) ovis-terminal-cli attach::input::tests::the_detach_key_ends_forwarding_mid_chunk
+        PASS [   0.008s] ( 2/50) ovis-terminal-cli assembly::recovery::tests::an_unreadable_operating_system_boot_is_a_typed_warning_and_stamps_nothing
+        PASS [   0.009s] ( 3/50) ovis-terminal-cli assembly::directory::tests::the_largest_identity_round_trips_through_its_address
+        PASS [   0.009s] ( 4/50) ovis-terminal-cli assembly::directory::tests::every_explicit_form_names_the_terminal_and_nothing_else_resolves
+        PASS [   0.009s] ( 5/50) ovis-terminal-cli assembly::recovery::tests::a_readable_operating_system_boot_is_stamped_without_a_warning
+        PASS [   0.009s] ( 6/50) ovis-terminal-cli assembly::identity::tests::the_last_boot_round_trips_and_a_spent_counter_is_refused
+        PASS [   0.009s] ( 7/50) ovis-terminal-cli attach::input::tests::unknown_sequences_and_non_utf8_bytes_are_forwarded_unchanged
+        PASS [   0.009s] ( 8/50) ovis-terminal-cli assembly::identity::tests::each_start_takes_the_next_boot_and_keeps_the_machine
+        PASS [   0.009s] ( 9/50) ovis-terminal-cli attach::modes::tests::full_reset_and_cancelled_sequences_clear_or_skip_state
+        PASS [   0.010s] (10/50) ovis-terminal-cli attach::modes::tests::modes_left_on_are_reset_with_the_alternate_screen_last
+        PASS [   0.010s] (11/50) ovis-terminal-cli attach::modes::tests::nothing_drawn_resets_nothing_and_plain_text_only_resets_attributes
+        PASS [   0.011s] (12/50) ovis-terminal-cli assembly::identity::tests::a_numeric_boot_counter_is_refused
+        PASS [   0.008s] (13/50) ovis-terminal-cli attach::session::tests::a_closing_record_revokes_readiness_and_is_kept_for_the_loss_report
+        PASS [   0.008s] (14/50) ovis-terminal-cli invocation::context::tests::json_comes_from_the_flag_or_the_switch_and_never_from_the_terminal
+        PASS [   0.008s] (15/50) ovis-terminal-cli invocation::context::tests::a_credential_never_prints_its_bearer_text
+        PASS [   0.008s] (16/50) ovis-terminal-cli invocation::context::tests::an_unrecognized_switch_value_is_refused_in_the_requested_form
+        PASS [   0.008s] (17/50) ovis-terminal-cli attach::session::tests::input_revoked_holds_typed_bytes_until_the_stream_is_ready_again
+        PASS [   0.007s] (18/50) ovis-terminal-cli invocation::exit::tests::an_unknown_kind_from_a_newer_server_is_a_plain_failure
+        PASS [   0.008s] (19/50) ovis-terminal-cli invocation::execute::tests::u64_max_round_trips_and_a_numeric_uptime_is_an_invalid_response
+        PASS [   0.009s] (20/50) ovis-terminal-cli attach::session::tests::a_detach_is_confirmed_only_by_the_streams_close
+        PASS [   0.009s] (21/50) ovis-terminal-cli invocation::discovery::tests::the_cli_contract_lists_the_grammar_and_every_exit_code
+        PASS [   0.018s] (22/50) ovis-terminal-cli assembly::directory::tests::an_address_resolves_to_exactly_its_own_identity
+        PASS [   0.009s] (23/50) ovis-terminal-cli invocation::discovery::tests::the_manual_names_every_command_and_every_exit_status
+        PASS [   0.023s] (24/50) ovis-terminal-cli attach::modes::tests::any_split_of_the_stream_tracks_the_same_modes
+        PASS [   0.007s] (25/50) ovis-terminal-cli invocation::exit::tests::codes_are_distinct_and_every_kind_selects_exactly_its_status
+        PASS [   0.007s] (26/50) ovis-terminal-cli invocation::plan::tests::a_numeric_op_id_is_refused_with_its_field_path
+        PASS [   0.008s] (27/50) ovis-terminal-cli invocation::plan::tests::a_missing_target_plans_needs_target_and_two_targets_do_not_parse
+        PASS [   0.008s] (28/50) ovis-terminal-cli invocation::plan::tests::an_explicit_target_becomes_the_typed_get_request
+        PASS [   0.008s] (29/50) ovis-terminal-cli invocation::text::tests::nested_records_become_indented_lines
+        PASS [   0.017s] (30/50) ovis-terminal-cli invocation::execute::tests::uptime_is_relayed_as_the_exact_decimal_string
+        PASS [   0.010s] (31/50) ovis-terminal-cli invocation::plan::tests::call_refuses_hello_unknown_methods_and_non_object_params
+        PASS [   0.031s] (32/50) ovis-terminal-cli attach::input::tests::forwarded_bytes_are_exactly_the_prefix_before_the_first_detach_key
+        PASS [   0.019s] (33/50) ovis-terminal-cli::interactive_restore a_signal_before_the_stream_is_attached_is_a_typed_interruption_at_its_stage
+        PASS [   0.048s] (34/50) ovis-terminal-cli attach::modes::tests::arbitrary_bytes_never_panic_and_always_end_with_an_attribute_reset
+        PASS [   0.363s] (35/50) ovis-terminal-cli::attach connection_loss_restores_the_outer_terminal_and_reports_it
+        PASS [   0.403s] (36/50) ovis-terminal-cli::attach ctrl_c_goes_to_the_program_and_sigint_to_the_client_detaches_cleanly
+        PASS [   0.416s] (37/50) ovis-terminal-cli::attach typed_input_reaches_the_program_resize_follows_and_ctrl_backslash_restores_the_terminal
+        PASS [   0.419s] (38/50) ovis-terminal-cli::attach a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_terminal
+        PASS [   0.469s] (39/50) ovis-terminal-cli::attach observing_needs_no_tty_and_never_forwards_input
+        PASS [   0.464s] (40/50) ovis-terminal-cli::interactive_attach an_observer_on_a_terminal_never_resizes_and_stays_live_after_the_operator_detaches
+        PASS [   0.470s] (41/50) ovis-terminal-cli::interactive_owners an_observer_sharing_its_operators_label_is_another_owner_and_releases_only_its_own_lease
+        PASS [   0.567s] (42/50) ovis-terminal-cli::interactive_connections two_connections_under_one_client_id_compete_and_the_second_never_types_into_the_program
+        PASS [   0.545s] (43/50) ovis-terminal-cli::interactive_transparency the_attach_client_draws_exactly_the_bytes_the_server_sent_and_nothing_else
+        PASS [   0.567s] (44/50) ovis-terminal-cli::interactive_restore an_outer_terminal_that_hangs_up_while_attached_detaches_and_releases_every_lease
+        PASS [   0.574s] (45/50) ovis-terminal-cli::interactive_restore repeated_signals_while_attached_detach_once_and_restore_the_terminal
+        PASS [   0.562s] (46/50) ovis-terminal-cli::interactive_restore unknown_sequences_reach_the_program_and_its_modes_are_switched_off_on_detach
+        PASS [   0.615s] (47/50) ovis-terminal-cli::interactive_owners two_attach_processes_sharing_one_client_id_compete_and_the_second_is_refused
+        PASS [   0.618s] (48/50) ovis-terminal-cli::interactive_owners two_attach_processes_with_the_default_label_compete_and_the_second_is_refused
+        PASS [   0.669s] (49/50) ovis-terminal-cli::interactive_attach a_stale_takeover_names_the_current_epoch_and_a_current_one_displaces_the_holder
+        FAIL [  10.010s] (50/50) ovis-terminal-cli attach::session::credit_tests::a_download_larger_than_the_window_completes_only_through_replenished_credit
+  stdout ───
+
+    running 1 test
+    ................test attach::session::credit_tests::a_download_larger_than_the_window_completes_only_through_replenished_credit ... FAILED
+
+    failures:
+
+    failures:
+        attach::session::credit_tests::a_download_larger_than_the_window_completes_only_through_replenished_credit
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 33 filtered out; finished in 10.00s
+
+  stderr ───
+
+    thread 'attach::session::credit_tests::a_download_larger_than_the_window_completes_only_through_replenished_credit' (3367389) panicked at crates/ovis-terminal-cli/src/attach/session/credit_tests.rs:107:9:
+    the stream stalled at 16 of 64 bytes: credit was not replenished
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure
+────────────
+     Summary [  10.019s] 50 tests run: 49 passed, 1 failed, 0 skipped
+        FAIL [  10.010s] (50/50) ovis-terminal-cli attach::session::credit_tests::a_download_larger_than_the_window_completes_only_through_replenished_credit
+error: test run failed
+MUTANT_LANE_EXIT 100
+ crates/ovis-terminal-cli/src/attach/session.rs | 2 ++
+ 1 file changed, 2 insertions(+)
+restored: session.rs is byte-identical to the pre-mutant copy (the HEAD diff shown above is this round's uncommitted `mod credit_tests;` line, not the mutant)

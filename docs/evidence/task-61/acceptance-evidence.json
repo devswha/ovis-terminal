@@ -1,9 +1,9 @@
 [
   {
     "binary": {
-      "bytes": "60573456",
-      "path": "/dev/shm/ovt-target-lane-t61/debug/ovis-terminal",
-      "sha256": "47754beffff73a9025b10f09671bae46dadbd299db82d115b6e6be920af13f3c"
+      "bytes": "145274048",
+      "path": "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
+      "sha256": "f685337b396c465301d60c50cea444578ae11df62809c0ac76555911e2117515"
     },
     "case": "all",
     "cases": [
@@ -2590,6 +2590,9 @@
                         },
                         "type": "array"
                       },
+                      "current": {
+                        "$ref": "#/components/schemas/LeaseRecord"
+                      },
                       "current_seq": {
                         "$ref": "#/components/schemas/ReportSeq"
                       },
@@ -2726,6 +2729,7 @@
                       "lease_revoked",
                       "lease_conflict",
                       "lease_epoch_mismatch",
+                      "stale_geometry",
                       "blocked",
                       "not_ready",
                       "recovering",
@@ -3752,6 +3756,78 @@
                     "required": [
                       "cols",
                       "rows"
+                    ],
+                    "type": "object"
+                  },
+                  "GeometryEpoch": {
+                    "description": "GeometryEpoch carried as a canonical decimal string.",
+                    "pattern": "^(0|[1-9][0-9]{0,19})$",
+                    "type": "string"
+                  },
+                  "GeometryEventData": {
+                    "description": "Data of `geometry.changed`, `geometry.checkpoint` and `geometry.input_ready`.",
+                    "properties": {
+                      "epoch": {
+                        "$ref": "#/components/schemas/GeometryEpoch",
+                        "description": "Grid epoch of the transition."
+                      },
+                      "geometry": {
+                        "$ref": "#/components/schemas/Geometry",
+                        "description": "Grid at this step."
+                      },
+                      "output_offset": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/ByteOffset"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Raw output offset the step applies at."
+                      },
+                      "owner_lease": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/LeaseId"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Geometry lease that requested the change, for `geometry.changed`."
+                      },
+                      "previous": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/Geometry"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Grid before the change, for `geometry.changed`."
+                      },
+                      "revision": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/Revision"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Screen revision at the new grid, for the checkpoint and input readiness."
+                      },
+                      "terminal_id": {
+                        "$ref": "#/components/schemas/TerminalId",
+                        "description": "Terminal whose grid changed."
+                      }
+                    },
+                    "required": [
+                      "terminal_id",
+                      "epoch",
+                      "geometry"
                     ],
                     "type": "object"
                   },
@@ -23379,6 +23455,11 @@
                 },
                 {
                   "code": -32000,
+                  "description": "A geometry request names an epoch a newer transition superseded.",
+                  "kind": "stale_geometry"
+                },
+                {
+                  "code": -32000,
                   "description": "The program is blocked on a prompt; answer it instead.",
                   "kind": "blocked"
                 },
@@ -24023,6 +24104,27 @@
                   "summary": "Geometry ownership moved."
                 },
                 {
+                  "name": "geometry.changed",
+                  "schema": {
+                    "$ref": "#/components/schemas/GeometryEventData"
+                  },
+                  "summary": "A grid change committed before the holder heard of it."
+                },
+                {
+                  "name": "geometry.checkpoint",
+                  "schema": {
+                    "$ref": "#/components/schemas/GeometryEventData"
+                  },
+                  "summary": "The screen was checkpointed at the new grid."
+                },
+                {
+                  "name": "geometry.input_ready",
+                  "schema": {
+                    "$ref": "#/components/schemas/GeometryEventData"
+                  },
+                  "summary": "Input readiness returned at the new grid."
+                },
+                {
                   "name": "stream.closed",
                   "schema": {
                     "$ref": "#/components/schemas/StreamClosedData"
@@ -24306,7 +24408,7 @@
             "passed": true
           },
           {
-            "actual": "1299",
+            "actual": "1454",
             "check": "gate[0]/sources/files_checked",
             "expected": {
               "$at_least": "1000"
@@ -24654,19 +24756,19 @@
           "todo": "61"
         },
         "descriptors": [],
-        "elapsed_ms": "10017",
+        "elapsed_ms": "11930",
         "failure": null,
         "fixture": null,
         "outcome": "passed",
         "processes": [
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t61/debug/ovis-terminal",
+              "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
               "schema",
               "openrpc"
             ],
             "exit_code": 0,
-            "pid": "3123725",
+            "pid": "3589619",
             "role": "binary",
             "stderr": {
               "bytes": "0",
@@ -24674,14 +24776,14 @@
               "text": ""
             },
             "stdout": {
-              "bytes": "645669",
-              "sha256": "a998a8d9a1f6c179dda47515122461a2d548b0f98c7a3a3f62442006284b6c2d",
+              "bytes": "648725",
+              "sha256": "13b76ae5b3f05250283fa188d9f5df062485cd9e8a4f70780bbbf1d27ca81830",
               "text": null
             }
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t61/debug/ovis-terminal",
+              "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
               "--json",
               "schema",
               "openrpc",
@@ -24689,7 +24791,7 @@
               "focused"
             ],
             "exit_code": 2,
-            "pid": "3123741",
+            "pid": "3589620",
             "role": "binary",
             "stderr": {
               "bytes": "212",
@@ -24706,7 +24808,7 @@
             "argv": [
               "source-check",
               "--repo",
-              "/home/devswha/workspace/ovis-terminal-wt/lane-t61",
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t62",
               "--roots",
               "crates",
               "packages/client-ts",
@@ -24732,8 +24834,8 @@
             },
             "stdout": {
               "bytes": "1704",
-              "sha256": "6e362c215536bb5fccf41d83410c726353bd9b7c6e612dd5bcf849f3d826922f",
-              "text": "{\n  \"argv\": [\n    \"source-check\",\n    \"--repo\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t61\",\n    \"--roots\",\n    \"crates\",\n    \"packages/client-ts\",\n    \"conformance\",\n    \"bench\",\n    \"probes\",\n    \"--max-pure-loc\",\n    \"250\",\n    \"--max-params\",\n    \"3\",\n    \"--violations\",\n    \"docs/research/violations.md\",\n    \"--checklist\",\n    \"docs/quality-checklist.md\"\n  ],\n  \"checklist\": {\n    \"path\": \"docs/quality-checklist.md\",\n    \"rule_ids\": \"64\",\n    \"sha256\": \"c742eda2782a1cffcb26f684bb14a37c86c8a728b33775d72cc0b35526d85f0a\",\n    \"v_rows\": \"5174\",\n    \"violations_sha256\": \"4a45b251393649c7ec30b72cc480908381fede4d3fa2fba201f4ecd75b56e71c\"\n  },\n  \"exit\": 0,\n  \"finding_count\": \"0\",\n  \"findings\": [],\n  \"gate\": \"source-check\",\n  \"hint\": null,\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": null,\n  \"limits\": {\n    \"max_params\": \"3\",\n    \"max_pure_loc\": \"250\"\n  },\n  \"rules\": {\n    \"cargo\": [\n      \"workspace-lints\",\n      \"member-lints\",\n      \"toolchain-pinned\",\n      \"cargo-deny-config\",\n      \"clippy-thresholds\"\n    ],\n    \"source\": [\n      \"syntax\",\n      \"max-pure-loc\",\n      \"max-parameters\",\n      \"dropped-result\",\n      \"allow-attribute\",\n      \"numeric-cast\",\n      \"tautological-assert\"\n    ]\n  },\n  \"sources\": {\n    \"files_checked\": \"1299\",\n    \"roots\": [\n      {\n        \"root\": \"crates\",\n        \"rust_files\": \"1146\"\n      },\n      {\n        \"root\": \"packages/client-ts\",\n        \"rust_files\": \"0\"\n      },\n      {\n        \"root\": \"conformance\",\n        \"rust_files\": \"70\"\n      },\n      {\n        \"root\": \"bench\",\n        \"rust_files\": \"19\"\n      },\n      {\n        \"root\": \"probes\",\n        \"rust_files\": \"64\"\n      }\n    ]\n  },\n  \"verdict\": \"pass\"\n}"
+              "sha256": "134593e95f3b418134990318cffd4d4b6695924cd51625e8aed8eddbf069a248",
+              "text": "{\n  \"argv\": [\n    \"source-check\",\n    \"--repo\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t62\",\n    \"--roots\",\n    \"crates\",\n    \"packages/client-ts\",\n    \"conformance\",\n    \"bench\",\n    \"probes\",\n    \"--max-pure-loc\",\n    \"250\",\n    \"--max-params\",\n    \"3\",\n    \"--violations\",\n    \"docs/research/violations.md\",\n    \"--checklist\",\n    \"docs/quality-checklist.md\"\n  ],\n  \"checklist\": {\n    \"path\": \"docs/quality-checklist.md\",\n    \"rule_ids\": \"64\",\n    \"sha256\": \"c742eda2782a1cffcb26f684bb14a37c86c8a728b33775d72cc0b35526d85f0a\",\n    \"v_rows\": \"5174\",\n    \"violations_sha256\": \"4a45b251393649c7ec30b72cc480908381fede4d3fa2fba201f4ecd75b56e71c\"\n  },\n  \"exit\": 0,\n  \"finding_count\": \"0\",\n  \"findings\": [],\n  \"gate\": \"source-check\",\n  \"hint\": null,\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": null,\n  \"limits\": {\n    \"max_params\": \"3\",\n    \"max_pure_loc\": \"250\"\n  },\n  \"rules\": {\n    \"cargo\": [\n      \"workspace-lints\",\n      \"member-lints\",\n      \"toolchain-pinned\",\n      \"cargo-deny-config\",\n      \"clippy-thresholds\"\n    ],\n    \"source\": [\n      \"syntax\",\n      \"max-pure-loc\",\n      \"max-parameters\",\n      \"dropped-result\",\n      \"allow-attribute\",\n      \"numeric-cast\",\n      \"tautological-assert\"\n    ]\n  },\n  \"sources\": {\n    \"files_checked\": \"1454\",\n    \"roots\": [\n      {\n        \"root\": \"crates\",\n        \"rust_files\": \"1256\"\n      },\n      {\n        \"root\": \"packages/client-ts\",\n        \"rust_files\": \"0\"\n      },\n      {\n        \"root\": \"conformance\",\n        \"rust_files\": \"79\"\n      },\n      {\n        \"root\": \"bench\",\n        \"rust_files\": \"41\"\n      },\n      {\n        \"root\": \"probes\",\n        \"rust_files\": \"78\"\n      }\n    ]\n  },\n  \"verdict\": \"pass\"\n}"
             }
           },
           {
@@ -24742,15 +24844,15 @@
               "--mode",
               "verify",
               "--ideals",
-              "/home/devswha/workspace/ovis-terminal-wt/lane-t61/docs/design/ideal-state.md",
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t62/docs/design/ideal-state.md",
               "--gaps",
-              "/home/devswha/workspace/ovis-terminal-wt/lane-t61/docs/design/gap-list.md",
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t62/docs/design/gap-list.md",
               "--schema",
-              "/home/devswha/workspace/ovis-terminal-wt/lane-t61/schema/ovis-terminal.openrpc.json",
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t62/schema/ovis-terminal.openrpc.json",
               "--traceability",
-              "/home/devswha/workspace/ovis-terminal-wt/lane-t61/conformance/traceability.json",
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t62/conformance/traceability.json",
               "--ideal-map",
-              "/home/devswha/workspace/ovis-terminal-wt/lane-t61/conformance/ideal-map.json"
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t62/conformance/ideal-map.json"
             ],
             "exit_code": 0,
             "pid": null,
@@ -24762,8 +24864,8 @@
             },
             "stdout": {
               "bytes": "928",
-              "sha256": "13d92407785f4e107e40718f5503ff5826c5ed4347a1683b9461ee7727eb63ae",
-              "text": "{\n  \"argv\": [\n    \"quality-matrix\",\n    \"--mode\",\n    \"verify\",\n    \"--ideals\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t61/docs/design/ideal-state.md\",\n    \"--gaps\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t61/docs/design/gap-list.md\",\n    \"--schema\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t61/schema/ovis-terminal.openrpc.json\",\n    \"--traceability\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t61/conformance/traceability.json\",\n    \"--ideal-map\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t61/conformance/ideal-map.json\"\n  ],\n  \"exclusions\": \"29\",\n  \"exit\": 0,\n  \"finding_count\": \"0\",\n  \"findings\": [],\n  \"gaps\": \"154\",\n  \"gate\": \"quality-matrix\",\n  \"hint\": null,\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"ideals\": \"121\",\n  \"kind\": null,\n  \"methods\": \"104\",\n  \"unowned\": {\n    \"exclusions\": [],\n    \"gaps\": [],\n    \"ideals\": []\n  },\n  \"verdict\": \"pass\"\n}"
+              "sha256": "a75bb8854d1e1b95b7d34bcfb87676f87d3a8ccd001ba258994777bc6a5b080d",
+              "text": "{\n  \"argv\": [\n    \"quality-matrix\",\n    \"--mode\",\n    \"verify\",\n    \"--ideals\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t62/docs/design/ideal-state.md\",\n    \"--gaps\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t62/docs/design/gap-list.md\",\n    \"--schema\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t62/schema/ovis-terminal.openrpc.json\",\n    \"--traceability\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t62/conformance/traceability.json\",\n    \"--ideal-map\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t62/conformance/ideal-map.json\"\n  ],\n  \"exclusions\": \"29\",\n  \"exit\": 0,\n  \"finding_count\": \"0\",\n  \"findings\": [],\n  \"gaps\": \"154\",\n  \"gate\": \"quality-matrix\",\n  \"hint\": null,\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"ideals\": \"121\",\n  \"kind\": null,\n  \"methods\": \"104\",\n  \"unowned\": {\n    \"exclusions\": [],\n    \"gaps\": [],\n    \"ideals\": []\n  },\n  \"verdict\": \"pass\"\n}"
             }
           },
           {
@@ -25733,7 +25835,7 @@
         "summary": "Every seeded defect fails its gate with exit 1 and a typed kind: evidence with a PASS banner and no receipts, a prose banner, a forged exit or assertion, an unknown matcher, a $present claim on a missing value, a self-contradicting gate report and a skipped case claimed as a pass are evidence_invalid; an `.ok();` discard, an #[allow], an `as` cast, a self-comparing assertion and an undisposed Rule totals id are quality_violation; an unresolved reference, an uncovered GAP and overlapping same-wave writes are plan_invalid; unproved and forged IDEAL proofs are ideal_unproved. With --inject only the named fixture runs."
       }
     ],
-    "elapsed_ms": "11944",
+    "elapsed_ms": "12157",
     "error": null,
     "format": "ovis-conformance-evidence/1",
     "host": {
@@ -25772,7 +25874,7 @@
       "--checklist",
       "docs/quality-checklist.md",
       "--evidence",
-      "/home/devswha/workspace/ovis-terminal-wt/lane-t61/.omo/evidence/ovis-terminal-v1/attempt.7Th1aM/task-61-ovis-terminal-v1.json"
+      "/dev/shm/ovt-fixtures/t62e.QTZo/acc.json"
     ],
     "checklist": {
       "path": "docs/quality-checklist.md",
@@ -25814,11 +25916,11 @@
       ]
     },
     "sources": {
-      "files_checked": "1299",
+      "files_checked": "1454",
       "roots": [
         {
           "root": "crates",
-          "rust_files": "1146"
+          "rust_files": "1256"
         },
         {
           "root": "packages/client-ts",
@@ -25826,15 +25928,15 @@
         },
         {
           "root": "conformance",
-          "rust_files": "70"
+          "rust_files": "79"
         },
         {
           "root": "bench",
-          "rust_files": "19"
+          "rust_files": "41"
         },
         {
           "root": "probes",
-          "rust_files": "64"
+          "rust_files": "78"
         }
       ]
     },

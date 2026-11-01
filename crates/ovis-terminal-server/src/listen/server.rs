@@ -16,6 +16,8 @@ const DEFAULT_MAX_CONNECTIONS: usize = 64;
 const DEFAULT_SHUTDOWN_GRACE: Duration = Duration::from_secs(5);
 
 #[cfg(test)]
+mod restart_reply;
+#[cfg(test)]
 mod shutdown_race;
 
 /// What a server authenticates against, reports as its identity and how far it scales.
@@ -104,7 +106,7 @@ impl ServeReport {
 pub struct ServerHandle {
     signal: watch::Sender<Option<Ending>>,
     progress: watch::Receiver<ServeReport>,
-    task: JoinHandle<Result<ServeReport, EndpointError>>,
+    task: JoinHandle<Result<(ServeReport, Option<UnixEndpoint>), EndpointError>>,
 }
 
 impl ServerHandle {
@@ -121,7 +123,7 @@ impl ServerHandle {
     /// The accept failure that stopped the server early, [`EndpointError::Io`] when the
     /// socket file cannot be removed and [`EndpointError::ServerTask`] if the task panicked.
     pub async fn shutdown(self) -> Result<ServeReport, EndpointError> {
-        self.end(Ending::Shutdown).await
+        Ok(self.end(Ending::Shutdown).await?.0)
     }
 
     /// Stops accepting for a planned control restart: every connection is closed with
@@ -132,10 +134,29 @@ impl ServerHandle {
     ///
     /// As [`ServerHandle::shutdown`].
     pub async fn restart(self) -> Result<ServeReport, EndpointError> {
+        let (report, endpoint) = self.hand_over().await?;
+        if let Some(endpoint) = endpoint {
+            endpoint.remove()?;
+        }
+        Ok(report)
+    }
+
+    /// Ends serving as [`ServerHandle::restart`] does but keeps the endpoint bound and
+    /// returns it, so a successor serves the same socket: a client connecting meanwhile
+    /// waits in the listen backlog instead of finding no server. The endpoint is absent
+    /// only when accepting failed first.
+    ///
+    /// # Errors
+    ///
+    /// As [`ServerHandle::shutdown`], except that the socket file is never removed.
+    pub async fn hand_over(self) -> Result<(ServeReport, Option<UnixEndpoint>), EndpointError> {
         self.end(Ending::Restart).await
     }
 
-    async fn end(mut self, ending: Ending) -> Result<ServeReport, EndpointError> {
+    async fn end(
+        mut self,
+        ending: Ending,
+    ) -> Result<(ServeReport, Option<UnixEndpoint>), EndpointError> {
         self.signal.send_replace(Some(ending));
         (&mut self.task).await.map_err(EndpointError::ServerTask)?
     }
@@ -190,7 +211,7 @@ pub fn serve_unix<H: RequestHandler>(
 async fn accept_loop<H: RequestHandler>(
     endpoint: UnixEndpoint,
     mut serving: Serving<H>,
-) -> Result<ServeReport, EndpointError> {
+) -> Result<(ServeReport, Option<UnixEndpoint>), EndpointError> {
     let mut report = ServeReport::default();
     let mut running = JoinSet::new();
     let stopped = loop {
@@ -246,8 +267,11 @@ async fn accept_loop<H: RequestHandler>(
         }
     }
     serving.progress.send_replace(report.clone());
+    if matches!(ending, Ending::Restart) && stopped.is_ok() {
+        return Ok((report, Some(endpoint)));
+    }
     let removed = endpoint.remove();
     stopped?;
     removed?;
-    Ok(report)
+    Ok((report, None))
 }

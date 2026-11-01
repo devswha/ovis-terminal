@@ -19,7 +19,11 @@ fn revoked(epoch: &Value, lease_id: &str) -> Value {
                 "lease_id": lease_id,
                 "slot": "interact",
                 "epoch": epoch,
-                "owner": { "principal": "operator", "client": "tui" },
+                "owner": {
+                    "principal": "operator",
+                    "client": "tui",
+                    "connection": "6f1c2d3e-4a5b-4c6d-8e7f-001122334455",
+                },
             },
             "reason": "taken_over",
             "displaced_by": null,

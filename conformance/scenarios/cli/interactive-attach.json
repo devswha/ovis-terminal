@@ -1,0 +1,1000 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "cli/interactive-attach",
+  "title": "Interactive attach without multiplexer chrome",
+  "todo": 62,
+  "closes": [
+    "GAP-039",
+    "GAP-040",
+    "GAP-041",
+    "GAP-042",
+    "GAP-043",
+    "GAP-044",
+    "GAP-045",
+    "GAP-056",
+    "GAP-057",
+    "GAP-058",
+    "GAP-059",
+    "GAP-145",
+    "GAP-148",
+    "GAP-149"
+  ],
+  "delivers": [
+    "IDEAL-028",
+    "IDEAL-029",
+    "IDEAL-030",
+    "IDEAL-031",
+    "IDEAL-033",
+    "IDEAL-037",
+    "IDEAL-038",
+    "IDEAL-039",
+    "IDEAL-046",
+    "IDEAL-055",
+    "IDEAL-103"
+  ],
+  "excludes": [
+    "EXCL-001",
+    "EXCL-002",
+    "EXCL-004",
+    "EXCL-007",
+    "EXCL-016",
+    "EXCL-017",
+    "EXCL-019"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Real serve runs /bin/sh as t1 with a socket observer (phone) attached; ovis-terminal terminal attach --target t1 on a real outer PTY types a marker, follows a resize the inner PTY reports, passes an unknown escape sequence through unchanged, detaches on Ctrl-\\ after switching off the modes the program enabled; outer terminal settings equal the originals, every granted lease is released, the observer stays attached and the program incarnation is unchanged.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "attach.leases",
+                  "attach.resize",
+                  "attach.close",
+                  "attach.credit",
+                  "input.raw",
+                  "terminal.process_info"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "shell",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "before",
+                "method": "terminal.process_info",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "before": {
+                "/result/launcher/incarnation": "1",
+                "/result/launcher/pid": {
+                  "$present": true
+                },
+                "/result/launcher/start_token": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "phone",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "phone",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "phone",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "watch",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:watch",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "observe",
+                  "client_id": "phone",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "outer",
+            "args": [
+              "terminal",
+              "attach",
+              "--target",
+              "t1",
+              "--client-id",
+              "cli"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "echo mark-$((30+1))\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "mark-31"
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "held",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "held": {
+                "/result/interact/holder": "cli",
+                "/result/interact/role": "interact",
+                "/result/geometry_owner/holder": "cli",
+                "/result/observers/0/holder": "phone",
+                "/result/observers/0/role": "observe"
+              }
+            }
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "sh -c 'sleep 600 & p=$!; trap \"stty size; kill $p; exit\" WINCH; echo armed-$((2+2)); wait'\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "armed-4"
+          }
+        },
+        {
+          "pty_resize": {
+            "pty": "outer",
+            "cols": 120,
+            "rows": 40
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "40 120"
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "cat -v\r"
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "\u001b[99;7~\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "^[[99;7~"
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "\u0004"
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "printf '\\033[?1049h\\033[?1000;1006h\\033[?2004h\\033[?25l'; echo on-$((3*3))\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "on-9"
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "\u001c"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "\u001b[?1000l\u001b[?1006l\u001b[?2004l\u001b[?1049l\u001b[?25h\u001b[0m"
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "outer",
+            "exit": 0,
+            "stderr": {
+              "/detached/reason": "detach_key",
+              "/detached/stream_closed": true,
+              "/detached/leases_released": true,
+              "/detached/leases_held": []
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "released",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "released": {
+                "/result/interact": null,
+                "/result/geometry_owner": null,
+                "/result/observers/0/holder": "phone",
+                "/result/observers/1": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "after",
+                "method": "terminal.process_info",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "after": {
+                "/result/launcher/incarnation": "1",
+                "/result/launcher/pid": {
+                  "$present": true
+                },
+                "/result/launcher/start_token": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "While cli holds the interact lease: a competing attach exits 11 lease_conflict naming the holder and the lease.revoked retry boundary; --takeover 7 exits 11 lease_epoch_mismatch with the current epoch 1; injected attach.open takeovers at epoch 7 (lease_epoch_mismatch with error.data.current epoch 1, holder cli) and 0 (invalid_params), the plan's literal attach.takeover inject (invalid_params: lease_epoch outside takeover), served attach.takeover on the relay's held stream at the plan's epoch 0 (invalid_params: no lease ever holds epoch 0) and at stale epoch 7 (lease_epoch_mismatch with error.data.current epoch 1, holder cli, interact) and a following ordinary attach.open (held with holder and retry, observe lease only), and a second connection presenting the holder's own client id cli (held naming the holder; its input.raw under lease:1 refused no_lease) never evict the holder, which detaches cleanly with the program incarnation unchanged.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "attach.leases",
+                  "attach.resize",
+                  "attach.close",
+                  "attach.credit",
+                  "input.raw",
+                  "terminal.process_info"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "shell",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "holder",
+            "args": [
+              "--json",
+              "terminal",
+              "attach",
+              "--target",
+              "t1",
+              "--client-id",
+              "cli"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "holder",
+            "bytes": "echo ready-$((2+3))\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "holder",
+            "output": "ready-5"
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "rival",
+            "args": [
+              "--json",
+              "terminal",
+              "attach",
+              "--target",
+              "t1"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "rival",
+            "exit": 11,
+            "stderr": {
+              "/error/kind": "lease_conflict",
+              "/error/holder/holder": "cli",
+              "/error/holder/role": "interact",
+              "/error/holder/epoch": "1",
+              "/error/retry/on": "lease_released",
+              "/error/retry/event": "lease.revoked",
+              "/error/retry/lease/holder": "cli"
+            }
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "stale",
+            "args": [
+              "--json",
+              "terminal",
+              "attach",
+              "--target",
+              "t1",
+              "--client-id",
+              "bridge",
+              "--takeover",
+              "7"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "stale",
+            "exit": 11,
+            "stderr": {
+              "/error/kind": "lease_epoch_mismatch",
+              "/error/expected_epoch": "7",
+              "/error/current/epoch": "1",
+              "/error/current/holder": "cli"
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "relay",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "relay",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "relay",
+            "base": {
+              "op_id": "$op:inject",
+              "target": {
+                "address": "t1"
+              },
+              "role": "interact",
+              "client_id": "relay",
+              "geometry": null,
+              "stream_mode": "plain",
+              "takeover": null
+            },
+            "planned": [
+              {
+                "request": {
+                  "method": "attach.open",
+                  "params": {
+                    "takeover": {
+                      "lease_epoch": "7",
+                      "reason": "stale takeover epoch"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "lease_epoch_mismatch",
+                  "/result": {
+                    "$present": false
+                  },
+                  "/error/data/current/epoch": "1",
+                  "/error/data/current/holder": "cli"
+                }
+              },
+              {
+                "request": {
+                  "method": "attach.open",
+                  "params": {
+                    "takeover": {
+                      "lease_epoch": "0",
+                      "reason": "an epoch no lease holds"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "attach.takeover",
+                  "params": {
+                    "lease_epoch": "0"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "relay",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "held_open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:held_open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "relay",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "relay",
+            "expect": {
+              "held_open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "held",
+                "/result/holder/holder": "cli",
+                "/result/holder/epoch": "1",
+                "/result/retry/on": "lease_released",
+                "/result/retry/event": "lease.revoked",
+                "/result/lease/role": "observe",
+                "/result/displaced": null,
+                "/result/stream_id": {
+                  "$capture": "relay_stream"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "relay",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "plan_epoch_takeover",
+                "method": "attach.takeover",
+                "params": {
+                  "op_id": "$op:plan_epoch_takeover",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "stream_id": "$value:relay_stream",
+                  "takeover": {
+                    "lease_epoch": "0",
+                    "reason": "the plan's stale epoch"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "relay",
+            "expect": {
+              "plan_epoch_takeover": {
+                "/error/data/kind": "invalid_params",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "relay",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stale_takeover",
+                "method": "attach.takeover",
+                "params": {
+                  "op_id": "$op:stale_takeover",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "stream_id": "$value:relay_stream",
+                  "takeover": {
+                    "lease_epoch": "7",
+                    "reason": "stale takeover epoch"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "relay",
+            "expect": {
+              "stale_takeover": {
+                "/error/data/kind": "lease_epoch_mismatch",
+                "/error/data/current/epoch": "1",
+                "/error/data/current/holder": "cli",
+                "/error/data/current/role": "interact",
+                "/error/data/current/lease_id": {
+                  "$present": true
+                },
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "twin",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "twin",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "twin",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "twin_open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:twin_open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "cli",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "twin",
+            "expect": {
+              "twin_open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "held",
+                "/result/holder/holder": "cli",
+                "/result/holder/lease_id": "lease:1",
+                "/result/retry/on": "lease_released",
+                "/result/retry/event": "lease.revoked",
+                "/result/lease/role": "observe"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "twin",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "twin_write",
+                "method": "input.raw",
+                "params": {
+                  "op_id": "$op:twin_write",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "data_b64": "ZWNobyB0d2luLSQoKDErMSkpDQ==",
+                  "lease_id": "lease:1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "twin",
+            "expect": {
+              "twin_write": {
+                "/error/data/kind": "no_lease",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "unchanged",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "unchanged": {
+                "/result/interact/holder": "cli",
+                "/result/interact/epoch": "1"
+              }
+            }
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "holder",
+            "bytes": "\u001c"
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "holder",
+            "exit": 0,
+            "stderr": {
+              "/detached/reason": "detach_key",
+              "/detached/leases_released": true
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "alive",
+                "method": "terminal.process_info",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "alive": {
+                "/result/launcher/incarnation": "1",
+                "/result/launcher/pid": {
+                  "$present": true
+                },
+                "/result/launcher/start_token": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

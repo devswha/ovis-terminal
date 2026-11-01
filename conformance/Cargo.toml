@@ -48,9 +48,10 @@ thiserror = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
 
-# Stops the fixture's peer runtime and waits for the kernel to report it stopped.
+# Outer PTYs for the attach steps, and stopping the fixture's peer runtime; the version
+# the holder resolves.
 [target.'cfg(unix)'.dependencies]
-rustix = { version = "1.1.6", features = ["process"] }
+rustix = { version = "1.1.6", features = ["fs", "process", "pty", "stdio", "termios"] }
 
 [dev-dependencies]
 proptest = { workspace = true }

@@ -34,6 +34,57 @@ impl Terminals {
         }
     }
 
+    #[cfg(all(test, unix))]
+    /// Applies one holder notification exactly like [`Terminals::receive`] and hands it
+    /// back once committed, so screens and input sequencers follow the same ordered facts;
+    /// `None` when the notification was an internal spawn refusal.
+    ///
+    /// # Errors
+    ///
+    /// The failures of [`Terminals::receive`]; a message that failed to apply is not returned.
+    pub(crate) fn receive_message(
+        &mut self,
+        timeout: Duration,
+    ) -> Result<Option<Message>, TerminalError> {
+        let incoming = self
+            .messages
+            .recv_timeout(timeout)
+            .map_err(TerminalError::Notification)?;
+        self.apply_message(incoming)
+    }
+
+    /// Applies one holder notification that already arrived, exactly like
+    /// [`Terminals::receive`], and never waits: a caller holding a lock around it
+    /// cannot keep that lock while the holder is silent. An empty queue is the same
+    /// `Notification(Timeout)` a zero-length wait reports.
+    ///
+    /// # Errors
+    ///
+    /// The failures of [`Terminals::receive`].
+    pub fn try_receive_message(&mut self) -> Result<Option<Message>, TerminalError> {
+        let incoming = self.messages.try_recv().map_err(|error| {
+            TerminalError::Notification(match error {
+                std::sync::mpsc::TryRecvError::Empty => std::sync::mpsc::RecvTimeoutError::Timeout,
+                std::sync::mpsc::TryRecvError::Disconnected => {
+                    std::sync::mpsc::RecvTimeoutError::Disconnected
+                }
+            })
+        })?;
+        self.apply_message(incoming)
+    }
+
+    fn apply_message(&mut self, incoming: Incoming) -> Result<Option<Message>, TerminalError> {
+        match incoming {
+            Incoming::Holder(message) => {
+                let applied = message.clone();
+                self.observe(message)?;
+                Ok(Some(applied))
+            }
+            Incoming::Rejected(id, error) => self.rejected(id, error).map(|()| None),
+            Incoming::Disconnected(error) => Err(error.into()),
+        }
+    }
+
     /// Awaits spawn evidence, consuming the same ordered holder stream used by the actor.
     ///
     /// # Errors

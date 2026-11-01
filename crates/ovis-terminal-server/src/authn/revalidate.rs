@@ -59,6 +59,10 @@ impl<H: RequestHandler> RequestHandler for Revalidated<H> {
         self.inner.methods()
     }
 
+    fn transports(&self) -> Vec<ovis_terminal_protocol::schema::limits::TransportKind> {
+        self.inner.transports()
+    }
+
     async fn call(&self, call: Call) -> Result<Value, BoundaryError> {
         self.authority
             .validate(&call.session, now()?)

@@ -108,6 +108,14 @@ fn cli_record(error: &CliError) -> Map<String, Value> {
         CliError::NotRunning { state, .. } => {
             record.insert("state".to_owned(), json!(state));
         }
+        #[cfg(unix)]
+        CliError::Attach(error) => {
+            for (field, value) in error.details() {
+                record.insert(field.to_owned(), value);
+            }
+        }
+        #[cfg(unix)]
+        CliError::Assembly(_) => {}
         CliError::Usage { .. }
         | CliError::MissingCommand
         | CliError::SkillWithCommand
@@ -117,6 +125,7 @@ fn cli_record(error: &CliError) -> Map<String, Value> {
         | CliError::Endpoint(_)
         | CliError::Io { .. }
         | CliError::Closed
+        | CliError::Restarted
         | CliError::Reply(_)
         | CliError::Result(_)
         | CliError::Timeout { .. }
@@ -196,6 +205,16 @@ impl Report {
         Self {
             stdout: text.into_bytes(),
             stderr: Vec::new(),
+            status: ExitStatus::Success,
+        }
+    }
+
+    /// A success whose stdout was the attached screen: the outcome record goes to stderr.
+    #[cfg(unix)]
+    pub(super) fn detached(record: &Value) -> Self {
+        Self {
+            stdout: Vec::new(),
+            stderr: format!("{record}\n").into_bytes(),
             status: ExitStatus::Success,
         }
     }

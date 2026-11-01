@@ -44,7 +44,7 @@ impl Isolated {
         let marker = format!("ovt20-{}-{nanos:x}-{unique}", std::process::id());
         // Not temp_dir(): on Darwin it is ~50 bytes deep, which pushes
         // `<root>/ovis-terminal/default.sock` past the 103-byte portable socket limit.
-        let root = Path::new("/tmp").join(format!("ovt20-{}-{unique}", std::process::id()));
+        let root = fixture_root().join(format!("ovt20-{}-{unique}", std::process::id()));
         std::os::unix::fs::DirBuilderExt::mode(&mut std::fs::DirBuilder::new(), 0o700)
             .create(&root)?;
         Ok(Self { root, marker })
@@ -272,6 +272,12 @@ pub async fn serve(dir: &Isolated) -> TestResult<Served> {
         socket,
         bearer: issued.bearer().to_owned(),
     })
+}
+
+/// Where test state lives: `OVIS_FIXTURE_ROOT` when the host sets it, else `/tmp`, which
+/// stays inside every platform's socket path limit.
+fn fixture_root() -> PathBuf {
+    std::env::var_os("OVIS_FIXTURE_ROOT").map_or_else(|| PathBuf::from("/tmp"), PathBuf::from)
 }
 
 /// The value at a JSON pointer such as `/error/kind`, or null when absent.

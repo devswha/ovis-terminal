@@ -1,0 +1,17 @@
+Linux 7.0.0-38-generic x86_64
+
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-31 --isolated --case happy --evidence "$ATTEMPT_DIR/task-31-ovis-terminal-v1-happy.json"
+{"case":"happy","error":null,"evidence":"/home/devswha/.ovis-run/scratch/t31/task-31-ovis-terminal-v1-happy.json","evidence_written":null,"result":"passed","scenario":"part-a/task-31","totals":{"assertions":"23","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+EXIT=0
+
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-31 --isolated --case failure --evidence "$ATTEMPT_DIR/task-31-ovis-terminal-v1-failure.json"
+{"case":"failure","error":null,"evidence":"/home/devswha/.ovis-run/scratch/t31/task-31-ovis-terminal-v1-failure.json","evidence_written":null,"result":"passed","scenario":"part-a/task-31","totals":{"assertions":"26","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+EXIT=0
+
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-31 --isolated --case all --require-no-skips --evidence "$ATTEMPT_DIR/task-31-ovis-terminal-v1.json"
+{"case":"all","error":null,"evidence":"/home/devswha/.ovis-run/scratch/t31/task-31-ovis-terminal-v1.json","evidence_written":null,"result":"passed","scenario":"part-a/task-31","totals":{"assertions":"49","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
+EXIT=0
+
+$ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario all/all --isolated --case all --require-no-skips --evidence "$ATTEMPT_DIR/all-all.json"
+{"case":"all","error":{"detail":"37 declaration files are not executed","hint":"register the remaining declarations; declared.json must be empty","kind":"declared_only_present","step":null},"evidence":"/home/devswha/.ovis-run/scratch/t31/all-all.json","evidence_written":null,"result":"failed","scenario":"all/all","totals":{"assertions":"2009","cases":"48","declared_only":"37","failed":"0","passed":"48","skipped":"0"}}
+EXIT=1

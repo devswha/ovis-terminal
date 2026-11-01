@@ -29,6 +29,10 @@ pub(super) enum Plan {
     NeedsTarget,
     #[cfg(any(unix, windows))]
     Service(crate::service::ServiceCommand),
+    #[cfg(unix)]
+    Serve(crate::assembly::ServePlan),
+    #[cfg(unix)]
+    Attach(crate::attach::AttachPlan),
 }
 
 /// Builds a request and proves its params decode as the method's closed type `P`.
@@ -103,6 +107,65 @@ pub(super) fn plan(cli: Cli) -> Result<Plan, CliError> {
         Command::Call(args) => Plan::Call(call(args)?),
         #[cfg(any(unix, windows))]
         Command::Service(command) => Plan::Service(command),
+        #[cfg(unix)]
+        Command::Serve(args) => Plan::Serve(crate::assembly::ServePlan {
+            root: args.root,
+            stdin_lifetime: args.stdin_lifetime,
+            websocket_port: args.websocket_port,
+            qa: crate::assembly::QaSeams {
+                holder_poll_ms: args.qa_holder_poll_ms,
+                actor_hold: args.qa_actor_hold,
+            },
+        }),
+        #[cfg(unix)]
+        Command::Hold(session) => Plan::Service(crate::service::ServiceCommand::Run(
+            crate::service::unix::StartArgs {
+                session,
+                manager: crate::service::unix::Placement::Detached,
+            },
+        )),
+        #[cfg(unix)]
+        Command::Terminal(TerminalCommand::Attach(args)) => Plan::Attach(attach(args)?),
+    })
+}
+
+/// Proves the target and client label decode as their closed wire types.
+#[cfg(unix)]
+fn attach(args: super::args::AttachArgs) -> Result<crate::attach::AttachPlan, CliError> {
+    let super::args::AttachTarget {
+        target,
+        terminal_id,
+        name,
+    } = args.target;
+    let named = [
+        ("address", target),
+        ("terminal_id", terminal_id),
+        ("name", name),
+    ];
+    let target = named
+        .into_iter()
+        .find_map(|(field, value)| value.map(|value| json!({ field: value })))
+        .ok_or(CliError::MissingCommand)?;
+    let request = typed::<ovis_terminal_protocol::schema::methods::attach::AttachLeasesParams>(
+        "attach.leases",
+        &json!({ "target": target }),
+    )?;
+    let params: ovis_terminal_protocol::schema::methods::attach::AttachLeasesParams =
+        decode_params(&request).map_err(CliError::Params)?;
+    let label = args
+        .client_id
+        .unwrap_or_else(|| format!("cli-{}", std::process::id()));
+    let client = serde_json::from_value(json!(label)).map_err(CliError::ParamsJson)?;
+    let takeover = args
+        .takeover
+        .map(|epoch| serde_json::from_value(json!(epoch)))
+        .transpose()
+        .map_err(CliError::ParamsJson)?;
+    Ok(crate::attach::AttachPlan {
+        target: params.target,
+        observe: args.observe,
+        client,
+        takeover,
     })
 }
 

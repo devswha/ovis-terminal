@@ -12,6 +12,7 @@ use ovis_terminal_core::leases::{LeaseEvent, Transition};
 use ovis_terminal_core::registry::TargetResolutionError;
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::schema::common::Target;
+use ovis_terminal_protocol::schema::scalar::EventSeq;
 use ovis_terminal_server::conn::{Call, RequestHandler};
 use ovis_terminal_server::dispatch::lanes::agent_status::{ResolvedTerminal, TerminalDirectory};
 use ovis_terminal_server::streams::{LeaseJournal, StreamError};
@@ -38,7 +39,7 @@ pub(crate) type Core = Coordinator<LeaseEvent, NoSections>;
 pub(crate) struct Journal(pub Arc<Core>);
 
 impl LeaseJournal for Journal {
-    fn record(&self, op: OpId, transition: Transition) -> Result<(), StreamError> {
+    fn record(&self, op: OpId, transition: Transition) -> Result<Option<EventSeq>, StreamError> {
         self.0.record(op, transition)
     }
 }

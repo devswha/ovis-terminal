@@ -1,0 +1,1095 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "part-a/task-31",
+  "title": "Assembled binary and plain interactive attach client",
+  "todo": 31,
+  "closes": [
+    "GAP-039",
+    "GAP-040",
+    "GAP-041",
+    "GAP-042",
+    "GAP-044",
+    "GAP-045",
+    "GAP-056",
+    "GAP-057",
+    "GAP-137",
+    "GAP-145"
+  ],
+  "delivers": [
+    "IDEAL-028",
+    "IDEAL-029",
+    "IDEAL-030",
+    "IDEAL-031",
+    "IDEAL-033",
+    "IDEAL-037",
+    "IDEAL-055",
+    "IDEAL-110",
+    "IDEAL-111",
+    "IDEAL-114"
+  ],
+  "excludes": [
+    "EXCL-001",
+    "EXCL-002",
+    "EXCL-003",
+    "EXCL-007",
+    "EXCL-016",
+    "EXCL-027"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Real ovis-terminal serve runs /bin/sh as t1; ovis-terminal terminal attach --target t1 on a real outer PTY types a marker the shell evaluates, follows a resize the inner PTY reports, detaches on Ctrl-\\ with exit 0; the outer terminal settings equal the originals and attach.leases is empty afterwards; an unrouted method answers method_not_found.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "attach.resize",
+                  "attach.leases",
+                  "input.raw",
+                  "terminal.run",
+                  "terminal.get",
+                  "server.status"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "shell",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "layout",
+                "method": "layout.get",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "layout": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/workspaces": [],
+                "/result/selections": []
+              }
+            }
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "outer",
+            "args": [
+              "terminal",
+              "attach",
+              "--target",
+              "t1",
+              "--client-id",
+              "cli"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "echo mark-$((30+1))\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "mark-31"
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "held",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "held": {
+                "/result/interact/holder": "cli",
+                "/result/geometry_owner/holder": "cli"
+              }
+            }
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "sh -c 'sleep 600 & p=$!; trap \"stty size; kill $p; exit\" WINCH; echo armed-$((2+2)); wait'\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "armed-4"
+          }
+        },
+        {
+          "pty_resize": {
+            "pty": "outer",
+            "cols": 120,
+            "rows": 40
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "outer",
+            "output": "40 120"
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "outer",
+            "bytes": "\u001c"
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "outer",
+            "exit": 0,
+            "stderr": {
+              "/detached/reason": "detach_key",
+              "/detached/stream_closed": true
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "released",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "released": {
+                "/result": {
+                  "interact": null,
+                  "geometry_owner": null,
+                  "observers": []
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "An RPC interact attach is ready under its own lease; an observe-only principal naming that lease is refused for its permission before the lease is looked at (the boundary policy's precheck answers input.raw and input.send forbidden) and the owner's, which may write but holds no such lease, no_lease; an operator held behind it takes the interact lease over with attach.takeover, and the writer's stream is told input_revoked then closes taken_over naming the operator, after which the writer's revoked lease admits nothing (no_lease); the operator's attach.close is confirmed by its CLOSE, after which attach.leases is empty, so the CLI holder then acquires interact; a PTY observer sees the first paint and follows output, its typed bytes are never evaluated (absent after a fence on both PTYs) and attach.leases lists it as an observer; a second interact attach exits 11 lease_conflict naming the holder and never changes its terminal; a stale target exits 3 not_found; interact without a TTY exits 2 not_a_tty; stopping the server (forced socket EOF) sends $/closing server_shutdown first, which revokes the clients' input readiness, and the holder and the observer then exit 4 connection_lost naming that closing, with their outer terminal settings restored.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "attach.resize",
+                  "attach.leases",
+                  "input.raw",
+                  "terminal.run",
+                  "terminal.get",
+                  "server.status"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "shell",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "writer",
+            "via": "socket",
+            "principal": "writer"
+          }
+        },
+        {
+          "hello": {
+            "conn": "writer",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "input.raw"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "writer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "rpc-open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:rpc-open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "rpc-writer",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "writer",
+            "expect": {
+              "rpc-open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/role": "interact",
+                "/result/lease/lease_id": {
+                  "$capture": "writer_lease"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "rpc-held",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "rpc-held": {
+                "/result/interact/holder": "rpc-writer"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "observer",
+            "via": "socket",
+            "principal": "observe"
+          }
+        },
+        {
+          "hello": {
+            "conn": "observer",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "observer-input",
+                "method": "input.raw",
+                "params": {
+                  "op_id": "$op:observer-input",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "data_b64": "ZWNobyBvYnNlcnZlZC0kKCg3KzcpKQ0=",
+                  "lease_id": "$value:writer_lease"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "observer-input": {
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/kind": "forbidden"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "observer-send",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:observer-send",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "echo observed-$((7+7))",
+                  "submit": "enter",
+                  "lease_id": "$value:writer_lease"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "observer-send": {
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/kind": "forbidden"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "foreign-lease",
+                "method": "input.raw",
+                "params": {
+                  "op_id": "$op:foreign-lease",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "data_b64": "ZWNobyBmb3JlaWduLSQoKDgrOCkpDQ==",
+                  "lease_id": "$value:writer_lease"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "foreign-lease": {
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/kind": "no_lease"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "operator",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "operator",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.takeover"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "operator-open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:operator-open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "operator",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "operator-open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "held",
+                "/result/holder/holder": "rpc-writer",
+                "/result/holder/epoch": {
+                  "$capture": "writer_epoch"
+                },
+                "/result/stream_id": {
+                  "$capture": "operator_stream"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "takeover",
+                "method": "attach.takeover",
+                "params": {
+                  "op_id": "$op:takeover",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "stream_id": "$value:operator_stream",
+                  "takeover": {
+                    "lease_epoch": "$value:writer_epoch",
+                    "reason": "operator takes the terminal"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "takeover": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/acquired/holder": "operator",
+                "/result/acquired/role": "interact",
+                "/result/displaced/holder": "rpc-writer",
+                "/result/seq": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "writer",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "checkpoint"
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "writer",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "input_ready"
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "writer",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "input_revoked"
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "writer",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "close",
+              "/params/close/reason": "taken_over",
+              "/params/close/by/holder": "operator"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "writer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "revoked-input",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:revoked-input",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "echo revoked-$((9+9))",
+                  "submit": "enter",
+                  "lease_id": "$value:writer_lease"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "writer",
+            "expect": {
+              "revoked-input": {
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/kind": "no_lease"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "operator-close",
+                "method": "attach.close",
+                "params": {
+                  "stream_id": "$value:operator_stream"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "operator-close": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "operator",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "checkpoint"
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "operator",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "input_ready"
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "operator",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "input_revoked"
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "operator",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "close",
+              "/params/close/reason": "client_closed"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "released",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "released": {
+                "/result/interact": null,
+                "/result/geometry_owner": null
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "writer"
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "holder",
+            "args": [
+              "--json",
+              "terminal",
+              "attach",
+              "--target",
+              "t1",
+              "--client-id",
+              "cli"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "holder",
+            "bytes": "echo ready-$((2+3))\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "holder",
+            "output": "ready-5"
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "watcher",
+            "args": [
+              "--json",
+              "terminal",
+              "attach",
+              "--target",
+              "t1",
+              "--observe",
+              "--client-id",
+              "watcher"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "watcher",
+            "output": "ready-5"
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "watcher",
+            "bytes": "echo rogue-$((1+1))\r"
+          }
+        },
+        {
+          "pty_type": {
+            "pty": "holder",
+            "bytes": "echo fence-$((5+5))\r"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "holder",
+            "output": "fence-10"
+          }
+        },
+        {
+          "pty_expect": {
+            "pty": "watcher",
+            "output": "fence-10"
+          }
+        },
+        {
+          "pty_absent": {
+            "pty": "holder",
+            "output": "rogue-2"
+          }
+        },
+        {
+          "pty_absent": {
+            "pty": "watcher",
+            "output": "rogue-2"
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "second",
+            "args": [
+              "--json",
+              "terminal",
+              "attach",
+              "--target",
+              "t1",
+              "--client-id",
+              "second"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "second",
+            "exit": 11,
+            "stderr": {
+              "/error/kind": "lease_conflict",
+              "/error/holder/holder": "cli",
+              "/error/holder/role": "interact"
+            }
+          }
+        },
+        {
+          "pty_open": {
+            "pty": "stale",
+            "args": [
+              "--json",
+              "terminal",
+              "attach",
+              "--target",
+              "t9"
+            ],
+            "cols": 100,
+            "rows": 30
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "stale",
+            "exit": 3,
+            "stderr": {
+              "/error/kind": "not_found"
+            }
+          }
+        },
+        {
+          "run": {
+            "args": [
+              "--json",
+              "terminal",
+              "attach",
+              "--target",
+              "t1"
+            ],
+            "endpoint": true,
+            "exit": 2,
+            "stderr": {
+              "/error/kind": "not_a_tty"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "still",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "still": {
+                "/result/interact/holder": "cli",
+                "/result/observers/0/holder": "watcher",
+                "/result/observers/0/role": "observe"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "holder",
+            "exit": 4,
+            "stderr": {
+              "/error/kind": "connection_lost",
+              "/error/closing/reason": "server_shutdown"
+            }
+          }
+        },
+        {
+          "pty_exit": {
+            "pty": "watcher",
+            "exit": 4,
+            "stderr": {
+              "/error/kind": "connection_lost",
+              "/error/closing/reason": "server_shutdown"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

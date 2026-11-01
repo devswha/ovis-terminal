@@ -1,6 +1,6 @@
 //! Lease identities, owners and the records every lease event carries.
 
-use ovis_terminal_authz::PrincipalId;
+use ovis_terminal_authz::{ConnectionId, PrincipalId};
 use ovis_terminal_protocol::schema::ids::ClientId;
 use serde::{Deserialize, Serialize};
 
@@ -38,9 +38,12 @@ impl From<ControlSlot> for LeaseSlot {
     }
 }
 
-/// The authenticated principal together with the client label it attached as.
+/// The authenticated principal, the client label it attached as, and the connection it
+/// attached on.
 ///
-/// Both must match for a lease to act; knowing a lease id grants nothing.
+/// All three must match for a lease to act: knowing a lease id grants nothing, and another
+/// connection presenting the same principal and label is another owner, so it competes for
+/// a held lease instead of sharing it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
@@ -49,12 +52,18 @@ pub struct Owner {
     pub principal: PrincipalId,
     /// Client label of the attachment.
     pub client: ClientId,
+    /// Connection the lease lives on; its disconnect revokes the lease.
+    pub connection: ConnectionId,
 }
 
 impl Owner {
     /// Names the owner of a lease.
-    pub const fn new(principal: PrincipalId, client: ClientId) -> Self {
-        Self { principal, client }
+    pub const fn new(principal: PrincipalId, client: ClientId, connection: ConnectionId) -> Self {
+        Self {
+            principal,
+            client,
+            connection,
+        }
     }
 }
 

@@ -20,7 +20,7 @@ use ovis_terminal_protocol::schema::methods::attach::{
     AttachOpenResult, AttachOutcome, TakeoverRequest,
 };
 use ovis_terminal_protocol::schema::records::{
-    AttachControl, Checkpoint, ControlKind, LeaseRole, RetryBoundary, StreamClose,
+    AttachControl, Checkpoint, ControlKind, LeaseRecord, LeaseRole, RetryBoundary, StreamClose,
 };
 use ovis_terminal_protocol::schema::scalar::{ByteCount, OpenEnum};
 use ovis_terminal_store::OpId;
@@ -94,7 +94,7 @@ impl TerminalStreams {
             },
         };
         result.lease = Some(lease_record(&granted.lease));
-        displace(&mut state, &granted, &mut result);
+        result.displaced = displace(&mut state, &granted);
         let ready = result.outcome == OpenEnum::Known(AttachOutcome::Ready);
         let interact = ready && request.role == LeaseRole::Interact;
         let (wake, first) = self.attach(&mut state, (&request, interact))?;
@@ -185,8 +185,10 @@ fn decide(
     }
 }
 
-/// Closes the streams of a lease an explicit takeover displaced, naming the new owner.
-fn displace(state: &mut HubState, granted: &Granted, result: &mut AttachOpenResult) {
+/// Closes the streams of a lease an explicit takeover displaced, naming the new owner;
+/// returns the displaced lease.
+pub(super) fn displace(state: &mut HubState, granted: &Granted) -> Option<LeaseRecord> {
+    let mut displaced = None;
     for event in &granted.transition.events {
         let LeaseEvent::Revoked {
             lease,
@@ -196,7 +198,7 @@ fn displace(state: &mut HubState, granted: &Granted, result: &mut AttachOpenResu
         else {
             continue;
         };
-        result.displaced = Some(lease_record(lease));
+        displaced = Some(lease_record(lease));
         for viewer in state.viewers.values_mut() {
             if viewer.owner == lease.owner && viewer.interact {
                 revoke_input(viewer);
@@ -208,6 +210,7 @@ fn displace(state: &mut HubState, granted: &Granted, result: &mut AttachOpenResu
             }
         }
     }
+    displaced
 }
 
 trait Attached {

@@ -24,6 +24,7 @@ pub use attach::{MachineAddAttached, ReconnectError, reconnect};
 use ovis_terminal_authz::{Action, Authority, ResolvedTarget, Session, TargetResource};
 use ovis_terminal_core::registry::{MachineId as LocalMachine, RegistryIdentities};
 use ovis_terminal_protocol::errors::{BoundaryError, OpId};
+use ovis_terminal_protocol::schema::limits::TransportKind;
 use ovis_terminal_protocol::schema::methods::machine::MachineState;
 use ovis_terminal_protocol::schema::scalar::OpenEnum;
 use ovis_terminal_remote::actors::{ActorError, Actors, Line, Request};
@@ -115,6 +116,10 @@ impl<L: Line, H: RequestHandler> RemoteDispatch<L, H> {
 impl<L: Line, H: RequestHandler> RequestHandler for RemoteDispatch<L, H> {
     fn methods(&self) -> Vec<&'static str> {
         self.local.methods()
+    }
+
+    fn transports(&self) -> Vec<TransportKind> {
+        self.local.transports()
     }
 
     async fn call(&self, call: Call) -> Result<Value, BoundaryError> {

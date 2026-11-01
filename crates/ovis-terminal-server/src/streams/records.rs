@@ -15,7 +15,7 @@ use ovis_terminal_vt::{
 use super::offset::StreamOffset;
 
 /// The wire record of a core lease.
-pub(super) fn lease_record(lease: &Lease) -> LeaseRecord {
+pub fn lease_record(lease: &Lease) -> LeaseRecord {
     let role = match lease.slot {
         LeaseSlot::Observe => LeaseRole::Observe,
         _ => LeaseRole::Interact,
@@ -27,7 +27,7 @@ pub(super) fn lease_record(lease: &Lease) -> LeaseRecord {
     )
 }
 
-fn enabled(modes: &TerminalModes) -> Vec<OpenEnum<TerminalMode>> {
+pub(super) fn enabled(modes: &TerminalModes) -> Vec<OpenEnum<TerminalMode>> {
     let flags = [
         (
             modes.paste == PasteMode::Bracketed,

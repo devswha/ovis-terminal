@@ -1,0 +1,589 @@
+{
+  "binary": {
+    "bytes": "46781808",
+    "path": "/dev/shm/ovt-target-lane-t31/debug/ovis-terminal",
+    "sha256": "b66ca674136df08eca2d68dfda4a1c8591ec50d1dd99ad73ea6734f2b6df4e4c"
+  },
+  "case": "happy",
+  "cases": [
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": [
+            "hello",
+            "server.status",
+            "server.stop",
+            "server.restart",
+            "server.metrics",
+            "op.get",
+            "op.cancel",
+            "terminal.run",
+            "terminal.list",
+            "terminal.get",
+            "terminal.kill",
+            "terminal.rm",
+            "terminal.keep",
+            "terminal.recover",
+            "terminal.label",
+            "terminal.rename",
+            "terminal.process_info",
+            "terminal.screen",
+            "terminal.output",
+            "terminal.wait_output",
+            "input.send",
+            "input.keys",
+            "input.raw",
+            "input.paste",
+            "input.barrier",
+            "attach.open",
+            "attach.resize",
+            "attach.repaint",
+            "attach.credit",
+            "attach.close",
+            "attach.takeover",
+            "attach.leases",
+            "status.get",
+            "status.report",
+            "status.clear",
+            "prompt.list",
+            "prompt.get",
+            "prompt.open",
+            "prompt.answer",
+            "prompt.close",
+            "agent.register",
+            "agent.get",
+            "agent.update_session",
+            "agent.children",
+            "agent.conversation",
+            "agent.append_records",
+            "agent.records",
+            "agent.history",
+            "plugin.list",
+            "plugin.invoke",
+            "plugin.run_get",
+            "doc.get",
+            "doc.set",
+            "machine.add",
+            "machine.get",
+            "machine.rename",
+            "service.describe",
+            "update.stage",
+            "update.verify",
+            "update.activate",
+            "update.rollback",
+            "update.query",
+            "rpc.discover",
+            "schema.errors",
+            "schema.events",
+            "schema.capabilities",
+            "credential.rotate",
+            "credential.revoke"
+          ],
+          "check": "hello/result/methods",
+          "expected": {
+            "$contains": [
+              "server.restart",
+              "server.stop",
+              "server.status"
+            ]
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[run]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "spawned",
+          "check": "reply[run]/result/spawn",
+          "expected": "spawned",
+          "passed": true
+        },
+        {
+          "actual": "t1",
+          "check": "reply[run]/result/terminal/address",
+          "expected": "t1",
+          "passed": true
+        },
+        {
+          "actual": [
+            "run"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "run"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[status]/result/live_terminals",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "runtime:1",
+          "check": "reply[status]/result/runtime_lifetime",
+          "expected": {
+            "$capture": "lifetime"
+          },
+          "passed": true
+        },
+        {
+          "actual": "boot:1",
+          "check": "reply[status]/result/server_boot_id",
+          "expected": {
+            "$capture": "boot_old"
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[before]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": 2127014,
+          "check": "reply[before]/result/launcher/pid",
+          "expected": {
+            "$capture": "pid"
+          },
+          "passed": true
+        },
+        {
+          "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:2285198",
+          "check": "reply[before]/result/launcher/start_token",
+          "expected": {
+            "$capture": "token"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "before",
+            "status"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "before",
+            "status"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[restart]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [],
+          "check": "reply[restart]/result/ended_incarnations",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[restart]/result/preserved_incarnations/0",
+          "expected": {
+            "$present": true
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[restart]/result/preserved_incarnations/1",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "boot:2",
+          "check": "reply[restart]/result/server_boot_id_new",
+          "expected": {
+            "$capture": "boot_new"
+          },
+          "passed": true
+        },
+        {
+          "actual": "boot:1",
+          "check": "reply[restart]/result/server_boot_id_old",
+          "expected": "boot:1",
+          "passed": true
+        },
+        {
+          "actual": [
+            "restart"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "restart"
+          ],
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "notification[$/closing]/params/incarnations_preserved",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": "server_restart",
+          "check": "notification[$/closing]/params/reason",
+          "expected": "server_restart",
+          "passed": true
+        },
+        {
+          "actual": "4298",
+          "check": "connection[control]/bytes_received=bytes_decoded",
+          "expected": "4298",
+          "passed": true
+        },
+        {
+          "actual": "runtime:1",
+          "check": "announcement/restarted/runtime_lifetime",
+          "expected": "runtime:1",
+          "passed": true
+        },
+        {
+          "actual": "boot:2",
+          "check": "announcement/restarted/server_boot_id",
+          "expected": "boot:2",
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "runtime:1",
+          "check": "hello/result/runtime_lifetime",
+          "expected": "runtime:1",
+          "passed": true
+        },
+        {
+          "actual": "boot:2",
+          "check": "hello/result/server_boot_id",
+          "expected": "boot:2",
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[status]/result/live_terminals",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "runtime:1",
+          "check": "reply[status]/result/runtime_lifetime",
+          "expected": "runtime:1",
+          "passed": true
+        },
+        {
+          "actual": "boot:2",
+          "check": "reply[status]/result/server_boot_id",
+          "expected": "boot:2",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[after]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": 2127014,
+          "check": "reply[after]/result/launcher/pid",
+          "expected": 2127014,
+          "passed": true
+        },
+        {
+          "actual": "linux:d260380d-1788-45bb-869b-0c308b014812:2285198",
+          "check": "reply[after]/result/launcher/start_token",
+          "expected": "linux:d260380d-1788-45bb-869b-0c308b014812:2285198",
+          "passed": true
+        },
+        {
+          "actual": [
+            "after",
+            "status"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "after",
+            "status"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "2995",
+          "check": "connection[successor]/bytes_received=bytes_decoded",
+          "expected": "2995",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "happy",
+      "connections": [
+        {
+          "bytes_decoded": "4298",
+          "bytes_received": "4298",
+          "bytes_sent": "878",
+          "name": "control",
+          "records_received": "6",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "bfc664e1700331ec697910e2a8a216d7361fa205b40b4014608dc95708a4d9b5",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2251",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "65d4861a41a47f41ec3d14cfc3c6ca811be4c4ba946e7014308c82e76125c52d",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a1963f-9fea-7543-815f-bb98caa9a02f\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793522116100\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1",
+              "bytes": "356",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "f336e019da3258b46fa86aa44db314e42fb5501741fcb937cffc0f1f3e442fc1",
+              "text": "{\"id\":\"run\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"PS1\":\"$ \",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a1963f-a605-70cb-bef6-f8fcf8ae6b64\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "33",
+              "bytes": "871",
+              "direction": "received",
+              "offset": "2251",
+              "sha256": "c3299940118c4cae7746c19a5176db51fdf5368ecc9552236dbbce81fa87b2e9",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a1963f-9fea-7543-815f-bb98caa9a02f\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2127014,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:2285198\",\"started_ms\":\"1793522116130\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "34",
+              "bytes": "171",
+              "direction": "sent",
+              "offset": "590",
+              "sha256": "ff0b79af40a1d85c1b956b36712444fc185f4494de864f90822afee25cb51143",
+              "text": "{\"id\":\"status\",\"jsonrpc\":\"2.0\",\"method\":\"server.status\",\"params\":{}}\n{\"id\":\"before\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.process_info\",\"params\":{\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "36",
+              "bytes": "282",
+              "direction": "received",
+              "offset": "3122",
+              "sha256": "2c43fc170f03ac67d8976c52f87c4e68cd5f2814c73634fa1ff65620f958eed5",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"status\",\"result\":{\"census\":\"reported\",\"holder_count\":\"1\",\"live_terminals\":\"1\",\"recovery_state\":{\"corrupted\":false,\"incidents\":\"0\",\"phase\":\"clean\",\"unsettled\":\"0\"},\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"state\":\"running\",\"uptime_ms\":\"1583\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "121",
+              "bytes": "465",
+              "direction": "received",
+              "offset": "3404",
+              "sha256": "f20f6addcb839a40d14168fb2124dca9af24c55874f01f1bba923d6c8bc6c991",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"before\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2127014,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:2285198\",\"started_ms\":\"1793522116130\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2127014,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:2285198\",\"started_ms\":\"1793522116130\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "122",
+              "bytes": "117",
+              "direction": "sent",
+              "offset": "761",
+              "sha256": "450452a6f815c0308c20b02dc93369254d73a1bcb2a71a358d92f7ad17eb7ad8",
+              "text": "{\"id\":\"restart\",\"jsonrpc\":\"2.0\",\"method\":\"server.restart\",\"params\":{\"op_id\":\"01a1963f-a67e-7027-bc82-2b42daecd030\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "465",
+              "bytes": "180",
+              "direction": "received",
+              "offset": "3869",
+              "sha256": "6dd04827378ffce20250fb8bd82c35b74e7180732de827ea4ad3f068a9dfe910",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"restart\",\"result\":{\"ended_incarnations\":[],\"interrupted_ops\":[],\"preserved_incarnations\":[\"1\"],\"server_boot_id_new\":\"boot:2\",\"server_boot_id_old\":\"boot:1\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "471",
+              "bytes": "249",
+              "direction": "received",
+              "offset": "4049",
+              "sha256": "7cb0a422869a555bf3f186347954c2b14efe5980ae119713afddaf91bf79514e",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"$/closing\",\"params\":{\"reason\":\"server_restart\",\"hint\":\"reconnect to the same endpoint; hello reports the new server_boot_id and the server.restart receipt lists every preserved incarnation\",\"incarnations_preserved\":true}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "4"
+        },
+        {
+          "bytes_decoded": "2995",
+          "bytes_received": "2995",
+          "bytes_sent": "404",
+          "name": "successor",
+          "records_received": "3",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "bfc664e1700331ec697910e2a8a216d7361fa205b40b4014608dc95708a4d9b5",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2251",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "a5c8bfdc2f5c49a98c8c8568f59fba35de07673753f81db48efa576f315a2d0b",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a1963f-9fea-7543-815f-bb98caa9a02f\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:2\",\"server_time_ms\":\"1793522116588\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1",
+              "bytes": "170",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "1ef87d8068e7d076e1d53e88d0bd534aee0b1e87cb806136bef1d188e581eec5",
+              "text": "{\"id\":\"status\",\"jsonrpc\":\"2.0\",\"method\":\"server.status\",\"params\":{}}\n{\"id\":\"after\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.process_info\",\"params\":{\"target\":{\"address\":\"t1\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "280",
+              "direction": "received",
+              "offset": "2251",
+              "sha256": "a561b9aa3b30a82699de82d19ee3d2df5dc9ef2a674d67e1db6565cf203089e7",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"status\",\"result\":{\"census\":\"reported\",\"holder_count\":\"1\",\"live_terminals\":\"1\",\"recovery_state\":{\"corrupted\":false,\"incidents\":\"0\",\"phase\":\"clean\",\"unsettled\":\"0\"},\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:2\",\"state\":\"running\",\"uptime_ms\":\"14\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "85",
+              "bytes": "464",
+              "direction": "received",
+              "offset": "2531",
+              "sha256": "91273bde9f9e40983a8ad7a2570282141c13eb7f220aa2cec221593a87ae1bee",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"after\",\"result\":{\"foreground\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2127014,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:2285198\",\"started_ms\":\"1793522116130\"},\"launcher\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2127014,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:2285198\",\"started_ms\":\"1793522116130\"},\"supported_fields\":[\"argv\",\"cwd\",\"foreground\"],\"terminal_id\":\"terminal:1\"}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "2"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-065",
+          "GAP-122",
+          "GAP-126"
+        ],
+        "delivers": [
+          "IDEAL-045",
+          "IDEAL-094",
+          "IDEAL-099",
+          "IDEAL-117"
+        ],
+        "excludes": [
+          "EXCL-016",
+          "EXCL-021",
+          "EXCL-026",
+          "EXCL-027"
+        ],
+        "title": "Planned control restart keeps program incarnations and reports interrupted work",
+        "todo": "48"
+      },
+      "descriptors": [],
+      "elapsed_ms": "2253",
+      "failure": null,
+      "fixture": {
+        "accepted": "2",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-t31/debug/ovis-terminal",
+            "serve",
+            "--stdin-lifetime",
+            "--root",
+            "/tmp/ovc-2125609-0/srv"
+          ],
+          "exit_code": 0,
+          "pid": "2126326",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "recovery/restart",
+      "summary": "Real ovis-terminal serve runs /bin/sh as t1; server.restart answers with both boots and one preserved incarnation, the old connection closes server_restart, the server announces the successor boot, and a new connection sees the same lifetime, the new boot and the same program pid."
+    }
+  ],
+  "elapsed_ms": "3817",
+  "error": null,
+  "format": "ovis-conformance-evidence/1",
+  "host": {
+    "arch": "x86_64",
+    "family": "unix",
+    "os": "linux"
+  },
+  "inventory": null,
+  "result": "passed",
+  "runner_version": "0.1.0",
+  "scenario": "recovery/restart",
+  "totals": {
+    "assertions": "37",
+    "cases": "1",
+    "declared_only": "0",
+    "failed": "0",
+    "passed": "1",
+    "skipped": "0"
+  }
+}

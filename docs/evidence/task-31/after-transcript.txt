@@ -1,0 +1,13 @@
+$ uname -srm  ->  Linux 7.0.0-38-generic x86_64
+$ ovis-terminal serve --root <tmp> --stdin-lifetime
+{"ready": {"socket": "/tmp/t31-t00rkjnk/run/s.sock", "bearer": "<redacted>", "observer": "<redacted>"}}
+$ ovis-terminal --json call terminal.run --params '{"program":{"argv":["/bin/sh"]},"name":"shell",...}'  -> exit 0
+{"spawn": "spawned", "terminal": {"terminal_id": "terminal:1", "address": "t1", "state": "live", "process": {"argv": ["/bin/sh"], "cwd": "/tmp", "incarnation": "1", "pid": 1672057, "start_token": "linux:44213f41-39db-4eed-a62b-f5e5992ca358:34616068", "started_ms": "1793485899840"}}}
+$ ovis-terminal terminal attach --target t1   (stdin/stdout = outer PTY slave, 100x30, controlling terminal)
+typed: 'echo mark-$((30+1))\r'  -> outer PTY shows 'mark-31': True
+$ ovis-terminal --json call attach.leases (while attached) -> {"geometry_owner":{"epoch":"1","holder":"cli","lease_id":"lease:2","role":"interact"},"interact":{"epoch":"1","holder":"cli","lease_id":"lease:1","role":"interact"},"observers":[]}
+outer PTY resized to 120x40; inner 'stty size' reports '40 120': True
+typed: Ctrl-\ (0x1c) -> client exit 0; stderr: {"detached":{"reason":"detach_key","stream_closed":true,"stream_id":"stream:01a19417-0853-75a9-8bb0-72773d50472c"}}
+outer PTY termios after detach == before attach: True
+$ ovis-terminal --json call attach.leases (after detach) -> {"geometry_owner":null,"interact":null,"observers":[]}
+serve report: {"report":{"accepted":"4","failures":{},"panicked":"0"}}  exit 0

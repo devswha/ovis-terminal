@@ -6,6 +6,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use super::matcher::Expect;
+pub(crate) use super::serve::{Announced, FixtureKind, Serve, Stop};
 use crate::ids::{CaseName, ConnName, ScenarioId};
 
 /// Marker that makes a file a registered, runner-executable scenario.
@@ -106,28 +107,30 @@ pub(crate) enum Step {
     Pages(Pages),
     /// Stop the fixture and check its serve report.
     Stop(Stop),
+    /// Await the fixture's next stdout announcement, such as a successor boot.
+    Announced(Announced),
     /// Splice the steps of another scenario's case.
     Include(Include),
+    /// Resend one read until its reply matches, a bounded number of times.
+    PollReply(PollReply),
     /// Require the inner step to fail with this kind.
     ExpectFailure(ExpectFailure),
     /// Send planned requests, or only the one `--inject` names, and check each reply.
     Inject(Inject),
+    /// Start the binary on a fresh outer PTY.
+    PtyOpen(super::pty::PtyOpen),
+    /// Type bytes on an outer PTY.
+    PtyType(super::pty::PtyType),
+    /// Require output on an outer PTY.
+    PtyExpect(super::pty::PtyExpect),
+    /// Require output to be absent from what an outer PTY delivered so far.
+    PtyAbsent(super::pty::PtyAbsent),
+    /// Resize an outer PTY.
+    PtyResize(super::pty::PtyResize),
+    /// Await the PTY client's exit and check its terminal settings.
+    PtyExit(super::pty::PtyExit),
     /// Run planned quality gates in-process, or only the one `--inject` names.
     Gates(super::gates::Gates),
-}
-
-/// Fixture servers the runner can start.
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum FixtureKind {
-    /// Real server, dispatcher and store with protocol test methods.
-    Protocol,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct Serve {
-    pub(crate) fixture: FixtureKind,
 }
 
 /// How a connection reaches the endpoint.
@@ -223,6 +226,17 @@ pub(crate) struct Replies {
     pub(crate) keep_bearer: BTreeMap<String, String>,
 }
 
+/// One read resent until its reply satisfies `expect`, at most `attempts` times.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct PollReply {
+    pub(crate) conn: ConnName,
+    pub(crate) id: String,
+    pub(crate) request: Value,
+    pub(crate) expect: Expect,
+    pub(crate) attempts: u32,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Notification {
@@ -275,12 +289,6 @@ pub(crate) struct Pages {
     pub(crate) total_bytes: crate::ids::Decimal,
     /// Lowercase hex SHA-256 of the complete logical result.
     pub(crate) sha256: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct Stop {
-    pub(crate) expect: Expect,
 }
 
 #[derive(Debug, Clone, Deserialize)]

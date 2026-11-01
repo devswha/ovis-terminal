@@ -69,6 +69,15 @@ async fn execute(plan: Plan, mode: OutputMode, context: &Context) -> Result<Repo
             execute::connect(context).await?;
             return Ok(Report::raw(String::new()));
         }
+        #[cfg(unix)]
+        Plan::Serve(plan) => {
+            crate::assembly::serve(&plan, context.endpoint())
+                .await
+                .map_err(CliError::Assembly)?;
+            return Ok(Report::raw(String::new()));
+        }
+        #[cfg(unix)]
+        Plan::Attach(plan) => return execute::attach(context, &plan).await,
     };
     Ok(Report::success(mode, &value))
 }

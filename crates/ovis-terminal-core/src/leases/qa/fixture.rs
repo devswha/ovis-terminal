@@ -5,9 +5,9 @@ use std::sync::Arc;
 
 use ovis_terminal_authz::{
     Authority, AuthorityConfig, EndpointPolicy, FileEvidence, Grant, Issuance, IssueRequest,
-    LocalAccount, OwnerSpec, PeerAdmission, PeerEvidence, Permission, Presentation, PrincipalId,
-    ResolvedTarget, ResourceScope, RuntimeBinding, ScopeResource, Session, TargetResource,
-    UnixSocketEvidence, UnixUid,
+    IssuedCredential, LocalAccount, OwnerSpec, PeerAdmission, PeerEvidence, Permission,
+    Presentation, PrincipalId, ResolvedTarget, ResourceScope, RuntimeBinding, ScopeResource,
+    Session, TargetResource, UnixSocketEvidence, UnixUid,
 };
 use ovis_terminal_core::events::{EventError, Filter, SnapshotProducer};
 use ovis_terminal_core::leases::{Caller, ControlSlot, Owner, Takeover, TerminalLeases};
@@ -55,7 +55,11 @@ impl Client {
 
     /// The owner its leases carry.
     pub fn owner(&self) -> Owner {
-        Owner::new(self.session.principal().clone(), self.client.clone())
+        Owner::new(
+            self.session.principal().clone(),
+            self.client.clone(),
+            self.session.connection(),
+        )
     }
 }
 
@@ -125,6 +129,39 @@ impl Fixture {
     ///
     /// Fails when the authority refuses the setup step.
     pub fn client(&self, label: &str, permissions: &[Permission]) -> TestResult<Client> {
+        let issued = self.issue(label, permissions)?;
+        self.connect(&issued, label)
+    }
+
+    /// Two connections of one principal named `label`, both attached under that label.
+    ///
+    /// # Errors
+    ///
+    /// Fails when the authority refuses the setup step.
+    pub fn twins(&self, label: &str, permissions: &[Permission]) -> TestResult<(Client, Client)> {
+        let issued = self.issue(label, permissions)?;
+        Ok((self.connect(&issued, label)?, self.connect(&issued, label)?))
+    }
+
+    fn connect(
+        &self,
+        issued: &IssuedCredential<RegistryIdentities>,
+        label: &str,
+    ) -> TestResult<Client> {
+        let session = self
+            .authority
+            .authenticate(&self.admission, Presentation::new(issued.bearer(), NOW))?;
+        Ok(Client {
+            session,
+            client: ClientId::new(label.to_owned()),
+        })
+    }
+
+    fn issue(
+        &self,
+        label: &str,
+        permissions: &[Permission],
+    ) -> TestResult<IssuedCredential<RegistryIdentities>> {
         let TargetResource::Terminal { terminal, .. } = self.target.resource() else {
             return Err("fixture target is not a terminal".into());
         };
@@ -138,16 +175,9 @@ impl Fixture {
             .collect();
         let request =
             IssueRequest::new(PrincipalId::parse(label)?, grants, TimestampMs::new(8_000));
-        let issued = self
+        Ok(self
             .authority
-            .issue(&self.owner, Issuance::new(request, NOW))?;
-        let session = self
-            .authority
-            .authenticate(&self.admission, Presentation::new(issued.bearer(), NOW))?;
-        Ok(Client {
-            session,
-            client: ClientId::new(label.to_owned()),
-        })
+            .issue(&self.owner, Issuance::new(request, NOW))?)
     }
 
     /// A lease identity never handed out before by this fixture.

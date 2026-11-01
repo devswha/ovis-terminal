@@ -17,6 +17,7 @@ const EXECUTABLE: &[&str] = &[
     "agent/status.json",
     "agent/tree.json",
     "all/all.json",
+    "cli/interactive-attach.json",
     "client/package.json",
     "observability/health.json",
     "part-a/task-21.json",
@@ -43,6 +44,27 @@ const EXECUTABLE: &[&str] = &[
     "services/update.json",
 ];
 
+/// Executable scenarios whose server is the assembled binary itself (plan todo 31).
+const ASSEMBLED: [&str; 6] = [
+    "part-a/task-22.json",
+    "part-a/task-26.json",
+    "part-a/task-27.json",
+    "part-a/task-31.json",
+    "recovery/restart.json",
+    "services/worktrees.json",
+];
+
+/// Every executable scenario file, sorted as the inventory reports them.
+fn executable() -> Vec<String> {
+    let mut files: Vec<String> = EXECUTABLE
+        .iter()
+        .chain(&ASSEMBLED)
+        .map(|file| (*file).to_owned())
+        .collect();
+    files.sort();
+    files
+}
+
 /// Every executable file runs and passes; every other file is a listed declaration.
 #[test]
 fn every_scenario_file_is_executed_or_a_listed_declaration() -> TestResult {
@@ -58,13 +80,7 @@ fn every_scenario_file_is_executed_or_a_listed_declaration() -> TestResult {
         "the summary reports the evidence file it wrote"
     );
     let evidence = &ran.evidence;
-    assert_eq!(
-        strings(evidence, "/inventory/executed"),
-        EXECUTABLE
-            .iter()
-            .map(|file| (*file).to_owned())
-            .collect::<Vec<String>>()
-    );
+    assert_eq!(strings(evidence, "/inventory/executed"), executable());
     let allowlist: Value = serde_json::from_slice(&std::fs::read(
         Path::new(env!("CARGO_MANIFEST_DIR")).join("scenarios/declared.json"),
     )?)?;
@@ -89,7 +105,7 @@ fn every_scenario_file_is_executed_or_a_listed_declaration() -> TestResult {
         .iter()
         .filter_map(|case| field(case, "/scenario").as_str())
         .collect();
-    for file in EXECUTABLE.iter().filter(|file| **file != "all/all.json") {
+    for file in executable().iter().filter(|file| *file != "all/all.json") {
         let id = file.trim_end_matches(".json");
         assert!(ran_ids.contains(id), "{id} did not run");
     }

@@ -1,0 +1,10 @@
+==> cargo +nightly fmt --all -- --check
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+     Summary [ 137.298s] 931 tests run: 931 passed (1 slow), 1 skipped
+==> cargo test --doc --workspace --all-features --locked
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 942 file(s) checked
+==> bash scripts/hygiene/manifests.sh
+==> bash scripts/hygiene/json.sh
+CHECK_EXIT=0

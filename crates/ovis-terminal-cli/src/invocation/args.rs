@@ -49,6 +49,37 @@ pub(super) enum Command {
     #[cfg(any(unix, windows))]
     #[command(subcommand)]
     Service(crate::service::ServiceCommand),
+    /// Run the control server in the foreground: endpoint, stores, holder and every routed method.
+    #[cfg(unix)]
+    Serve(ServeArgs),
+    /// Run the session holder in the foreground, owned by no service manager.
+    #[cfg(unix)]
+    Hold(crate::service::unix::SessionArgs),
+}
+
+/// `ovis-terminal serve [--root <dir>] [--stdin-lifetime]`.
+#[cfg(unix)]
+#[derive(Debug, Args)]
+pub(super) struct ServeArgs {
+    /// Keep the socket at `<root>/run/s.sock` and state in `<root>/state`.
+    #[arg(long)]
+    pub(super) root: Option<std::path::PathBuf>,
+    /// Also stop when standard input reaches end of file.
+    #[arg(long)]
+    pub(super) stdin_lifetime: bool,
+    /// Also serve the protocol over WebSocket on this loopback port (0 picks a free one).
+    #[arg(long)]
+    pub(super) websocket_port: Option<u16>,
+    /// QA seam: how long the runtime waits for a request, with the control released,
+    /// before it looks for holder messages again (milliseconds; 5 without it). Accepted
+    /// only with a `--root` that holds a `qa-fixture` file.
+    #[arg(long)]
+    pub(super) qa_holder_poll_ms: Option<u64>,
+    /// QA seam: before the next `terminal.run`, the runtime, holding the control, writes
+    /// `held` to this FIFO, then waits until a writer opens it again. Accepted only with a
+    /// `--root` that holds a `qa-fixture` file.
+    #[arg(long)]
+    pub(super) qa_actor_hold: Option<std::path::PathBuf>,
 }
 
 /// The two published contracts.
@@ -74,6 +105,44 @@ pub(super) enum TerminalCommand {
     List,
     /// Read one terminal record; without a target, answer `needs_target` with candidates.
     Get(TargetArgs),
+    /// Attach this terminal to a running terminal; Ctrl-\ detaches.
+    #[cfg(unix)]
+    Attach(AttachArgs),
+}
+
+/// `ovis-terminal terminal attach (--target <address> | --terminal-id <id> | --name <name>)`.
+#[cfg(unix)]
+#[derive(Debug, Args)]
+pub(super) struct AttachArgs {
+    /// The terminal to attach to.
+    #[command(flatten)]
+    pub(super) target: AttachTarget,
+    /// Watch only: needs no TTY and never reads or forwards input.
+    #[arg(long)]
+    pub(super) observe: bool,
+    /// Take over the interact lease, naming the epoch it holds now; a stale epoch is refused.
+    #[arg(long, value_name = "EPOCH", conflicts_with = "observe")]
+    pub(super) takeover: Option<String>,
+    /// Client label the lease is recorded under; defaults to `cli-<pid>`, so two attach
+    /// processes never share an owner and compete for the interact lease.
+    #[arg(long)]
+    pub(super) client_id: Option<String>,
+}
+
+/// Exactly one explicit way to name the attached terminal.
+#[cfg(unix)]
+#[derive(Debug, Args)]
+#[group(required = true, multiple = false)]
+pub(super) struct AttachTarget {
+    /// Terminal address such as `t1` or `machine/t1`.
+    #[arg(long)]
+    pub(super) target: Option<String>,
+    /// Stable terminal identity.
+    #[arg(long)]
+    pub(super) terminal_id: Option<String>,
+    /// Unique live terminal name.
+    #[arg(long)]
+    pub(super) name: Option<String>,
 }
 
 /// At most one explicit way to name a terminal; there is no focus fallback.

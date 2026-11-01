@@ -1,0 +1,148 @@
+# Task 62 mutants
+
+## Round 2 (fixes for gate round 1 REJECT B1/B2)
+
+Run at 2926824 through the heavy gate (`with-slot.sh bash target/t62-mutants-r2.sh`). Each mutant is applied alone,
+the shipped tests that must catch it run, and the file is restored from a byte copy; `git diff` was empty after the run.
+fe95709 (after this run) only adds assertions to interactive_owners test 1, which still fails first on the refused
+attach's exit for the shared-default-label mutant.
+
+head: 29268243554fb007d911b17bcb30f00c66a3ead3; dirty files: 0
+=== MUTANT status-line: crates/ovis-terminal-cli/src/attach/screen.rs
+--- from
+let chunk = bytes.to_vec();
++++ to
+let mut chunk = bytes.to_vec();
+        chunk.extend_from_slice(b"\x1b7\x1b[999;1H\x1b[7m[ovis-terminal t1 | Ctrl-\\ detach]\x1b[0m\x1b8");
+        FAIL [   0.197s] (1/1) ovis-terminal-cli::interactive_transparency the_attach_client_draws_exactly_the_bytes_the_server_sent_and_nothing_else
+     Summary [   0.198s] 1 test run: 0 passed, 1 failed, 0 skipped
+MUTANT status-line KILLED
+=== MUTANT sgr-prefix: crates/ovis-terminal-cli/src/attach/screen.rs
+--- from
+let chunk = bytes.to_vec();
++++ to
+let chunk = [b"\x1b[31m".as_slice(), bytes].concat();
+        FAIL [   0.200s] (1/1) ovis-terminal-cli::interactive_transparency the_attach_client_draws_exactly_the_bytes_the_server_sent_and_nothing_else
+     Summary [   0.225s] 1 test run: 0 passed, 1 failed, 0 skipped
+MUTANT sgr-prefix KILLED
+=== MUTANT shared-default-label: crates/ovis-terminal-cli/src/invocation/plan.rs
+--- from
+.unwrap_or_else(|| format!("cli-{}", std::process::id()));
++++ to
+.unwrap_or_else(|| "cli".to_owned());
+        FAIL [   0.210s] (2/4) ovis-terminal-cli::interactive_attach an_observer_on_a_terminal_never_resizes_and_stays_live_after_the_operator_detaches
+        FAIL [  15.236s] (4/4) ovis-terminal-cli::interactive_owners two_attach_processes_with_the_default_label_compete_and_the_second_is_refused
+     Summary [  15.236s] 4 tests run: 2 passed, 2 failed, 0 skipped
+MUTANT shared-default-label KILLED
+=== MUTANT observer-reads-geometry: crates/ovis-terminal-cli/src/attach/session.rs
+--- from
+let geometry_lease = if plan.observe {
++++ to
+let geometry_lease = if plan.observe && false {
+        FAIL [  15.161s] (4/4) ovis-terminal-cli::interactive_owners an_observer_sharing_its_operators_label_never_claims_the_owners_geometry_or_input
+     Summary [  15.162s] 4 tests run: 3 passed, 1 failed, 0 skipped
+MUTANT observer-reads-geometry KILLED
+=== MUTANT detach-key: crates/ovis-terminal-cli/src/attach/input.rs
+--- from
+pub(super) const DETACH_KEY: u8 = 0x1c;
++++ to
+pub(super) const DETACH_KEY: u8 = 0x1d;
+        FAIL [   0.012s] ( 6/30) ovis-terminal-cli attach::input::tests::the_detach_key_ends_forwarding_mid_chunk
+        FAIL [  15.187s] (28/30) ovis-terminal-cli::attach a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_terminal
+        FAIL [  15.501s] (29/30) ovis-terminal-cli::attach observing_needs_no_tty_and_never_forwards_input
+        FAIL [  16.180s] (30/30) ovis-terminal-cli::attach typed_input_reaches_the_program_resize_follows_and_ctrl_backslash_restores_the_terminal
+     Summary [  16.284s] 30 tests run: 26 passed, 4 failed, 0 skipped
+MUTANT detach-key KILLED
+=== MUTANT stale-epoch: crates/ovis-terminal-cli/src/attach/open.rs
+--- from
+if error.data.kind.token() == "lease_epoch_mismatch" =>
++++ to
+if error.data.kind.token() == "lease_epoch_mismatch_never" =>
+        FAIL [   0.345s] (2/2) ovis-terminal-cli::interactive_attach a_stale_takeover_names_the_current_epoch_and_a_current_one_displaces_the_holder
+     Summary [   0.513s] 2 tests run: 1 passed, 1 failed, 0 skipped
+MUTANT stale-epoch KILLED
+=== MUTANT held-not-conflict: crates/ovis-terminal-cli/src/attach/open.rs
+--- from
+OpenEnum::Known(AttachOutcome::Held) => Some(AttachError::Conflict {
+            holder: record(opened.holder.as_ref()),
+            retry: record(opened.retry.as_ref()),
+        }),
++++ to
+OpenEnum::Known(AttachOutcome::Held) => Some(AttachError::Refused { reason: reason() }),
+        FAIL [   0.152s] (2/9) ovis-terminal-cli::attach a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_terminal
+        FAIL [   0.254s] (7/9) ovis-terminal-cli::interactive_owners two_attach_processes_with_the_default_label_compete_and_the_second_is_refused
+        FAIL [   0.260s] (8/9) ovis-terminal-cli::interactive_attach a_stale_takeover_names_the_current_epoch_and_a_current_one_displaces_the_holder
+     Summary [   0.475s] 9 tests run: 6 passed, 3 failed, 0 skipped
+MUTANT held-not-conflict KILLED
+=== MUTANT alt-screen-not-reset: crates/ovis-terminal-cli/src/attach/modes.rs
+--- from
+1047, 47, 1049,
+];
++++ to
+1047, 47, 1048,
+];
+        FAIL [   0.020s] (13/29) ovis-terminal-cli attach::modes::tests::modes_left_on_are_reset_with_the_alternate_screen_last
+        FAIL [   0.287s] (27/29) ovis-terminal-cli::interactive_restore unknown_sequences_reach_the_program_and_its_modes_are_switched_off_on_detach
+     Summary [   0.840s] 29 tests run: 27 passed, 2 failed, 0 skipped
+MUTANT alt-screen-not-reset KILLED
+git diff after restore: 0 lines
+
+RESULT round 2: 8 of 8 killed, 0 survived.
+- status-line and sgr-prefix (B2): killed by interactive_transparency (the drawn bytes are not exactly the bytes the
+  server sent plus ESC[0m).
+- shared-default-label (B1, the default label back to "cli"): the second default attach is ready on the holder's lease
+  and never exits (interactive_owners test 1), and the operator's detach no longer releases the interact lease while the
+  observer of the same owner remains (interactive_attach observer test).
+- observer-reads-geometry: killed by interactive_owners test 2 (see the correction below).
+
+## Correction of round 1
+
+Round 1 recorded `observer-resizes` (`plan.observe && false` in attach/session.rs) as SURVIVED and called it
+equivalent. That was wrong. When the observer shares its operator's client label (round 1: the shared default `cli`),
+the mutated observer reads the owner's geometry lease (open.rs::geometry_lease matches the holder label; the server
+matches the lease by owner principal), and its grid reached the program (gate probe observer_grid_reached_program=true).
+It has the same root cause as B1. Round 2 kills it with
+interactive_owners::an_observer_sharing_its_operators_label_never_claims_the_owners_geometry_or_input: the observer's
+33x11 grid reaches the program, and its detach record lists the owner's interact-role lease.
+
+## Round 1 (head fe8f4de + working tree), kept for the record
+
+=== MUTANT detach-key: crates/ovis-terminal-cli/src/attach/input.rs: 'pub(super) const DETACH_KEY: u8 = 0x1c;' -> 'pub(super) const DETACH_KEY: u8 = 0x1d;'
+ crates/ovis-terminal-cli/src/attach/input.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+        FAIL [   0.009s] (1/3) ovis-terminal-cli attach::input::tests::the_detach_key_ends_forwarding_mid_chunk
+     Summary [   0.402s] 3 tests run: 2 passed, 1 failed, 27 skipped
+MUTANT detach-key KILLED
+=== MUTANT stale-epoch: crates/ovis-terminal-cli/src/attach/open.rs: 'if error.data.kind.token() == "lease_epoch_mismatch" =>' -> 'if error.data.kind.token() == "lease_epoch_mismatch_never" =>'
+ crates/ovis-terminal-cli/src/attach/open.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+        FAIL [   0.262s] (2/2) ovis-terminal-cli::interactive_attach a_stale_takeover_names_the_current_epoch_and_a_current_one_displaces_the_holder
+     Summary [   0.265s] 2 tests run: 1 passed, 1 failed, 0 skipped
+MUTANT stale-epoch KILLED
+=== MUTANT held-not-conflict: crates/ovis-terminal-cli/src/attach/open.rs: 'OpenEnum::Known(AttachOutcome::Held) => Some(AttachError::Conflict {
+            holder: record(opened.holder.as_ref()),
+            retry: record(opened.retry.as_ref()),
+        }),' -> 'OpenEnum::Known(AttachOutcome::Held) => Some(AttachError::Refused { reason: reason() }),'
+ crates/ovis-terminal-cli/src/attach/open.rs | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+        FAIL [   0.156s] (2/7) ovis-terminal-cli::attach a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_terminal
+        FAIL [   0.412s] (5/7) ovis-terminal-cli::interactive_attach a_stale_takeover_names_the_current_epoch_and_a_current_one_displaces_the_holder
+     Summary [   1.250s] 7 tests run: 5 passed, 2 failed, 0 skipped
+MUTANT held-not-conflict KILLED
+=== MUTANT alt-screen-not-reset: crates/ovis-terminal-cli/src/attach/modes.rs: '1047, 47, 1049,
+];' -> '1047, 47, 1048,
+];'
+ crates/ovis-terminal-cli/src/attach/modes.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+        FAIL [   0.010s] (2/6) ovis-terminal-cli attach::modes::tests::modes_left_on_are_reset_with_the_alternate_screen_last
+        FAIL [   0.251s] (6/6) ovis-terminal-cli::interactive_restore unknown_sequences_reach_the_program_and_its_modes_are_switched_off_on_detach
+     Summary [   0.252s] 6 tests run: 4 passed, 2 failed, 23 skipped
+MUTANT alt-screen-not-reset KILLED
+=== MUTANT observer-resizes: crates/ovis-terminal-cli/src/attach/session.rs: 'let geometry_lease = if plan.observe {
+        None' -> 'let geometry_lease = if plan.observe && false {
+        None'
+ crates/ovis-terminal-cli/src/attach/session.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+MUTANT observer-resizes SURVIVED
+
+RESULT round 1: 4 killed, 1 survived; the survivor was NOT equivalent (see the correction above).

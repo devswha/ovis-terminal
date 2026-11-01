@@ -69,6 +69,22 @@ pub struct Limits {
 }
 
 impl Limits {
+    /// How much longer than the deadline a client waits, so the server's own answer at the
+    /// deadline (a `deadline_exceeded` carrying the pending operation's id) reaches it.
+    pub const REPLY_ALLOWANCE: DurationMs = DurationMs::new(5_000);
+
+    /// How long a client waits for the answer to a request that names no deadline: the
+    /// deadline the server applies plus [`Limits::REPLY_ALLOWANCE`], so the server always
+    /// answers first and a caller is never left without the operation's id.
+    #[must_use]
+    pub const fn client_bound_ms(&self) -> DurationMs {
+        DurationMs::new(
+            self.rpc_default_deadline_ms
+                .get()
+                .saturating_add(Self::REPLY_ALLOWANCE.get()),
+        )
+    }
+
     /// Returns the settled v1 defaults.
     #[must_use]
     pub const fn v1() -> Self {

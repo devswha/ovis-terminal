@@ -131,7 +131,14 @@ impl StreamError {
     /// The typed wire error.
     #[must_use]
     pub fn boundary(&self) -> BoundaryError {
-        BoundaryError::domain(ErrorKind::from(self.kind().to_owned()), self.retryable())
-            .with_hint(self.hint())
+        let refusal =
+            BoundaryError::domain(ErrorKind::from(self.kind().to_owned()), self.retryable())
+                .with_hint(self.hint());
+        match self {
+            Self::Lease(LeaseError::EpochMismatch { current, .. }) => {
+                refusal.with_current_lease(super::records::lease_record(current))
+            }
+            _ => refusal,
+        }
     }
 }

@@ -1,9 +1,9 @@
 [
   {
     "binary": {
-      "bytes": "60573456",
-      "path": "/dev/shm/ovt-target-lane-t61/debug/ovis-terminal",
-      "sha256": "47754beffff73a9025b10f09671bae46dadbd299db82d115b6e6be920af13f3c"
+      "bytes": "145274048",
+      "path": "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
+      "sha256": "f685337b396c465301d60c50cea444578ae11df62809c0ac76555911e2117515"
     },
     "case": "happy",
     "cases": [
@@ -2590,6 +2590,9 @@
                         },
                         "type": "array"
                       },
+                      "current": {
+                        "$ref": "#/components/schemas/LeaseRecord"
+                      },
                       "current_seq": {
                         "$ref": "#/components/schemas/ReportSeq"
                       },
@@ -2726,6 +2729,7 @@
                       "lease_revoked",
                       "lease_conflict",
                       "lease_epoch_mismatch",
+                      "stale_geometry",
                       "blocked",
                       "not_ready",
                       "recovering",
@@ -3752,6 +3756,78 @@
                     "required": [
                       "cols",
                       "rows"
+                    ],
+                    "type": "object"
+                  },
+                  "GeometryEpoch": {
+                    "description": "GeometryEpoch carried as a canonical decimal string.",
+                    "pattern": "^(0|[1-9][0-9]{0,19})$",
+                    "type": "string"
+                  },
+                  "GeometryEventData": {
+                    "description": "Data of `geometry.changed`, `geometry.checkpoint` and `geometry.input_ready`.",
+                    "properties": {
+                      "epoch": {
+                        "$ref": "#/components/schemas/GeometryEpoch",
+                        "description": "Grid epoch of the transition."
+                      },
+                      "geometry": {
+                        "$ref": "#/components/schemas/Geometry",
+                        "description": "Grid at this step."
+                      },
+                      "output_offset": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/ByteOffset"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Raw output offset the step applies at."
+                      },
+                      "owner_lease": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/LeaseId"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Geometry lease that requested the change, for `geometry.changed`."
+                      },
+                      "previous": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/Geometry"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Grid before the change, for `geometry.changed`."
+                      },
+                      "revision": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/Revision"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Screen revision at the new grid, for the checkpoint and input readiness."
+                      },
+                      "terminal_id": {
+                        "$ref": "#/components/schemas/TerminalId",
+                        "description": "Terminal whose grid changed."
+                      }
+                    },
+                    "required": [
+                      "terminal_id",
+                      "epoch",
+                      "geometry"
                     ],
                     "type": "object"
                   },
@@ -23379,6 +23455,11 @@
                 },
                 {
                   "code": -32000,
+                  "description": "A geometry request names an epoch a newer transition superseded.",
+                  "kind": "stale_geometry"
+                },
+                {
+                  "code": -32000,
                   "description": "The program is blocked on a prompt; answer it instead.",
                   "kind": "blocked"
                 },
@@ -24023,6 +24104,27 @@
                   "summary": "Geometry ownership moved."
                 },
                 {
+                  "name": "geometry.changed",
+                  "schema": {
+                    "$ref": "#/components/schemas/GeometryEventData"
+                  },
+                  "summary": "A grid change committed before the holder heard of it."
+                },
+                {
+                  "name": "geometry.checkpoint",
+                  "schema": {
+                    "$ref": "#/components/schemas/GeometryEventData"
+                  },
+                  "summary": "The screen was checkpointed at the new grid."
+                },
+                {
+                  "name": "geometry.input_ready",
+                  "schema": {
+                    "$ref": "#/components/schemas/GeometryEventData"
+                  },
+                  "summary": "Input readiness returned at the new grid."
+                },
+                {
                   "name": "stream.closed",
                   "schema": {
                     "$ref": "#/components/schemas/StreamClosedData"
@@ -24306,7 +24408,7 @@
             "passed": true
           },
           {
-            "actual": "1299",
+            "actual": "1454",
             "check": "gate[0]/sources/files_checked",
             "expected": {
               "$at_least": "1000"
@@ -24654,19 +24756,19 @@
           "todo": "61"
         },
         "descriptors": [],
-        "elapsed_ms": "9806",
+        "elapsed_ms": "11304",
         "failure": null,
         "fixture": null,
         "outcome": "passed",
         "processes": [
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t61/debug/ovis-terminal",
+              "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
               "schema",
               "openrpc"
             ],
             "exit_code": 0,
-            "pid": "3130909",
+            "pid": "3586337",
             "role": "binary",
             "stderr": {
               "bytes": "0",
@@ -24674,14 +24776,14 @@
               "text": ""
             },
             "stdout": {
-              "bytes": "645669",
-              "sha256": "a998a8d9a1f6c179dda47515122461a2d548b0f98c7a3a3f62442006284b6c2d",
+              "bytes": "648725",
+              "sha256": "13b76ae5b3f05250283fa188d9f5df062485cd9e8a4f70780bbbf1d27ca81830",
               "text": null
             }
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t61/debug/ovis-terminal",
+              "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
               "--json",
               "schema",
               "openrpc",
@@ -24689,7 +24791,7 @@
               "focused"
             ],
             "exit_code": 2,
-            "pid": "3130965",
+            "pid": "3586357",
             "role": "binary",
             "stderr": {
               "bytes": "212",
@@ -24706,7 +24808,7 @@
             "argv": [
               "source-check",
               "--repo",
-              "/home/devswha/workspace/ovis-terminal-wt/lane-t61",
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t62",
               "--roots",
               "crates",
               "packages/client-ts",
@@ -24732,8 +24834,8 @@
             },
             "stdout": {
               "bytes": "1704",
-              "sha256": "6e362c215536bb5fccf41d83410c726353bd9b7c6e612dd5bcf849f3d826922f",
-              "text": "{\n  \"argv\": [\n    \"source-check\",\n    \"--repo\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t61\",\n    \"--roots\",\n    \"crates\",\n    \"packages/client-ts\",\n    \"conformance\",\n    \"bench\",\n    \"probes\",\n    \"--max-pure-loc\",\n    \"250\",\n    \"--max-params\",\n    \"3\",\n    \"--violations\",\n    \"docs/research/violations.md\",\n    \"--checklist\",\n    \"docs/quality-checklist.md\"\n  ],\n  \"checklist\": {\n    \"path\": \"docs/quality-checklist.md\",\n    \"rule_ids\": \"64\",\n    \"sha256\": \"c742eda2782a1cffcb26f684bb14a37c86c8a728b33775d72cc0b35526d85f0a\",\n    \"v_rows\": \"5174\",\n    \"violations_sha256\": \"4a45b251393649c7ec30b72cc480908381fede4d3fa2fba201f4ecd75b56e71c\"\n  },\n  \"exit\": 0,\n  \"finding_count\": \"0\",\n  \"findings\": [],\n  \"gate\": \"source-check\",\n  \"hint\": null,\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": null,\n  \"limits\": {\n    \"max_params\": \"3\",\n    \"max_pure_loc\": \"250\"\n  },\n  \"rules\": {\n    \"cargo\": [\n      \"workspace-lints\",\n      \"member-lints\",\n      \"toolchain-pinned\",\n      \"cargo-deny-config\",\n      \"clippy-thresholds\"\n    ],\n    \"source\": [\n      \"syntax\",\n      \"max-pure-loc\",\n      \"max-parameters\",\n      \"dropped-result\",\n      \"allow-attribute\",\n      \"numeric-cast\",\n      \"tautological-assert\"\n    ]\n  },\n  \"sources\": {\n    \"files_checked\": \"1299\",\n    \"roots\": [\n      {\n        \"root\": \"crates\",\n        \"rust_files\": \"1146\"\n      },\n      {\n        \"root\": \"packages/client-ts\",\n        \"rust_files\": \"0\"\n      },\n      {\n        \"root\": \"conformance\",\n        \"rust_files\": \"70\"\n      },\n      {\n        \"root\": \"bench\",\n        \"rust_files\": \"19\"\n      },\n      {\n        \"root\": \"probes\",\n        \"rust_files\": \"64\"\n      }\n    ]\n  },\n  \"verdict\": \"pass\"\n}"
+              "sha256": "134593e95f3b418134990318cffd4d4b6695924cd51625e8aed8eddbf069a248",
+              "text": "{\n  \"argv\": [\n    \"source-check\",\n    \"--repo\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t62\",\n    \"--roots\",\n    \"crates\",\n    \"packages/client-ts\",\n    \"conformance\",\n    \"bench\",\n    \"probes\",\n    \"--max-pure-loc\",\n    \"250\",\n    \"--max-params\",\n    \"3\",\n    \"--violations\",\n    \"docs/research/violations.md\",\n    \"--checklist\",\n    \"docs/quality-checklist.md\"\n  ],\n  \"checklist\": {\n    \"path\": \"docs/quality-checklist.md\",\n    \"rule_ids\": \"64\",\n    \"sha256\": \"c742eda2782a1cffcb26f684bb14a37c86c8a728b33775d72cc0b35526d85f0a\",\n    \"v_rows\": \"5174\",\n    \"violations_sha256\": \"4a45b251393649c7ec30b72cc480908381fede4d3fa2fba201f4ecd75b56e71c\"\n  },\n  \"exit\": 0,\n  \"finding_count\": \"0\",\n  \"findings\": [],\n  \"gate\": \"source-check\",\n  \"hint\": null,\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": null,\n  \"limits\": {\n    \"max_params\": \"3\",\n    \"max_pure_loc\": \"250\"\n  },\n  \"rules\": {\n    \"cargo\": [\n      \"workspace-lints\",\n      \"member-lints\",\n      \"toolchain-pinned\",\n      \"cargo-deny-config\",\n      \"clippy-thresholds\"\n    ],\n    \"source\": [\n      \"syntax\",\n      \"max-pure-loc\",\n      \"max-parameters\",\n      \"dropped-result\",\n      \"allow-attribute\",\n      \"numeric-cast\",\n      \"tautological-assert\"\n    ]\n  },\n  \"sources\": {\n    \"files_checked\": \"1454\",\n    \"roots\": [\n      {\n        \"root\": \"crates\",\n        \"rust_files\": \"1256\"\n      },\n      {\n        \"root\": \"packages/client-ts\",\n        \"rust_files\": \"0\"\n      },\n      {\n        \"root\": \"conformance\",\n        \"rust_files\": \"79\"\n      },\n      {\n        \"root\": \"bench\",\n        \"rust_files\": \"41\"\n      },\n      {\n        \"root\": \"probes\",\n        \"rust_files\": \"78\"\n      }\n    ]\n  },\n  \"verdict\": \"pass\"\n}"
             }
           },
           {
@@ -24742,15 +24844,15 @@
               "--mode",
               "verify",
               "--ideals",
-              "/home/devswha/workspace/ovis-terminal-wt/lane-t61/docs/design/ideal-state.md",
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t62/docs/design/ideal-state.md",
               "--gaps",
-              "/home/devswha/workspace/ovis-terminal-wt/lane-t61/docs/design/gap-list.md",
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t62/docs/design/gap-list.md",
               "--schema",
-              "/home/devswha/workspace/ovis-terminal-wt/lane-t61/schema/ovis-terminal.openrpc.json",
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t62/schema/ovis-terminal.openrpc.json",
               "--traceability",
-              "/home/devswha/workspace/ovis-terminal-wt/lane-t61/conformance/traceability.json",
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t62/conformance/traceability.json",
               "--ideal-map",
-              "/home/devswha/workspace/ovis-terminal-wt/lane-t61/conformance/ideal-map.json"
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t62/conformance/ideal-map.json"
             ],
             "exit_code": 0,
             "pid": null,
@@ -24762,8 +24864,8 @@
             },
             "stdout": {
               "bytes": "928",
-              "sha256": "13d92407785f4e107e40718f5503ff5826c5ed4347a1683b9461ee7727eb63ae",
-              "text": "{\n  \"argv\": [\n    \"quality-matrix\",\n    \"--mode\",\n    \"verify\",\n    \"--ideals\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t61/docs/design/ideal-state.md\",\n    \"--gaps\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t61/docs/design/gap-list.md\",\n    \"--schema\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t61/schema/ovis-terminal.openrpc.json\",\n    \"--traceability\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t61/conformance/traceability.json\",\n    \"--ideal-map\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t61/conformance/ideal-map.json\"\n  ],\n  \"exclusions\": \"29\",\n  \"exit\": 0,\n  \"finding_count\": \"0\",\n  \"findings\": [],\n  \"gaps\": \"154\",\n  \"gate\": \"quality-matrix\",\n  \"hint\": null,\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"ideals\": \"121\",\n  \"kind\": null,\n  \"methods\": \"104\",\n  \"unowned\": {\n    \"exclusions\": [],\n    \"gaps\": [],\n    \"ideals\": []\n  },\n  \"verdict\": \"pass\"\n}"
+              "sha256": "a75bb8854d1e1b95b7d34bcfb87676f87d3a8ccd001ba258994777bc6a5b080d",
+              "text": "{\n  \"argv\": [\n    \"quality-matrix\",\n    \"--mode\",\n    \"verify\",\n    \"--ideals\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t62/docs/design/ideal-state.md\",\n    \"--gaps\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t62/docs/design/gap-list.md\",\n    \"--schema\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t62/schema/ovis-terminal.openrpc.json\",\n    \"--traceability\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t62/conformance/traceability.json\",\n    \"--ideal-map\",\n    \"/home/devswha/workspace/ovis-terminal-wt/lane-t62/conformance/ideal-map.json\"\n  ],\n  \"exclusions\": \"29\",\n  \"exit\": 0,\n  \"finding_count\": \"0\",\n  \"findings\": [],\n  \"gaps\": \"154\",\n  \"gate\": \"quality-matrix\",\n  \"hint\": null,\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"ideals\": \"121\",\n  \"kind\": null,\n  \"methods\": \"104\",\n  \"unowned\": {\n    \"exclusions\": [],\n    \"gaps\": [],\n    \"ideals\": []\n  },\n  \"verdict\": \"pass\"\n}"
             }
           },
           {
@@ -24951,7 +25053,7 @@
         "summary": "The binary's OpenRPC output equals the checked-in schema and an unknown flag is a typed usage error before any connection. source-check passes the repository (250 pure LOC, 3 parameters, strict Cargo lints, fresh 64-rule checklist) and quality-matrix verifies the IDEAL map against the ledgers and the schema. Each clean seed passes; the oversized file, fourth parameter, dropped Result, missing QA scenario and fake exit-zero evidence are each rejected with their rule."
       }
     ],
-    "elapsed_ms": "11937",
+    "elapsed_ms": "11518",
     "error": null,
     "format": "ovis-conformance-evidence/1",
     "host": {
@@ -24974,24 +25076,14 @@
   },
   {
     "binary": {
-      "bytes": "60573456",
-      "path": "/dev/shm/ovt-target-lane-t61/debug/ovis-terminal",
-      "sha256": "47754beffff73a9025b10f09671bae46dadbd299db82d115b6e6be920af13f3c"
+      "bytes": "145274048",
+      "path": "/dev/shm/ovt-target-lane-t62/debug/ovis-terminal",
+      "sha256": "f685337b396c465301d60c50cea444578ae11df62809c0ac76555911e2117515"
     },
     "case": "failure",
     "cases": [
       {
         "assertions": [
-          {
-            "actual": {
-              "fixture": "missing-receipt-and-pass-banner"
-            },
-            "check": "inject/planned",
-            "expected": {
-              "fixture": "missing-receipt-and-pass-banner"
-            },
-            "passed": true
-          },
           {
             "actual": 1,
             "check": "gate[0]/exit",
@@ -25027,6 +25119,372 @@
             "check": "gate[0]/verdict",
             "expected": "fail",
             "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[1]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "gate[1]/finding_count",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": "manifest-schema",
+            "check": "gate[1]/findings/0/rule",
+            "expected": "manifest-schema",
+            "passed": true
+          },
+          {
+            "actual": "evidence_invalid",
+            "check": "gate[1]/kind",
+            "expected": "evidence_invalid",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[2]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "gate[2]/finding_count",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": "assertion-forged",
+            "check": "gate[2]/findings/0/rule",
+            "expected": "assertion-forged",
+            "passed": true
+          },
+          {
+            "actual": "evidence_invalid",
+            "check": "gate[2]/kind",
+            "expected": "evidence_invalid",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[3]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "gate[3]/finding_count",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": "pass-claim-unsupported",
+            "check": "gate[3]/findings/0/rule",
+            "expected": "pass-claim-unsupported",
+            "passed": true
+          },
+          {
+            "actual": "evidence_invalid",
+            "check": "gate[3]/kind",
+            "expected": "evidence_invalid",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[4]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "gate[4]/finding_count",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": "unknown-matcher",
+            "check": "gate[4]/findings/0/rule",
+            "expected": "unknown-matcher",
+            "passed": true
+          },
+          {
+            "actual": "evidence_invalid",
+            "check": "gate[4]/kind",
+            "expected": "evidence_invalid",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[5]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "gate[5]/finding_count",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": "assertion-forged",
+            "check": "gate[5]/findings/0/rule",
+            "expected": "assertion-forged",
+            "passed": true
+          },
+          {
+            "actual": "evidence_invalid",
+            "check": "gate[5]/kind",
+            "expected": "evidence_invalid",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[6]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "gate-report-forged",
+            "check": "gate[6]/findings/0/rule",
+            "expected": "gate-report-forged",
+            "passed": true
+          },
+          {
+            "actual": "evidence_invalid",
+            "check": "gate[6]/kind",
+            "expected": "evidence_invalid",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[7]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "gate[7]/finding_count",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": "seed/ok-discard.rs:2",
+            "check": "gate[7]/findings/0/location",
+            "expected": "seed/ok-discard.rs:2",
+            "passed": true
+          },
+          {
+            "actual": "dropped-result",
+            "check": "gate[7]/findings/0/rule",
+            "expected": "dropped-result",
+            "passed": true
+          },
+          {
+            "actual": "quality_violation",
+            "check": "gate[7]/kind",
+            "expected": "quality_violation",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[8]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "allow-attribute",
+            "check": "gate[8]/findings/0/rule",
+            "expected": "allow-attribute",
+            "passed": true
+          },
+          {
+            "actual": "quality_violation",
+            "check": "gate[8]/kind",
+            "expected": "quality_violation",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[9]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "numeric-cast",
+            "check": "gate[9]/findings/0/rule",
+            "expected": "numeric-cast",
+            "passed": true
+          },
+          {
+            "actual": "quality_violation",
+            "check": "gate[9]/kind",
+            "expected": "quality_violation",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[10]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "tautological-assert",
+            "check": "gate[10]/findings/0/rule",
+            "expected": "tautological-assert",
+            "passed": true
+          },
+          {
+            "actual": "quality_violation",
+            "check": "gate[10]/kind",
+            "expected": "quality_violation",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[11]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "UNLISTED-RULE",
+            "check": "gate[11]/findings/0/location",
+            "expected": "UNLISTED-RULE",
+            "passed": true
+          },
+          {
+            "actual": "checklist-disposition",
+            "check": "gate[11]/findings/0/rule",
+            "expected": "checklist-disposition",
+            "passed": true
+          },
+          {
+            "actual": "quality_violation",
+            "check": "gate[11]/kind",
+            "expected": "quality_violation",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[12]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "plan_invalid",
+            "check": "gate[12]/kind",
+            "expected": "plan_invalid",
+            "passed": true
+          },
+          {
+            "actual": [
+              "todo 2: todo 9 does not exist",
+              "todo 2: IDEAL-009 is not a ledger row"
+            ],
+            "check": "gate[12]/unresolved_refs",
+            "expected": [
+              "todo 2: todo 9 does not exist",
+              "todo 2: IDEAL-009 is not a ledger row"
+            ],
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[13]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "plan_invalid",
+            "check": "gate[13]/kind",
+            "expected": "plan_invalid",
+            "passed": true
+          },
+          {
+            "actual": [
+              "GAP-002"
+            ],
+            "check": "gate[13]/uncovered_gaps",
+            "expected": [
+              "GAP-002"
+            ],
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[14]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "write-conflict",
+            "check": "gate[14]/findings/0/rule",
+            "expected": "write-conflict",
+            "passed": true
+          },
+          {
+            "actual": "plan_invalid",
+            "check": "gate[14]/kind",
+            "expected": "plan_invalid",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[15]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "ideal_unproved",
+            "check": "gate[15]/kind",
+            "expected": "ideal_unproved",
+            "passed": true
+          },
+          {
+            "actual": [
+              "IDEAL-002"
+            ],
+            "check": "gate[15]/missing",
+            "expected": [
+              "IDEAL-002"
+            ],
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "gate[15]/proved",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": 1,
+            "check": "gate[16]/exit",
+            "expected": 1,
+            "passed": true
+          },
+          {
+            "actual": "evidence-invalid",
+            "check": "gate[16]/findings/0/rule",
+            "expected": "evidence-invalid",
+            "passed": true
+          },
+          {
+            "actual": "ideal_unproved",
+            "check": "gate[16]/kind",
+            "expected": "ideal_unproved",
+            "passed": true
+          },
+          {
+            "actual": [
+              "IDEAL-002"
+            ],
+            "check": "gate[16]/missing",
+            "expected": [
+              "IDEAL-002"
+            ],
+            "passed": true
           }
         ],
         "case": "failure",
@@ -25057,7 +25515,7 @@
           "todo": "61"
         },
         "descriptors": [],
-        "elapsed_ms": "1",
+        "elapsed_ms": "9",
         "failure": null,
         "fixture": null,
         "outcome": "passed",
@@ -25081,13 +25539,333 @@
               "sha256": "35536667a85bd3d59c6414994175ce05d06c4d8cb977d39e5eefbe6c776c6089",
               "text": "{\n  \"argv\": [\n    \"evidence-audit\",\n    \"--fixture\",\n    \"missing-receipt-and-pass-banner\"\n  ],\n  \"exempted\": [],\n  \"exit\": 1,\n  \"finding_count\": \"2\",\n  \"findings\": [\n    {\n      \"detail\": \"the run claims a pass but names no binary path with a sha256 digest\",\n      \"location\": \"seed/missing-receipt-and-pass-banner#0\",\n      \"rule\": \"binary-hash\"\n    },\n    {\n      \"detail\": \"quality/gates/happy passed without a single assertion\",\n      \"location\": \"seed/missing-receipt-and-pass-banner#0\",\n      \"rule\": \"receipt-missing\"\n    }\n  ],\n  \"gate\": \"evidence-audit\",\n  \"hint\": \"rerun the conformance runner; a pass needs parsed exits, recomputable assertions and a binary hash\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"inputs\": \"1\",\n  \"kind\": \"evidence_invalid\",\n  \"runs\": \"1\",\n  \"verdict\": \"fail\"\n}"
             }
+          },
+          {
+            "argv": [
+              "evidence-audit",
+              "--fixture",
+              "prose-pass-banner"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "613",
+              "sha256": "7859fad9d38d193318faa65c671855a2b2c2ed4cf67a49bff477d4d946a33f25",
+              "text": "{\n  \"argv\": [\n    \"evidence-audit\",\n    \"--fixture\",\n    \"prose-pass-banner\"\n  ],\n  \"exempted\": [],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"not a JSON evidence document; a printed PASS banner is not evidence\",\n      \"location\": \"seed/prose-pass-banner\",\n      \"rule\": \"manifest-schema\"\n    }\n  ],\n  \"gate\": \"evidence-audit\",\n  \"hint\": \"rerun the conformance runner; a pass needs parsed exits, recomputable assertions and a binary hash\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"inputs\": \"1\",\n  \"kind\": \"evidence_invalid\",\n  \"runs\": \"0\",\n  \"verdict\": \"fail\"\n}"
+            }
+          },
+          {
+            "argv": [
+              "evidence-audit",
+              "--fixture",
+              "forged-assertion"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "640",
+              "sha256": "16b1f2a3063b37a9c64a53ad60c25a4d66ea95ec9af233e62d6dcca00904f981",
+              "text": "{\n  \"argv\": [\n    \"evidence-audit\",\n    \"--fixture\",\n    \"forged-assertion\"\n  ],\n  \"exempted\": [],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"quality/gates/happy report/kind: passed=true but expected \\\"evidence_invalid\\\" vs actual null\",\n      \"location\": \"seed/forged-assertion#0\",\n      \"rule\": \"assertion-forged\"\n    }\n  ],\n  \"gate\": \"evidence-audit\",\n  \"hint\": \"rerun the conformance runner; a pass needs parsed exits, recomputable assertions and a binary hash\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"inputs\": \"1\",\n  \"kind\": \"evidence_invalid\",\n  \"runs\": \"1\",\n  \"verdict\": \"fail\"\n}"
+            }
+          },
+          {
+            "argv": [
+              "evidence-audit",
+              "--fixture",
+              "skipped-as-pass"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "619",
+              "sha256": "d43b6b861968b14d67d1de7d185075b68608bc5c965969c0ca2705c6f928481a",
+              "text": "{\n  \"argv\": [\n    \"evidence-audit\",\n    \"--fixture\",\n    \"skipped-as-pass\"\n  ],\n  \"exempted\": [],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"result passed with no case, a failed or skipped case, or a run error\",\n      \"location\": \"seed/skipped-as-pass#0\",\n      \"rule\": \"pass-claim-unsupported\"\n    }\n  ],\n  \"gate\": \"evidence-audit\",\n  \"hint\": \"rerun the conformance runner; a pass needs parsed exits, recomputable assertions and a binary hash\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"inputs\": \"1\",\n  \"kind\": \"evidence_invalid\",\n  \"runs\": \"1\",\n  \"verdict\": \"fail\"\n}"
+            }
+          },
+          {
+            "argv": [
+              "evidence-audit",
+              "--fixture",
+              "forged-matcher"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "651",
+              "sha256": "94788781ac1ae64dd73ccc8a1a96fb2502a5c73c510c9cfb2301a800c0864c17",
+              "text": "{\n  \"argv\": [\n    \"evidence-audit\",\n    \"--fixture\",\n    \"forged-matcher\"\n  ],\n  \"exempted\": [],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"quality/gates/happy binary/stderr/error/hint: $bogus is not a runner matcher, so the assertion proves nothing\",\n      \"location\": \"seed/forged-matcher#0\",\n      \"rule\": \"unknown-matcher\"\n    }\n  ],\n  \"gate\": \"evidence-audit\",\n  \"hint\": \"rerun the conformance runner; a pass needs parsed exits, recomputable assertions and a binary hash\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"inputs\": \"1\",\n  \"kind\": \"evidence_invalid\",\n  \"runs\": \"1\",\n  \"verdict\": \"fail\"\n}"
+            }
+          },
+          {
+            "argv": [
+              "evidence-audit",
+              "--fixture",
+              "present-on-null"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "650",
+              "sha256": "41fb84751dc7f2222f4012063da71dc2fae50fc6badf20698c597d9cc639db4f",
+              "text": "{\n  \"argv\": [\n    \"evidence-audit\",\n    \"--fixture\",\n    \"present-on-null\"\n  ],\n  \"exempted\": [],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"quality/gates/happy binary/stderr/error/hint: passed=true but expected {\\\"$present\\\":true} vs actual null\",\n      \"location\": \"seed/present-on-null#0\",\n      \"rule\": \"assertion-forged\"\n    }\n  ],\n  \"gate\": \"evidence-audit\",\n  \"hint\": \"rerun the conformance runner; a pass needs parsed exits, recomputable assertions and a binary hash\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"inputs\": \"1\",\n  \"kind\": \"evidence_invalid\",\n  \"runs\": \"1\",\n  \"verdict\": \"fail\"\n}"
+            }
+          },
+          {
+            "argv": [
+              "evidence-audit",
+              "--fixture",
+              "forged-gate-report"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "745",
+              "sha256": "8973dc333219571300b792cd8a34004a393037ac67067c635b13f1fd40203a28",
+              "text": "{\n  \"argv\": [\n    \"evidence-audit\",\n    \"--fixture\",\n    \"forged-gate-report\"\n  ],\n  \"exempted\": [],\n  \"exit\": 1,\n  \"finding_count\": \"2\",\n  \"findings\": [\n    {\n      \"detail\": \"finding_count Some(0) but 1 findings\",\n      \"location\": \"seed/forged-gate-report#0\",\n      \"rule\": \"gate-report-forged\"\n    },\n    {\n      \"detail\": \"verdict, exit, kind and findings disagree\",\n      \"location\": \"seed/forged-gate-report#0\",\n      \"rule\": \"gate-report-forged\"\n    }\n  ],\n  \"gate\": \"evidence-audit\",\n  \"hint\": \"rerun the conformance runner; a pass needs parsed exits, recomputable assertions and a binary hash\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"inputs\": \"1\",\n  \"kind\": \"evidence_invalid\",\n  \"runs\": \"1\",\n  \"verdict\": \"fail\"\n}"
+            }
+          },
+          {
+            "argv": [
+              "source-check",
+              "--fixture",
+              "ok-discard"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "1034",
+              "sha256": "b25baa522549e838f688c41bb93cfa3db5091c3fcd2661484bd43841155633e3",
+              "text": "{\n  \"argv\": [\n    \"source-check\",\n    \"--fixture\",\n    \"ok-discard\"\n  ],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"`std::fs::remove_file(..).ok();` discards a Result; handle or propagate it\",\n      \"location\": \"seed/ok-discard.rs:2\",\n      \"rule\": \"dropped-result\"\n    }\n  ],\n  \"fixture\": {\n    \"name\": \"ok-discard\",\n    \"path\": \"seed/ok-discard.rs\"\n  },\n  \"gate\": \"source-check\",\n  \"hint\": \"fix each finding structurally; limits are never raised and lints never silenced\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": \"quality_violation\",\n  \"limits\": {\n    \"max_params\": \"3\",\n    \"max_pure_loc\": \"250\"\n  },\n  \"rules\": {\n    \"cargo\": [\n      \"workspace-lints\",\n      \"member-lints\",\n      \"toolchain-pinned\",\n      \"cargo-deny-config\",\n      \"clippy-thresholds\"\n    ],\n    \"source\": [\n      \"syntax\",\n      \"max-pure-loc\",\n      \"max-parameters\",\n      \"dropped-result\",\n      \"allow-attribute\",\n      \"numeric-cast\",\n      \"tautological-assert\"\n    ]\n  },\n  \"verdict\": \"fail\"\n}"
+            }
+          },
+          {
+            "argv": [
+              "source-check",
+              "--fixture",
+              "allow-attribute"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "1051",
+              "sha256": "966840a662353c1acb6a565a035a0c212b0f9af0a213a3c6dee5d0e2f81f61be",
+              "text": "{\n  \"argv\": [\n    \"source-check\",\n    \"--fixture\",\n    \"allow-attribute\"\n  ],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"`allow` silences a lint; use #[expect(lint, reason = ...)] on one item\",\n      \"location\": \"seed/allow-attribute.rs:1\",\n      \"rule\": \"allow-attribute\"\n    }\n  ],\n  \"fixture\": {\n    \"name\": \"allow-attribute\",\n    \"path\": \"seed/allow-attribute.rs\"\n  },\n  \"gate\": \"source-check\",\n  \"hint\": \"fix each finding structurally; limits are never raised and lints never silenced\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": \"quality_violation\",\n  \"limits\": {\n    \"max_params\": \"3\",\n    \"max_pure_loc\": \"250\"\n  },\n  \"rules\": {\n    \"cargo\": [\n      \"workspace-lints\",\n      \"member-lints\",\n      \"toolchain-pinned\",\n      \"cargo-deny-config\",\n      \"clippy-thresholds\"\n    ],\n    \"source\": [\n      \"syntax\",\n      \"max-pure-loc\",\n      \"max-parameters\",\n      \"dropped-result\",\n      \"allow-attribute\",\n      \"numeric-cast\",\n      \"tautological-assert\"\n    ]\n  },\n  \"verdict\": \"fail\"\n}"
+            }
+          },
+          {
+            "argv": [
+              "source-check",
+              "--fixture",
+              "numeric-cast"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "1014",
+              "sha256": "fa39d156b09b9b8090125795be1c9af65d92dc91de72600131303991363587d4",
+              "text": "{\n  \"argv\": [\n    \"source-check\",\n    \"--fixture\",\n    \"numeric-cast\"\n  ],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"`as u32` cast; use From for widening or try_from\",\n      \"location\": \"seed/numeric-cast.rs:2\",\n      \"rule\": \"numeric-cast\"\n    }\n  ],\n  \"fixture\": {\n    \"name\": \"numeric-cast\",\n    \"path\": \"seed/numeric-cast.rs\"\n  },\n  \"gate\": \"source-check\",\n  \"hint\": \"fix each finding structurally; limits are never raised and lints never silenced\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": \"quality_violation\",\n  \"limits\": {\n    \"max_params\": \"3\",\n    \"max_pure_loc\": \"250\"\n  },\n  \"rules\": {\n    \"cargo\": [\n      \"workspace-lints\",\n      \"member-lints\",\n      \"toolchain-pinned\",\n      \"cargo-deny-config\",\n      \"clippy-thresholds\"\n    ],\n    \"source\": [\n      \"syntax\",\n      \"max-pure-loc\",\n      \"max-parameters\",\n      \"dropped-result\",\n      \"allow-attribute\",\n      \"numeric-cast\",\n      \"tautological-assert\"\n    ]\n  },\n  \"verdict\": \"fail\"\n}"
+            }
+          },
+          {
+            "argv": [
+              "source-check",
+              "--fixture",
+              "tautological-assert"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "1037",
+              "sha256": "2c0cf5bd0814df5524755255f4a5ee5f58e1a1a016d69cca54de7a9c58d13ec0",
+              "text": "{\n  \"argv\": [\n    \"source-check\",\n    \"--fixture\",\n    \"tautological-assert\"\n  ],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"assert! compares `since` with itself\",\n      \"location\": \"seed/tautological-assert.rs:4\",\n      \"rule\": \"tautological-assert\"\n    }\n  ],\n  \"fixture\": {\n    \"name\": \"tautological-assert\",\n    \"path\": \"seed/tautological-assert.rs\"\n  },\n  \"gate\": \"source-check\",\n  \"hint\": \"fix each finding structurally; limits are never raised and lints never silenced\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": \"quality_violation\",\n  \"limits\": {\n    \"max_params\": \"3\",\n    \"max_pure_loc\": \"250\"\n  },\n  \"rules\": {\n    \"cargo\": [\n      \"workspace-lints\",\n      \"member-lints\",\n      \"toolchain-pinned\",\n      \"cargo-deny-config\",\n      \"clippy-thresholds\"\n    ],\n    \"source\": [\n      \"syntax\",\n      \"max-pure-loc\",\n      \"max-parameters\",\n      \"dropped-result\",\n      \"allow-attribute\",\n      \"numeric-cast\",\n      \"tautological-assert\"\n    ]\n  },\n  \"verdict\": \"fail\"\n}"
+            }
+          },
+          {
+            "argv": [
+              "source-check",
+              "--fixture",
+              "checklist-missing-rule"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "1020",
+              "sha256": "84ddf2c47ea1276b34235afbe3ba7b16c0affe4a803a4b49e6d24c7fd80c2bb0",
+              "text": "{\n  \"argv\": [\n    \"source-check\",\n    \"--fixture\",\n    \"checklist-missing-rule\"\n  ],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"Rule totals id without a disposition\",\n      \"location\": \"UNLISTED-RULE\",\n      \"rule\": \"checklist-disposition\"\n    }\n  ],\n  \"fixture\": {\n    \"name\": \"checklist-missing-rule\",\n    \"path\": \"seed/violations.md\"\n  },\n  \"gate\": \"source-check\",\n  \"hint\": \"fix each finding structurally; limits are never raised and lints never silenced\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": \"quality_violation\",\n  \"limits\": {\n    \"max_params\": \"3\",\n    \"max_pure_loc\": \"250\"\n  },\n  \"rules\": {\n    \"cargo\": [\n      \"workspace-lints\",\n      \"member-lints\",\n      \"toolchain-pinned\",\n      \"cargo-deny-config\",\n      \"clippy-thresholds\"\n    ],\n    \"source\": [\n      \"syntax\",\n      \"max-pure-loc\",\n      \"max-parameters\",\n      \"dropped-result\",\n      \"allow-attribute\",\n      \"numeric-cast\",\n      \"tautological-assert\"\n    ]\n  },\n  \"verdict\": \"fail\"\n}"
+            }
+          },
+          {
+            "argv": [
+              "plan-audit",
+              "--fixture",
+              "unresolved-reference"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "984",
+              "sha256": "adbbecef34bc1cac12347058b07e61808fb895116bb5534c97724a6106a63158",
+              "text": "{\n  \"argv\": [\n    \"plan-audit\",\n    \"--fixture\",\n    \"unresolved-reference\"\n  ],\n  \"denied_writes\": [],\n  \"excluded_features\": [],\n  \"exit\": 1,\n  \"finding_count\": \"2\",\n  \"findings\": [\n    {\n      \"detail\": \"unresolved refs\",\n      \"location\": \"todo 2: todo 9 does not exist\",\n      \"rule\": \"unresolved-ref\"\n    },\n    {\n      \"detail\": \"unresolved refs\",\n      \"location\": \"todo 2: IDEAL-009 is not a ledger row\",\n      \"rule\": \"unresolved-ref\"\n    }\n  ],\n  \"gate\": \"plan-audit\",\n  \"hint\": \"assign every uncovered row, fix each unresolved reference and split overlapping write scopes\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": \"plan_invalid\",\n  \"landed\": [\n    \"1\"\n  ],\n  \"missing_scenarios\": [],\n  \"missing_todos\": [],\n  \"removed\": [],\n  \"todos\": \"2\",\n  \"uncovered_gaps\": [],\n  \"uncovered_ideals\": [],\n  \"unresolved_refs\": [\n    \"todo 2: todo 9 does not exist\",\n    \"todo 2: IDEAL-009 is not a ledger row\"\n  ],\n  \"verdict\": \"fail\",\n  \"write_conflicts\": []\n}"
+            }
+          },
+          {
+            "argv": [
+              "plan-audit",
+              "--fixture",
+              "uncovered-gap"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "748",
+              "sha256": "c67beedbf83dcdb101e45e1d5a88cc9cfba1ffc788e511c1b2da1dd4404066aa",
+              "text": "{\n  \"argv\": [\n    \"plan-audit\",\n    \"--fixture\",\n    \"uncovered-gap\"\n  ],\n  \"denied_writes\": [],\n  \"excluded_features\": [],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"uncovered gaps\",\n      \"location\": \"GAP-002\",\n      \"rule\": \"uncovered-gap\"\n    }\n  ],\n  \"gate\": \"plan-audit\",\n  \"hint\": \"assign every uncovered row, fix each unresolved reference and split overlapping write scopes\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": \"plan_invalid\",\n  \"landed\": [\n    \"1\"\n  ],\n  \"missing_scenarios\": [],\n  \"missing_todos\": [],\n  \"removed\": [],\n  \"todos\": \"2\",\n  \"uncovered_gaps\": [\n    \"GAP-002\"\n  ],\n  \"uncovered_ideals\": [],\n  \"unresolved_refs\": [],\n  \"verdict\": \"fail\",\n  \"write_conflicts\": []\n}"
+            }
+          },
+          {
+            "argv": [
+              "plan-audit",
+              "--fixture",
+              "overlapping-writes"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "869",
+              "sha256": "d9f9bd987ab3ad5847c664386feef26f5a0f56ad21edd84955a5373d4b308db7",
+              "text": "{\n  \"argv\": [\n    \"plan-audit\",\n    \"--fixture\",\n    \"overlapping-writes\"\n  ],\n  \"denied_writes\": [],\n  \"excluded_features\": [],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"write conflicts\",\n      \"location\": \"wave 1: todo 1 seed/targets/ overlaps todo 2 seed/targets/waits/\",\n      \"rule\": \"write-conflict\"\n    }\n  ],\n  \"gate\": \"plan-audit\",\n  \"hint\": \"assign every uncovered row, fix each unresolved reference and split overlapping write scopes\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": \"plan_invalid\",\n  \"landed\": [\n    \"1\"\n  ],\n  \"missing_scenarios\": [],\n  \"missing_todos\": [],\n  \"removed\": [],\n  \"todos\": \"2\",\n  \"uncovered_gaps\": [],\n  \"uncovered_ideals\": [],\n  \"unresolved_refs\": [],\n  \"verdict\": \"fail\",\n  \"write_conflicts\": [\n    \"wave 1: todo 1 seed/targets/ overlaps todo 2 seed/targets/waits/\"\n  ]\n}"
+            }
+          },
+          {
+            "argv": [
+              "ideal-audit",
+              "--fixture",
+              "unproved-ideal"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "645",
+              "sha256": "f0ffb53eb7637813c8b616bf0f86889375bd87a40068b4a7d5aef2d3c7249c96",
+              "text": "{\n  \"argv\": [\n    \"ideal-audit\",\n    \"--fixture\",\n    \"unproved-ideal\"\n  ],\n  \"exit\": 1,\n  \"finding_count\": \"1\",\n  \"findings\": [\n    {\n      \"detail\": \"seed/waits happy on linux; seed/waits failure on linux\",\n      \"location\": \"IDEAL-002\",\n      \"rule\": \"unproved-ideal\"\n    }\n  ],\n  \"gaps_closed\": \"2\",\n  \"gate\": \"ideal-audit\",\n  \"hint\": \"run each mapped scenario's happy and failure case on every required platform and pass the evidence directory\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": \"ideal_unproved\",\n  \"missing\": [\n    \"IDEAL-002\"\n  ],\n  \"proved\": \"1\",\n  \"runs\": \"1\",\n  \"shortfalls\": [],\n  \"verdict\": \"fail\"\n}"
+            }
+          },
+          {
+            "argv": [
+              "ideal-audit",
+              "--fixture",
+              "forged-proof"
+            ],
+            "exit_code": 1,
+            "pid": null,
+            "role": "gate",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "827",
+              "sha256": "fa3a4f3d00cb67d932fd53c29186da1d1928d049e7911030550b8537b31d648e",
+              "text": "{\n  \"argv\": [\n    \"ideal-audit\",\n    \"--fixture\",\n    \"forged-proof\"\n  ],\n  \"exit\": 1,\n  \"finding_count\": \"2\",\n  \"findings\": [\n    {\n      \"detail\": \"assertion-forged: seed/waits/failure seed/held: passed=true but expected 1 vs actual 2\",\n      \"location\": \"seed/waits\",\n      \"rule\": \"evidence-invalid\"\n    },\n    {\n      \"detail\": \"seed/waits happy on linux; seed/waits failure on linux\",\n      \"location\": \"IDEAL-002\",\n      \"rule\": \"unproved-ideal\"\n    }\n  ],\n  \"gaps_closed\": \"2\",\n  \"gate\": \"ideal-audit\",\n  \"hint\": \"run each mapped scenario's happy and failure case on every required platform and pass the evidence directory\",\n  \"host\": {\n    \"arch\": \"x86_64\",\n    \"os\": \"linux\"\n  },\n  \"kind\": \"ideal_unproved\",\n  \"missing\": [\n    \"IDEAL-002\"\n  ],\n  \"proved\": \"1\",\n  \"runs\": \"2\",\n  \"shortfalls\": [],\n  \"verdict\": \"fail\"\n}"
+            }
           }
         ],
         "scenario": "quality/gates",
         "summary": "Every seeded defect fails its gate with exit 1 and a typed kind: evidence with a PASS banner and no receipts, a prose banner, a forged exit or assertion, an unknown matcher, a $present claim on a missing value, a self-contradicting gate report and a skipped case claimed as a pass are evidence_invalid; an `.ok();` discard, an #[allow], an `as` cast, a self-comparing assertion and an undisposed Rule totals id are quality_violation; an unresolved reference, an uncovered GAP and overlapping same-wave writes are plan_invalid; unproved and forged IDEAL proofs are ideal_unproved. With --inject only the named fixture runs."
       }
     ],
-    "elapsed_ms": "1750",
+    "elapsed_ms": "232",
     "error": null,
     "format": "ovis-conformance-evidence/1",
     "host": {
@@ -25100,7 +25878,7 @@
     "runner_version": "0.1.0",
     "scenario": "quality/gates",
     "totals": {
-      "assertions": "7",
+      "assertions": "64",
       "cases": "1",
       "declared_only": "0",
       "failed": "0",
