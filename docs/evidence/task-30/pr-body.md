@@ -120,4 +120,4 @@ Each step below ends in a typed rejection or an asserted outcome.
 
 DEFERRED VERIFICATION: none. `part-a/task-30` happy and failure both execute on the assembled binary (exit 0).
 
-macOS stress dispatch: MACOS_RUN
+macOS stress dispatch: https://github.com/devswha/ovis-terminal/actions/runs/41347211460 (probe=attach-input, head fb2e4cd)
