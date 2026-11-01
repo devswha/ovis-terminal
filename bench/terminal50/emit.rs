@@ -1,7 +1,8 @@
 //! The paced program each PTY runs: colored build-log output at a fixed byte rate until
-//! its terminal goes away.
+//! its terminal goes away. It consumes its input, so admitted bytes reach a reader and a
+//! full PTY can never hold the stdin forwarder at teardown.
 
-use std::io::{self, Write as _};
+use std::io::{self, Read as _, Write as _};
 use std::time::{Duration, Instant};
 
 /// `len` bytes of colored build-log lines with cursor moves and erases, from `seed`.
@@ -22,8 +23,16 @@ pub(super) fn corpus(len: usize, seed: usize) -> Vec<u8> {
         .collect()
 }
 
-/// Writes `rate` bytes per second in 100 paced slices until stdout fails.
-pub(super) fn run(rate: usize) {
+/// Writes `rate` bytes per second in 100 paced slices until stdout fails, while a thread
+/// reads and discards stdin.
+pub(super) fn run(rate: usize) -> io::Result<()> {
+    std::thread::Builder::new()
+        .name("emit-stdin".to_owned())
+        .spawn(|| {
+            let mut stdin = io::stdin().lock();
+            let mut sink = [0_u8; 4096];
+            while matches!(stdin.read(&mut sink), Ok(read) if read > 0) {}
+        })?;
     let mut stdout = io::stdout().lock();
     let start = Instant::now();
     let slice = rate.div_ceil(100).max(1);
@@ -34,9 +43,10 @@ pub(super) fn run(rate: usize) {
             .and_then(|()| stdout.flush())
             .is_err()
         {
-            return;
+            return Ok(());
         }
         let due = Duration::from_millis(10).saturating_mul(tick);
         std::thread::sleep(due.saturating_sub(start.elapsed()));
     }
+    Ok(())
 }

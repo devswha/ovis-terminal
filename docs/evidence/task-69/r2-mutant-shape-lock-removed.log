@@ -1,0 +1,8 @@
+mutant shape-lock-removed: bench/terminal50/cli.rs
+- if shape != fixed {
++ if shape != fixed && shape.terminals == 0 {
+$ cargo nextest run --locked -p ovis-terminal-bench --no-tests=fail --no-fail-fast
+
+FAIL terminal50::tests::the_max_bounds_judge_only_the_exact_ideal_shape
+Summary [   2.291s] 17 tests run: 16 passed, 1 failed, 0 skipped
+NEXTEST_EXIT=100

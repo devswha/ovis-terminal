@@ -10,6 +10,8 @@ use std::time::{Duration, Instant};
 use ovis_terminal_server::streams::scheduler::TerminalHandle;
 use ovis_terminal_vt::Geometry;
 
+use super::plan::Plan;
+
 /// Every lane issues one request per tick.
 const REQUEST_TICK: Duration = Duration::from_millis(10);
 
@@ -21,10 +23,13 @@ pub(super) struct Progress {
     wanted: usize,
     until: Instant,
     measuring_from: OnceLock<Instant>,
+    /// The `admission-delay` fixture: a wait inside every timed admission.
+    admission_delay: Option<Duration>,
 }
 
 impl Progress {
-    pub(super) fn new(warmup: usize, samples: usize, max_run: Duration) -> Self {
+    pub(super) fn new(plan: &Plan) -> Self {
+        let (warmup, samples, max_run) = (plan.warmup, plan.samples, plan.max_run);
         let now = Instant::now();
         let measuring_from = OnceLock::new();
         if warmup == 0 {
@@ -36,6 +41,7 @@ impl Progress {
             wanted: warmup.saturating_add(samples),
             until: now.checked_add(max_run).unwrap_or(now),
             measuring_from,
+            admission_delay: plan.admission_delay(),
         }
     }
 
@@ -77,6 +83,11 @@ pub(super) struct LaneSamples {
 }
 
 impl LaneSamples {
+    /// Whether this lane took any admission or control sample.
+    pub(super) const fn sampled(&self) -> bool {
+        !(self.warmup.is_empty() && self.admission.is_empty() && self.control.is_empty())
+    }
+
     pub(super) fn absorb(&mut self, other: Self) {
         self.warmup.extend(other.warmup);
         self.admission.extend(other.admission);
@@ -122,7 +133,12 @@ pub(super) async fn lane(
         match round % 4 {
             0 | 1 => {
                 let answer = match handle.reserve(8) {
-                    Ok(held) => handle.admit(held, b"echo ok\r".to_vec()).await,
+                    Ok(held) => {
+                        if let Some(delay) = progress.admission_delay {
+                            tokio::time::sleep(delay).await;
+                        }
+                        handle.admit(held, b"echo ok\r".to_vec()).await
+                    }
                     Err(refused) => Err(refused),
                 };
                 let warmup = progress.claim(started);

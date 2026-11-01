@@ -1,8 +1,9 @@
 //! One real pseudo-terminal per terminal: `terminal50 emit <rate>` in a private
 //! environment, an owned pump thread into the actor and an owned stdin forwarder.
 //!
-//! The emitter never reads stdin, so admitted input fills the terminal's input buffer:
-//! the stdin non-reader case. It runs until killed; only its captured pid is signalled.
+//! The emitter consumes its stdin, so admitted input is delivered and cannot wedge the
+//! forwarder on a full PTY once the emitter is gone. It runs until killed; only its
+//! captured pid is signalled.
 
 use std::io::Write as _;
 use std::path::Path;

@@ -203,6 +203,10 @@ impl Client {
         })
     }
 
+    pub(super) const fn index(&self) -> usize {
+        self.index
+    }
+
     /// Hangs up a non-reader's unread end, so its blocked writer fails and stops.
     pub(super) fn hang_up_unread(&mut self) {
         self.unread = None;

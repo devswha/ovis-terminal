@@ -42,6 +42,16 @@ pub enum Terminal50Error {
         /// The bound waited.
         bound_ms: u64,
     },
+    /// A teardown step did not finish within its bound.
+    #[error("teardown stalled at {stage} {index} for {bound_ms} ms")]
+    ShutdownStalled {
+        /// The step that did not finish.
+        stage: &'static str,
+        /// The terminal or client it was waiting on.
+        index: usize,
+        /// The bound waited.
+        bound_ms: u64,
+    },
     /// The run finished and broke at least one budget; the report lists each one.
     #[error("{violations} budget checks failed")]
     BudgetExceeded {
@@ -103,6 +113,7 @@ impl Terminal50Error {
             Self::Inject { .. } => "invalid_inject",
             Self::Binary { .. } => "binary_unreadable",
             Self::NotReady { .. } => "not_ready",
+            Self::ShutdownStalled { .. } => "shutdown_stalled",
             Self::BudgetExceeded { .. } => "budget_exceeded",
             Self::Cpu { .. } => "cpu_unreadable",
             Self::Pty { .. } => "pty_failed",
@@ -128,6 +139,9 @@ impl Terminal50Error {
             }
             Self::Binary { .. } => "build target/release/ovis-terminal first",
             Self::NotReady { .. } => "check that the host can run PTY programs",
+            Self::ShutdownStalled { .. } => {
+                "the named terminal or client did not stop; nothing of the run is reported"
+            }
             Self::BudgetExceeded { .. } => "read verdict.violations in the evidence",
             Self::Cpu { .. } => "check /proc or ps on this host",
             Self::Pty { .. } => "check that the host can open pseudo-terminals",

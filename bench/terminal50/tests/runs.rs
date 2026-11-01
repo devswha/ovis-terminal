@@ -7,19 +7,19 @@ use super::super::drive;
 use super::super::host::Binary;
 use super::super::plan::{Fixture, Plan, Profile, Shape, Source};
 
-const IDEAL: Profile = Profile::Ideal {
+pub(super) const IDEAL: Profile = Profile::Ideal {
     admission_max_ms: 100,
     event_max_ms: 100,
 };
 
-fn in_process(name: &str, fixture: Option<Fixture>) -> Plan {
+pub(super) fn in_process(name: &str, fixture: Option<Fixture>) -> Plan {
     let root = std::env::var_os("OVIS_FIXTURE_ROOT")
         .map_or_else(std::env::temp_dir, Into::into)
         .join(format!("terminal50-{name}-{}", std::process::id()));
     std::fs::create_dir_all(&root).unwrap();
     Plan {
         shape: Shape {
-            terminals: 2,
+            terminals: 3,
             clients: 2,
             inflight: 4,
             bytes_per_second: 64 * 1024,
@@ -33,13 +33,14 @@ fn in_process(name: &str, fixture: Option<Fixture>) -> Plan {
         workers: 2,
         max_run: Duration::from_secs(60),
         drain: Duration::from_secs(1),
+        teardown: Duration::from_secs(10),
         fixture,
         source: Source::InProcess,
         root,
     }
 }
 
-fn binary() -> Binary {
+pub(super) fn binary() -> Binary {
     Binary {
         path: "in-process".to_owned(),
         sha256: String::new(),
@@ -104,7 +105,7 @@ fn every_committed_event_is_delivered_lost_or_undelivered_for_each_client() {
     }
     assert_eq!(
         report.viewers.iter().filter(|viewer| !viewer.reads).count(),
-        2
+        plan.shape.terminals
     );
     assert!(
         report

@@ -17,6 +17,12 @@ pub(super) const IDEAL_SHAPE: Shape = Shape {
     bytes_per_second: 1_048_576,
 };
 
+/// The exact shape of the 50-terminal capacity release target.
+pub(super) const CAPACITY_SHAPE: Shape = Shape {
+    terminals: 50,
+    ..IDEAL_SHAPE
+};
+
 /// How much load a run applies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub(super) struct Shape {
@@ -52,14 +58,8 @@ pub(super) enum Profile {
 pub(super) enum Fixture {
     /// Every control-event writer waits `delay_ms` before each write.
     ControlWriterDelay { delay_ms: u64 },
-}
-
-impl Fixture {
-    pub(super) const fn writer_delay(self) -> Duration {
-        match self {
-            Self::ControlWriterDelay { delay_ms } => Duration::from_millis(delay_ms),
-        }
-    }
+    /// Every admission waits `delay_ms` between its reservation and its admit.
+    AdmissionDelay { delay_ms: u64 },
 }
 
 /// Where each terminal's output comes from.
@@ -90,6 +90,8 @@ pub(super) struct Plan {
     pub(super) max_run: Duration,
     /// Hang guard on draining event writers after the load stops.
     pub(super) drain: Duration,
+    /// Bound on each teardown step.
+    pub(super) teardown: Duration,
     pub(super) fixture: Option<Fixture>,
     pub(super) source: Source,
     /// The private directory every file of the run lives under.
@@ -114,8 +116,15 @@ impl Plan {
 
     pub(super) const fn writer_delay(&self) -> Option<Duration> {
         match self.fixture {
-            Some(fixture) => Some(fixture.writer_delay()),
-            None => None,
+            Some(Fixture::ControlWriterDelay { delay_ms }) => Some(Duration::from_millis(delay_ms)),
+            _ => None,
+        }
+    }
+
+    pub(super) const fn admission_delay(&self) -> Option<Duration> {
+        match self.fixture {
+            Some(Fixture::AdmissionDelay { delay_ms }) => Some(Duration::from_millis(delay_ms)),
+            _ => None,
         }
     }
 }

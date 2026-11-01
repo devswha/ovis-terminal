@@ -6,7 +6,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use clap::{Parser, Subcommand};
 
 use super::error::Terminal50Error;
-use super::plan::{Fixture, IDEAL_SHAPE, Plan, Profile, Shape, Source};
+use super::plan::{CAPACITY_SHAPE, Fixture, IDEAL_SHAPE, Plan, Profile, Shape, Source};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -63,7 +63,8 @@ pub(super) struct Cli {
     /// Hang guard on the whole measurement.
     #[arg(long, default_value_t = 900)]
     max_seconds: u64,
-    /// A failure fixture, `{"fixture":"control-writer-delay","delay_ms":150}`.
+    /// A failure fixture: `{"fixture":"control-writer-delay","delay_ms":150}` or
+    /// `{"fixture":"admission-delay","delay_ms":150}`.
     #[arg(long)]
     inject: Option<String>,
     /// Where the evidence JSON goes; raw samples go beside it as `<stem>.samples.json`.
@@ -112,10 +113,18 @@ fn profile(cli: &Cli, shape: Shape) -> Result<Profile, Terminal50Error> {
             ));
         }
     };
-    if matches!(profile, Profile::Ideal { .. }) && shape != IDEAL_SHAPE {
-        return Err(usage(
+    let (fixed, reason) = match profile {
+        Profile::Ideal { .. } => (
+            IDEAL_SHAPE,
             "the max bounds judge only the IDEAL shape: 16 terminals, 8 clients, 16 in flight, 1048576 B/s",
-        ));
+        ),
+        Profile::Capacity { .. } => (
+            CAPACITY_SHAPE,
+            "the p99 bounds judge only the capacity shape: 50 terminals, 8 clients, 16 in flight, 1048576 B/s",
+        ),
+    };
+    if shape != fixed {
+        return Err(usage(reason));
     }
     Ok(profile)
 }
@@ -171,6 +180,7 @@ impl Cli {
             workers: workers.max(1),
             max_run: Duration::from_secs(self.max_seconds),
             drain: Duration::from_secs(5),
+            teardown: Duration::from_secs(10),
             fixture,
             source: Source::Pty { exe },
             root: private_root(),

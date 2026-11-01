@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use ovis_terminal_server::streams::scheduler::TerminalHandle;
 use tokio::task::JoinSet;
 
+use super::account::{self, Raw};
 use super::delivery::{Client, Spec};
 use super::error::Terminal50Error;
 use super::fleet::{self, Fleet};
@@ -15,7 +16,7 @@ use super::lanes::{self, LaneSamples, Progress};
 use super::measure;
 use super::plan::Plan;
 use super::report::Report;
-use super::settle::{self, Load, Raw};
+use super::settle::{self, Load};
 
 /// Bound on every terminal showing its first output.
 const READY: Duration = Duration::from_secs(30);
@@ -27,8 +28,9 @@ pub(super) fn run(plan: &Plan, binary: Binary) -> Result<(Report, Raw), Terminal
         .enable_all()
         .build()?;
     let handle = runtime.handle().clone();
-    let measured = runtime.block_on(measure(plan, handle))?;
-    Ok(settle::report(plan, binary, &measured))
+    let measured = runtime.block_on(measure(plan, handle));
+    runtime.shutdown_timeout(Duration::from_secs(5));
+    Ok(account::report(plan, binary, &measured?))
 }
 
 fn clients(
@@ -73,7 +75,7 @@ async fn measure(plan: &Plan, runtime: tokio::runtime::Handle) -> Result<Load, T
     std::fs::create_dir_all(&history_root)?;
     let rss_before = measure::rss(&[])?;
     let mut fleet = fleet::spawn(plan, &history_root, &runtime)?;
-    let progress = Arc::new(Progress::new(plan.warmup, plan.samples, plan.max_run));
+    let progress = Arc::new(Progress::new(plan));
     let clients = clients(plan, &fleet.handles, &progress)?;
     ready(&mut fleet).await?;
     let pids = fleet.pids.clone();
@@ -89,13 +91,16 @@ async fn measure(plan: &Plan, runtime: tokio::runtime::Handle) -> Result<Load, T
     }
     drop(handles);
     let mut samples = LaneSamples::default();
+    let mut lanes = 0_usize;
     let mut rss_peak = rss_before;
     let mut sampling = tokio::time::interval(Duration::from_millis(250));
     while !running.is_empty() {
         tokio::select! {
             joined = running.join_next() => {
                 if let Some(lane) = joined {
-                    samples.absorb(lane.map_err(std::io::Error::other)?);
+                    let lane = lane.map_err(std::io::Error::other)?;
+                    lanes = lanes.saturating_add(usize::from(lane.sampled()));
+                    samples.absorb(lane);
                 }
             }
             _ = sampling.tick() => rss_peak = rss_peak.max(measure::rss(&pids)?),
@@ -108,6 +113,7 @@ async fn measure(plan: &Plan, runtime: tokio::runtime::Handle) -> Result<Load, T
     Ok(Load {
         samples,
         wanted: progress.wanted(),
+        lanes,
         rss_before,
         rss_peak,
         disk: measure::disk_bytes(&history_root)?,

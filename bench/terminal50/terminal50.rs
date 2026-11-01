@@ -7,6 +7,7 @@
 //! separately labelled capacity release target. The report goes to stdout and to
 //! `--evidence`, raw samples beside it; a broken budget exits 1 with `budget_exceeded`.
 
+mod account;
 mod cli;
 mod delivery;
 mod drive;
@@ -23,6 +24,7 @@ mod settle;
 mod stats;
 #[cfg(test)]
 mod tests;
+mod verdict;
 
 use std::ffi::OsString;
 use std::io::{self, Write as _};
@@ -52,7 +54,7 @@ fn finish(stdout: &[u8], failure: Option<&Terminal50Error>) -> ExitCode {
     ExitCode::from(error.exit_code())
 }
 
-fn write_evidence(path: &Path, report: &[u8], raw: &settle::Raw) -> Result<(), Terminal50Error> {
+fn write_evidence(path: &Path, report: &[u8], raw: &account::Raw) -> Result<(), Terminal50Error> {
     if let Some(parent) = path
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
@@ -109,8 +111,11 @@ pub fn main_with(args: Vec<OsString>) -> ExitCode {
         }
     };
     if let Some(cli::Mode::Emit { bytes_per_second }) = cli.mode {
-        emit::run(bytes_per_second);
-        return ExitCode::SUCCESS;
+        return if emit::run(bytes_per_second).is_ok() {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
+        };
     }
     match std::env::current_exe()
         .map_err(Terminal50Error::from)

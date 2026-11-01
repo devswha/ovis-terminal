@@ -11,10 +11,12 @@ use super::cli::Cli;
 use super::error::Terminal50Error;
 use super::measure::{parse_clock, stat_cpu};
 use super::plan::{Fixture, Plan, Profile};
-use super::report::{Budgets, Observed, judge};
 use super::stats::summarize;
+use super::verdict::{Budgets, Observed, judge};
 
+mod bound;
 mod runs;
+mod shape;
 
 const BUDGETS: Budgets = Budgets {
     rss_limit_bytes: 1 << 30,
@@ -159,6 +161,8 @@ fn the_max_bounds_judge_only_the_exact_ideal_shape() {
         capacity.shape.terminals.saturating_mul(capacity.viewers),
         400
     );
+    fifty[1] = "--terminals=49";
+    assert_eq!(plan_of(&fifty).unwrap_err().kind(), "usage");
 }
 
 #[test]
@@ -177,6 +181,8 @@ fn mixed_budgets_a_shared_root_and_unknown_fixtures_are_refused() {
     };
     let delayed = inject(r#"{"fixture":"control-writer-delay","delay_ms":150}"#).unwrap();
     assert_eq!(delayed, Some(Fixture::ControlWriterDelay { delay_ms: 150 }));
+    let admission = inject(r#"{"fixture":"admission-delay","delay_ms":150}"#).unwrap();
+    assert_eq!(admission, Some(Fixture::AdmissionDelay { delay_ms: 150 }));
     for refused in [
         r#"{"fixture":"other","delay_ms":150}"#,
         r#"{"fixture":"control-writer-delay","delay_ms":150,"filter":true}"#,
