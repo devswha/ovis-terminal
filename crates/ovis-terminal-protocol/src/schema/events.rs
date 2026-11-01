@@ -143,6 +143,26 @@ pub struct OutputRevisionData {
     pub output_offset: ByteOffset,
 }
 
+/// Data of `geometry.changed`, `geometry.checkpoint` and `geometry.input_ready`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[non_exhaustive]
+pub struct GeometryEventData {
+    /// Terminal whose grid changed.
+    pub terminal_id: crate::schema::ids::TerminalId,
+    /// Grid epoch of the transition.
+    pub epoch: crate::schema::scalar::GeometryEpoch,
+    /// Grid at this step.
+    pub geometry: crate::schema::common::Geometry,
+    /// Grid before the change, for `geometry.changed`.
+    pub previous: Option<crate::schema::common::Geometry>,
+    /// Geometry lease that requested the change, for `geometry.changed`.
+    pub owner_lease: Option<crate::schema::ids::LeaseId>,
+    /// Raw output offset the step applies at.
+    pub output_offset: Option<ByteOffset>,
+    /// Screen revision at the new grid, for the checkpoint and input readiness.
+    pub revision: Option<Revision>,
+}
+
 /// Data of `lease.acquired`, `lease.revoked` and `lease.geometry`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
