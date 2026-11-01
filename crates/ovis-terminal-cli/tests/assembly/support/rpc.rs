@@ -2,10 +2,9 @@
 
 use std::io::{BufRead as _, BufReader, Write as _};
 use std::os::unix::net::UnixStream;
+use std::time::Duration;
 
 use serde_json::{Value, json};
-
-use std::time::Duration;
 
 use super::{Served, TestResult, op_id};
 
