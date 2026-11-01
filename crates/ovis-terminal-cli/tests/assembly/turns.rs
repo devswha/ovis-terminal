@@ -5,7 +5,7 @@
 
 use serde_json::{Value, json};
 
-use super::pending::make_fifo;
+use super::pending::{make_fifo, read_fifo_within};
 use super::prompts::spawned_token;
 use super::support::{Served, TestResult, op_id};
 
@@ -155,7 +155,7 @@ fn a_wait_sent_after_a_status_reports_reply_is_already_satisfied() -> TestResult
             "geometry": {"cols": 80, "rows": 24}, "cwd": "/tmp", "env": {"PATH": "/usr/bin:/bin"},
             "name": "agent"}),
     )?;
-    let token = std::fs::read_to_string(&fifo)?;
+    let token = read_fifo_within(&fifo, std::time::Duration::from_secs(60))?;
     call(
         &served,
         "agent.register",

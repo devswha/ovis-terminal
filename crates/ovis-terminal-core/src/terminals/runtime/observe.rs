@@ -34,6 +34,7 @@ impl Terminals {
         }
     }
 
+    #[cfg(all(test, unix))]
     /// Applies one holder notification exactly like [`Terminals::receive`] and hands it
     /// back once committed, so screens and input sequencers follow the same ordered facts;
     /// `None` when the notification was an internal spawn refusal.
@@ -41,7 +42,10 @@ impl Terminals {
     /// # Errors
     ///
     /// The failures of [`Terminals::receive`]; a message that failed to apply is not returned.
-    pub fn receive_message(&mut self, timeout: Duration) -> Result<Option<Message>, TerminalError> {
+    pub(crate) fn receive_message(
+        &mut self,
+        timeout: Duration,
+    ) -> Result<Option<Message>, TerminalError> {
         let incoming = self
             .messages
             .recv_timeout(timeout)
@@ -50,13 +54,13 @@ impl Terminals {
     }
 
     /// Applies one holder notification that already arrived, exactly like
-    /// [`Terminals::receive_message`], and never waits: a caller holding a lock around it
+    /// [`Terminals::receive`], and never waits: a caller holding a lock around it
     /// cannot keep that lock while the holder is silent. An empty queue is the same
     /// `Notification(Timeout)` a zero-length wait reports.
     ///
     /// # Errors
     ///
-    /// The failures of [`Terminals::receive_message`].
+    /// The failures of [`Terminals::receive`].
     pub fn try_receive_message(&mut self) -> Result<Option<Message>, TerminalError> {
         let incoming = self.messages.try_recv().map_err(|error| {
             TerminalError::Notification(match error {

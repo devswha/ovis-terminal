@@ -24,6 +24,9 @@ fn held() -> TestResult<(Served, std::path::PathBuf)> {
     ))
 }
 
+/// How long a test waits for a FIFO's writer before it fails.
+const HOLD_BOUND: std::time::Duration = std::time::Duration::from_secs(60);
+
 /// Makes a FIFO at `path` with the system's `mkfifo`, the same on Linux and macOS.
 ///
 /// # Errors
@@ -39,10 +42,37 @@ pub fn make_fifo(path: &Path) -> TestResult {
     Ok(())
 }
 
+/// Reads everything a writer of the FIFO at `path` writes, failing after `bound`.
+///
+/// The open waits for the writer on a helper thread; past the bound the test opens the FIFO for
+/// writing itself, which completes that open, and fails.
+///
+/// # Errors
+///
+/// When the FIFO cannot be read, or no writer opened it within `bound`.
+pub fn read_fifo_within(path: &Path, bound: std::time::Duration) -> TestResult<String> {
+    let (sender, read) = std::sync::mpsc::channel();
+    let fifo = path.to_path_buf();
+    std::thread::spawn(move || {
+        let mut text = String::new();
+        let outcome = std::fs::File::open(&fifo)
+            .and_then(|mut reader| std::io::Read::read_to_string(&mut reader, &mut text))
+            .map(|_| text);
+        // The receiver is gone only once the test already failed on its bound.
+        match sender.send(outcome) {
+            Ok(()) | Err(_) => {}
+        }
+    });
+    if let Ok(outcome) = read.recv_timeout(bound) {
+        return Ok(outcome?);
+    }
+    drop(std::fs::OpenOptions::new().write(true).open(path)?);
+    Err(format!("no writer opened {} within {bound:?}", path.display()).into())
+}
+
 /// Returns once the runtime holds the control: it writes `held` to the FIFO when it does.
 fn engaged(fifo: &Path) -> TestResult {
-    let mut said = String::new();
-    std::io::Read::read_to_string(&mut std::fs::File::open(fifo)?, &mut said)?;
+    let said = read_fifo_within(fifo, HOLD_BOUND)?;
     assert_eq!(said, "held\n");
     Ok(())
 }
