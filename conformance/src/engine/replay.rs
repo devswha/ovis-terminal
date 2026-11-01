@@ -112,7 +112,10 @@ impl Session<'_> {
             .map_err(|e| replay_failure(&e))?;
         let previous = std::mem::replace(&mut self.root, IsolatedRoot::create()?);
         let ran = async {
-            let serve = Serve { fixture: kind, qa_graphics_sequence_max_bytes: None };
+            let serve = Serve {
+                fixture: kind,
+                qa_graphics_sequence_max_bytes: None,
+            };
             self.serve(&serve).await?;
             let mut wire = Wire::new(self, case.id.as_str());
             let options = Options::new(&set.legacy, Bindings::new(bindings), inject);
