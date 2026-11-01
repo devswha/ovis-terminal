@@ -1,0 +1,15 @@
+# host: Linux x86_64; lane 4e0f09f merged with origin/integration 723d101
+$ bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh
+==> cargo +nightly fmt --all -- --check
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+     Summary [ 137.228s] 1141 tests run: 1141 passed (1 slow), 1 skipped
+==> cargo test --doc --workspace --all-features --locked
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 1125 file(s) checked
+==> bash scripts/hygiene/manifests.sh
+manifests.sh: 16 member manifest(s) checked
+==> bash scripts/hygiene/json.sh
+json.sh: 126 JSON file(s) checked
+check.sh: all steps passed
+exit 0

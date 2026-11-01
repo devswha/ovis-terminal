@@ -19,28 +19,59 @@ export interface Schema {
 export const DECIMAL_PATTERN = "^(0|[1-9][0-9]{0,19})$";
 const REF_PREFIX = "#/components/schemas/";
 
-export class GenerateError extends Error {
-  readonly kind: "unsupported_schema" | "name_collision" | "stale_output";
-  readonly hint: string;
+const IDENTIFIER = /^[A-Z][A-Za-z0-9]*$/;
 
-  constructor(kind: GenerateError["kind"], message: string) {
+const HINTS = {
+  unsupported_schema: "extend the generator before publishing this schema",
+  name_collision: "rename one of the colliding schema components so their TypeScript names differ",
+  stale_output: "run `bun run generate` and commit the result",
+} as const;
+
+/** The generated declaration two or more schema components were mapped onto. */
+export interface Collision {
+  readonly target: string;
+  readonly sources: readonly string[];
+}
+
+export class GenerateError extends Error {
+  readonly kind: keyof typeof HINTS;
+  readonly hint: string;
+  /** Set only for `name_collision`. */
+  readonly target: string | undefined;
+  readonly sources: readonly string[];
+
+  constructor(kind: GenerateError["kind"], message: string, collision?: Collision) {
     super(message);
     this.name = "GenerateError";
     this.kind = kind;
-    this.hint =
-      kind === "stale_output" ? "run `bun run generate` and commit the result" : "extend the generator before publishing this schema";
+    this.hint = HINTS[kind];
+    this.target = collision?.target;
+    this.sources = collision?.sources ?? [];
   }
+}
+
+/**
+ * The TypeScript identifier for a schema component name: runs of characters other than
+ * ASCII letters and digits separate words, and each word's first letter is upper-cased
+ * (`Observed_Array_of_ProcessSample` -> `ObservedArrayOfProcessSample`). A name that is
+ * already a PascalCase identifier maps to itself.
+ */
+export function typeName(component: string): string {
+  const name = component
+    .split(/[^A-Za-z0-9]+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("");
+  if (!IDENTIFIER.test(name)) {
+    throw new GenerateError("unsupported_schema", `component name ${component} maps to ${JSON.stringify(name)}, which is not a TypeScript identifier`);
+  }
+  return name;
 }
 
 export function refName(ref: string): string {
   if (!ref.startsWith(REF_PREFIX)) {
     throw new GenerateError("unsupported_schema", `reference ${ref} is outside components.schemas`);
   }
-  const name = ref.slice(REF_PREFIX.length);
-  if (!/^[A-Z][A-Za-z0-9]*$/.test(name)) {
-    throw new GenerateError("unsupported_schema", `component name ${name} is not a TypeScript identifier`);
-  }
-  return name;
+  return typeName(ref.slice(REF_PREFIX.length));
 }
 
 export function literals(schema: Schema): readonly string[] | undefined {
