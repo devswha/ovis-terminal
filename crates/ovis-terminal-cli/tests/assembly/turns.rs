@@ -133,3 +133,31 @@ fn a_status_report_racing_a_state_wait_settles_it_with_the_reported_seq() -> Tes
     served.stop()?;
     Ok(())
 }
+
+/// The runtime idles in its job wait for ten minutes, so nothing applies delivered status
+/// between jobs: the wait sent after the report's reply is the next job, and it observes the
+/// report only because every job first applies the status delivered before it.
+#[test]
+fn a_wait_sent_after_a_status_reports_reply_is_already_satisfied() -> TestResult {
+    let served = Served::start_with(&["--qa-holder-poll-ms", "600000"])?;
+    served.run_shell("shell")?;
+    let token = spawned_token(&served)?;
+    call(
+        &served,
+        "agent.register",
+        &json!({"op_id": op_id()?, "target": t1(), "process_token": token, "label": "agent",
+            "session": null}),
+    )?;
+    report(&served, &token, ("working", "1"))?;
+    let wait = json!({"target": t1(), "states": ["working"], "turn_after": null, "exit": null,
+        "cursor": null, "timeout_ms": "10000"});
+    let waited = call(&served, "events.wait", &wait)?;
+    assert_eq!(
+        waited.get("outcome"),
+        Some(&json!("already_satisfied")),
+        "{waited}"
+    );
+    assert_ne!(waited.get("seq"), Some(&json!("0")), "{waited}");
+    served.stop()?;
+    Ok(())
+}
