@@ -295,13 +295,27 @@ impl Served {
     /// # Panics
     ///
     /// Panics when the binary's behaviour differs from the expectation.
-    pub fn stop(mut self) -> TestResult<Value> {
+    pub fn stop(self) -> TestResult<Value> {
+        let (report, root) = self.stop_keeping_state()?;
+        std::fs::remove_dir_all(root)?;
+        Ok(report)
+    }
+
+    /// Closes stdin, as [`Served::stop`], and keeps the state for a later boot.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a process, socket or file step fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the server exits with a failure.
+    pub fn stop_keeping_state(mut self) -> TestResult<(Value, PathBuf)> {
         drop(self.stdin.take());
         let mut line = String::new();
         self.stdout.read_line(&mut line)?;
         let status = self.child.wait()?;
         assert_eq!(status.code(), Some(0), "serve exited {status:?}");
-        std::fs::remove_dir_all(&self.root)?;
-        Ok(serde_json::from_str(&line)?)
+        Ok((serde_json::from_str(&line)?, self.root.clone()))
     }
 }

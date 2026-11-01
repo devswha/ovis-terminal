@@ -69,3 +69,29 @@ fn a_boot_after_a_crash_reports_only_the_programs_it_inherited() -> TestResult {
     third.stop()?;
     Ok(())
 }
+
+#[test]
+fn a_clean_stop_ends_the_programs_so_the_next_boot_recovers_nothing() -> TestResult {
+    let first = Served::start()?;
+    first.run_shell("shell")?;
+    let (report, root) = first.stop_keeping_state()?;
+    assert_eq!(
+        report.pointer("/report/panicked"),
+        Some(&json!("0")),
+        "{report}"
+    );
+    let second = Served::start_at(&root, &[])?;
+    assert_eq!(second.ready().pointer("/ready/recovery"), None);
+    let listed = second.ok(&["call", "terminal.list", "--params", "{}"])?;
+    let states: Vec<&Value> = listed
+        .get("terminals")
+        .and_then(Value::as_array)
+        .ok_or_else(|| listed.to_string())?
+        .iter()
+        .filter_map(|terminal| terminal.get("state"))
+        .collect();
+    assert_eq!(states.len(), 1, "{listed}");
+    assert_ne!(states.first(), Some(&&json!("live")), "{listed}");
+    second.stop()?;
+    Ok(())
+}

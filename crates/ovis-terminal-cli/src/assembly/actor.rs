@@ -13,8 +13,9 @@ use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity, Terminal
 use ovis_terminal_core::restart::{Control, RestartError};
 use ovis_terminal_core::terminals::{TerminalError, Terminals};
 use ovis_terminal_holder::unix::Holder;
-use ovis_terminal_protocol::errors::BoundaryError;
+use ovis_terminal_protocol::errors::{BoundaryError, OpId};
 use ovis_terminal_protocol::schema::common::Geometry;
+use ovis_terminal_protocol::schema::methods::server::StopScope;
 use ovis_terminal_protocol::schema::scalar::{Revision, TimestampMs};
 use ovis_terminal_server::streams::{AttachLane, StreamSetup};
 use tokio::sync::oneshot;
@@ -105,16 +106,30 @@ impl Runtime {
 
     fn close(self) -> Result<(), AssemblyError> {
         drop(self.live);
-        Arc::try_unwrap(self.control)
-            .map_err(|_| AssemblyError::stop("release the restart control")("still shared"))?
-            .close()
-            .map_err(AssemblyError::stop("release the terminal lifecycle"))?;
+        stop_control(&self.control)?;
+        drop(self.control);
         self.holder
             .shutdown()
             .map_err(AssemblyError::stop("shut the holder down"))?;
         self.geometry_log
             .close()
             .map_err(AssemblyError::stop("close the geometry log"))
+    }
+}
+
+/// Ends the programs this holder owns and releases control, without requiring the last
+/// handle: dispatched lanes may still hold the control while their tasks wind down.
+/// Programs a previous boot recorded and this holder never owned cannot be proven
+/// ended; control is then stopped without signalling anything further.
+fn stop_control(control: &Control) -> Result<(), AssemblyError> {
+    let op = || OpId::new(uuid::Uuid::now_v7().to_string());
+    let stopped = match control.stop(op(), StopScope::ControlAndPrograms) {
+        Err(RestartError::StopUnproven { .. }) => control.stop(op(), StopScope::ControlOnly),
+        other => other,
+    };
+    match stopped {
+        Ok(_) | Err(RestartError::ControlStopped) => Ok(()),
+        Err(error) => Err(AssemblyError::stop("stop the terminal lifecycle")(error)),
     }
 }
 
