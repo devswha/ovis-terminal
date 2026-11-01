@@ -779,6 +779,17 @@
             ],
             "description": "Close details, for `close`."
           },
+          "graphics_dropped": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphicsDroppedData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The dropped sequence, for `graphics_dropped`."
+          },
           "kind": {
             "$ref": "#/components/schemas/ControlKind",
             "description": "Record kind.",
@@ -1975,6 +1986,11 @@
           {
             "const": "close",
             "description": "The stream closed; no record or byte follows.",
+            "type": "string"
+          },
+          {
+            "const": "graphics_dropped",
+            "description": "A whole graphics sequence over its cap was dropped where this record stands.",
             "type": "string"
           }
         ]

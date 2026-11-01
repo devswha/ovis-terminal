@@ -14,6 +14,7 @@ pub mod bridge;
 pub mod commit_barrier;
 #[cfg(unix)]
 pub mod documents;
+pub mod graphics;
 #[cfg(unix)]
 pub mod handler;
 #[cfg(unix)]

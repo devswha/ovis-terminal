@@ -140,6 +140,8 @@ pub(crate) struct QaSeams {
     pub(crate) holder_poll_ms: Option<u64>,
     /// A FIFO the runtime opens, holding the control, before its next `terminal.run`.
     pub(crate) actor_hold: Option<PathBuf>,
+    /// The largest graphics sequence attach streams pass whole, instead of 8 MiB.
+    pub(crate) graphics_sequence_max_bytes: Option<u64>,
 }
 
 /// A QA seam named on a root that is not a QA fixture root.

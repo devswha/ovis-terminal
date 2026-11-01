@@ -131,6 +131,8 @@ pub(crate) enum Step {
     PtyExit(super::pty::PtyExit),
     /// Run planned quality gates in-process, or only the one `--inject` names.
     Gates(super::gates::Gates),
+    /// Read one attach stream until a marker and check its bytes and control records.
+    GraphicsTranscript(crate::fixture::graphics::GraphicsTranscript),
 }
 
 /// How a connection reaches the endpoint.

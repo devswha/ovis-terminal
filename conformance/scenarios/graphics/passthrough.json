@@ -1,0 +1,483 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "graphics/passthrough",
+  "title": "Graphics sequences pass through attach streams unmodified",
+  "todo": 83,
+  "closes": [
+    "GAP-151",
+    "GAP-154"
+  ],
+  "delivers": [
+    "IDEAL-118",
+    "IDEAL-121"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Real ovis-terminal serve runs a shell as t1; an interact viewer attaches and types the go key on its own lease, then the program writes a 3-chunk Kitty f=100 PNG (m=1, m=1, m=0) and a sixel; the viewer's DATA bytes are contiguous and contain both sequences byte-identical (SHA-256 of the found window equals that of the written bytes), with only the checkpoint as a control record.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "input.raw",
+                  "terminal.run",
+                  "terminal.screen"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "read go; printf '\\033_Ga=T,f=100,i=7,m=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB\\033\\\\\\033_Gm=1;CAYAAAAfFcSJAAAADUlEQVR42mNk+M9Q\\033\\\\\\033_Gm=0;DwADhgGAWjR9awAAAABJRU5ErkJggg==\\033\\\\'; printf '\\033P0;1;0q\"1;1;6;6#0;2;100;0;0#0~~~~~~-\\033\\\\'; printf 'image-done'; read done"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "graphics",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "viewer",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "viewer",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "image-viewer",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/role": "interact",
+                "/result/lease/lease_id": {
+                  "$capture": "lease"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "go",
+                "method": "input.raw",
+                "params": {
+                  "op_id": "$op:go",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "data_b64": "DQ==",
+                  "lease_id": "$value:lease"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "go": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "graphics_transcript": {
+            "conn": "viewer",
+            "until": "image-done",
+            "contains_b64": {
+              "kitty_png_3_chunks": "G19HYT1ULGY9MTAwLGk9NyxtPTE7aVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUFFQUFBQUIbXBtfR209MTtDQVlBQUFBZkZjU0pBQUFBRFVsRVFWUjQybU5rK005URtcG19HbT0wO0R3QURoZ0dBV2pSOWF3QUFBQUJKUlU1RXJrSmdnZz09G1w=",
+              "sixel": "G1AwOzE7MHEiMTsxOzY7NiMwOzI7MTAwOzA7MCMwfn5+fn5+LRtc"
+            },
+            "controls": [
+              "checkpoint",
+              "input_ready"
+            ]
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "--inject {\"graphics\":{\"bytes\":\"over_cap\"}}: serve runs with the QA seam --qa-graphics-sequence-max-bytes 4096 on a qa-fixture root, so crossing the cap does not depend on PTY throughput; the program writes text, a Kitty m=1 chunk of 4097 payload bytes plus its m=0 final chunk, then text; the viewer receives exactly one graphics_dropped record (too_large, kitty, limit 4096, sequence_bytes 4097, output_offset 13) between the two texts and none of the series' bytes, and terminal.screen shows the text joined on one row: the grid is what the VT drew from every raw byte. The advertised 8 MiB default is asserted on the stream config by unit tests.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled",
+            "qa_graphics_sequence_max_bytes": "4096"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "input.raw",
+                  "terminal.run",
+                  "terminal.screen"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "read go; printf 'before-mark'; printf '\\033_Ga=T,f=100,i=9,m=1;'; head -c 4097 /dev/zero | tr '\\000' A; printf '\\033\\\\'; printf '\\033_Gm=0;QQ\\033\\\\'; printf 'after-mark'; read done"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "graphics",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "viewer",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "viewer",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "image-viewer",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/role": "interact",
+                "/result/lease/lease_id": {
+                  "$capture": "lease"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "go",
+                "method": "input.raw",
+                "params": {
+                  "op_id": "$op:go",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "data_b64": "DQ==",
+                  "lease_id": "$value:lease"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "go": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "graphics_transcript": {
+            "conn": "viewer",
+            "inject": {
+              "graphics": {
+                "bytes": "over_cap"
+              }
+            },
+            "until": "after-mark",
+            "contains_b64": {
+              "text_around_the_drop": "YmVmb3JlLW1hcmthZnRlci1tYXJr"
+            },
+            "absent_b64": {
+              "kitty_introducer": "G19H",
+              "payload": "QUFBQUFBQUE=",
+              "final_chunk": "UVE="
+            },
+            "controls": [
+              "checkpoint",
+              "input_ready",
+              "graphics_dropped"
+            ],
+            "dropped": {
+              "/graphics_dropped/reason": "too_large",
+              "/graphics_dropped/protocol": "kitty",
+              "/graphics_dropped/limit_bytes": "4096",
+              "/graphics_dropped/sequence_bytes": "4097",
+              "/graphics_dropped/output_offset": "13"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "screen",
+                "method": "terminal.screen",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "format": "text"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "screen": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/lines": {
+                  "$contains": [
+                    "before-markafter-mark"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

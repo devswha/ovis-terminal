@@ -1,0 +1,34 @@
+# Adversarial pass, todo 83 (executor-run)
+# Each class is a way the passthrough could split, reorder, leak or over-buffer a graphics
+# sequence; the line names the shipped test that would fail if the class broke.
+
+1. Read boundary inside a sequence (every byte offset, single cut): a_kitty_chunk_series_is_released_whole_at_every_split,
+   an_iterm2_image_is_released_whole_at_every_split, a_sixel_is_released_whole_at_every_split (sha256 of released == written,
+   sequence present whole inside ONE gate output, raw accounting contiguous).
+2. Many random cuts, mixed text around repeated sequences (proptest): every_byte_arrives_in_order_wherever_reads_split.
+3. Arbitrary bytes, including stray ESC/CAN/SUB/BEL and half introducers (proptest over any::<u8>()):
+   arbitrary_output_is_never_lost_or_reordered (no byte lost, duplicated or reordered; raw spans contiguous).
+4. Look-alikes that are NOT graphics: DECRQSS "ESC P $ q" (intermediate before q), an OSC title containing "1337;File=",
+   APC "_X": other_strings_and_queries_pass_through_untouched (no graphics bytes counted, no notice).
+5. Query-filter interaction (answered DSR immediately before and after a series, cuts inside both):
+   an_answered_query_beside_an_image_is_still_removed (removal semantics unchanged; raw offsets still map).
+6. Text between Kitty chunks: text_between_chunks_ends_the_series_without_reordering (series closes, nothing reordered).
+7. Attach/resync fence while a unit is arriving: a_unit_still_arriving_stays_held_across_a_fence (never released as a prefix).
+8. Cap boundary: exactly cap admitted, cap+1 dropped: the_cap_is_admitted_and_one_byte_more_is_dropped_whole.
+9. Over cap for each protocol, at any split: every_protocol_over_its_cap_is_dropped_whole,
+   an_over_cap_sequence_is_dropped_whole_wherever_reads_split (exactly one notice, standing exactly where the sequence began,
+   zero payload bytes, sequence_bytes = cap+1, output_offset = raw start).
+10. Chunks after the drop point (m=1 ... m=0) are part of the dropped series: chunks_after_the_drop_belong_to_the_dropped_series.
+11. Unbounded buffering of a dropped series: a_dropped_series_never_holds_more_than_its_cap (nothing held after the drop while
+    4 KiB more arrive in 100-byte reads).
+12. Live socket, 8 MiB (= cap) image vs 4 MiB stream backlog: graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog
+    (no gap, sha256 equal). Over-cap 8 MiB+1 series on the socket: graphics_an_over_cap_series_is_replaced_by_one_typed_notice
+    (one graphics_dropped record, no payload, a late viewer's painted grid equals a VT fed every raw byte and a VT fed only the text).
+
+Mutants (each applied alone, run, restored; logs alongside):
+- mutant-kitty-series-never-continues.log: m=1 never read -> 6 tests fail.
+- mutant-drop-without-notice.log: drop without publishing the notice -> 5 tests fail.
+- mutant-no-graphics-backlog-bypass.log: backlog bound not raised for pending graphics -> 1 test fails (the 8 MiB socket test).
+
+Not covered by design (stated in the PR Risks): an iTerm2 multipart transfer (MultipartFile/FilePart) is not a recognised unit;
+a Kitty series interrupted by other output is measured per contiguous run.

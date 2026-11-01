@@ -27,7 +27,7 @@ impl Session<'_> {
     pub(crate) fn execute<'s>(&'s mut self, step: &'s Step) -> StepFuture<'s> {
         Box::pin(async move {
             match step {
-                Step::Serve(serve) => self.serve(serve.fixture).await,
+                Step::Serve(serve) => self.serve(serve).await,
                 Step::Connect(connect) => self.connect(connect).await,
                 Step::Hello(hello) => self.hello(hello).await,
                 Step::Send(send) => self.send(send).await,
@@ -64,6 +64,7 @@ impl Session<'_> {
                 | Step::PtyResize(_)
                 | Step::PtyExit(_) => self.pty(step).await,
                 Step::Gates(gates) => self.gates(gates).await,
+                Step::GraphicsTranscript(step) => self.graphics_transcript(step).await,
             }
         })
     }
