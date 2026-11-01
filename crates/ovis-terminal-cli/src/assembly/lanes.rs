@@ -19,6 +19,7 @@ use ovis_terminal_core::docs::DocChanged;
 use ovis_terminal_core::events::{Coordinator, EventData};
 use ovis_terminal_core::ops::{OperationEvent, OperationProducer};
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
+use ovis_terminal_core::subscriptions::LossRecord;
 use ovis_terminal_protocol::schema::scalar::EventSeq;
 use ovis_terminal_server::dispatch::Dispatcher;
 use ovis_terminal_services::worktrees::WorktreeEvent;
@@ -38,6 +39,20 @@ pub(super) enum ServedEvent {
     Doc(DocChanged),
     /// A checkout was created, opened or removed.
     Worktree(WorktreeEvent),
+    /// A subscription lost matching events.
+    Lost(LossRecord),
+}
+
+impl ServedEvent {
+    /// The event's own data, as an `event` notification carries it.
+    pub(super) fn payload(&self) -> Result<serde_json::Value, serde_json::Error> {
+        match self {
+            Self::Agent(event) => serde_json::to_value(event),
+            Self::Doc(event) => serde_json::to_value(event),
+            Self::Worktree(event) => serde_json::to_value(event),
+            Self::Lost(loss) => serde_json::to_value(loss),
+        }
+    }
 }
 
 impl EventData for ServedEvent {
@@ -46,6 +61,7 @@ impl EventData for ServedEvent {
             Self::Agent(event) => event.event_type(),
             Self::Doc(event) => event.event_type(),
             Self::Worktree(event) => event.event_type(),
+            Self::Lost(_) => "subscription.lost",
         }
     }
 
@@ -54,6 +70,7 @@ impl EventData for ServedEvent {
             Self::Agent(event) => event.at_sequence(seq),
             Self::Doc(event) => event.at_sequence(seq),
             Self::Worktree(event) => event.at_sequence(seq),
+            Self::Lost(_) => {}
         }
     }
 }
@@ -73,6 +90,12 @@ impl From<AgentStatusEvent> for ServedEvent {
 impl From<WorktreeEvent> for ServedEvent {
     fn from(event: WorktreeEvent) -> Self {
         Self::Worktree(event)
+    }
+}
+
+impl From<LossRecord> for ServedEvent {
+    fn from(loss: LossRecord) -> Self {
+        Self::Lost(loss)
     }
 }
 

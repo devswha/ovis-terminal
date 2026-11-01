@@ -108,6 +108,7 @@ pub(super) struct Generation {
     listener: ServerHandle,
     dispatch: Arc<Dispatch>,
     log: Arc<DispatchLog>,
+    events: Arc<super::events::EventLane>,
     handler: Arc<Handler>,
 }
 
@@ -137,11 +138,13 @@ impl Generation {
             })
             .await
             .map_err(AssemblyError::start("install the status feed"))?;
+        let events = super::events::EventLane::start(&log, identity, Arc::clone(&health))?;
         let dispatch = Arc::new(dispatch);
         let served = Arc::new(Served {
             actor: shared.actor.clone(),
             lane: Arc::clone(&shared.lane),
             dispatch: Arc::clone(&dispatch),
+            events: Arc::clone(&events),
             stop: shared.stop.clone(),
             restart: shared.restart.clone(),
         });
@@ -180,6 +183,7 @@ impl Generation {
             listener,
             dispatch,
             log,
+            events,
             handler,
         })
     }
@@ -211,6 +215,7 @@ impl Generation {
             .await
             .map_err(AssemblyError::stop("join dispatched operations"))?;
         drop((self.dispatch, self.handler));
+        self.events.shutdown()?;
         Ok(Ended {
             report,
             log: self.log,

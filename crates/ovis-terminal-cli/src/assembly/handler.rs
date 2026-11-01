@@ -33,7 +33,7 @@ use super::error::{refusal, worker_gone};
 use super::lanes::Dispatch;
 
 /// Methods served by the runtime actor and the lease table, besides the attach streams.
-pub(super) const ROUTED: [&str; 29] = [
+pub(super) const ROUTED: [&str; 32] = [
     "terminal.run",
     "terminal.list",
     "terminal.get",
@@ -63,6 +63,9 @@ pub(super) const ROUTED: [&str; 29] = [
     "turn.wait",
     "events.wait",
     "input.interrupt",
+    "events.subscribe",
+    "events.update",
+    "events.unsubscribe",
 ];
 
 type Lane = AttachLane<Arc<Directory>>;
@@ -77,6 +80,7 @@ pub(super) struct Served {
     pub(super) actor: Actor,
     pub(super) lane: Arc<Lane>,
     pub(super) dispatch: Arc<Dispatch>,
+    pub(super) events: Arc<super::events::EventLane>,
     pub(super) stop: super::restart::StopSignal,
     pub(super) restart: super::restart::RestartSignal,
 }
@@ -143,6 +147,7 @@ impl RequestHandler for Served {
             | "attach.release_geometry"
             | "attach.focus" => self.layout_or_lease(call).await,
             "turn.wait" | "events.wait" | "input.interrupt" => self.waited(call).await,
+            "events.subscribe" | "events.update" | "events.unsubscribe" => self.events(call).await,
             "attach.leases" => {
                 let params: AttachLeasesParams = decode(&call)?;
                 let leases = self

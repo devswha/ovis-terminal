@@ -14,6 +14,7 @@ mod credentials;
 mod directory;
 mod discovery;
 mod error;
+mod events;
 mod feed;
 mod generation;
 mod handler;
