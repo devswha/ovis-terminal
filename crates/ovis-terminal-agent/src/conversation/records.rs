@@ -6,11 +6,15 @@
 //! stamped with the status turn running when it arrived. Turn boundaries, outcome and
 //! times are read from the agent status turn, so they are absent rather than guessed
 //! when status did not record them. Nothing here reads terminal output.
+//!
+//! Every record is its own store entry, so the per-agent bounds (10,000 records,
+//! 8 MiB) are this module's own counters, and an append's receipt carries identities,
+//! counts and a digest instead of record bodies.
 
 mod error;
-mod log;
 mod read;
 mod service;
+mod store;
 mod turns;
 mod validate;
 

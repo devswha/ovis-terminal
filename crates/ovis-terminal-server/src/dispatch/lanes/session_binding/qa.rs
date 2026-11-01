@@ -6,7 +6,6 @@
 use std::sync::Arc;
 
 use ovis_terminal_agent::conversation::binding::{BindingService, Stores};
-use ovis_terminal_agent::conversation::records::RecordsService;
 use ovis_terminal_agent::status::{AgentStatusEvent, ProcessOwner, StatusService};
 use ovis_terminal_core::events::Coordinator;
 use ovis_terminal_core::ops::OperationProducer;
@@ -18,10 +17,9 @@ use ovis_terminal_server::dispatch::Dispatcher;
 use ovis_terminal_server::dispatch::lanes::agent_status::{
     AgentStatusLane, RegisterAgent, ResolvedTerminal, TerminalDirectory,
 };
-use ovis_terminal_server::dispatch::lanes::conversation_records::{
-    Conversation, ConversationRecordsLane,
+use ovis_terminal_server::dispatch::lanes::session_binding::{
+    Conversation, SessionBindingLane, UpdateSession,
 };
-use ovis_terminal_server::dispatch::lanes::session_binding::{SessionBindingLane, UpdateSession};
 use ovis_terminal_server::listen::ServerHandle;
 use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
@@ -81,19 +79,10 @@ fn lane() -> TestResult<Lane> {
     let agents = AgentStatusLane::new(Arc::clone(&directory), Arc::clone(&status));
     dispatch.register(RegisterAgent::new(&agents))?;
     let stores = Stores::new(&[("store", store_dir)])?;
-    let service = Arc::new(BindingService::new(
-        identity.runtime_id(),
-        Arc::clone(&status),
-        stores,
-    ));
-    let records = Arc::new(RecordsService::new(
-        identity.runtime_id(),
-        Arc::clone(&status),
-    ));
-    let binding = SessionBindingLane::new(Arc::clone(&directory), Arc::clone(&service));
+    let service = BindingService::new(identity.runtime_id(), Arc::clone(&status), stores);
+    let binding = SessionBindingLane::new(directory, Arc::new(service));
     dispatch.register(UpdateSession::new(&binding))?;
-    let conversation = ConversationRecordsLane::new(directory, service, records);
-    dispatch.register(Conversation::new(&conversation))?;
+    dispatch.register(Conversation::new(&binding))?;
     Ok(Lane {
         socket,
         status,

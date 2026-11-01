@@ -2,8 +2,8 @@ use proptest::prelude::*;
 use serde_json::{Value, json};
 
 use super::{
-    AppendRecordsParams, ContentBlock, ConversationSource, ConversationTurn, MessagePhase,
-    RecordBlock, RecordInput, RecordRole, TurnState, Unavailable, UnavailableReason,
+    AgentRecordsParams, AppendRecordsParams, ContentBlock, ConversationSource, ConversationTurn,
+    MessagePhase, RecordBlock, RecordInput, RecordRole, TurnState, Unavailable, UnavailableReason,
 };
 use crate::errors::{BoundaryError, ErrorData, ErrorKind};
 use crate::schema::ids::{AgentId, CallId, RecordId};
@@ -83,15 +83,18 @@ fn unknown_block_types_fields_roles_and_numeric_times_are_refused_at_their_path(
 }
 
 #[test]
-fn terminal_screen_is_no_conversation_source() -> Result<(), String> {
-    let read = |source: &str| json!({"target": {"name": "agent"}, "page": null, "source": source});
-    let records: AgentConversationParams =
-        serde_json::from_value(read("records")).map_err(|e| e.to_string())?;
-    assert_eq!(records.source, Some(ConversationSource::Records));
+fn no_conversation_read_takes_a_source_so_terminal_screen_is_refused_at_source()
+-> Result<(), String> {
+    let screen = json!({"target": {"name": "agent"}, "source": "terminal_screen"});
     assert_eq!(
-        refused_at::<AgentConversationParams>(read("terminal_screen"))?,
+        refused_at::<AgentConversationParams>(screen.clone())?,
         "source"
     );
+    assert_eq!(refused_at::<AgentRecordsParams>(screen)?, "source");
+    let records: AgentRecordsParams = serde_json::from_value(json!({"target": {"name": "agent"},
+        "cursor": {"history_id": "h", "revision": "1", "position": "2"}}))
+    .map_err(|e| e.to_string())?;
+    assert!(records.cursor.is_some());
     Ok(())
 }
 

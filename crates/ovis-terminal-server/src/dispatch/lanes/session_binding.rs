@@ -1,18 +1,19 @@
-//! `agent.update_session` (plan todo 36).
+//! `agent.update_session` and `agent.conversation` (plan todo 36).
 //!
-//! The method resolves its explicit target through the owning terminal directory and
-//! runs inside one commit unit: a binding change commits its history record, agent row
-//! and `agent.session_bound` event together. Its history is read through
-//! `agent.conversation` in the conversation records lane.
+//! Both resolve their explicit target through the owning terminal directory and run
+//! inside one commit unit: a binding change commits its history record, agent row and
+//! `agent.session_bound` event together, and a read records the revision it observed.
 
 use std::sync::Arc;
 
-use ovis_terminal_agent::conversation::binding::{BindingService, Update};
+use ovis_terminal_agent::conversation::binding::{BindingService, Read, Update};
 use ovis_terminal_agent::status::AgentStatusEvent;
 use ovis_terminal_authz::{Action, Session};
 use ovis_terminal_core::events::{EventData, SnapshotProducer};
 use ovis_terminal_core::ops::{OperationEvent, OperationSnapshot};
-use ovis_terminal_protocol::schema::methods::agent::AgentUpdateSessionParams;
+use ovis_terminal_protocol::schema::methods::agent::{
+    AgentConversationParams, AgentUpdateSessionParams,
+};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -37,7 +38,19 @@ impl<T: TerminalDirectory> SessionBindingLane<T> {
 #[derive(Debug)]
 pub struct UpdateSession<T>(Arc<SessionBindingLane<T>>);
 
+/// `agent.conversation`: one page of the bound history at its current revision.
+#[derive(Debug)]
+pub struct Conversation<T>(Arc<SessionBindingLane<T>>);
+
 impl<T> UpdateSession<T> {
+    /// The method over `lane`'s shared state.
+    #[must_use]
+    pub fn new(lane: &Arc<SessionBindingLane<T>>) -> Self {
+        Self(Arc::clone(lane))
+    }
+}
+
+impl<T> Conversation<T> {
     /// The method over `lane`'s shared state.
     #[must_use]
     pub fn new(lane: &Arc<SessionBindingLane<T>>) -> Self {
@@ -79,6 +92,43 @@ where
         let service = Arc::clone(&self.0.service);
         execution
             .commit_unit(move |snapshot: &_| service.update_session(snapshot, update))
+            .await
+    }
+}
+
+impl<T, D, P> Method<D, P> for Conversation<T>
+where
+    T: TerminalDirectory,
+    D: EventData
+        + From<OperationEvent>
+        + From<AgentStatusEvent>
+        + Clone
+        + Serialize
+        + DeserializeOwned
+        + Send
+        + 'static,
+    P: SnapshotProducer + Send + Sync + 'static,
+    P::Sections: AsRef<OperationSnapshot> + DeserializeOwned,
+{
+    const NAME: &'static str = "agent.conversation";
+    type Params = AgentConversationParams;
+
+    fn resolve(&self, params: &Self::Params, _: &Session) -> Result<Access, DispatchError> {
+        terminal_access(&self.0.terminals, &params.target, Action::Read)
+    }
+
+    async fn run(
+        &self,
+        params: Self::Params,
+        execution: Execution<D, P>,
+    ) -> Result<Completed, DispatchError> {
+        let terminal = super::agent_status::terminal(&execution)?;
+        let mut read = Read::new(terminal);
+        read.cursor = params.cursor;
+        read.page = params.page;
+        let service = Arc::clone(&self.0.service);
+        execution
+            .commit_unit(move |snapshot: &_| service.conversation(snapshot, &read))
             .await
     }
 }

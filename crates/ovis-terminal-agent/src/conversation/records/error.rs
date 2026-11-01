@@ -34,7 +34,7 @@ impl Violation {
         match self {
             Self::Empty => "send at least one record with at least one block, or turn metadata",
             Self::Bounds => {
-                "keep ids and names within 256 bytes, texts within 64 KiB, 32 blocks per record and 64 records per append"
+                "keep record ids within 128 bytes, call ids, names and turn labels within 256, texts within 64 KiB, records within 256 KiB and 32 blocks, appends within 64 records"
             }
             Self::DuplicateRecord => "give every record a new record_id",
             Self::DuplicateCall => "give every tool call a new call_id",
@@ -129,7 +129,7 @@ impl RecordsError {
             Self::NotOwner => "report with the token handed to the terminal's current program",
             Self::Unregistered => "register the agent with agent.register before reporting records",
             Self::InvalidRecords { violation, .. } => violation.hint(),
-            Self::TooLarge => "the agent keeps at most 10000 records and 8 MiB of them",
+            Self::TooLarge => "an agent keeps at most 10000 records and 8 MiB of them",
             Self::Unavailable(_) => {
                 "the agent reports no structured records; show its terminal output as terminal output"
             }

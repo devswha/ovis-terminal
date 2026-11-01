@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::conversation_records::{
-    AppendRecordsParams, ConversationSource, ConversationTurn, MessagePhase, RecordBlock,
+    AgentRecordsParams, AppendRecordsParams, ConversationTurn, MessagePhase, RecordBlock,
     RecordsAppended, ToolLink,
 };
 use crate::domain::session_binding::{ConversationCursor, SessionChange};
@@ -231,9 +231,6 @@ pub struct AgentConversationParams {
     /// Position bound to a history identity and revision; absent starts the active chain.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cursor: Option<ConversationCursor>,
-    /// Records to read; absent reads the bound transcript. Terminal output is no source.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source: Option<ConversationSource>,
 }
 
 /// One conversation record with provenance.
@@ -330,6 +327,8 @@ pub(crate) const METHODS: &[MethodSpec] = &[
     "Read conversation records with provenance.", [CursorExpired, HistoryChanged, ConversationUnavailable, FrameTooLarge]},
     method! {"agent.append_records", Mutation, Terminal, AppendRecordsParams => RecordsAppended,
     "Append typed conversation records as the owning process.", [NotOwner, InvalidRecords, TooLarge]},
+    method! {"agent.records", Query, Terminal, AgentRecordsParams => AgentConversationResult,
+    "Read the typed records and turns an agent's owning process reported.", [CursorExpired, HistoryChanged, ConversationUnavailable]},
     method! {"agent.history", Query, Untargeted, AgentHistoryParams => AgentHistoryResult,
     "List sessions found in authorized provider stores.", [StoreUnavailable]},
 ];

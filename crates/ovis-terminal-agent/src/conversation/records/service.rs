@@ -7,14 +7,20 @@ use ovis_terminal_core::events::{EventError, ResourceId};
 use ovis_terminal_core::ops::{Completion, OperationError};
 use ovis_terminal_core::registry::{RuntimeId, TerminalId};
 use ovis_terminal_protocol::domain::conversation_records::{
-    AppendFacts, RecordInput, RecordsAppended, TurnMetadata,
+    AppendFacts, ConversationTurn, RecordInput, RecordsAppended, RecordsDigest, TurnMetadata,
 };
 use ovis_terminal_protocol::schema::ids::ProcessToken;
-use ovis_terminal_protocol::schema::scalar::{HistoryRevision, TurnNumber};
-use ovis_terminal_store::Snapshot;
+use ovis_terminal_protocol::schema::scalar::{
+    ByteCount, HistoryRevision, RecordCount, RecordPosition, TurnNumber,
+};
+use ovis_terminal_store::{CasWrite, Snapshot, Version};
+use sha2::{Digest as _, Sha256};
 
-use super::log::{RecordLog, StoredLog};
-use super::{RecordsError, Violation, validate};
+use super::store::{self, BYTE_LIMIT, Entry, Head, Keys, RECORD_LIMIT};
+use super::turns::{TurnFacts, running};
+use super::validate::{self, Accepted, Log, NAME_LIMIT};
+use super::{RecordsError, Violation};
+use crate::status::row::Row;
 use crate::status::{AgentStatusEvent, StatusError, StatusService};
 
 /// An `agent.append_records` by the process holding `token`.
@@ -68,25 +74,97 @@ pub(super) fn settle<D>(
     }
 }
 
-/// Applies reported turn metadata to the running turn.
+/// Checks reported turn metadata: bounded labels, and a running turn to carry them.
 fn metadata(
-    log: &mut RecordLog,
-    meta: Option<TurnMetadata>,
+    meta: Option<&TurnMetadata>,
     running: Option<TurnNumber>,
-) -> Result<(), RecordsError> {
+) -> Result<Option<TurnNumber>, RecordsError> {
     let Some(meta) = meta else {
-        return Ok(());
+        return Ok(None);
     };
-    let turn = running
-        .ok_or_else(|| RecordsError::invalid("turn".to_owned(), Violation::NoRunningTurn))?;
-    let facts = log.turn(turn);
-    if meta.model.is_some() {
-        facts.model = meta.model;
+    for (field, label) in [
+        ("turn.model", &meta.model),
+        ("turn.reasoning", &meta.reasoning),
+    ] {
+        if label
+            .as_ref()
+            .is_some_and(|label| label.is_empty() || label.len() > NAME_LIMIT)
+        {
+            return Err(RecordsError::invalid(field.to_owned(), Violation::Bounds));
+        }
     }
-    if meta.reasoning.is_some() {
-        facts.reasoning = meta.reasoning;
+    running
+        .map(Some)
+        .ok_or_else(|| RecordsError::invalid("turn".to_owned(), Violation::NoRunningTurn))
+}
+
+/// Folds status facts, and reported metadata, into the entries of the turns this append
+/// touches and of the turn status last finished; returns their writes and the views of
+/// the touched turns.
+fn turns(
+    (snapshot, keys, row): (&Snapshot, &Keys, &Row),
+    (touched, meta): (Option<TurnNumber>, Option<TurnMetadata>),
+) -> Result<(Vec<CasWrite>, Vec<ConversationTurn>), RecordsError> {
+    let ended = row.status.last_turn.as_ref().map(|turn| turn.turn);
+    let mut writes = Vec::new();
+    let mut views = Vec::new();
+    let mut numbers: Vec<TurnNumber> = touched.into_iter().chain(ended).collect();
+    numbers.dedup();
+    for turn in numbers {
+        let entry = Entry::<TurnFacts>::read(snapshot, keys.turn(turn))?;
+        let is_touched = Some(turn) == touched;
+        let Some(mut facts) = entry
+            .value
+            .clone()
+            .or_else(|| is_touched.then(TurnFacts::default))
+        else {
+            continue;
+        };
+        if let Some(meta) = meta.as_ref().filter(|_| is_touched) {
+            if meta.model.is_some() {
+                facts.model.clone_from(&meta.model);
+            }
+            if meta.reasoning.is_some() {
+                facts.reasoning.clone_from(&meta.reasoning);
+            }
+        }
+        facts.observe(turn, row);
+        if entry.value.as_ref() != Some(&facts) {
+            writes.push(entry.write(&facts)?);
+        }
+        if is_touched {
+            views.push(facts.view(turn, row));
+        }
     }
-    Ok(())
+    Ok((writes, views))
+}
+
+/// `sha256:` and the hex digest of the appended records' stored encodings, in order.
+fn digest(accepted: &[Accepted]) -> RecordsDigest {
+    let mut hasher = Sha256::new();
+    for record in accepted {
+        hasher.update(&record.bytes);
+    }
+    RecordsDigest::new(format!("sha256:{:x}", hasher.finalize()))
+}
+
+/// The writes of the accepted records and of their identity and call index entries.
+fn record_writes(
+    keys: &Keys,
+    head: &Head,
+    accepted: &[Accepted],
+) -> Result<Vec<CasWrite>, RecordsError> {
+    let mut writes = Vec::new();
+    for (position, record) in (head.count..).zip(accepted) {
+        let key = keys.record(position);
+        writes.push(store::put(key, Version::ABSENT, &record.bytes));
+        let id = &record.record.record_id;
+        writes.push(store::create(keys.id(id), &RecordPosition::new(position))?);
+        for call in &record.calls {
+            writes.push(store::create(keys.call(call), id)?);
+        }
+    }
+    Ok(writes)
 }
 
 impl RecordsService {
@@ -97,6 +175,9 @@ impl RecordsService {
     }
 
     /// Appends typed records, and metadata of the running turn, as the owning process.
+    ///
+    /// Each record is stored as its own entry; the result names them by identity, count
+    /// and digest, so the operation receipt stays small whatever they hold.
     ///
     /// # Errors
     ///
@@ -127,41 +208,65 @@ impl RecordsService {
                     Violation::Empty,
                 ));
             }
-            let store = StoredLog::read(snapshot, self.runtime, &agent.agent_id)?;
-            let mut log = store.log.clone().unwrap_or_else(RecordLog::empty);
-            let running = super::turns::running(&stored.row);
-            let records = validate::append(&log, &append.records, running)?;
-            let mut touched: Vec<TurnNumber> = records.iter().filter_map(|r| r.turn).collect();
-            touched.extend(running.filter(|_| append.turn.is_some()));
-            touched.sort_unstable();
-            touched.dedup();
-            metadata(&mut log, append.turn, running)?;
-            for turn in &touched {
-                log.turn(*turn);
-            }
-            for (turn, facts) in &mut log.turns {
-                facts.observe(*turn, &stored.row);
-            }
-            log.records.extend(records.iter().cloned());
-            log.revision = HistoryRevision::new(log.revision.get().saturating_add(1));
-            let turns = touched
+            let keys = Keys::new(self.runtime, &agent.agent_id);
+            let head_entry = Entry::<Head>::read(snapshot, keys.head())?;
+            let mut head = head_entry.value.clone().unwrap_or_else(Head::empty);
+            let running = running(&stored.row);
+            let log = Log {
+                snapshot,
+                keys: &keys,
+                head: &head,
+            };
+            let accepted = validate::append(&log, &append.records, running)?;
+            let meta_turn = metadata(append.turn.as_ref(), running)?;
+            let large = |_| RecordsError::TooLarge;
+            let added = accepted
                 .iter()
-                .filter_map(|turn| Some(log.turns.get(turn)?.view(*turn, &stored.row)))
-                .collect();
+                .map(|r| u64::try_from(r.bytes.len()))
+                .sum::<Result<u64, _>>()
+                .map_err(large)?;
+            let count = head
+                .count
+                .saturating_add(u64::try_from(accepted.len()).map_err(large)?);
+            let bytes = head.bytes.saturating_add(added);
+            if count > RECORD_LIMIT || bytes > BYTE_LIMIT {
+                return Err(RecordsError::TooLarge);
+            }
+            let touched = meta_turn.or_else(|| running.filter(|_| !accepted.is_empty()));
+            let (turn_writes, views) =
+                turns((snapshot, &keys, &stored.row), (touched, append.turn))?;
+            let writes = record_writes(&keys, &head, &accepted)?;
+            let first = head.count;
+            head.count = count;
+            head.bytes = bytes;
+            head.revision = HistoryRevision::new(head.revision.get().saturating_add(1));
+            if let Some(last) = accepted.last() {
+                head.last = Some(last.record.record_id.clone());
+            }
             let appended = RecordsAppended::from(AppendFacts {
                 agent_id: agent.agent_id.clone(),
                 process_incarnation: owner.process,
-                history_id: log.history_id.clone(),
-                revision: log.revision,
-                records,
-                turns,
+                history_id: head.history_id.clone(),
+                revision: head.revision,
+                record_ids: accepted
+                    .iter()
+                    .map(|r| r.record.record_id.clone())
+                    .collect(),
+                first_position: RecordPosition::new(first),
+                total_records: RecordCount::new(count),
+                total_bytes: ByteCount::new(bytes),
+                digest: digest(&accepted),
+                turns: views,
             });
-            Ok(Completion::new(serde_json::to_value(&appended)?)
-                .write(store.write(&log)?)
-                .event(
-                    D::from(AgentStatusEvent::RecordsAppended(Box::new(appended))),
-                    vec![ResourceId::Terminal(owner.terminal)],
-                ))
+            let mut completion =
+                Completion::new(serde_json::to_value(&appended)?).write(head_entry.write(&head)?);
+            for write in writes.into_iter().chain(turn_writes) {
+                completion = completion.write(write);
+            }
+            Ok(completion.event(
+                D::from(AgentStatusEvent::RecordsAppended(Box::new(appended))),
+                vec![ResourceId::Terminal(owner.terminal)],
+            ))
         })())
     }
 }

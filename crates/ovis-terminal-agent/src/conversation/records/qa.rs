@@ -2,6 +2,7 @@
 //! coordinator, operation ledger and agent status service.
 
 mod append;
+mod bounds;
 mod refusals;
 mod split;
 mod turns;
@@ -11,7 +12,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use ovis_terminal_authz::PrincipalId;
-use ovis_terminal_core::events::{Coordinator, Subscription};
+use ovis_terminal_core::events::{Coordinator, EventError, Subscription};
 use ovis_terminal_core::ops::{
     Completion, Context, OperationError, OperationProducer, OperationSnapshot, Operations, Request,
 };
@@ -32,7 +33,7 @@ use ovis_terminal_store::{Snapshot, Store, StoreOptions};
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use super::{Append, RecordsService};
+use super::{Append, RecordsError, RecordsService};
 use crate::conversation::binding::Read;
 use crate::status::{AgentStatusEvent, ProcessOwner, Register, Report, StatusService};
 
@@ -200,18 +201,36 @@ impl Harness {
         self.append_as((TOKEN, records), None)
     }
 
+    /// Reads like `agent.records`: from the latest committed snapshot, no receipt.
+    fn read(
+        &self,
+        read: &Read,
+    ) -> Result<Result<AgentConversationResult, RecordsError>, Box<dyn Error>> {
+        Ok(self
+            .core
+            .read_view(|snapshot| Ok::<_, EventError>(self.records.read(snapshot, read)))?)
+    }
+
     fn read_at(
         &self,
         id: u64,
         cursor: Option<ConversationCursor>,
-    ) -> Result<OpRecord, Box<dyn Error>> {
+    ) -> Result<Result<AgentConversationResult, RecordsError>, Box<dyn Error>> {
         let mut read = Read::new(terminal(id)?);
         read.cursor = cursor;
-        self.run(|snapshot| self.records.conversation(snapshot, &read))
+        self.read(&read)
+    }
+
+    /// The refusal a read of terminal `id` returns.
+    fn read_refusal(&self, id: u64) -> Result<ErrorData, Box<dyn Error>> {
+        match self.read_at(id, None)? {
+            Err(error) => Ok(error.error_data()),
+            Ok(page) => Err(format!("expected a refusal, got {page:?}").into()),
+        }
     }
 
     fn page(&self) -> Result<AgentConversationResult, Box<dyn Error>> {
-        result(&self.read_at(AGENT, None)?)
+        Ok(self.read_at(AGENT, None)??)
     }
 }
 
@@ -221,4 +240,16 @@ fn ids(page: &AgentConversationResult) -> Vec<&str> {
         .iter()
         .map(|record| record.record_id.as_str())
         .collect()
+}
+
+/// The digest an append reports for `records`, recomputed from what a read returns.
+fn digest_of(
+    records: &[ovis_terminal_protocol::schema::methods::agent::ConversationRecord],
+) -> Result<String, Box<dyn Error>> {
+    use sha2::{Digest as _, Sha256};
+    let mut hasher = Sha256::new();
+    for record in records {
+        hasher.update(serde_json::to_vec(record)?);
+    }
+    Ok(format!("sha256:{:x}", hasher.finalize()))
 }

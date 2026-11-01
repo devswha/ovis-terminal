@@ -102,17 +102,6 @@
             ],
             "description": "Continuation from a previous page."
           },
-          "source": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ConversationSource"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Records to read; absent reads the bound transcript. Terminal output is no source."
-          },
           "target": {
             "$ref": "#/components/schemas/Target",
             "description": "Terminal of the agent."
@@ -328,6 +317,42 @@
         "required": [
           "note_id",
           "outcome"
+        ],
+        "type": "object"
+      },
+      "AgentRecordsParams": {
+        "additionalProperties": false,
+        "description": "Parameters of `agent.records`.",
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationCursor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Position bound to the records' identity and revision; absent starts at the first."
+          },
+          "page": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PageRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Continuation from a previous page."
+          },
+          "target": {
+            "$ref": "#/components/schemas/Target",
+            "description": "Terminal of the agent."
+          }
+        },
+        "required": [
+          "target"
         ],
         "type": "object"
       },
@@ -1784,13 +1809,8 @@
         "type": "object"
       },
       "ConversationSource": {
-        "description": "Where `agent.conversation` reads records from.",
+        "description": "The structured source a conversation read consulted.",
         "oneOf": [
-          {
-            "const": "transcript",
-            "description": "The transcript file bound with `agent.update_session`.",
-            "type": "string"
-          },
           {
             "const": "records",
             "description": "Typed records the owning process reported with `agent.append_records`.",
@@ -6906,11 +6926,19 @@
         "type": "string"
       },
       "RecordsAppended": {
-        "description": "Payload of `agent.records_appended` and result of `agent.append_records`.",
+        "description": "Payload of `agent.records_appended` and result of `agent.append_records`.\n\nIt names the appended records by identity, count and digest; their bodies are read\nwith `agent.records`, so the receipt stays small whatever the records hold.",
         "properties": {
           "agent_id": {
             "$ref": "#/components/schemas/AgentId",
             "description": "Agent whose records grew."
+          },
+          "digest": {
+            "$ref": "#/components/schemas/RecordsDigest",
+            "description": "Digest of the appended records exactly as `agent.records` returns them."
+          },
+          "first_position": {
+            "$ref": "#/components/schemas/RecordPosition",
+            "description": "Position of the first appended record."
           },
           "history_id": {
             "$ref": "#/components/schemas/HistoryId",
@@ -6920,16 +6948,24 @@
             "$ref": "#/components/schemas/Incarnation",
             "description": "Program incarnation that reported them."
           },
-          "records": {
-            "description": "The appended records as every later read returns them.",
+          "record_ids": {
+            "description": "Identities of the appended records, in order.",
             "items": {
-              "$ref": "#/components/schemas/ConversationRecord"
+              "$ref": "#/components/schemas/RecordId"
             },
             "type": "array"
           },
           "revision": {
             "$ref": "#/components/schemas/HistoryRevision",
             "description": "History revision after the append."
+          },
+          "total_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Stored bytes of the agent's records after the append."
+          },
+          "total_records": {
+            "$ref": "#/components/schemas/RecordCount",
+            "description": "Records the agent holds after the append."
           },
           "turns": {
             "description": "Turns the appended records or metadata belong to.",
@@ -6944,10 +6980,18 @@
           "process_incarnation",
           "history_id",
           "revision",
-          "records",
+          "record_ids",
+          "first_position",
+          "total_records",
+          "total_bytes",
+          "digest",
           "turns"
         ],
         "type": "object"
+      },
+      "RecordsDigest": {
+        "description": "`sha256:` and the lowercase hex SHA-256 of the appended records' stored encoding.",
+        "type": "string"
       },
       "RecoveryEvidence": {
         "description": "One recorded recovery fact; reads never clear it.",
@@ -17783,21 +17827,6 @@
           }
         },
         {
-          "name": "source",
-          "required": false,
-          "schema": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ConversationSource"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Records to read; absent reads the bound transcript. Terminal output is no source."
-          }
-        },
-        {
           "name": "target",
           "required": true,
           "schema": {
@@ -17963,6 +17992,124 @@
       "x-effect": "mutation",
       "x-params": {
         "$ref": "#/components/schemas/AppendRecordsParams"
+      },
+      "x-targeting": "terminal"
+    },
+    {
+      "errors": [
+        {
+          "code": -32602,
+          "message": "invalid_params"
+        },
+        {
+          "code": -32000,
+          "message": "unavailable"
+        },
+        {
+          "code": -32603,
+          "message": "internal"
+        },
+        {
+          "code": -32000,
+          "message": "ambiguous_target"
+        },
+        {
+          "code": -32000,
+          "message": "stale_target"
+        },
+        {
+          "code": -32000,
+          "message": "machine_unreachable"
+        },
+        {
+          "code": -32000,
+          "message": "not_found"
+        },
+        {
+          "code": -32000,
+          "message": "unauthenticated"
+        },
+        {
+          "code": -32000,
+          "message": "forbidden"
+        },
+        {
+          "code": -32000,
+          "message": "deadline_exceeded"
+        },
+        {
+          "code": -32000,
+          "message": "cancelled"
+        },
+        {
+          "code": -32000,
+          "message": "backpressure"
+        },
+        {
+          "code": -32000,
+          "message": "cursor_expired"
+        },
+        {
+          "code": -32000,
+          "message": "history_changed"
+        },
+        {
+          "code": -32000,
+          "message": "conversation_unavailable"
+        }
+      ],
+      "name": "agent.records",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "cursor",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationCursor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Position bound to the records' identity and revision; absent starts at the first."
+          }
+        },
+        {
+          "name": "page",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PageRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Continuation from a previous page."
+          }
+        },
+        {
+          "name": "target",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/Target",
+            "description": "Terminal of the agent."
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/AgentConversationResult"
+        }
+      },
+      "summary": "Read the typed records and turns an agent's owning process reported.",
+      "x-effect": "query",
+      "x-params": {
+        "$ref": "#/components/schemas/AgentRecordsParams"
       },
       "x-targeting": "terminal"
     },

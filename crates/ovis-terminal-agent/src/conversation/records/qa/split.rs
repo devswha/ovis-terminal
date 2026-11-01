@@ -50,16 +50,20 @@ fn pages_of_two_reassemble_the_log_and_an_older_cursor_is_refused_as_an_append()
     read.page = Some(serde_json::from_value::<PageRequest>(
         json!({"after": null, "limit": 2}),
     )?);
-    let first: AgentConversationResult = result(&h.run(|s| h.records.conversation(s, &read))?)?;
+    let first = h.read(&read)??;
     read.cursor.clone_from(&first.next_cursor);
-    let second: AgentConversationResult = result(&h.run(|s| h.records.conversation(s, &read))?)?;
+    let second = h.read(&read)??;
 
     assert_eq!(ids(&first), ["u1", "a1"]);
     assert_eq!(ids(&second), ["u2", "a2"]);
     assert_eq!(second.next_cursor, None);
 
     h.append(&json!([text("u3", "user", "more")]))?;
-    let stale = refusal(&h.run(|s| h.records.conversation(s, &read))?)?.clone();
+    let stale = h
+        .read(&read)?
+        .err()
+        .ok_or("expected history_changed")?
+        .error_data();
     assert_eq!(stale.kind.token(), "history_changed");
     let current = stale.history.ok_or("history")?;
     assert_eq!(current.revision.get(), 2);

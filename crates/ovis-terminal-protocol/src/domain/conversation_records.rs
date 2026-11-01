@@ -5,31 +5,64 @@
 //! runtime keeps their order and identities, links every tool result to the record that
 //! made its call, and stamps each record with the status turn that was running when it
 //! arrived. Provider stores are parsed by their clients; terminal output is never a
-//! source of records.
+//! source of records. `agent.records` serves them outside the operation ledger, and an
+//! append's receipt names what it stored by identity, count and digest, never by body.
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::domain::session_binding::ConversationCursor;
 use crate::errors::OpId;
-use crate::schema::common::Target;
+use crate::schema::common::{PageRequest, Target};
 use crate::schema::ids::{AgentId, CallId, HistoryId, ProcessToken, RecordId};
-use crate::schema::methods::agent::ConversationRecord;
 use crate::schema::methods::status::TurnOutcome;
-use crate::schema::records::SessionRef;
 use crate::schema::scalar::{
-    EventSeq, HistoryRevision, Incarnation, OpenEnum, TimestampMs, TurnNumber,
+    ByteCount, EventSeq, HistoryRevision, Incarnation, OpenEnum, RecordCount, RecordPosition,
+    TimestampMs, TurnNumber,
 };
 
-/// Where `agent.conversation` reads records from.
+/// The structured source a conversation read consulted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ConversationSource {
-    /// The transcript file bound with `agent.update_session`.
-    Transcript,
     /// Typed records the owning process reported with `agent.append_records`.
     Records,
+}
+
+/// Parameters of `agent.records`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct AgentRecordsParams {
+    /// Terminal of the agent.
+    pub target: Target,
+    /// Continuation from a previous page.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page: Option<PageRequest>,
+    /// Position bound to the records' identity and revision; absent starts at the first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cursor: Option<ConversationCursor>,
+}
+
+/// `sha256:` and the lowercase hex SHA-256 of the appended records' stored encoding.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(transparent)]
+pub struct RecordsDigest(String);
+
+impl RecordsDigest {
+    /// Wraps a `sha256:<hex>` digest.
+    #[must_use]
+    pub const fn new(value: String) -> Self {
+        Self(value)
+    }
+
+    /// Borrows the digest text.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 /// Who a record speaks for.
@@ -226,6 +259,9 @@ impl ConversationTurn {
 }
 
 /// Payload of `agent.records_appended` and result of `agent.append_records`.
+///
+/// It names the appended records by identity, count and digest; their bodies are read
+/// with `agent.records`, so the receipt stays small whatever the records hold.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
 pub struct RecordsAppended {
@@ -237,8 +273,16 @@ pub struct RecordsAppended {
     pub history_id: HistoryId,
     /// History revision after the append.
     pub revision: HistoryRevision,
-    /// The appended records as every later read returns them.
-    pub records: Vec<ConversationRecord>,
+    /// Identities of the appended records, in order.
+    pub record_ids: Vec<RecordId>,
+    /// Position of the first appended record.
+    pub first_position: RecordPosition,
+    /// Records the agent holds after the append.
+    pub total_records: RecordCount,
+    /// Stored bytes of the agent's records after the append.
+    pub total_bytes: ByteCount,
+    /// Digest of the appended records exactly as `agent.records` returns them.
+    pub digest: RecordsDigest,
     /// Turns the appended records or metadata belong to.
     pub turns: Vec<ConversationTurn>,
 }
@@ -258,8 +302,16 @@ pub struct AppendFacts {
     pub history_id: HistoryId,
     /// Revision after the append.
     pub revision: HistoryRevision,
-    /// Appended records.
-    pub records: Vec<ConversationRecord>,
+    /// Appended record identities.
+    pub record_ids: Vec<RecordId>,
+    /// Position of the first.
+    pub first_position: RecordPosition,
+    /// Records held after the append.
+    pub total_records: RecordCount,
+    /// Stored bytes held after the append.
+    pub total_bytes: ByteCount,
+    /// Digest of the appended records.
+    pub digest: RecordsDigest,
     /// Their turns.
     pub turns: Vec<ConversationTurn>,
 }
@@ -271,63 +323,19 @@ impl From<AppendFacts> for RecordsAppended {
             process_incarnation: facts.process_incarnation,
             history_id: facts.history_id,
             revision: facts.revision,
-            records: facts.records,
+            record_ids: facts.record_ids,
+            first_position: facts.first_position,
+            total_records: facts.total_records,
+            total_bytes: facts.total_bytes,
+            digest: facts.digest,
             turns: facts.turns,
         }
     }
 }
 
-/// Why no structured conversation can be read.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-#[non_exhaustive]
-pub enum UnavailableReason {
-    /// The terminal runs a plain program with no registered agent.
-    NoAgent,
-    /// The agent never reported typed records.
-    NotReported,
-}
+mod unavailable;
 
-/// What a conversation read consulted before finding nothing structured.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[non_exhaustive]
-pub struct Provenance {
-    /// The source that was read.
-    pub source: OpenEnum<ConversationSource>,
-    /// Agent of the terminal's current program; null for a plain program.
-    pub agent_id: Option<AgentId>,
-    /// Session that agent declared, when it declared one.
-    pub session: Option<SessionRef>,
-}
-
-/// Data of a `conversation_unavailable` refusal: the reason and what was consulted.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[non_exhaustive]
-pub struct Unavailable {
-    /// Why nothing structured exists.
-    pub reason: OpenEnum<UnavailableReason>,
-    /// What the read consulted.
-    pub provenance: Provenance,
-}
-
-impl Unavailable {
-    /// `reason`, found reading `source` for `agent_id` bound to `session`.
-    #[must_use]
-    pub fn new(
-        reason: UnavailableReason,
-        source: ConversationSource,
-        (agent_id, session): (Option<AgentId>, Option<SessionRef>),
-    ) -> Self {
-        Self {
-            reason: OpenEnum::Known(reason),
-            provenance: Provenance {
-                source: OpenEnum::Known(source),
-                agent_id,
-                session,
-            },
-        }
-    }
-}
+pub use unavailable::{Provenance, Unavailable, UnavailableReason};
 
 #[cfg(test)]
 mod tests;

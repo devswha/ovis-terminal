@@ -47,13 +47,13 @@ fn a_dangling_tool_result_is_refused_and_appends_nothing() -> TestResult {
         refused_at(&refused)?,
         kind_at("invalid_records", "params.records[1].blocks[1].call_id")
     );
-    let unread = refusal(&h.read_at(AGENT, None)?)?.clone();
+    let unread = h.read_refusal(AGENT)?;
     assert_eq!(unread.kind.token(), "conversation_unavailable");
     h.append(&json!([text("u9", "user", "later")]))?;
     assert_eq!(ids(&h.page()?), ["u9"]);
     let event = next_appended(&events)?;
-    let first = event.records.first().ok_or("u9")?;
-    assert_eq!(first.record_id.as_str(), "u9");
+    let first = event.record_ids.first().ok_or("u9")?;
+    assert_eq!(first.as_str(), "u9");
     Ok(())
 }
 
@@ -126,8 +126,8 @@ fn a_plain_program_and_an_agent_without_records_are_unavailable_with_provenance(
     let agent: AgentResult = result(&h.register()?)?;
     let agent_id: AgentId = agent.agent.ok_or("agent")?.agent_id;
 
-    let plain = refusal(&h.read_at(SHELL, None)?)?.clone();
-    let silent = refusal(&h.read_at(AGENT, None)?)?.clone();
+    let plain = h.read_refusal(SHELL)?;
+    let silent = h.read_refusal(AGENT)?;
 
     // Then: both are conversation_unavailable, naming the reason and what was consulted.
     assert_eq!(plain.kind.token(), "conversation_unavailable");
