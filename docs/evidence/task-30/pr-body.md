@@ -17,14 +17,14 @@ Host: Linux 7.0.0-38-generic x86_64 (`{"arch":"x86_64","family":"unix","os":"lin
 
 ```
 $ cargo run -q --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary /dev/shm/ovt-target-lane-t30/debug/ovis-terminal --scenario part-a/task-30 --isolated --case happy --evidence docs/evidence/task-30/task-30-happy.json
-{"case":"happy",...,"result":"passed","scenario":"part-a/task-30","totals":{"assertions":"397","cases":"1","failed":"0","passed":"1","skipped":"0"}}
+{"case":"happy",...,"result":"passed","scenario":"part-a/task-30","totals":{"assertions":"412","cases":"1","failed":"0","passed":"1","skipped":"0"}}
 EXIT=0
 $ ... --case failure --evidence docs/evidence/task-30/task-30-failure.json
-{"case":"failure",...,"result":"passed","scenario":"part-a/task-30","totals":{"assertions":"150","cases":"1","failed":"0","passed":"1","skipped":"0"}}
+{"case":"failure",...,"result":"passed","scenario":"part-a/task-30","totals":{"assertions":"161","cases":"1","failed":"0","passed":"1","skipped":"0"}}
 EXIT=0
 ```
 
-Socket transcript lines, verbatim from `task-30-happy.json`. The full excerpt (55 lines, both cases) is in `docs/evidence/task-30/after-transcript.md`.
+Socket transcript lines, verbatim from `task-30-happy.json`. The full excerpt (63 lines, both cases) is in `docs/evidence/task-30/after-transcript.md`.
 
 ```
 [control sent 46ms] {"id":"mark-wait",...,"method":"terminal.wait_output","params":{"cursor":{"offset":"2"},"pattern":{"text":"mark-42"},...}}
@@ -97,6 +97,19 @@ On macOS, all four task-30 cases failed at step 6: `reply[prompt]/result/matched
 
 The scenarios now capture the prompt's `matched_at` and its end cursor. They check the raw bytes at each match (`terminal.output` from `matched_at` returns `$ ` and `mark-42`), and the Rust test checks the arithmetic (marker = prompt end + echoed line). There are no `cfg` forks. A scratch variant that prints `ESC[?1034h` before `exec /bin/sh` passes on Linux.
 
+### Round 3: macOS stress fix (96ffc78 → this head)
+
+Stress run 41352274612 now uploads every evidence file as `*.evidence.log`, because the workflow uploads only `./*.log`. Its failure case stopped at step 49: the flood receipt's `output_cursor` was 93 where 90 was expected.
+
+The evidence shows the cause. `terminal.screen` at `head-now` read the line `$ echo after-$(`: the *previous* command's (`after-fake`) echo was still arriving when the head was captured. The scenario never fenced on that command's output, and Linux was only fast enough to hide the race. These 3 bytes are not Darwin-specific.
+
+Fix (scenario only, no `cfg`):
+- The failure case now waits for `after-4\r\n$ ` from the after-fake receipt cursor and checks those bytes at `matched_at`.
+- The pre-flood cursor is that fence's end, and `terminal.screen`'s head must equal it (idle shell).
+- In the 16-PTY profile and `capacity/fifty`, each echo is now asserted to match exactly at its own admission cursor (`$value:curoff<k>`), not at 0.
+
+A sweep left only request parameters reading from 0 and the credit-defined `stream_offset` 262144. Scratch variants of both cases whose shell first prints `ESC[?1034h` pass on Linux (412/161).
+
 ## Reported findings (not fixed here; for F4 unless noted)
 
 1. **Serialized output ingestion across PTYs (16-PTY profile).** Admissions are fast: all 15 receipts arrived 2–16 ms after the batch. Echo *delivery*, however, arrives one terminal at a time, about 30–90 ms apart. Measured from the admission batch, t2 was matched at 34 ms, t3 at 94, t4 at 125, t5 at 202, t6 at 233, t7 at 309, t8 at 403, t9 at 434, t10 at 502, and t16 about 790–807 ms. Reversing the order of the wait requests did not change the arrival order (t2 first, t16 last), so ingestion, not wait handling, is serial. Once an echo is delivered, its wait answers in 0–15 ms. The scenario therefore bounds admissions and per-terminal event answers at 100 ms. End-to-end PTY→wait delivery for the later terminals **does not meet the 100 ms bound**. It is reported here, not substituted with a percentile.
@@ -127,4 +140,4 @@ The scenarios now capture the prompt's `matched_at` and its end cursor. They che
 
 DEFERRED VERIFICATION: none. `part-a/task-30` happy and failure both execute on the assembled binary (exit 0).
 
-macOS stress dispatch: round 1 https://github.com/devswha/ovis-terminal/actions/runs/41347211460 (head fb2e4cd) failed at iteration 1, `part-a/task-30` happy after 20 assertions, from the same Darwin prompt offset; round 2 https://github.com/devswha/ovis-terminal/actions/runs/41349240120 (head b6fecf8).
+macOS stress dispatch: round 1 https://github.com/devswha/ovis-terminal/actions/runs/41347211460 (head fb2e4cd) failed at iteration 1, `part-a/task-30` happy after 20 assertions, from the same Darwin prompt offset; round 2 https://github.com/devswha/ovis-terminal/actions/runs/41349240120 (head b6fecf8) failed in the failure case without evidence; round 3 https://github.com/devswha/ovis-terminal/actions/runs/41352274612 (head 96ffc78, evidence kept) failed at step 49 (see Round 3); round 4: MACOS_RUN4.
