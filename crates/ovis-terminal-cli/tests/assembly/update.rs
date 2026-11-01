@@ -122,10 +122,11 @@ fn an_activated_update_restarts_control_onto_the_staged_build_and_keeps_the_prog
 }
 
 /// Sends `update.query` until `restarted` is set and returns every exit code; `started`
-/// is told once the first query was answered, so the restart races queries that follow.
+/// is told once the first query was answered, so the restart races queries that follow,
+/// and is dropped with this thread if it fails first.
 fn queries(
     served: &Served,
-    (started, restarted): (&mpsc::Sender<()>, &AtomicBool),
+    (started, restarted): (mpsc::Sender<()>, &AtomicBool),
 ) -> Result<Vec<Option<i32>>, String> {
     let mut codes = Vec::new();
     loop {
@@ -163,8 +164,16 @@ fn a_query_racing_a_planned_restart_is_answered_by_one_boot_or_the_next() -> Tes
         let restarted = AtomicBool::new(false);
         let (started, first) = mpsc::channel();
         let answered = std::thread::scope(|scope| -> TestResult<Vec<Option<i32>>> {
-            let reader = scope.spawn(|| queries(&served, (&started, &restarted)));
-            first.recv()?;
+            // The query thread owns the sender: if it fails before its first answer, the
+            // sender drops and this wait ends with the thread's failure instead of hanging.
+            let (shared, flag) = (&served, &restarted);
+            let reader = scope.spawn(move || queries(shared, (started, flag)));
+            if first.recv().is_err() {
+                return Err(match reader.join() {
+                    Ok(Err(error)) => error.into(),
+                    _ => "the query thread panicked before its first answer".into(),
+                });
+            }
             let (method, params) = if round == 0 {
                 (
                     "update.activate",
@@ -173,8 +182,11 @@ fn a_query_racing_a_planned_restart_is_answered_by_one_boot_or_the_next() -> Tes
             } else {
                 ("server.restart", json!({"op_id": op_id()?}))
             };
-            call(&served, method, &params)?;
+            // The query thread stops on this flag whether or not the call succeeded, so
+            // a failed call fails the test instead of leaving the scope waiting on it.
+            let called = call(&served, method, &params);
             restarted.store(true, Ordering::Release);
+            called?;
             let codes = reader.join().map_err(|_| "the query thread panicked")?;
             Ok(codes?)
         })?;

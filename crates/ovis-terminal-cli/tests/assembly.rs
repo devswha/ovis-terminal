@@ -12,6 +12,8 @@ mod lanes;
 mod layout;
 #[path = "assembly/leases.rs"]
 mod leases;
+#[path = "assembly/pending.rs"]
+mod pending;
 #[path = "assembly/prompts.rs"]
 pub mod prompts;
 #[path = "assembly/records.rs"]
@@ -22,6 +24,8 @@ pub mod restart;
 mod routes;
 #[path = "assembly/session.rs"]
 mod session;
+#[path = "assembly/stdio.rs"]
+mod stdio;
 #[path = "assembly/support.rs"]
 pub mod support;
 #[path = "assembly/templates.rs"]

@@ -43,6 +43,34 @@ fn fixture_root() -> PathBuf {
     std::env::var_os("OVIS_FIXTURE_ROOT").map_or_else(|| PathBuf::from("/tmp"), PathBuf::from)
 }
 
+/// The binary under test. With `OVIS_TEST_PIN_CORES` set (a `taskset -c` list), it runs
+/// pinned to those cores, so a loaded-core run loads only the server and CLI under test
+/// while the harness keeps its own cores.
+fn product() -> Command {
+    std::env::var("OVIS_TEST_PIN_CORES").map_or_else(
+        |_| Command::new(BIN),
+        |cores| {
+            let mut pinned = Command::new("/usr/bin/taskset");
+            pinned.args(["-c", &cores, BIN]);
+            pinned
+        },
+    )
+}
+
+/// Hang guard on one server announcement; a missing one fails with the live server pid.
+const ANNOUNCE_GUARD: Duration = Duration::from_secs(60);
+
+/// Whether `stdout` has bytes (or end of file) to read within `guard`.
+fn readable(stdout: &ChildStdout, guard: Duration) -> TestResult<bool> {
+    use rustix::event::{PollFd, PollFlags, Timespec, poll};
+    let mut fds = [PollFd::new(stdout, PollFlags::IN)];
+    let timeout = Timespec {
+        tv_sec: i64::try_from(guard.as_secs())?,
+        tv_nsec: 0,
+    };
+    Ok(poll(&mut fds, Some(&timeout))? > 0)
+}
+
 /// A new, empty server root below the fixture root.
 ///
 /// # Errors
@@ -123,7 +151,9 @@ impl Served {
     /// Fails when a process, socket or file step fails.
     pub fn start_at(root: &Path, extra: &[&str]) -> TestResult<Self> {
         let root = root.to_path_buf();
-        let mut child = Command::new(BIN)
+        // Every test root is a QA fixture root, so the serve QA seams are accepted on it.
+        std::fs::write(root.join("qa-fixture"), b"")?;
+        let mut child = product()
             .args(["serve", "--root"])
             .arg(&root)
             .arg("--stdin-lifetime")
@@ -216,7 +246,7 @@ impl Served {
     ///
     /// Fails when a process, socket or file step fails.
     pub fn cli(&self, args: &[&str]) -> TestResult<Output> {
-        Ok(Command::new(BIN)
+        Ok(product()
             .arg("--json")
             .args(args)
             .env_clear()
@@ -298,6 +328,14 @@ impl Served {
     ///
     /// Fails when stdout ended or the line is not JSON.
     pub fn announcement(&mut self) -> TestResult<Value> {
+        if self.stdout.buffer().is_empty() && !readable(self.stdout.get_ref(), ANNOUNCE_GUARD)? {
+            let pid = self.child.id();
+            let state = std::fs::read_to_string(format!("/proc/{pid}/stat")).unwrap_or_default();
+            return Err(format!(
+                "no announcement within {ANNOUNCE_GUARD:?}: server pid {pid}, stat {state}"
+            )
+            .into());
+        }
         let mut line = String::new();
         if self.stdout.read_line(&mut line)? == 0 {
             return Err("the server's stdout ended".into());
@@ -334,6 +372,12 @@ impl Served {
             return Err(reply.to_string().into());
         }
         Ok(connection)
+    }
+
+    /// The server process's pid.
+    #[must_use]
+    pub fn server_pid(&self) -> u32 {
+        self.child.id()
     }
 
     /// The method list hello advertises to the owner.
