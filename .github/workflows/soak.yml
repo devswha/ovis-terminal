@@ -1,0 +1,186 @@
+name: soak
+
+# The continuous 72-hour, 50-terminal soak of plan todo 70 on the existing dedicated
+# self-hosted Linux and macOS runners (label ovis-soak; no new paid service). One
+# harness process runs the whole 259200 s measured phase without a stop-to-start: no step
+# restarts it, and a run that ends early fails its next checkpoint and its verdict
+# (incomplete_duration). Raw samples, the minute checkpoint and process logs are uploaded
+# every six hours as external artifact checkpoints, so evidence survives a lost runner.
+# The result is reported when it lands; todo 70 itself never claims it.
+#
+# The measured phase is bounded by its step's timeout-minutes 4320 (exactly 72 h); the
+# job allows 60 minutes more for the build, the holder-loss probe and teardown.
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration_seconds:
+        description: Measured run length (the 72-hour profile is 259200)
+        type: string
+        default: "259200"
+  schedule:
+    - cron: "17 3 * * 6"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: soak-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: never
+  RUST_BACKTRACE: 1
+
+jobs:
+  soak:
+    name: soak (${{ matrix.os }}, 50 terminals, 72 h)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            runs_on: [self-hosted, Linux, ovis-soak]
+          - os: macos
+            runs_on: [self-hosted, macOS, ovis-soak]
+    runs-on: ${{ matrix.runs_on }}
+    timeout-minutes: 4380
+    env:
+      DURATION: ${{ inputs.duration_seconds || '259200' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - name: build the binary under test and the harness
+        timeout-minutes: 60
+        run: |
+          cargo build --locked --release -p ovis-terminal-cli --bin ovis-terminal
+          cargo build --locked --release --manifest-path bench/Cargo.toml --bin soak
+          echo "SOAK_DIR=$RUNNER_TEMP/soak-$GITHUB_RUN_ID" >> "$GITHUB_ENV"
+      - name: start the continuous soak
+        run: |
+          mkdir -p "$SOAK_DIR"
+          {
+            uname -a
+            sw_vers 2>/dev/null || true
+            rustc --version
+            git rev-parse HEAD
+          } > "$SOAK_DIR/host.txt"
+          nohup target/release/soak --binary target/release/ovis-terminal --isolated \
+            --terminals 50 --duration-seconds "$DURATION" --core-crashes 20 \
+            --planned-restarts 6 --remote-interruptions 12 --stalled-viewers 6 \
+            --rss-limit-mib 1024 --disk-limit-mib 4096 \
+            --evidence "$SOAK_DIR/soak.json" > "$SOAK_DIR/soak.stdout" 2> "$SOAK_DIR/soak.stderr" &
+          echo "$!" > "$SOAK_DIR/soak.pid"
+      - name: await the 6 h checkpoint
+        timeout-minutes: 4320
+        run: bash bench/soak/ci/await-checkpoint.sh "$SOAK_DIR" 6
+      - name: upload the 6 h checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.os }}-${{ github.run_id }}-h06
+          path: ${{ env.SOAK_DIR }}
+          if-no-files-found: error
+      - name: await the 12 h checkpoint
+        timeout-minutes: 4320
+        run: bash bench/soak/ci/await-checkpoint.sh "$SOAK_DIR" 12
+      - name: upload the 12 h checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.os }}-${{ github.run_id }}-h12
+          path: ${{ env.SOAK_DIR }}
+          if-no-files-found: error
+      - name: await the 18 h checkpoint
+        timeout-minutes: 4320
+        run: bash bench/soak/ci/await-checkpoint.sh "$SOAK_DIR" 18
+      - name: upload the 18 h checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.os }}-${{ github.run_id }}-h18
+          path: ${{ env.SOAK_DIR }}
+          if-no-files-found: error
+      - name: await the 24 h checkpoint
+        timeout-minutes: 4320
+        run: bash bench/soak/ci/await-checkpoint.sh "$SOAK_DIR" 24
+      - name: upload the 24 h checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.os }}-${{ github.run_id }}-h24
+          path: ${{ env.SOAK_DIR }}
+          if-no-files-found: error
+      - name: await the 30 h checkpoint
+        timeout-minutes: 4320
+        run: bash bench/soak/ci/await-checkpoint.sh "$SOAK_DIR" 30
+      - name: upload the 30 h checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.os }}-${{ github.run_id }}-h30
+          path: ${{ env.SOAK_DIR }}
+          if-no-files-found: error
+      - name: await the 36 h checkpoint
+        timeout-minutes: 4320
+        run: bash bench/soak/ci/await-checkpoint.sh "$SOAK_DIR" 36
+      - name: upload the 36 h checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.os }}-${{ github.run_id }}-h36
+          path: ${{ env.SOAK_DIR }}
+          if-no-files-found: error
+      - name: await the 42 h checkpoint
+        timeout-minutes: 4320
+        run: bash bench/soak/ci/await-checkpoint.sh "$SOAK_DIR" 42
+      - name: upload the 42 h checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.os }}-${{ github.run_id }}-h42
+          path: ${{ env.SOAK_DIR }}
+          if-no-files-found: error
+      - name: await the 48 h checkpoint
+        timeout-minutes: 4320
+        run: bash bench/soak/ci/await-checkpoint.sh "$SOAK_DIR" 48
+      - name: upload the 48 h checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.os }}-${{ github.run_id }}-h48
+          path: ${{ env.SOAK_DIR }}
+          if-no-files-found: error
+      - name: await the 54 h checkpoint
+        timeout-minutes: 4320
+        run: bash bench/soak/ci/await-checkpoint.sh "$SOAK_DIR" 54
+      - name: upload the 54 h checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.os }}-${{ github.run_id }}-h54
+          path: ${{ env.SOAK_DIR }}
+          if-no-files-found: error
+      - name: await the 60 h checkpoint
+        timeout-minutes: 4320
+        run: bash bench/soak/ci/await-checkpoint.sh "$SOAK_DIR" 60
+      - name: upload the 60 h checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.os }}-${{ github.run_id }}-h60
+          path: ${{ env.SOAK_DIR }}
+          if-no-files-found: error
+      - name: await the 66 h checkpoint
+        timeout-minutes: 4320
+        run: bash bench/soak/ci/await-checkpoint.sh "$SOAK_DIR" 66
+      - name: upload the 66 h checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.os }}-${{ github.run_id }}-h66
+          path: ${{ env.SOAK_DIR }}
+          if-no-files-found: error
+      - name: await the end of the measured phase and the report
+        timeout-minutes: 4320
+        run: |
+          pid="$(cat "$SOAK_DIR/soak.pid")"
+          while kill -0 "$pid" 2>/dev/null; do sleep 60; done
+          test -f "$SOAK_DIR/soak.json"
+          python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); print(json.dumps(r["verdict"])); sys.exit(0 if r["verdict"]["passed"] and r["measured"]["elapsed_ms"] >= r["plan"]["duration_ms"] else 1)' "$SOAK_DIR/soak.json"
+      - name: upload the final evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-${{ matrix.os }}-${{ github.run_id }}-final
+          path: ${{ env.SOAK_DIR }}
+          if-no-files-found: error
