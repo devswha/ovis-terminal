@@ -26,6 +26,7 @@ Host: `Linux 7.0.0-38-generic x86_64`. Binary under test: `target/debug/ovis-ter
 | same with `--fixtures conformance/fixtures/ovis` (`task-64-fixtures.json`) | 0 | 2 cases, failed 0, skipped 0, 2759 assertions |
 | `bun run --cwd packages/client-ts test:fixtures -- --fixtures ../../conformance/fixtures/ovis` | 0 | 4 pass: pins equal the manifest (same 15 hashes the runner checks), 8/8 cases replay with no failed check, Bun receipts equal `receipts.json`, replay sources typecheck against the packed declarations |
 | QA happy: `... --scenario client/fixtures --isolated --case happy --evidence "$ATTEMPT_DIR/task-64-ovis-terminal-v1.json"` | 0 | 1450 assertions, failed 0 |
+| Loaded host: `taskset -c 0-1` with 8 busy loops, `conformance ... --scenario client/fixtures --isolated --case all` x10 | 10 × 0 | 10/10 after the `attach.close` fix; 5/10 before, each at `attach-held-retry/send-released-lease` (`load-stress.log`) |
 | QA failure: `... --case failure --inject '{"method":"pane.split","params":{"pane_id_typo":"other-pane","direction":"right"}}' --evidence "$ATTEMPT_DIR/task-64-ovis-terminal-v1.json" --append` | 0 | 1283 assertions, failed 0 |
 
 The materialized socket exchange of the failure case (`after.log`, through `ovis-terminal connect`):
@@ -85,8 +86,20 @@ Unit and integration tests:
 - `schema_params::misspelled_target_is_named_instead_of_the_field_it_left_absent`.
 - `binding::qa::observe::a_transcript_replaced_by_an_outside_link_after_binding_is_refused`.
 
+Product defect found by the replay under load (`attach.close` answered before the lease was revoked):
+- What the loaded loop showed: before the fix, 5/10 runs failed at `attach-held-retry/send-released-lease`. desk's `attach.close` had replied, then `input.send` with desk's released lease was expected to get `no_lease`. Instead it got a result: `{"receipt": {"admitted_bytes": "1", ...}}`, a write admitted on a released lease (IDEAL-048 / GAP-070).
+- Why it is the product, not the fixture: the fixture sends `input.send` only after the close reply arrives. `TerminalStreams::close` only revoked input on the viewer and marked the close. The owner's leases were disconnected later, by the pump task's `detach`, so the reply could precede the revocation.
+- Fix (`crates/ovis-terminal-server/src/streams/ops.rs`, `fn close`):
+  - Before `Ok(at)`, `close` calls the existing `self.release(stream, detach_op())`. It is the same release the pump's detach performs, under the same "another stream of this owner keeps the leases" rule. The pump's later detach finds nothing to revoke, and an empty transition journals nothing.
+  - Because `close` now commits to the store, `attach.close` runs it through `spawn_blocking` in `streams/handler.rs`, as `attach.open` and `attach.takeover` already do. Running it on the executor thread panicked the server in the first attempt.
+  - `attach.repaint` is unchanged.
+  - `attach.close` carries no op id (its params are `{stream_id}` only), so the release is journaled under an op id minted by the pump's existing `detach_op()` (`pump.rs`, now `pub(super)`).
+- Regression test: `streams::ops::tests::close_revokes_the_interact_lease_before_it_returns` drives the hub directly with no pump task: `open` interact, `close`, then the interact lease must be gone. Deterministic: there is no task scheduling between `close` and the check.
+
 Gates:
-- `bash scripts/check.sh` (heavy gate) exit 0: `1488 tests run: 1488 passed (3 slow), 2 skipped`, hygiene `0 violation(s) in 1493 file(s)` (`check.log`).
+- `bash scripts/check.sh` (heavy gate) exit 0: `1504 tests run: 1504 passed (3 slow), 2 skipped`, hygiene `0 violation(s) in 1529 file(s)` (`check.log`).
+- `RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps --locked` exit 0 (`rustdoc.log`).
+- `cargo nextest run --manifest-path conformance/Cargo.toml -E 'test(suite::)'`: 4 passed, including all/all (`suite.log`).
 - Windows: `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exit 0 and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` exit 0 (`windows.log`).
 - client-ts: `bun run generate:check` fresh (31 files), `bun run typecheck` 0, `bun test` 51 pass 0 fail.
 
@@ -100,8 +113,13 @@ Mutants (logs `mutant-*.log`, each fails a shipped test with exit 101):
 - M2: read-time containment accepts either check alone; fails `a_transcript_replaced_by_an_outside_link_after_binding_is_refused`.
 - M3: legacy unknown keys go inside `edit`; fails `known_fields_are_renamed_and_unknown_fields_reach_the_server_unchanged`.
 - M4: replay continues after a failed step; fails `captures_bind_later_requests_and_a_failed_step_stops_the_case`.
+- M5: `close` without the release (the old ordering); fails `close_revokes_the_interact_lease_before_it_returns` with `left: Some(LeaseId(1)), right: None`.
 
 ## Seams
+
+Seams outside the write scope:
+- `crates/ovis-terminal-server/src/streams/ops.rs` (`fn close`, + `ops/tests.rs`), `streams/handler.rs` (`stream_call` runs `close` off the executor), `streams/pump.rs` (`detach_op` is `pub(super)`): the `attach.close` lease-revocation defect above. The fix is the smallest one: other callers keep their behaviour, and only `attach.close` reaches `close`.
+- `conformance/src/engine/replay.rs`: each replay connection is half-closed and decoded to end of stream before `finish_conn` asserts `bytes_received = bytes_decoded`. This fixes the CI failure in all/all, where a notification still in flight left a partial line received but not decoded. It is the same contract as the `hangup` and `closed` steps, bounded by the record wait, with no sleep.
 
 Files outside the write scope (`conformance/fixtures/ovis/`, `conformance/replay/`, `conformance/scenarios/client/fixtures/`):
 - `conformance/scenarios/client/fixtures.json`: the scenario itself. Scenario ids resolve to `<family>/<name>.json`, so `client/fixtures` must be this file.
@@ -115,7 +133,7 @@ Files outside the write scope (`conformance/fixtures/ovis/`, `conformance/replay
 - `crates/ovis-terminal-agent/src/conversation/binding/observe.rs` (+ `qa/observe.rs`): the seam assigned to 64. Containment was checked only at bind, so replacing the bound transcript (or a directory above it) with a link to an outside file made reads follow it. Every read now re-resolves the path and compares the opened file's identity; a mismatch is `OutsideStores` (`invalid_session`).
 - `packages/client-ts/{package.json,tsconfig.json}`, new `scripts/fixtures.ts`, `tests/fixtures.test.ts`, `tests/replay/*`: the `test:fixtures` entry point. The replay sources run in an isolated project that installs the packed tarball, so they are excluded from the repository typecheck, as `tests/consumer` is.
 - `probes/platform-qa/stress/client-fixtures.{json,sh}`: the data-driven macOS stress lane (10 iterations of the runner `--case all` and the Bun `test:fixtures`). Dispatched once at c80a4f7: https://github.com/devswha/ovis-terminal/actions/runs/41354470413.
-- Merged `origin/integration` 070871b (T83); conflicts in `steps.rs`, `steps/serve.rs` and `model.rs` were resolved by keeping both step kinds. Re-pinned with `cargo run -p ovis-terminal-replay --bin ovis-replay -- refresh`. `graphics/passthrough` now exists, so it left `pending`. `openrpc check` reports fresh, `quality-matrix --mode verify` passes, and `bun run generate:check` reports fresh.
+- Merged `origin/integration` 1abcced (T70 soak) after 070871b; clean merge. Re-pinned (`performance/soak` now declared, so it left `pending`); openrpc check fresh, quality-matrix verify pass, SDK `generate:check` fresh. Earlier: merged `origin/integration` 070871b (T83); conflicts in `steps.rs`, `steps/serve.rs` and `model.rs` were resolved by keeping both step kinds. Re-pinned with `cargo run -p ovis-terminal-replay --bin ovis-replay -- refresh`. `graphics/passthrough` now exists, so it left `pending`. `openrpc check` reports fresh, `quality-matrix --mode verify` passes, and `bun run generate:check` reports fresh.
 
 ## Risks
 
