@@ -1,14 +1,15 @@
 //! The landed dispatcher lanes the server hosts behind its own routes: documents, plugins,
 //! machine identity, agent status, prompts and session binding, on one dispatcher whose
-//! coordinator commits their operation, agent and document events.
+//! coordinator commits their operation, agent and document events. Each registration
+//! phase lives in its own child module, so a later lane adds one call here.
+
+mod agents;
+mod machine;
 
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Duration;
 
-use ovis_terminal_agent::conversation::binding::{BindingService, Stores};
-use ovis_terminal_agent::prompts::PromptService;
-use ovis_terminal_agent::status::{AgentStatusEvent, StatusService};
+use ovis_terminal_agent::status::AgentStatusEvent;
 use ovis_terminal_authz::Authority;
 use ovis_terminal_core::docs::DocChanged;
 use ovis_terminal_core::events::{Coordinator, EventData};
@@ -16,31 +17,11 @@ use ovis_terminal_core::ops::{OperationEvent, OperationProducer};
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
 use ovis_terminal_protocol::schema::scalar::EventSeq;
 use ovis_terminal_server::dispatch::Dispatcher;
-use ovis_terminal_server::dispatch::lanes::agent_status::{
-    AgentStatusLane, ClearStatus, GetAgent, GetStatus, RegisterAgent, ReportStatus,
-};
-use ovis_terminal_server::dispatch::lanes::credential_rotation::{
-    CredentialLane, RevokeCredential, RotateCredential,
-};
-use ovis_terminal_server::dispatch::lanes::machine_identity::{
-    MachineGet, MachineLane, MachineRename,
-};
-use ovis_terminal_server::dispatch::lanes::prompts::{
-    AnswerPrompt, ClosePrompt, GetPrompt, ListPrompts, OpenPrompt, PromptLane,
-};
-use ovis_terminal_server::dispatch::lanes::session_binding::{
-    Conversation, SessionBindingLane, UpdateSession,
-};
-use ovis_terminal_server::dispatch::lanes::{documents_retention, plugins};
-use ovis_terminal_services::plugins::Plugins;
 use ovis_terminal_store::{Store, StoreOptions};
 use serde::{Deserialize, Serialize};
 
 use super::AssemblyError;
 use super::directory::Directory;
-
-/// Bound on one remote machine handshake.
-const HANDSHAKE_BOUND: Duration = Duration::from_secs(10);
 
 /// Every event the hosted lanes commit, in one sequence domain.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,103 +87,17 @@ fn stage<E: Into<super::StageSource>>(stage: &'static str) -> impl FnOnce(E) -> 
 }
 
 /// Builds the dispatcher with every hosted lane registered and prompt routes recovered.
-pub(super) fn host(hosting: Hosting<'_>) -> Result<(Dispatch, Arc<DispatchLog>), AssemblyError> {
-    let Hosting {
-        state,
-        identity,
-        authority,
-        directory,
-        actor,
-        control,
-    } = hosting;
-    let store = Store::open(&state.join("dispatch.db"), StoreOptions::default())
+pub(super) fn host(hosting: &Hosting<'_>) -> Result<(Dispatch, Arc<DispatchLog>), AssemblyError> {
+    let store = Store::open(&hosting.state.join("dispatch.db"), StoreOptions::default())
         .map_err(stage("open the dispatch store"))?;
+    let identity = hosting.identity;
     let log = Arc::new(Coordinator::new(
         store,
         identity,
         OperationProducer::new(identity.runtime_id()),
     ));
-    let credentials = CredentialLane::new(
-        Arc::clone(&authority),
-        identity.machine_id(),
-        Arc::new(super::credentials::ActorWrites(actor)),
-    );
-    let mut dispatch = Dispatcher::new(authority, identity, Arc::clone(&log));
-    dispatch
-        .register(RotateCredential::new(&credentials))
-        .map_err(stage("register credential.rotate"))?;
-    dispatch
-        .register(RevokeCredential::new(&credentials))
-        .map_err(stage("register credential.revoke"))?;
-    let machine = identity.machine_id();
-    super::restart::register(&mut dispatch, control, machine)?;
-    documents_retention::register(&mut dispatch, identity).map_err(stage("register documents"))?;
-    std::fs::create_dir_all(state.join("plugins")).map_err(stage("create the plugin root"))?;
-    let (list, invoke, run) =
-        plugins::routes(&Arc::new(Plugins::new(state.join("plugins"))), machine);
-    dispatch
-        .register(list)
-        .map_err(stage("register plugin.list"))?;
-    dispatch
-        .register(invoke)
-        .map_err(stage("register plugin.invoke"))?;
-    dispatch
-        .register(run)
-        .map_err(stage("register plugin.run_get"))?;
-    let machines = MachineLane::new(machine, HANDSHAKE_BOUND);
-    dispatch
-        .register(MachineGet::new(&machines))
-        .map_err(stage("register machine.get"))?;
-    dispatch
-        .register(MachineRename::new(&machines))
-        .map_err(stage("register machine.rename"))?;
-    let status = Arc::new(StatusService::new(identity.runtime_id()));
-    let agents = AgentStatusLane::new(Arc::clone(&directory), Arc::clone(&status));
-    dispatch
-        .register(RegisterAgent::new(&agents))
-        .map_err(stage("register agent.register"))?;
-    dispatch
-        .register(GetAgent::new(&agents))
-        .map_err(stage("register agent.get"))?;
-    dispatch
-        .register(ReportStatus::new(&agents))
-        .map_err(stage("register status.report"))?;
-    dispatch
-        .register(GetStatus::new(&agents))
-        .map_err(stage("register status.get"))?;
-    dispatch
-        .register(ClearStatus::new(&agents))
-        .map_err(stage("register status.clear"))?;
-    let prompts = Arc::new(PromptService::new(
-        identity.runtime_id(),
-        Arc::clone(&status),
-    ));
-    log.read_view(|snapshot| prompts.recover(snapshot))
-        .map_err(stage("recover open prompts"))?;
-    let lane = PromptLane::new(Arc::clone(&directory), prompts, machine);
-    dispatch
-        .register(OpenPrompt::new(&lane))
-        .map_err(stage("register prompt.open"))?;
-    dispatch
-        .register(AnswerPrompt::new(&lane))
-        .map_err(stage("register prompt.answer"))?;
-    dispatch
-        .register(ClosePrompt::new(&lane))
-        .map_err(stage("register prompt.close"))?;
-    dispatch
-        .register_read(GetPrompt::new(&lane))
-        .map_err(stage("register prompt.get"))?;
-    dispatch
-        .register_read(ListPrompts::new(&lane))
-        .map_err(stage("register prompt.list"))?;
-    let stores = Stores::new(&[]).map_err(stage("authorize session stores"))?;
-    let binding = Arc::new(BindingService::new(identity.runtime_id(), status, stores));
-    let sessions = SessionBindingLane::new(directory, binding);
-    dispatch
-        .register(UpdateSession::new(&sessions))
-        .map_err(stage("register agent.update_session"))?;
-    dispatch
-        .register(Conversation::new(&sessions))
-        .map_err(stage("register agent.conversation"))?;
+    let mut dispatch = Dispatcher::new(Arc::clone(&hosting.authority), identity, Arc::clone(&log));
+    machine::register(&mut dispatch, hosting)?;
+    agents::register(&mut dispatch, hosting, &log)?;
     Ok((dispatch, log))
 }

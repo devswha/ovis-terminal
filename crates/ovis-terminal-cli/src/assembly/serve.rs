@@ -145,7 +145,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         started: Instant::now(),
     };
     let (actor, thread) = Actor::spawn(runtime)?;
-    let (dispatch, dispatch_log) = super::lanes::host(super::lanes::Hosting {
+    let (dispatch, dispatch_log) = super::lanes::host(&super::lanes::Hosting {
         state: &state,
         identity: booted.identity,
         authority: Arc::clone(&booted.authority),

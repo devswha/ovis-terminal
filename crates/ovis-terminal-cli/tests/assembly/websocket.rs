@@ -94,7 +94,7 @@ fn hello_over_websocket_advertises_both_transports_and_the_same_methods() -> Tes
         .pointer("/result/methods")
         .and_then(Value::as_array)
         .map(Vec::len);
-    assert_eq!(methods, Some(48));
+    assert_eq!(methods, Some(49));
     drop((reader, stream));
     served.stop()?;
     Ok(())

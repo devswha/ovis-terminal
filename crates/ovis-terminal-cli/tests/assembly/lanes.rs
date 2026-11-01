@@ -177,6 +177,18 @@ fn hosted_lanes_answer_documents_plugins_prompts_and_status_over_the_socket() ->
     );
     let status = call(&served, "status.get", &json!({"target": t1()}))?;
     assert_eq!(status.pointer("/status/reported"), Some(&json!(false)));
+    let children = call(&served, "agent.children", &json!({"target": t1()}))?;
+    assert_eq!(children.get("children"), Some(&json!([])), "{children}");
+    let stale = served.refused(
+        &[
+            "call",
+            "agent.children",
+            "--params",
+            &json!({"target": {"address": "t9"}}).to_string(),
+        ],
+        3,
+    )?;
+    assert_eq!(stale.get("kind"), Some(&json!("not_found")));
     served.stop()?;
     Ok(())
 }

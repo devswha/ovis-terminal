@@ -21,6 +21,7 @@ use support::{BIN, Served, TestResult, op_id};
 fn hello_advertises_exactly_the_routed_methods_and_the_rest_is_method_not_found() -> TestResult {
     let served = Served::start()?;
     let expected: BTreeSet<String> = [
+        "agent.children",
         "agent.conversation",
         "agent.get",
         "agent.register",
