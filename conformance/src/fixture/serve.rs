@@ -94,6 +94,8 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let template = super::template_lane::register(&mut dispatch, (runtime, root), parts)?;
     let launch = (runtime, Arc::clone(&core), template);
     let tree = super::tree::register(&mut dispatch, (&agents, &gate), launch)?;
+    let fleet = (runtime, Arc::clone(&core));
+    let machines = super::machines::register(&mut dispatch, (&agents, &gate), fleet).await?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
     let observer = observer(&authority, issued.bearer())?;
     let prompts = Arc::clone(&gate.prompts);
@@ -103,6 +105,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         directory: Arc::clone(&directory),
         extension: Extension::new(bridge, Arc::clone(&core)),
         tree,
+        machines,
     };
     let handler = Arc::new(FixtureHandler::new(
         Arc::new(dispatch),

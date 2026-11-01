@@ -5,6 +5,7 @@ pub mod agent_tree;
 
 pub mod conpty;
 pub mod documents_retention;
+pub mod machine_actor;
 pub mod machine_identity;
 pub mod plugins;
 pub mod prompt_bridge;
