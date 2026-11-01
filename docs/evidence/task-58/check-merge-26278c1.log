@@ -1,0 +1,37 @@
+
+==> cargo +nightly fmt --all -- --check
+
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.14s
+
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+   Compiling once_cell v1.21.4
+   Compiling unicode-ident v1.0.27
+   Compiling thiserror v1.0.69
+   Compiling filedescriptor v0.8.3
+   Compiling proc-macro2 v1.0.107
+   Compiling tempfile v3.27.0
+   Compiling tracing-core v0.1.36
+   Compiling portable-pty v0.9.0
+error: failed to build archive at `/dev/shm/ovt-target-lane-t58/debug/deps/libfiledescriptor-dd235efac6e8b697.rlib`: Disk quota exceeded (os error 122)
+
+error: could not compile `filedescriptor` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+rustc-LLVM ERROR: IO failure on output stream: Disk quota exceeded
+error: could not compile `tempfile` (lib)
+
+Caused by:
+  Disk quota exceeded (os error 122)
+
+Caused by:
+  failed to parse process output: `/home/devswha/.ovis-toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/bin/rustc --crate-name tempfile --edition=2021 /home/devswha/.ovis-toolchain/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tempfile-3.27.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C codegen-units=256 -C debuginfo=2 --cfg 'feature="default"' --cfg 'feature="getrandom"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "getrandom", "nightly"))' -C metadata=4f34e1ecfb27349c -C extra-filename=-b8668c347d2db490 --out-dir /dev/shm/ovt-target-lane-t58/debug/deps -C linker=/home/devswha/.ovis-toolchain/cargo/bin/zigcc-linker -L dependency=/dev/shm/ovt-target-lane-t58/debug/deps --extern fastrand=/dev/shm/ovt-target-lane-t58/debug/deps/libfastrand-0693eb7edf6f51af.rmeta --extern getrandom=/dev/shm/ovt-target-lane-t58/debug/deps/libgetrandom-9077f84465dbf76e.rmeta --extern once_cell=/dev/shm/ovt-target-lane-t58/debug/deps/libonce_cell-6b28042498e15586.rmeta --extern rustix=/dev/shm/ovt-target-lane-t58/debug/deps/librustix-373445cbc3ac62b8.rmeta --cap-lints allow` (exit status: 101)
+error: failed to write to `/dev/shm/ovt-target-lane-t58/debug/deps/rmetaMgojwv/full.rmeta`: Disk quota exceeded (os error 122)
+
+error: failed to write to `/dev/shm/ovt-target-lane-t58/debug/deps/rmetadCVfCT/full.rmeta`: Disk quota exceeded (os error 122)
+
+error: could not compile `portable-pty` (lib) due to 1 previous error
+error: failed to write to `/dev/shm/ovt-target-lane-t58/debug/deps/rmetaCA73wE/full.rmeta`: Disk quota exceeded (os error 122)
+
+error: could not compile `tracing-core` (lib) due to 1 previous error
+error: could not compile `proc-macro2` (lib) due to 1 previous error
+error: command `/home/devswha/.ovis-toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/bin/cargo '--color=auto' test --no-run '--message-format=json-render-diagnostics' --workspace --all-targets --all-features --locked` exited with code 101

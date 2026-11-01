@@ -17,6 +17,7 @@ mod identity;
 mod permission;
 mod rotation;
 mod scope;
+pub mod validation;
 
 pub use authority::{
     AccessRequest, AttestRequest, Attestation, Authority, CommitCheck, Decision, IssuedCredential,

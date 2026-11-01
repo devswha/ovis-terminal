@@ -1,0 +1,140 @@
+28:  exec env OVIS_IN_SCOPE=1 flock -o -w 7200 /dev/shm/ovt-test-lane.lock \
+$ cargo nextest run -p ovis-terminal-holder --all-targets --locked --no-tests=fail
+   Compiling tokio v1.54.1
+   Compiling ovis-terminal-holder v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t58/crates/ovis-terminal-holder)
+   Compiling ovis-terminal-probes v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t58/probes)
+rustc-LLVM ERROR: IO failure on output stream: Disk quota exceeded
+error: could not compile `ovis-terminal-holder` (lib)
+
+Caused by:
+  Disk quota exceeded (os error 122)
+
+Caused by:
+  failed to parse process output: `/home/devswha/.ovis-toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/bin/rustc --crate-name ovis_terminal_holder --edition=2024 crates/ovis-terminal-holder/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C codegen-units=256 -C debuginfo=2 '--warn=clippy::pedantic' '--warn=clippy::nursery' '--warn=clippy::cargo' '--deny=clippy::all' '--warn=clippy::use_debug' '--deny=clippy::unwrap_used' --deny=unused_must_use --warn=unused_lifetimes --deny=unsafe_op_in_unsafe_fn --warn=unreachable_pub '--deny=clippy::unreachable' '--deny=clippy::unimplemented' --deny=unexpected_cfgs '--deny=clippy::undocumented_unsafe_blocks' --warn=trivial_numeric_casts '--deny=clippy::todo' --warn=single_use_lifetimes '--warn=clippy::rc_mutex' '--warn=clippy::rc_buffer' '--warn=clippy::ptr_as_ptr' '--warn=clippy::print_stdout' '--warn=clippy::print_stderr' '--deny=clippy::panic' --deny=non_ascii_idents '--warn=clippy::mutex_atomic' '--allow=clippy::must_use_candidate' '--deny=clippy::multiple_unsafe_ops_per_block' '--allow=clippy::module_name_repetitions' '--warn=clippy::mod_module_files' --warn=missing_docs --warn=missing_debug_implementations '--deny=clippy::mem_forget' '--deny=clippy::let_underscore_must_use' '--deny=clippy::indexing_slicing' '--deny=clippy::fn_to_numeric_cast_any' '--deny=clippy::expect_used' '--warn=clippy::exit' '--warn=clippy::exhaustive_structs' '--warn=clippy::exhaustive_enums' '--warn=clippy::empty_structs_with_brackets' '--warn=clippy::empty_enums' '--warn=clippy::empty_drop' --warn=elided_lifetimes_in_paths '--warn=clippy::dbg_macro' '--warn=clippy::clone_on_ref_ptr' '--warn=clippy::cast_sign_loss' '--warn=clippy::cast_precision_loss' '--warn=clippy::cast_possible_wrap' '--warn=clippy::cast_possible_truncation' '--warn=clippy::borrow_as_ptr' '--deny=clippy::as_underscore' '--deny=clippy::as_ptr_cast_mut' '--warn=clippy::arithmetic_side_effects' '--deny=clippy::allow_attributes_without_reason' '--deny=clippy::allow_attributes' --check-cfg 'cfg(loom)' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("ffi-model"))' -C metadata=46b67cb05bb6ae30 -C extra-filename=-e13da1aa75022661 --out-dir /dev/shm/ovt-target-lane-t58/debug/deps -C linker=/home/devswha/.ovis-toolchain/cargo/bin/zigcc-linker -C incremental=/dev/shm/ovt-target-lane-t58/debug/incremental -L dependency=/dev/shm/ovt-target-lane-t58/debug/deps --extern libc=/dev/shm/ovt-target-lane-t58/debug/deps/liblibc-ad73ce516a511d0b.rmeta --extern ovis_terminal_protocol=/dev/shm/ovt-target-lane-t58/debug/deps/libovis_terminal_protocol-7945703eef033a67.rmeta --extern portable_pty=/dev/shm/ovt-target-lane-t58/debug/deps/libportable_pty-c3f9d58180926145.rmeta --extern rustix=/dev/shm/ovt-target-lane-t58/debug/deps/librustix-373445cbc3ac62b8.rmeta --extern serde=/dev/shm/ovt-target-lane-t58/debug/deps/libserde-5003607c4fd3b515.rmeta --extern serde_json=/dev/shm/ovt-target-lane-t58/debug/deps/libserde_json-34643557a80ea097.rmeta --extern thiserror=/dev/shm/ovt-target-lane-t58/debug/deps/libthiserror-7044110eb0216f5f.rmeta` (exit status: 101)
+warning: build failed, waiting for other jobs to finish...
+error: failed to write to `/dev/shm/ovt-target-lane-t58/debug/deps/rmetaKQ6EH7/full.rmeta`: Disk quota exceeded (os error 122)
+
+error: could not compile `tokio` (lib) due to 1 previous error
+error: command `/home/devswha/.ovis-toolchain/rustup/toolchains/1.99.1-x86_64-unknown-linux-gnu/bin/cargo '--color=auto' test --no-run '--message-format=json-render-diagnostics' '--package=ovis-terminal-holder' --all-targets --locked` exited with code 101
+exit=101
+--- rerun 2 (first attempt above failed to compile: /dev/shm Disk quota exceeded while other lanes built; no test ran) ---
+$ cargo nextest run -p ovis-terminal-holder --all-targets --all-features --locked --no-tests=fail
+   Compiling tokio v1.54.1
+   Compiling ovis-terminal-store v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t58/crates/ovis-terminal-store)
+   Compiling ovis-terminal-authz v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t58/crates/ovis-terminal-authz)
+   Compiling ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t58/crates/ovis-terminal-core)
+   Compiling ovis-terminal-agent v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t58/crates/ovis-terminal-agent)
+   Compiling ovis-terminal-remote v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t58/crates/ovis-terminal-remote)
+   Compiling ovis-terminal-services v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t58/crates/ovis-terminal-services)
+   Compiling ovis-terminal-agent-adapters v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t58/crates/ovis-terminal-agent-adapters)
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t58/crates/ovis-terminal-server)
+   Compiling ovis-terminal-bench v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t58/bench)
+   Compiling ovis-terminal-holder v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t58/crates/ovis-terminal-holder)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 25.14s
+────────────
+ Nextest run ID 49f5f7fd-e642-4ce2-9492-f4abc2073f6f with nextest profile: default
+    Starting 101 tests across 6 binaries
+        PASS [   0.007s] (  1/101) ovis-terminal-holder process::signal::tests::unrepresentable_pid_is_refused_before_kill_is_reached
+        PASS [   0.008s] (  2/101) ovis-terminal-holder process::signal::tests::reserved_pids_are_refused_before_kill_is_reached
+        PASS [   0.008s] (  3/101) ovis-terminal-holder process::signal::tests::ordinary_targets_reach_kill_once_with_group_negation
+        PASS [   0.008s] (  4/101) ovis-terminal-holder process::table::tests::a_live_record_carries_the_same_start_token_as_the_token_reader
+        PASS [   0.009s] (  5/101) ovis-terminal-holder process::table::tests::a_reaped_pid_is_gone_for_every_read
+        PASS [   0.010s] (  6/101) ovis-terminal-holder process::start_token::tests::an_exited_child_reports_process_gone
+        PASS [   0.007s] (  7/101) ovis-terminal-holder protocol::property_tests::frame_errors_expose_stable_kinds_hints_and_sources
+        PASS [   0.008s] (  8/101) ovis-terminal-holder protocol::property_tests::rejected_header_does_not_leave_a_partial_decoder_frame
+        PASS [   0.007s] (  9/101) ovis-terminal-holder service::unix::definition::tests::a_unit_quotes_every_argument_names_its_owner_and_never_restarts
+        PASS [   0.007s] ( 10/101) ovis-terminal-holder service::unix::definition::tests::an_agent_escapes_xml_names_its_owner_and_is_not_kept_alive
+        PASS [   0.007s] ( 11/101) ovis-terminal-holder service::unix::launch::tests::a_losing_holder_refusal_becomes_typed_already_running_with_the_winner_proof
+        PASS [   0.024s] ( 12/101) ovis-terminal-holder protocol::hangup_tests::hangup_rejects_numeric_pid_at_the_frame_boundary
+        PASS [   0.025s] ( 13/101) ovis-terminal-holder process::start_token::tests::token_is_stable_while_the_process_lives
+        PASS [   0.025s] ( 14/101) ovis-terminal-holder process::table::tests::an_exited_unreaped_child_keeps_its_token_until_reaped
+        PASS [   0.025s] ( 15/101) ovis-terminal-holder protocol::hangup_tests::legacy_generation_two_reader_ignores_hangup_without_losing_output
+        PASS [   0.026s] ( 16/101) ovis-terminal-holder process::table::tests::unix_membership_is_never_reported_as_unsupported
+        PASS [   0.026s] ( 17/101) ovis-terminal-holder process::table::tests::argv_and_cwd_describe_this_process
+        PASS [   0.027s] ( 18/101) ovis-terminal-holder protocol::counter_json_tests::every_message_variant_encodes_large_counters_as_exact_json_strings
+        PASS [   0.028s] ( 19/101) ovis-terminal-holder protocol::hangup_tests::maximum_offset_hangup_survives_every_fragment_boundary
+        PASS [   0.033s] ( 20/101) ovis-terminal-holder process::table::tests::a_pty_session_leader_is_listed_on_its_own_controlling_terminal
+        PASS [   0.008s] ( 21/101) ovis-terminal-holder service::unix::observe::tests::an_empty_root_is_stopped_and_observing_creates_nothing
+        PASS [   0.007s] ( 22/101) ovis-terminal-holder service::unix::observe::tests::an_unrecorded_socket_nobody_accepts_on_is_stale_and_a_plain_file_is_not_a_socket
+        PASS [   0.011s] ( 23/101) ovis-terminal-holder service::unix::lifecycle_tests::stop_refuses_a_holder_that_is_not_the_recorded_incarnation_and_leaves_it_serving
+        PASS [   0.009s] ( 24/101) ovis-terminal-holder service::unix::observe::tests::a_live_recorded_process_is_running_only_while_its_socket_accepts
+        PASS [   0.010s] ( 25/101) ovis-terminal-holder service::unix::notify::tests::the_manager_socket_receives_exactly_ready
+        PASS [   0.007s] ( 26/101) ovis-terminal-holder service::unix::paths::tests::paths_follow_the_explicit_directories_in_order_and_never_tmp
+        PASS [   0.009s] ( 27/101) ovis-terminal-holder service::unix::observe::tests::a_record_naming_a_reaped_or_replaced_process_is_stale_and_is_left_in_place
+        PASS [   0.030s] ( 28/101) ovis-terminal-holder protocol::property_tests::arbitrary_fragment_widths_round_trip
+        PASS [   0.022s] ( 29/101) ovis-terminal-holder service::unix::lifecycle_tests::a_stale_endpoint_refuses_stop_and_is_replaced_only_by_an_explicit_start
+        PASS [   0.008s] ( 30/101) ovis-terminal-holder service::unix::paths::tests::session_names_are_closed_and_long_socket_paths_are_refused
+        PASS [   0.008s] ( 31/101) ovis-terminal-holder service::unix::record::tests::a_corrupt_record_is_an_error_and_is_never_read_as_absent
+        PASS [   0.020s] ( 32/101) ovis-terminal-holder service::unix::lifecycle_tests::a_started_holder_is_running_until_stopped_and_stopping_enumerates_and_withdraws_it
+        PASS [   0.008s] ( 33/101) ovis-terminal-holder service::unix::record::tests::a_record_is_owner_only_replaced_whole_and_withdrawn_only_by_its_owner
+        PASS [   0.008s] ( 34/101) ovis-terminal-holder service::unix::registration::tests::a_definition_this_runtime_did_not_write_is_never_reported_or_removed
+        PASS [   0.009s] ( 35/101) ovis-terminal-holder service::windows::definition::tests::the_definition_runs_this_program_as_the_session_holder_and_names_its_owner
+        PASS [   0.009s] ( 36/101) ovis-terminal-holder service::unix::registration::tests::a_detached_holder_always_lacks_a_manager_and_the_other_os_manager_is_unsupported
+        PASS [   0.020s] ( 37/101) ovis-terminal-holder service::unix::manager::tests::exit_status_and_diagnostics_are_reported_not_guessed
+        PASS [   0.008s] ( 38/101) ovis-terminal-holder service::windows::observe::tests::a_live_holder_is_running_only_while_its_pipe_has_an_instance
+        PASS [   0.009s] ( 39/101) ovis-terminal-holder service::windows::observe::tests::a_marker_without_its_process_is_stale_even_with_no_pipe_left
+        PASS [   0.041s] ( 40/101) ovis-terminal-holder protocol::property_tests::identity_fields_round_trip_as_canonical_decimal_strings
+        PASS [   0.007s] ( 41/101) ovis-terminal-holder service::windows::record::tests::a_corrupt_record_is_an_error_and_never_absent
+        PASS [   0.008s] ( 42/101) ovis-terminal-holder service::windows::paths::tests::sessions_name_one_label_and_malformed_names_are_refused
+        PASS [   0.010s] ( 43/101) ovis-terminal-holder service::windows::observe::tests::without_a_record_only_the_pipe_name_decides_stopped_or_unreachable
+        PASS [   0.009s] ( 44/101) ovis-terminal-holder service::windows::paths::tests::state_comes_from_local_app_data_or_an_explicit_absolute_path_only
+        PASS [   0.009s] ( 45/101) ovis-terminal-holder service::windows::paths::tests::the_pipe_is_named_for_its_owner_and_session
+        PASS [   0.007s] ( 46/101) ovis-terminal-holder unix::holder::ending::tests::failed_wait_and_read_are_typed_exit_evidence_not_a_null_exit
+        PASS [   0.009s] ( 47/101) ovis-terminal-holder service::windows::record::tests::a_record_is_replaced_whole_and_withdrawn_only_by_the_holder_it_names
+        PASS [   0.009s] ( 48/101) ovis-terminal-holder unix::holder::ending::tests::exit_waits_for_gated_writer_to_acknowledge_closed_queue
+        PASS [   0.010s] ( 49/101) ovis-terminal-holder unix::detach::tests::detached_holder_leads_its_own_session
+        PASS [   0.010s] ( 50/101) ovis-terminal-holder unix::holder::signalling::tests::permission_denied_is_preserved_while_target_is_live
+        PASS [   0.012s] ( 51/101) ovis-terminal-holder unix::holder::shutdown_tests::shutdown_kills_same_group_descendant_after_leader_is_reaped
+        PASS [   0.012s] ( 52/101) ovis-terminal-holder unix::holder::shutdown_tests::shutdown_reports_zombie_without_signalling_before_waiter_reaps
+        PASS [   0.012s] ( 53/101) ovis-terminal-holder unix::holder::signalling::tests::mismatched_start_token_never_signals_a_live_pid
+        PASS [   0.012s] ( 54/101) ovis-terminal-holder unix::holder::shutdown_tests::shutdown_reports_already_exited_when_waiter_reaped_before_output_completion
+        PASS [   0.013s] ( 55/101) ovis-terminal-holder unix::holder::shutdown_tests::shutdown_stops_pump_when_reaped_leader_group_is_gone
+        PASS [   0.017s] ( 56/101) ovis-terminal-holder unix::holder::reap_tests::hangup_after_reap_carries_spawned_incarnation_and_precedes_exit
+        PASS [   0.019s] ( 57/101) ovis-terminal-holder unix::holder::reap_tests::shutdown_with_descendant_holding_slave_is_bounded_and_keeps_hangup_before_exit
+        PASS [   0.016s] ( 58/101) ovis-terminal-holder unix::holder_tests::interrupt_delivery_is_not_termination_evidence
+        PASS [   0.018s] ( 59/101) ovis-terminal-holder unix::holder_tests::newer_fence_revokes_queued_input_behind_a_blocked_write
+        PASS [   0.018s] ( 60/101) ovis-terminal-holder unix::holder_tests::no_worker_thread_survives_kill_reap_and_shutdown
+        PASS [   0.008s] ( 61/101) ovis-terminal-holder unix::pty_io::tests::hangup_readiness_with_queued_final_bytes_returns_them_before_hangup
+        PASS [   0.008s] ( 62/101) ovis-terminal-holder unix::pty_io::tests::kernel_poll_error_flags_are_a_typed_failure_not_a_hangup
+        PASS [   0.008s] ( 63/101) ovis-terminal-holder unix::pty_io::tests::poll_flags_classify_hangup_readiness_and_typed_failures
+        PASS [   0.012s] ( 64/101) ovis-terminal-holder unix::holder_tests::stale_process_incarnation_and_sequence_regressions_are_rejected
+        PASS [   0.012s] ( 65/101) ovis-terminal-holder unix::launch_tests::a_program_that_exits_at_once_launches_with_the_token_it_keeps_until_reaped
+        PASS [   0.007s] ( 66/101) ovis-terminal-holder unix::pty_io::tests::unexpected_read_failure_is_typed_not_a_hangup
+        PASS [   0.008s] ( 67/101) ovis-terminal-holder unix::pty_io::tests::unexpected_write_failure_is_returned_with_the_written_prefix
+        PASS [   0.073s] ( 68/101) ovis-terminal-holder protocol::property_tests::all_message_kinds_round_trip_at_every_two_fragment_boundary
+        PASS [   0.009s] ( 69/101) ovis-terminal-holder unix::service_tests::draining_holder_refuses_spawns_and_completes_once_empty
+        PASS [   0.009s] ( 70/101) ovis-terminal-holder unix::service_tests::generation_one_core_is_refused_at_hello_before_any_spawn
+        PASS [   0.011s] ( 71/101) ovis-terminal-holder unix::service_tests::maximum_counters_round_trip_exactly_through_the_socket
+        PASS [   0.007s] ( 72/101) ovis-terminal-holder unix::tail::tests::offset_beyond_head_is_rejected
+        PASS [   0.012s] ( 73/101) ovis-terminal-holder unix::service_tests::malformed_frame_drops_only_that_connection
+        PASS [   0.010s] ( 74/101) ovis-terminal-holder unix::service_tests::requests_before_hello_and_unknown_generations_change_nothing
+        PASS [   0.052s] ( 75/101) ovis-terminal-holder service::windows::definition::tests::every_quoted_argument_splits_back_unchanged
+        PASS [   0.015s] ( 76/101) ovis-terminal-holder unix::service_tests::each_launch_gets_its_own_cwd_and_environment_over_the_socket
+        PASS [   0.012s] ( 77/101) ovis-terminal-holder unix::service_tests::stop_wakes_accept_and_joins_while_a_core_is_connected
+        PASS [   0.013s] ( 78/101) ovis-terminal-holder unix::service_tests::repeated_readoption_keeps_pid_and_start_token
+        PASS [   0.008s] ( 79/101) ovis-terminal-holder windows::model::input::tests::an_empty_request_still_counts_against_the_entry_bound
+        PASS [   0.009s] ( 80/101) ovis-terminal-holder windows::model::output::tests::nothing_is_appended_or_ended_twice_and_reads_past_the_head_are_refused
+        PASS [   0.009s] ( 81/101) ovis-terminal-holder windows::model::tests::an_unobserved_status_and_a_failed_read_are_reported_not_defaulted
+        PASS [   0.032s] ( 82/101) ovis-terminal-holder unix::input_tests::admission_matches_a_byte_and_entry_bounded_fenced_model
+        PASS [   0.008s] ( 83/101) ovis-terminal-holder::platform_probe unix_failure::an_exited_thread_is_reported_gone
+        PASS [   0.007s] ( 84/101) ovis-terminal-holder::protocol adoption_transition_table_returns_typed_kinds
+        PASS [   0.007s] ( 85/101) ovis-terminal-holder::protocol failure
+        PASS [   0.007s] ( 86/101) ovis-terminal-holder::protocol happy
+        PASS [   0.026s] ( 87/101) ovis-terminal-holder windows::model::input::tests::the_queue_never_exceeds_either_bound_and_writes_in_admission_order
+        PASS [   0.015s] ( 88/101) ovis-terminal-holder::platform_probe unix_happy::shell_readiness_deadline_fails_with_both_observed_sizes
+        PASS [   0.022s] ( 89/101) ovis-terminal-holder windows::model::tests::every_windows_exit_code_and_offset_survives_the_holder_frame
+        PASS [   0.031s] ( 90/101) ovis-terminal-holder unix::tail::tests::read_from_returns_the_retained_suffix_of_the_stream
+        PASS [   0.034s] ( 91/101) ovis-terminal-holder windows::model::output::tests::the_exit_is_reached_only_after_every_retained_byte_in_order
+        PASS [   0.016s] ( 92/101) ovis-terminal-holder::unix happy
+        PASS [   0.059s] ( 93/101) ovis-terminal-holder unix::input_tests::empty_requests_are_bounded_by_the_entry_limit
+        PASS [   0.048s] ( 94/101) ovis-terminal-holder windows::model::teardown::tests::the_console_closes_once_after_exit_and_the_exit_is_published_once_after_both
+        PASS [   0.190s] ( 95/101) ovis-terminal-holder protocol::adoption_sequence_tests::generated_adoption_exit_ack_sequences_match_reference_model
+        PASS [   0.213s] ( 96/101) ovis-terminal-holder service::unix::manager::tests::a_hung_manager_is_killed_at_the_bound_and_reported_as_unknown_outcome
+        PASS [   0.209s] ( 97/101) ovis-terminal-holder::platform_probe unix_failure::a_thread_that_never_exits_is_reported_at_the_deadline
+        PASS [   0.667s] ( 98/101) ovis-terminal-holder service::unix::start_race_tests::concurrent_starts_over_a_stale_endpoint_leave_exactly_one_holder_and_type_the_loser
+        PASS [   2.273s] ( 99/101) ovis-terminal-holder::platform_probe failure
+        PASS [   5.003s] (100/101) ovis-terminal-holder::platform_probe happy
+        PASS [   6.888s] (101/101) ovis-terminal-holder::unix failure
+────────────
+     Summary [   6.991s] 101 tests run: 101 passed, 0 skipped
+exit=0

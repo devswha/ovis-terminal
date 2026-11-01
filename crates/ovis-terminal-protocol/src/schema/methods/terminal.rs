@@ -331,7 +331,7 @@ pub struct TerminalProcessInfoResult {
 /// Methods of this namespace.
 pub(crate) const METHODS: &[MethodSpec] = &[
     method! {"terminal.run", Mutation, Untargeted, TerminalRunParams => TerminalRunResult,
-    "Launch a program in a new terminal.", [SpawnFailed, DuplicateName, TemplateNotFound, TemplateInvalid, ParentNotFound, ParentFinished, MachineUnreachable, InvalidGeometry, LimitExceeded]},
+    "Launch a program in a new terminal.", [SpawnFailed, DuplicateName, TemplateNotFound, TemplateInvalid, ParentNotFound, ParentFinished, MachineUnreachable, InvalidGeometry, LimitExceeded, TooLarge]},
     method! {"terminal.first_message", Query, Untargeted, TerminalFirstMessageParams => FirstMessageRecord,
     "Read the first message queued under a launch by its requesting principal.", []},
     method! {"terminal.list", Query, Untargeted, TerminalListParams => TerminalListResult,

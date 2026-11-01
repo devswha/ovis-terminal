@@ -6,7 +6,9 @@
 use std::collections::BTreeSet;
 use std::fs::{self, File};
 use std::io::{self, BufReader, Read};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
+
+use ovis_terminal_protocol::domain::boundary_policy::RelativePath;
 
 const BLOCK: u64 = 512;
 const MAX_ENTRIES: usize = 64;
@@ -72,14 +74,9 @@ fn relative(header: &[u8; 512]) -> Result<PathBuf, ArchiveError> {
     } else {
         format!("{prefix}/{name}")
     };
-    let path = Path::new(joined.trim_end_matches('/'));
-    let normal = path
-        .components()
-        .all(|component| matches!(component, Component::Normal(_)));
-    if !normal || path.as_os_str().is_empty() || joined.contains('\\') {
-        return Err(ArchiveError::Unsafe);
-    }
-    Ok(path.to_path_buf())
+    RelativePath::parse("archive.entry", joined.trim_end_matches('/'))
+        .map(|path| path.as_path().to_path_buf())
+        .map_err(|_| ArchiveError::Unsafe)
 }
 
 fn next(reader: &mut impl Read) -> Result<Entry, ArchiveError> {

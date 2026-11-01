@@ -293,6 +293,10 @@ pub struct AgentConversationResult {
 pub struct AgentHistoryParams {
     /// Page request.
     pub page: Option<PageRequest>,
+    /// Provider store to list: a relative path below the authorized history root; absent
+    /// lists the root. A path that leaves the root is refused as `forbidden`.
+    #[serde(default)]
+    pub store: Option<String>,
 }
 
 /// Result of `agent.history`.
@@ -330,5 +334,5 @@ pub(crate) const METHODS: &[MethodSpec] = &[
     method! {"agent.records", Query, Terminal, AgentRecordsParams => AgentConversationResult,
     "Read the typed records and turns an agent's owning process reported.", [CursorExpired, HistoryChanged, ConversationUnavailable]},
     method! {"agent.history", Query, Untargeted, AgentHistoryParams => AgentHistoryResult,
-    "List sessions found in authorized provider stores.", [StoreUnavailable]},
+    "List sessions found in authorized provider stores.", [StoreUnavailable, PathNotFound, TooLarge]},
 ];

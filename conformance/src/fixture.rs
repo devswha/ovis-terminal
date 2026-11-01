@@ -7,6 +7,8 @@
 #[cfg(unix)]
 pub mod agents;
 #[cfg(unix)]
+pub mod boundary;
+#[cfg(unix)]
 pub mod bridge;
 #[cfg(unix)]
 pub mod commit_barrier;

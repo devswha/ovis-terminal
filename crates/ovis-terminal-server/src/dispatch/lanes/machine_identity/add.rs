@@ -5,6 +5,7 @@ use std::sync::{Arc, PoisonError};
 use ovis_terminal_authz::{Action, Session};
 use ovis_terminal_core::events::{EventData, SnapshotProducer};
 use ovis_terminal_core::ops::{OperationEvent, OperationSnapshot};
+use ovis_terminal_protocol::domain::boundary_policy::EndpointAllowlist;
 use ovis_terminal_protocol::schema::methods::machine::{MachineAddParams, MachineRecord};
 use ovis_terminal_remote::identity::{
     Connected, Credential, Name, NameHold, Trust, Trusted, fresh_challenge,
@@ -13,6 +14,7 @@ use ovis_terminal_remote::transport::{Handshake, Link, TransportSpec};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+use super::super::boundary_policy::violation;
 use super::MachineLane;
 use crate::dispatch::{Access, Completed, DispatchError, Execution, Method};
 
@@ -53,7 +55,7 @@ impl Drop for Held {
 /// `machine.add`: the machine is recorded only after its runtime proved the expected
 /// identity over a fresh challenge with the presented credential.
 #[derive(Debug)]
-pub struct MachineAdd(Arc<MachineLane>);
+pub struct MachineAdd(Arc<MachineLane>, EndpointAllowlist);
 
 /// Where an add connects and whom it trusts there.
 struct Target {
@@ -62,10 +64,16 @@ struct Target {
 }
 
 impl MachineAdd {
-    /// Adds machines to `lane`.
+    /// Adds machines to `lane` at any endpoint the transport accepts.
     #[must_use]
     pub fn new(lane: &Arc<MachineLane>) -> Self {
-        Self(Arc::clone(lane))
+        Self::restricted(lane, EndpointAllowlist::Unrestricted)
+    }
+
+    /// Adds machines to `lane` only at endpoints `allowlist` admits.
+    #[must_use]
+    pub fn restricted(lane: &Arc<MachineLane>, allowlist: EndpointAllowlist) -> Self {
+        Self(Arc::clone(lane), allowlist)
     }
 
     /// Connects and verifies; `None` when the caller cancelled first.
@@ -101,7 +109,8 @@ where
     const NAME: &'static str = "machine.add";
     type Params = MachineAddParams;
 
-    fn resolve(&self, _: &Self::Params, _: &Session) -> Result<Access, DispatchError> {
+    fn resolve(&self, params: &Self::Params, _: &Session) -> Result<Access, DispatchError> {
+        self.1.admit(&params.transport).map_err(violation)?;
         Ok(self.0.access(Action::Administer))
     }
 

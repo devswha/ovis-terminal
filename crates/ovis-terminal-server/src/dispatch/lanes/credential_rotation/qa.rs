@@ -101,7 +101,8 @@ async fn rotation_hands_out_a_working_replacement_and_a_stale_epoch_conflicts() 
     .await?;
 
     // Then self-rotation is forbidden, the replacement works while the old connection is
-    // refused, the stale epoch conflicts naming epoch 2, and a retry returns the same result.
+    // refused, the stale epoch conflicts naming epoch 2, and a retry returns the same result
+    // with the bearer shown once: the ledger keeps only its digest (IDEAL-108).
     assert_eq!(error_kind(&own), "forbidden");
     assert_eq!(at(&rotated, "/result/replaced/withdrawn/epoch"), "2");
     assert_eq!(
@@ -111,7 +112,11 @@ async fn rotation_hands_out_a_working_replacement_and_a_stale_epoch_conflicts() 
     assert_ne!(&replacement, &json!(writer.id().to_string()));
     assert_eq!(error_kind(&stale), "version_conflict");
     assert_eq!(at(&stale, "/error/data/principal_epoch"), "2");
-    assert_eq!(at(&retried, "/result"), at(&rotated, "/result"));
+    let mut sealed = at(&rotated, "/result").clone();
+    let shown = ovis_terminal_core::telemetry::redaction::seal(&mut sealed, "/issued/bearer");
+    assert_eq!(shown.as_deref(), Some(bearer.as_str()));
+    assert_eq!(at(&retried, "/result"), &sealed);
+    assert!(!retried.to_string().contains(&bearer));
     let mut fresh = connected(&rig, &bearer).await?;
     let inspect = call(&mut fresh, "op.get", &json!({"op_id": op_id()})).await?;
     assert_ne!(error_kind(&inspect), "credential_revoked");
