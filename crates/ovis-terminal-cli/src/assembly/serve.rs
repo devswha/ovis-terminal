@@ -133,6 +133,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
             .await?;
     let directory = Arc::new(Directory::new(booted.identity.machine_id()));
     directory.recorded(&booted.recorded);
+    let agents = super::lanes::agents::assemble(booted.identity, &directory)?;
     let lane = AttachLane::new(Arc::clone(&directory));
     let journal = Arc::new(BootJournal::new(&state, booted.leases));
     let limits = StreamLimits::advertised(&Limits::v1());
@@ -152,7 +153,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         live: BTreeMap::new(),
         launches: BTreeMap::new(),
         created: BTreeMap::new(),
-        status: Arc::clone(&booted.status),
+        status: Arc::clone(agents.status()),
         health: Arc::clone(&health),
         census: None,
     };
@@ -167,7 +168,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         lane,
         actor,
         control: booted.control,
-        status: booted.status,
+        agents,
         journal,
         stop: StopSignal::default(),
         restart: RestartSignal::default(),

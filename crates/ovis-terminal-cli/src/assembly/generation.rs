@@ -8,7 +8,6 @@ use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use ovis_terminal_agent::status::StatusService;
 use ovis_terminal_authz::Authority;
 use ovis_terminal_core::health::Health;
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
@@ -30,6 +29,7 @@ use super::actor::Actor;
 use super::directory::Directory;
 use super::handler::{Assembled, Handler, Served};
 use super::journal::BootJournal;
+use super::lanes::agents::Agents;
 use super::lanes::{Dispatch, DispatchLog, Hosting, host};
 use super::restart::{RestartSignal, StopSignal};
 
@@ -44,7 +44,7 @@ pub(super) struct Shared {
     pub(super) lane: Arc<AttachLane<Arc<Directory>>>,
     pub(super) actor: Actor,
     pub(super) control: Arc<Control>,
-    pub(super) status: Arc<StatusService>,
+    pub(super) agents: Arc<Agents>,
     pub(super) journal: Arc<BootJournal>,
     pub(super) stop: StopSignal,
     pub(super) restart: RestartSignal,
@@ -95,7 +95,7 @@ impl Generation {
             directory: Arc::clone(&shared.directory),
             actor: shared.actor.clone(),
             control: Arc::clone(&shared.control),
-            status: Arc::clone(&shared.status),
+            agents: Arc::clone(&shared.agents),
             health: Arc::clone(&health),
         })?;
         let dispatch = Arc::new(dispatch);
@@ -115,8 +115,8 @@ impl Generation {
             served,
             transports,
         };
-        let policed =
-            BoundaryPolicy::new((Arc::clone(&shared.authority), audit(identity)?), assembled);
+        let gated = shared.agents.gate(Arc::new(assembled));
+        let policed = BoundaryPolicy::new((Arc::clone(&shared.authority), audit(identity)?), gated);
         let measured = Measured::new(health, Arc::new(policed));
         let handler = Arc::new(Revalidated::new(Arc::clone(&shared.authority), measured));
         let endpoint = UnixEndpoint::bind(&shared.socket)

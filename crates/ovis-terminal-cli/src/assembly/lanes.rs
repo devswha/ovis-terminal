@@ -3,7 +3,7 @@
 //! coordinator commits their operation, agent and document events. Each registration
 //! phase lives in its own child module, so a later lane adds one call here.
 
-mod agents;
+pub(super) mod agents;
 mod machine;
 mod service;
 mod update;
@@ -82,7 +82,7 @@ pub(super) struct Hosting<'a> {
     pub(super) directory: Arc<Directory>,
     pub(super) actor: super::actor::Actor,
     pub(super) control: Arc<ovis_terminal_core::restart::Control>,
-    pub(super) status: Arc<ovis_terminal_agent::status::StatusService>,
+    pub(super) agents: Arc<agents::Agents>,
     pub(super) health: Arc<ovis_terminal_core::health::Health>,
 }
 

@@ -88,7 +88,6 @@ pub(super) struct Booted {
     pub(super) boot: Boot,
     pub(super) inherited: Vec<ovis_terminal_core::recovery::Recorded>,
     pub(super) recorded: Vec<ovis_terminal_core::terminals::Record>,
-    pub(super) status: Arc<ovis_terminal_agent::status::StatusService>,
     pub(super) leases: LeaseLog,
     pub(super) geometry: GeometryLog,
 }
@@ -203,9 +202,6 @@ fn boot_blocking(state: &Path) -> Result<Booted, AssemblyError> {
         boot,
         inherited,
         recorded,
-        status: Arc::new(ovis_terminal_agent::status::StatusService::new(
-            identity.runtime_id(),
-        )),
         leases,
         geometry,
     })

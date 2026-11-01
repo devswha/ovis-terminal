@@ -14,6 +14,7 @@ use ovis_terminal_agent::status::StatusService;
 use ovis_terminal_protocol::domain::prompt_bridge::ProgramCredential;
 use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_protocol::rpc::RpcRequest;
+use ovis_terminal_protocol::schema::limits::TransportKind;
 use serde::Deserialize as _;
 use serde_json::Value;
 
@@ -105,6 +106,10 @@ impl<H, T> Gated<H, T> {
 impl<H: RequestHandler, T: TerminalDirectory> RequestHandler for Gated<H, T> {
     fn methods(&self) -> Vec<&'static str> {
         self.inner.methods()
+    }
+
+    fn transports(&self) -> Vec<TransportKind> {
+        self.inner.transports()
     }
 
     async fn call(&self, call: Call) -> Result<Value, BoundaryError> {

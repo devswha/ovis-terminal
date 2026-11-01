@@ -1,5 +1,5 @@
-//! A program finds its process token at spawn, opens a prompt with it, and the prompt is
-//! still known to the next boot of the same state.
+//! A program finds its process token at spawn, opens a prompt with it behind the prompt
+//! bridge gate, and the prompt is still known to the next boot of the same state.
 
 use serde_json::{Value, json};
 
@@ -105,9 +105,11 @@ fn a_prompt_opened_with_the_spawn_token_is_recovered_by_the_next_boot() -> TestR
             })
             .to_string(),
         ],
-        1,
+        12,
     )?;
-    assert_eq!(forged.get("kind"), Some(&json!("not_owner")), "{forged}");
+    // The prompt bridge gate refuses a token that names no current program before the
+    // prompt lane (which would answer `not_owner`) ever decodes the request.
+    assert_eq!(forged.get("kind"), Some(&json!("forbidden")), "{forged}");
     assert_eq!(prompt_ids(&first)?, vec![json!("p1")]);
     let (_, root) = first.stop_keeping_state()?;
     let second = Served::start_at(&root, &[])?;
