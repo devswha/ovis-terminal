@@ -3730,6 +3730,117 @@
         "$ref": "#/components/schemas/DecimalCounter",
         "description": "Holder GrantEpoch as a canonical decimal string."
       },
+      "GraphicsDropReason": {
+        "description": "Why a whole graphics sequence was dropped.",
+        "oneOf": [
+          {
+            "const": "too_large",
+            "description": "The sequence exceeded `graphics_sequence_max_bytes`.",
+            "type": "string"
+          }
+        ]
+      },
+      "GraphicsDroppedData": {
+        "additionalProperties": false,
+        "description": "Data of `graphics.dropped`: one sequence was dropped whole, never delivered in part.",
+        "properties": {
+          "limit_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "The cap in force."
+          },
+          "output_offset": {
+            "$ref": "#/components/schemas/ByteOffset",
+            "description": "Raw output offset where the sequence began."
+          },
+          "protocol": {
+            "$ref": "#/components/schemas/GraphicsProtocol",
+            "description": "Protocol of the dropped sequence.",
+            "x-ovis-open-enum": true
+          },
+          "reason": {
+            "$ref": "#/components/schemas/GraphicsDropReason",
+            "description": "Why it was dropped.",
+            "x-ovis-open-enum": true
+          },
+          "sequence_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Raw bytes seen before the drop; at least `limit_bytes` plus one."
+          }
+        },
+        "required": [
+          "protocol",
+          "reason",
+          "output_offset",
+          "sequence_bytes",
+          "limit_bytes"
+        ],
+        "type": "object"
+      },
+      "GraphicsEvictReason": {
+        "description": "Why retained graphics sequences were evicted.",
+        "oneOf": [
+          {
+            "const": "store_full",
+            "description": "Retaining a new sequence would exceed `graphics_terminal_store_max_bytes`.",
+            "type": "string"
+          }
+        ]
+      },
+      "GraphicsEvictedData": {
+        "additionalProperties": false,
+        "description": "Data of `graphics.evicted`: the oldest retained sequences left the terminal's store.",
+        "properties": {
+          "evicted_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Raw bytes evicted."
+          },
+          "evicted_sequences": {
+            "$ref": "#/components/schemas/Count",
+            "description": "Sequences evicted."
+          },
+          "limit_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "The cap in force."
+          },
+          "reason": {
+            "$ref": "#/components/schemas/GraphicsEvictReason",
+            "description": "Why sequences were evicted.",
+            "x-ovis-open-enum": true
+          },
+          "retained_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Raw bytes still retained after the eviction."
+          }
+        },
+        "required": [
+          "reason",
+          "evicted_sequences",
+          "evicted_bytes",
+          "retained_bytes",
+          "limit_bytes"
+        ],
+        "type": "object"
+      },
+      "GraphicsProtocol": {
+        "description": "Graphics protocol a sequence belongs to, recognized from its introducer only.",
+        "oneOf": [
+          {
+            "const": "kitty",
+            "description": "Kitty graphics: `APC _G ... ST`, one transmission across its `m=1` chunks.",
+            "type": "string"
+          },
+          {
+            "const": "iterm2",
+            "description": "iTerm2 inline image: `OSC 1337 ; File= ... BEL|ST`.",
+            "type": "string"
+          },
+          {
+            "const": "sixel",
+            "description": "Sixel: `DCS ... q ... ST`.",
+            "type": "string"
+          }
+        ]
+      },
       "Heartbeat": {
         "description": "Idle heartbeat of one subscription.",
         "properties": {
@@ -5016,6 +5127,14 @@
             "$ref": "#/components/schemas/Count",
             "description": "Retained events available for replay."
           },
+          "graphics_sequence_max_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Largest single graphics sequence: a whole Kitty chunk series, one OSC 1337 or\none sixel; a larger one is dropped whole with `graphics.dropped{too_large}`."
+          },
+          "graphics_terminal_store_max_bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Graphics bytes one terminal retains for replay; past it the oldest sequences are\nevicted with `graphics.evicted{store_full}`."
+          },
           "heartbeat_ms": {
             "$ref": "#/components/schemas/DurationMs",
             "description": "Idle interval after which a heartbeat is sent."
@@ -5108,7 +5227,9 @@
           "session_input_bytes",
           "session_backlog_bytes",
           "session_event_queue_bytes",
-          "session_vt_bytes"
+          "session_vt_bytes",
+          "graphics_sequence_max_bytes",
+          "graphics_terminal_store_max_bytes"
         ],
         "type": "object"
       },
@@ -23924,6 +24045,20 @@
         "$ref": "#/components/schemas/UpdateRecord"
       },
       "summary": "An update changed state."
+    },
+    {
+      "name": "graphics.dropped",
+      "schema": {
+        "$ref": "#/components/schemas/GraphicsDroppedData"
+      },
+      "summary": "A graphics sequence exceeded its cap and was dropped whole."
+    },
+    {
+      "name": "graphics.evicted",
+      "schema": {
+        "$ref": "#/components/schemas/GraphicsEvictedData"
+      },
+      "summary": "A terminal's graphics store was full and its oldest sequences were evicted."
     }
   ],
   "x-limits": {
@@ -23934,6 +24069,8 @@
       "doc_max_bytes": "1048576",
       "event_replay_bytes": "67108864",
       "event_replay_events": "10000",
+      "graphics_sequence_max_bytes": "8388608",
+      "graphics_terminal_store_max_bytes": "33554432",
       "heartbeat_ms": "15000",
       "history_lines": "100000",
       "input_queue_bytes": "16777216",

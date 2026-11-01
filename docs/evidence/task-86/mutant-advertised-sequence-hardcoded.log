@@ -1,0 +1,12 @@
+mutant: mutant-advertised-sequence-hardcoded (round 2, on the shipped split test layout)
+file: crates/ovis-terminal-protocol/src/domain/graphics.rs
+- sequence_max_bytes: limits.graphics_sequence_max_bytes,
++ sequence_max_bytes: ByteCount::new(8 * 1024 * 1024),
+$ cargo nextest run -p ovis-terminal-protocol --locked --no-fail-fast
+exit=0
+        FAIL [   0.007s] ( 19/225) ovis-terminal-protocol domain::graphics::tests::the_caps_are_read_from_the_limits_a_hello_reply_carries
+     Summary [   8.120s] 225 tests run: 224 passed, 1 failed, 0 skipped
+        FAIL [   0.007s] ( 19/225) ovis-terminal-protocol domain::graphics::tests::the_caps_are_read_from_the_limits_a_hello_reply_carries
+
+
+restored: yes (sha256 matches pre-mutant file)

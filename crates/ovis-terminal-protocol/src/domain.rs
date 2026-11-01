@@ -7,6 +7,7 @@ pub mod conpty;
 pub mod conversation_records;
 pub mod credential_rotation;
 pub mod documents_retention;
+pub mod graphics;
 pub mod health;
 pub mod machine_actor;
 pub mod machine_identity;
