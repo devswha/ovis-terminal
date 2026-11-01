@@ -105,6 +105,7 @@ Every file outside the write scope (`docs/skill/`, `src/skill/`, `src/agent/`, `
 - `conformance/scenarios/cli/manual.json`: the runner maps `--scenario cli/manual` to this file; the `cli/manual/` directory would not be found.
 - `conformance/src/{invocation.rs,invocation/tests.rs,scenario/model.rs,engine.rs,engine/steps.rs,engine/commands.rs}`: the plan's literal failure inject is a command line, not JSON, so the runner accepts it and selects a planned command run. Binary runs gained label resolution and captures, so `--skill` and `schema` versions are compared without pinning a version string.
 - `conformance/src/runner_tests/suite.rs`: `cli/manual.json` added to `EXECUTABLE` in sorted position. It was never in `declared.json`.
+- `probes/platform-qa/stress/cli-manual.{json,sh}`: the macOS stress lane for this todo (25 iterations of the CLI lib, producer and cli process tests plus `cli/manual` all and the literal failure inject); the workflow resolves lanes from these files, so it needs no edit.
 - `docs/evidence/task-66/`: logs and this body.
 
 Seams owed by todo 66 according to landed PRs: #57 already routes `machine.add` through `MachineAddAttached` and calls through `RemoteDispatch` in the served binary. `ServiceLanes`, `MachineAdd::restricted`, reconnect and the second fixture dispatcher for `worktree.*` are untouched here; see Risks.
@@ -115,6 +116,10 @@ Seams owed by todo 66 according to landed PRs: #57 already routes `machine.add` 
 - Text-mode output now escapes `\` and control characters in strings. Any person-facing script that parsed text mode would see `\\`; JSON is the contract and is unchanged.
 - The runner's `--inject` now also accepts command-line text. Malformed JSON (text starting with `{` or `[`) is still a usage error.
 - Host incident: one local build/test run sourced the toolchain env from the wrong cwd and wrote into `/dev/shm/ovt-target-main`. Nothing there was deleted (removing hashed artifacts could break a concurrent run). The owner may want to prune it.
+
+## macOS stress
+
+`gh workflow run probe-stress-macos.yml -f probe=cli-manual --ref lane/t66-assemble-the-single-binary-a`: https://github.com/devswha/ovis-terminal/actions/runs/41358489287 (dispatched once; result reported when it completes).
 
 ## DEFERRED VERIFICATION
 
