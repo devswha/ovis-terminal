@@ -74,7 +74,15 @@ Adversarial classes and legacy defects: `docs/evidence/task-70/adversarial.md`.
 
 ## DEFERRED VERIFICATION
 
-**72-hour soak.** `.github/workflows/soak.yml` (workflow_dispatch plus a weekly cron `17 3 * * 6`) runs 50 terminals for 259200 s with 20 control crashes, 6 handovers, 12 interruptions, 6 stalled viewers and the probe. It runs on existing self-hosted runners labelled `[self-hosted, Linux, ovis-soak]` and `[self-hosted, macOS, ovis-soak]`, with no new paid service, and uploads external artifact checkpoints every 6 h plus the final evidence. FIRST_DISPATCH_PLACEHOLDER The 72 h result is reported when it lands; this PR claims nothing about it.
+**72-hour soak.** `.github/workflows/soak.yml` (workflow_dispatch plus a weekly cron `17 3 * * 6`) runs 50 terminals for 259200 s with 20 control crashes, 6 handovers, 12 interruptions, 6 stalled viewers and the probe. It runs on existing self-hosted runners labelled `[self-hosted, Linux, ovis-soak]` and `[self-hosted, macOS, ovis-soak]`, with no new paid service, and uploads external artifact checkpoints every 6 h plus the final evidence. First dispatch, attempted from this lane:
+
+```
+$ gh workflow run soak.yml --ref lane/t70-ship-the-72-hour-soak-harnes
+HTTP 404: Not Found (https://api.github.com/repos/devswha/ovis-terminal/actions/workflows/soak.yml)
+exit=1
+```
+
+GitHub dispatches and schedules a workflow only once its file is on the default branch, which this lane does not change. The first dispatch therefore happens after the union merge reaches it, and is reported then. The 72 h result is reported when it lands; this PR claims nothing about it.
 
 **Conformance runner.** `performance/soak` is declared (`conformance/scenarios/declared.json`), not executable. The literal attempts, verbatim:
 
@@ -105,4 +113,4 @@ It becomes executable when todo 31 serves the control endpoint (terminal.run, in
 - **GAP-119/IDEAL-092 coverage.** The soak's "remote interruption" cuts and resumes the observing client's connection; it is not an SSH machine transport. Orphan acknowledgement replay by parent incarnation is proven by `recovery/e2e` (todo 52) and is not re-run inside this soak.
 - **Source state of the 1800 s run.** The soak binary of the acceptance run was built before a behaviour-free module split, needed for the 250-pure-LOC rule. `control.rs` was split into `io/ops/shutdown` and `drive.rs` into `tick`. The fixture run, the tests and the mutants ran on the final code.
 - **The stalled viewer was not cut inside the 1800 s run** (181417 of 262144 B before its boot ended). The cut is proven by the hub test; the 72 h profile attaches 6 stalled viewers.
-- **macOS.** Proven by the dispatched stress lane (`soak.sh`: tests, self-test, fixture, 600 s / 50 terminals). The native 1800 s proof is Linux.
+- **macOS.** The dispatched stress lane https://github.com/devswha/ovis-terminal/actions/runs/41341596094 covers it (`soak.sh`: tests, self-test, fixture, 600 s / 50 terminals). The native 1800 s proof is Linux.
