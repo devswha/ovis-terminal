@@ -1,0 +1,464 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "client/package",
+  "title": "The packed Bun client's wire contract: one persistent connection, exact u64 values, additive output values and typed refusals that are never resent",
+  "todo": 63,
+  "closes": [
+    "GAP-004",
+    "GAP-005",
+    "GAP-018",
+    "GAP-019",
+    "GAP-023",
+    "GAP-026",
+    "GAP-060",
+    "GAP-139",
+    "GAP-140"
+  ],
+  "delivers": [
+    "IDEAL-004",
+    "IDEAL-006",
+    "IDEAL-007",
+    "IDEAL-013",
+    "IDEAL-019",
+    "IDEAL-028",
+    "IDEAL-040",
+    "IDEAL-055",
+    "IDEAL-112",
+    "IDEAL-113"
+  ],
+  "excludes": [
+    "EXCL-014",
+    "EXCL-015",
+    "EXCL-016",
+    "EXCL-025"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the binary's connect bridge, one framed connection carries pipelined, fragmented requests of every effect class; each reply is correlated by id, a launched terminal is live, a document holding future_status and u64::MAX round-trips byte-exactly, and the schema the client package exports is the one the server discovers.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": true,
+            "expect": {
+              "/id": "hello",
+              "/result/capabilities/framed": true,
+              "/result/limits/max_frame_bytes": "16777216",
+              "/result/methods": {
+                "$contains": [
+                  "doc.set",
+                  "doc.get",
+                  "op.get",
+                  "terminal.run",
+                  "terminal.output"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "set-future",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:future",
+                  "name": "package",
+                  "value": {
+                    "status": "future_status",
+                    "offset": "18446744073709551615"
+                  },
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "package",
+                  "cwd": "/"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "page-at-max",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "terminal_id": "terminal:1"
+                  },
+                  "from_offset": "18446744073709551615",
+                  "limit_bytes": "4"
+                }
+              }
+            ],
+            "split": {
+              "chunks": [
+                1,
+                7,
+                64,
+                3
+              ]
+            }
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "set-future": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/value/status": "future_status",
+                "/result/value/offset": "18446744073709551615"
+              },
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/state": "live",
+                "/result/terminal/name": "package"
+              },
+              "page-at-max": {
+                "/result/from_offset": "67108864",
+                "/result/next_offset": "67108864",
+                "/result/data_b64": ""
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "get-future",
+                "method": "doc.get",
+                "params": {
+                  "name": "package"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "inspect-future",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:future"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "get-future": {
+                "/result/value/status": "future_status",
+                "/result/value/offset": "18446744073709551615"
+              },
+              "inspect-future": {
+                "/result/op_id": "$op:future",
+                "/result/method": "doc.set",
+                "/result/state": "committed"
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "package.json": {
+                "status": "future_status",
+                "offset": "18446744073709551615"
+              },
+              "spawn-terminal:100.json": {
+                "argv": [
+                  "agent"
+                ],
+                "env": {
+                  "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100"
+                },
+                "cwd": "/",
+                "name": "package",
+                "parent": null
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "An operation id outside the retention window is the typed op_expired refusal carrying its op_id, answered once and never committed; a literal non-UUIDv7 op id is invalid_params at params.op_id; a numeric u64 is invalid_params; the connection keeps serving after every refusal.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "terminal.run",
+                  "op.get"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "bridge",
+            "base": {
+              "op_id": "$op:injected",
+              "program": {
+                "argv": [
+                  "agent"
+                ]
+              },
+              "geometry": {
+                "cols": 80,
+                "rows": 24
+              },
+              "name": "injected"
+            },
+            "planned": [
+              {
+                "request": {
+                  "method": "terminal.run",
+                  "params": {
+                    "op_id": "expired-operation"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/error/data/field_path": "params.op_id",
+                  "/error/data/retryable": false,
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "terminal.run",
+                  "params": {
+                    "op_id": "01890000-0000-7000-8000-000000000001"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "op_expired",
+                  "/error/data/op_id": "01890000-0000-7000-8000-000000000001",
+                  "/error/data/retryable": false,
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "expired-run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "00000000-0000-7000-8000-000000000063",
+                  "program": {
+                    "argv": [
+                      "agent"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "name": "expired"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "expired-doc",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "00000000-0000-7000-8000-000000000064",
+                  "name": "expired",
+                  "value": "never",
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "numeric-offset",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "terminal_id": "terminal:1"
+                  },
+                  "from_offset": 9007199254740992,
+                  "limit_bytes": "4"
+                }
+              }
+            ],
+            "split": "bytewise"
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "expired-run": {
+                "/error/data/kind": "op_expired",
+                "/error/data/op_id": "00000000-0000-7000-8000-000000000063",
+                "/error/data/retryable": false,
+                "/result": {
+                  "$present": false
+                }
+              },
+              "expired-doc": {
+                "/error/data/kind": "op_expired",
+                "/error/data/op_id": "00000000-0000-7000-8000-000000000064"
+              },
+              "numeric-offset": {
+                "/error/data/kind": "invalid_params",
+                "/error/data/field_path": "params.from_offset"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "still-served",
+                "method": "doc.get",
+                "params": {
+                  "name": "expired"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "inspect-expired",
+                "method": "op.get",
+                "params": {
+                  "op_id": "00000000-0000-7000-8000-000000000063"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "still-served": {
+                "/result/value": null
+              },
+              "inspect-expired": {
+                "/error/data/kind": "op_expired",
+                "/error/data/op_id": "00000000-0000-7000-8000-000000000063",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {}
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
