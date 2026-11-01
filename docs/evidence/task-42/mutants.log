@@ -1,0 +1,49 @@
+# Mutants applied one at a time against the lane head; each reverted after its run.
+# Each compiled and was killed by a shipped test (exit 101).
+
+## M1-no-remote-mark
+file: crates/ovis-terminal-core/src/commit/boundary.rs
+mutation: '.write(remote::advance(snapshot, origin)?)\n                        .mirrored_from' -> '.mirrored_from'
+command: cargo test -p ovis-terminal-core --test commit
+exit: 101
+killed_by:
+  test remote::an_unreadable_upstream_mark_is_never_reset_to_a_default ... FAILED
+  test remote::upstream_positions_round_trip_as_decimal_strings ... FAILED
+  test remote::replayed_or_reordered_upstream_positions_are_refused ... FAILED
+  test result: FAILED. 6 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+
+## M2-inclusive-expiry
+file: crates/ovis-terminal-core/src/commit/pager.rs
+mutation: 'if now < expires_ms {' -> 'if now <= expires_ms {'
+command: cargo test -p ovis-terminal-core --test commit
+exit: 101
+killed_by:
+  test pages::pages_stay_on_one_revision_until_their_expiry ... FAILED
+  test result: FAILED. 8 passed; 1 failed
+
+## M3-never-truncated
+file: crates/ovis-terminal-core/src/commit/pager.rs
+mutation: 'truncated: continuation.is_some() && data.len() < limit,' -> 'truncated: false,'
+command: cargo test -p ovis-terminal-core --test commit
+exit: 101
+killed_by:
+  test pages::pages_stay_on_one_revision_until_their_expiry ... FAILED
+  test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+
+## M4-drop-status-clear
+file: crates/ovis-terminal-server/src/dispatch/agent.rs
+mutation: '        dispatcher.register(ClearStatus::new(&status))?;\n' -> ''
+command: cargo test -p ovis-terminal-server --test dispatch agent_assembly
+exit: 101
+killed_by:
+  test agent_assembly::the_assembly_routes_exactly_its_catalog_methods_once ... FAILED
+  test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.12s
+
+## M5-no-storage-full
+file: crates/ovis-terminal-core/src/commit/error.rs
+mutation: 'EventError::Store(store) if store.is_storage_full() =>' -> 'EventError::Store(store) if store.is_storage_full() && false =>'
+command: cargo test -p ovis-terminal-core --test commit
+exit: 101
+killed_by:
+  test storage::a_full_store_acknowledges_and_publishes_nothing ... FAILED
+

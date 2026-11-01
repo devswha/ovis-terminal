@@ -9,6 +9,8 @@ pub mod agents;
 #[cfg(unix)]
 pub mod bridge;
 #[cfg(unix)]
+pub mod commit_barrier;
+#[cfg(unix)]
 pub mod documents;
 #[cfg(unix)]
 pub mod handler;

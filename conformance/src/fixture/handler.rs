@@ -146,6 +146,9 @@ impl RequestHandler for FixtureHandler {
             "rpc.discover" => discover(&call.request),
             "terminal.output" => output::page(&call.request),
             PROVIDER_WRITE => super::transcripts::write(&self.root, &call.request),
+            super::commit_barrier::METHOD => {
+                super::commit_barrier::call(&self.root, &call.request).await
+            }
             REPLACE_PROCESS => self.replace().await,
             PTY_READ => {
                 let probes = (&*self.probes.gate, &*self.probes.directory);

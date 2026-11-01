@@ -156,6 +156,12 @@ impl StoreError {
         }
     }
 
+    /// Whether SQLite refused the transaction because the database or disk is full.
+    pub fn is_storage_full(&self) -> bool {
+        matches!(self, Self::Sqlite(error)
+            if error.sqlite_error_code() == Some(rusqlite::ErrorCode::DiskFull))
+    }
+
     /// The recovery evidence carried by `store_corrupted` and `store_unsupported`.
     pub fn recovery_evidence(&self) -> Option<&RecoveryEvidence> {
         match self {

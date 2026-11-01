@@ -1,6 +1,9 @@
 //! Strict dispatch through the real persistent connection and durable operation ledger.
 #![cfg(unix)]
 
+#[path = "../src/dispatch/agent/qa.rs"]
+/// The agent domain assembled over one dispatcher, gate and socket.
+pub mod agent_assembly;
 #[path = "../src/dispatch/qa/authority.rs"]
 /// Scoped admission and commit-time revocation.
 pub mod authority;
