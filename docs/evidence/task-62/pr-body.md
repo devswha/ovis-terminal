@@ -310,6 +310,52 @@ What the failure case asserts with `--inject` (only the injected planned request
 
 The macOS stress job was not re-dispatched this round (merge only). CI's macOS test job runs the attach tests on the push.
 
+
+## Round 5: the stale-takeover reply names the current lease (gate r4 blocker) + credit mutant
+
+**Blocker (gate r4).** The plan's failure case needs `lease_epoch_mismatch` *with the current epoch*. The served `attach.takeover` refusal carried only kind/hint/retryable/op_id, even though core's `LeaseError::EpochMismatch` holds `current: Box<Lease>`.
+
+**Fix (schema change, additive).**
+- `ErrorData` gains `current: Option<Box<LeaseRecord>>` (the lease holding the slot now, present on a `lease_epoch_mismatch` refusal), plus `BoundaryError::with_current_lease`.
+- The server's `StreamError::boundary()` maps `LeaseError::EpochMismatch { current }` into it, so both `attach.takeover` and `attach.open`'s `takeover` field report `error.data.current = {lease_id, epoch, role, holder}`. This is the same record the CLI path reports.
+- Regeneration:
+  - `openrpc write schema/ovis-terminal.openrpc.json`; `openrpc compat schema/released.openrpc.json` reports `compatible_with` (an additive optional field, so no baseline amendment).
+  - `bun run generate` in packages/client-ts (31 files).
+  - `quality-matrix --mode contract` passes and rewrites `conformance/ideal-map.json`.
+  - task-61's committed quality/gates evidence embeds the schema through `$equals_file`. It was re-recorded on this tree (happy 65, failure 64, all 129 assertions, plus the source-check report), the same procedure as 31183dd. evidence-audit passes.
+- Tests:
+  - `crates/ovis-terminal-protocol/tests/lease_epoch_mismatch.rs`: a proptest round trip over every epoch, `u64::MAX` exact, a numeric epoch refused, and the field omitted when unset.
+  - The server's `streams::qa::takeover` asserts that `error.data.current` equals the holder record from the held open.
+
+**Scenario (`cli/interactive-attach` failure).**
+- A correctly shaped `attach.takeover` on the relay's held stream (`stream_id` captured from its held `attach.open`) at the plan's epoch "0" is refused `invalid_params`: the parser refuses epoch 0 because no lease ever holds it (core `Takeover::new`, `takeover.lease_epoch`). Per the round brief, epoch 7 is therefore the stale epoch.
+- At stale epoch "7" it asserts `/error/data/kind` `lease_epoch_mismatch`, `/error/data/current/epoch` "1", `current/holder` "cli", `current/role` "interact", `current/lease_id` present, and `/result` absent.
+- The injected `attach.open` takeover at 7 asserts the same `current` epoch and holder.
+- The following `attach.leases` still shows holder `cli` at epoch "1": no eviction.
+- The plan's literal malformed inject `{"method":"attach.takeover","params":{"lease_epoch":"0"}}` stays as the malformed-input check, answered `invalid_params`.
+
+**Review items.**
+- (3) `interactive_transparency/viewer.rs`: a reply the viewer can no longer deliver (receiver dropped) now ends the route loop, like its data path. The disguised `.ok()` is gone.
+- (4) The observer rogue-input assertions are present in the merged `tests/attach.rs` (#57's version, which replaced the lane's), in stronger form:
+  - `rogue-2` never reaches the program: `!interact.shows("rogue-2", Duration::ZERO)` after an `echo fence-$((5+5))` fence (lines 196-198). The rogue input would precede the fence, so this is not a timed negative.
+  - The observer follows output on its own stdout: `screen.shows("after-8")` through `Drawn` (line 189). The interact side's `after-8` is at line 188.
+  - Old forms replaced: the 300 ms time-bounded `rogue-2` negative, and the post-exit stdout `contains("after-8")`.
+
+**Credit mutant (terra r4).** `attach/session/credit_tests.rs` has a scripted peer that honours credit the way the server does: it sends `attach.data` only while `sent - acknowledged < window`, and sends more only after `attach.credit`. The client must draw a 64-byte download through a 16-byte window within a 10 s bound. Mutant (session.rs `data` never sends `attach.credit`): the test fails with "the stream stalled at 16 of 64 bytes: credit was not replenished", and the lane suite exits 100. Unmutated: 50/50 pass. Log: `docs/evidence/task-62/mutant-credit-r5.log`.
+
+**Gates at 0b56ab1** (heavy gate; RAM target with `CARGO_INCREMENTAL=0` and line-tables-only debug info):
+- `bash scripts/check.sh`: exit 0. 1455 tests passed, 2 skipped. hygiene 0 violations. source-check and evidence-audit pass.
+- Windows `cargo check` and clippy with `-D warnings`: exit 0 (`windows-precheck-r5.log`). The first attempt inside the gate hit EDQUOT (os error 122) on the shared /dev/shm quota and was re-run after freeing this lane's target.
+- QA:
+  - happy: exit 0, 41 assertions.
+  - The plan's literal `--case failure --inject '{"method":"attach.takeover","params":{"lease_epoch":"0"}}' --append`: exit 0, 72 assertions.
+  - `--case all`: exit 0, 120 assertions.
+  - part-a/task-31 all: exit 0, 115 assertions.
+  - Logs: `qa-*-r5.log`, `merge5-task31-r5.log`, `gate-r5.log`. Raw evidence: `task-62-ovis-terminal-v1.json` and `-all.json`.
+- Binary sha256 `f685337b396c465301d60c50cea444578ae11df62809c0ac76555911e2117515`, Linux x86_64.
+
+**Seams (round 5).** Public API: `ovis_terminal_protocol::errors::ErrorData::current` (new field) and `BoundaryError::with_current_lease` (new builder). Both are additive: the wire field is optional and omitted when absent. Server crate: `StreamError::boundary()` now attaches the current lease for `EpochMismatch`.
+
 ## Seams
 
 Files outside the write scope (`crates/ovis-terminal-cli/src/attach/`, `conformance/scenarios/cli/interactive-attach/`), and why:
