@@ -107,6 +107,26 @@ $ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked
 - **Fixture stand-in.** `fixture.commit_barrier` runs the real `Boundary`, `Pager`, `Subscriptions`, coordinator and SQLite writer inside the fixture process, but on a dedicated store with a 64 MiB history stand-in section. No wire method for `session.snapshot` paging or `events.subscribe` is served by the binary yet. Assembling the full roster producer and the subscription transport over the wire remains for the assembly owners (todos 63/66). The remote source is a `RemoteOrigin`-tagged commit, not a live remote line (todo 52 assembles the mirror).
 - **Gaps between this assembly and production.** `agent.tree` and template launch still register through their own fixture modules. OSC ingestion is not yet wired to the live output pump.
 - **Debug-build cost.** The 64 MiB probe takes about 8.5 s in a debug build against the runner's 20 s per-reply bound. A much slower CI runner could approach that bound.
-- **Unmerged integration.** `origin/integration` moved to 291cfee (todo 86) after this lane's base. The lane does not merge it, per the lane rules (the orchestrator union-merges).
+- **`agent.history` is not in `AgentAssembly`.** It is served by T58's `boundary_policy` lane, which needs an authorized root. The daemon assembly (todo 31) must route it as an unrecorded Read and compose `Revalidated(Measured(BoundaryPolicy(gated)))`. The conformance fixture already composes it that way after the merge.
 
 DEFERRED VERIFICATION: none. The runner executes `agent/e2e`, and both cases passed above.
+
+## Merge addendum (authorized by the orchestrator)
+
+Two merge commits sit on top of a062208, with no rewrite: `0f00057` merges integration 291cfee (T86 graphics caps) and `edd7332` merges integration 167c0a7 (T58 boundary policy).
+- The only conflict was `.github/workflows/probe-stress-macos.yml`. It was resolved as a union: options end `..., boundary-policy, graphics-caps, commit-barrier`, and the `commit-barrier` job is last.
+- `conformance/src/fixture/serve.rs` auto-merged into `Revalidated(Measured(BoundaryPolicy(assembly.gate(handler))))`.
+- `Cargo.lock` did not conflict. `cargo metadata --locked` exits 0.
+- `openrpc write` / `check` / `compat schema/released.openrpc.json` each exit 0 (`compatible_with`). The regenerated document is byte-identical to the merged one.
+- In `packages/client-ts`, `bun run generate` reports `changed: 0`. With `OVIS_*_BIN` pointing at the merged RAM-target binaries, `generate:check`, `typecheck` and `bun test` exit 0: 30 pass, 0 fail.
+
+Gates on the merged tree (edd7332):
+```
+cargo test --no-fail-fast -p ovis-terminal-server -p ovis-terminal-agent -p ovis-terminal-agent-adapters -p ovis-terminal-core --all-targets   # exit 0, 639 passed, 0 failed (merge-lane-test.log)
+cargo clippy -p ovis-terminal-server -p ovis-terminal-agent -p ovis-terminal-agent-adapters -p ovis-terminal-core --all-targets -- -D warnings # exit 0
+conformance --scenario agent/e2e --isolated --case all                                   # exit 0, 126 assertions, 2/2 passed (merge-qa-all.log)
+bash ~/.ovis-toolchain/with-slot.sh bash scripts/check.sh                               # exit 0, nextest 1285 run: 1285 passed, 1 skipped; hygiene 0 violations (merge-check.log)
+RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked   # exit 0
+cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings          # exit 0
+```
+The macOS stress run `probe=commit-barrier` was dispatched once on a062208: https://github.com/devswha/ovis-terminal/actions/runs/41288062895
