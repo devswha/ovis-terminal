@@ -60,6 +60,12 @@ pub struct Limits {
     pub session_event_queue_bytes: ByteCount,
     /// Session budget for resident VT grids and history.
     pub session_vt_bytes: ByteCount,
+    /// Largest single graphics sequence: a whole Kitty chunk series, one OSC 1337 or
+    /// one sixel; a larger one is dropped whole with `graphics.dropped{too_large}`.
+    pub graphics_sequence_max_bytes: ByteCount,
+    /// Graphics bytes one terminal retains for replay; past it the oldest sequences are
+    /// evicted with `graphics.evicted{store_full}`.
+    pub graphics_terminal_store_max_bytes: ByteCount,
 }
 
 impl Limits {
@@ -90,6 +96,8 @@ impl Limits {
             session_backlog_bytes: ByteCount::new(64 * MIB),
             session_event_queue_bytes: ByteCount::new(64 * MIB),
             session_vt_bytes: ByteCount::new(128 * MIB),
+            graphics_sequence_max_bytes: ByteCount::new(8 * MIB),
+            graphics_terminal_store_max_bytes: ByteCount::new(32 * MIB),
         }
     }
 }

@@ -1,0 +1,23 @@
+mutant: mutant-sequence-default
+file: crates/ovis-terminal-protocol/src/schema/limits.rs
+- graphics_sequence_max_bytes: ByteCount::new(8 * MIB)
++ graphics_sequence_max_bytes: ByteCount::new(9 * MIB)
+$ cargo nextest run -p ovis-terminal-protocol --locked --no-fail-fast graphics
+exit=0
+        FAIL [   0.007s] (1/6) ovis-terminal-protocol domain::graphics::tests::the_cap_is_admitted_and_one_byte_more_is_dropped_whole
+    test domain::graphics::tests::the_cap_is_admitted_and_one_byte_more_is_dropped_whole ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 116 filtered out; finished in 0.00s
+        PASS [   0.007s] (2/6) ovis-terminal-protocol domain::graphics::tests::every_layer_that_carries_a_sequence_can_hold_the_cap
+        PASS [   0.007s] (3/6) ovis-terminal-protocol domain::graphics::tests::an_eviction_notice_names_store_full_and_the_store_cap
+        PASS [   0.008s] (4/6) ovis-terminal-protocol domain::graphics::tests::graphics_caps_round_trip_u64_max_and_refuse_numbers
+        FAIL [   0.009s] (5/6) ovis-terminal-protocol domain::graphics::tests::hello_limits_carry_both_graphics_caps_as_decimal_strings
+    test domain::graphics::tests::hello_limits_carry_both_graphics_caps_as_decimal_strings ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 116 filtered out; finished in 0.00s
+    thread 'domain::graphics::tests::hello_limits_carry_both_graphics_caps_as_decimal_strings' (4138907) panicked at crates/ovis-terminal-protocol/src/domain/graphics/tests.rs:21:5:
+        PASS [   0.051s] (6/6) ovis-terminal-protocol domain::graphics::tests::the_event_catalog_publishes_both_graphics_notices
+     Summary [   0.052s] 6 tests run: 4 passed, 2 failed, 216 skipped
+        FAIL [   0.007s] (1/6) ovis-terminal-protocol domain::graphics::tests::the_cap_is_admitted_and_one_byte_more_is_dropped_whole
+        FAIL [   0.009s] (5/6) ovis-terminal-protocol domain::graphics::tests::hello_limits_carry_both_graphics_caps_as_decimal_strings
+
+
+restored: yes

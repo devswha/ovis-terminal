@@ -1,0 +1,35 @@
+$ git show da5b456:schema/ovis-terminal.openrpc.json | jq '."x-limits".defaults'
+{
+  "connection_unwritten_bytes": "67108864",
+  "credit_initial_bytes": "262144",
+  "credit_max_bytes": "1048576",
+  "doc_max_bytes": "1048576",
+  "event_replay_bytes": "67108864",
+  "event_replay_events": "10000",
+  "heartbeat_ms": "15000",
+  "history_lines": "100000",
+  "input_queue_bytes": "16777216",
+  "max_frame_bytes": "16777216",
+  "max_in_flight_requests": "64",
+  "op_retention_ms": "86400000",
+  "output_ring_bytes": "67108864",
+  "queued_operations": "32",
+  "rpc_default_deadline_ms": "10000",
+  "session_backlog_bytes": "67108864",
+  "session_event_queue_bytes": "67108864",
+  "session_input_bytes": "67108864",
+  "session_retained_bytes": "4294967296",
+  "session_rss_bytes": "1073741824",
+  "session_vt_bytes": "134217728",
+  "stream_backlog_bytes": "4194304",
+  "stream_chunk_bytes": "16384"
+}
+graphics keys present: 0 of 23
+$ grep -n 'session_vt_bytes' crates/ovis-terminal-protocol/src/schema/limits.rs (at da5b456)
+62:    pub session_vt_bytes: ByteCount,
+63:}
+92:            session_vt_bytes: ByteCount::new(128 * MIB),
+95:}
+110:}
+121:}
+133:}
