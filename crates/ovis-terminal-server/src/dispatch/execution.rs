@@ -22,6 +22,10 @@ use tokio::sync::watch;
 use super::DispatchError;
 use crate::conn::Notifier;
 
+mod proven;
+
+pub use proven::Unsettled;
+
 /// A domain's resolved action and target, never a focus-based default.
 #[derive(Debug, Clone)]
 pub struct Access {

@@ -1,0 +1,863 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "services/update",
+  "title": "Staged updates are verified before selection and failed activations roll back with inspectable receipts",
+  "todo": 47,
+  "closes": [
+    "GAP-127"
+  ],
+  "delivers": [
+    "IDEAL-100",
+    "IDEAL-107",
+    "IDEAL-117"
+  ],
+  "excludes": [
+    "EXCL-013",
+    "EXCL-020",
+    "EXCL-021"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the bridge: a fixture release is staged by digest, verified (archive hash, protocol and holder generations), activated only after readiness and a control restart that preserves the held program, and a second release that fails readiness is rolled back: the old active build, its executable digest and a readiness_failed receipt are inspectable, and op.get keeps the failure; an explicit rollback then restores the original build.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "releases",
+                "method": "fixture.update",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "releases": {
+                "/result/releases/ready": {
+                  "$capture": "ready"
+                },
+                "/result/releases/broken": {
+                  "$capture": "broken"
+                },
+                "/result/releases/climbing": {
+                  "$capture": "climbing"
+                },
+                "/result/escaped": false
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "before",
+                "method": "update.query",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "before": {
+                "/result/active_version": "1.0.0",
+                "/result/active/binary_sha256": {
+                  "$capture": "original"
+                },
+                "/result/live_incarnations": {
+                  "$capture": "live"
+                },
+                "/result/previous": null,
+                "/result/pending": null,
+                "/result/updates": []
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stage-2",
+                "method": "update.stage",
+                "params": {
+                  "op_id": "$op:stage-2",
+                  "version": "2.0.0",
+                  "sha256": "$value:ready"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "stage-2": {
+                "/result/state": "staged",
+                "/result/sha256": "$value:ready",
+                "/result/active_version": "1.0.0",
+                "/result/build": null,
+                "/result/update_id": {
+                  "$capture": "u2"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "verify-2",
+                "method": "update.verify",
+                "params": {
+                  "op_id": "$op:verify-2",
+                  "update_id": "$value:u2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "verify-2": {
+                "/result/state": "verified",
+                "/result/build/manifest/version": "2.0.0",
+                "/result/build/manifest/protocol_generations": [
+                  "1"
+                ],
+                "/result/build/manifest/holder_generations": [
+                  "2"
+                ],
+                "/result/build/binary_sha256": {
+                  "$capture": "b2"
+                },
+                "/result/active_version": "1.0.0"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "unchanged",
+                "method": "update.query",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "unchanged": {
+                "/result/active_version": "1.0.0",
+                "/result/active/binary_sha256": "$value:original"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "activate-2",
+                "method": "update.activate",
+                "params": {
+                  "op_id": "$op:activate-2",
+                  "update_id": "$value:u2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "activate-2": {
+                "/result/state": "activated",
+                "/result/active_version": "2.0.0",
+                "/result/activation/previous/binary_sha256": "$value:original",
+                "/result/activation/readiness/outcome": "ready",
+                "/result/activation/readiness/exit_code": 0,
+                "/result/activation/restart/preserved_incarnations": "$value:live",
+                "/result/activation/restart/ended_incarnations": [],
+                "/result/activation/restart/server_boot_id_new": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "after-2",
+                "method": "update.query",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "after-2": {
+                "/result/active_version": "2.0.0",
+                "/result/active/binary_sha256": "$value:b2",
+                "/result/previous/version": "1.0.0",
+                "/result/previous/binary_sha256": "$value:original",
+                "/result/live_incarnations": "$value:live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stage-3",
+                "method": "update.stage",
+                "params": {
+                  "op_id": "$op:stage-3",
+                  "version": "3.0.0",
+                  "sha256": "$value:broken"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "stage-3": {
+                "/result/state": "staged",
+                "/result/update_id": {
+                  "$capture": "u3"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "verify-3",
+                "method": "update.verify",
+                "params": {
+                  "op_id": "$op:verify-3",
+                  "update_id": "$value:u3"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "verify-3": {
+                "/result/state": "verified"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "activate-3",
+                "method": "update.activate",
+                "params": {
+                  "op_id": "$op:activate-3",
+                  "update_id": "$value:u3"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "activate-3": {
+                "/error/data/kind": "activation_failed",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "activate-3-receipt",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:activate-3"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "activate-3-receipt": {
+                "/result/state": "failed",
+                "/result/error/kind": "activation_failed"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "rolled-back",
+                "method": "update.query",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "rolled-back": {
+                "/result/active_version": "2.0.0",
+                "/result/active/binary_sha256": "$value:b2",
+                "/result/pending": null,
+                "/result/live_incarnations": "$value:live",
+                "/result/updates/1/state": "rolled_back",
+                "/result/updates/1/rollback/reason": "readiness_failed",
+                "/result/updates/1/rollback/op_id": "$op:activate-3",
+                "/result/updates/1/rollback/from/version": "3.0.0",
+                "/result/updates/1/rollback/restored/version": "2.0.0",
+                "/result/updates/1/rollback/restored/binary_sha256": "$value:b2",
+                "/result/updates/1/rollback/readiness/outcome": "exited",
+                "/result/updates/1/rollback/readiness/exit_code": 1,
+                "/result/updates/0/state": "activated"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "rollback-2",
+                "method": "update.rollback",
+                "params": {
+                  "op_id": "$op:rollback-2",
+                  "update_id": "$value:u2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "rollback-2": {
+                "/result/state": "rolled_back",
+                "/result/rollback/reason": "requested",
+                "/result/rollback/restored/binary_sha256": "$value:original",
+                "/result/rollback/restart/preserved_incarnations": "$value:live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "restored",
+                "method": "update.query",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "restored": {
+                "/result/active_version": "1.0.0",
+                "/result/active/binary_sha256": "$value:original",
+                "/result/live_incarnations": "$value:live"
+              }
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "A zero digest is integrity_failed with nothing staged and the original executable digest and live incarnations unchanged; another target is incompatible, numeric digests and path-like versions are invalid_params; an archive that climbs out of its root is rejected as unsafe_archive with no escaped file, cannot be activated, and foreign update ids are no_staged_update.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "releases",
+                "method": "fixture.update",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "releases": {
+                "/result/releases/ready": {
+                  "$capture": "ready"
+                },
+                "/result/releases/broken": {
+                  "$capture": "broken"
+                },
+                "/result/releases/climbing": {
+                  "$capture": "climbing"
+                },
+                "/result/escaped": false
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "before",
+                "method": "update.query",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "before": {
+                "/result/active_version": "1.0.0",
+                "/result/active/binary_sha256": {
+                  "$capture": "original"
+                },
+                "/result/live_incarnations": {
+                  "$capture": "live"
+                },
+                "/result/previous": null,
+                "/result/pending": null,
+                "/result/updates": []
+              }
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "bridge",
+            "base": {
+              "op_id": "$op:inject",
+              "version": "2.0.0"
+            },
+            "planned": [
+              {
+                "request": {
+                  "method": "update.stage",
+                  "params": {
+                    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "integrity_failed",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "update.stage",
+                  "params": {
+                    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+                    "target": "plan9-mips"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "incompatible",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "update.stage",
+                  "params": {
+                    "sha256": 0
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "update.stage",
+                  "params": {
+                    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+                    "version": "../2.0.0"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "untouched",
+                "method": "update.query",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "untouched": {
+                "/result/active_version": "1.0.0",
+                "/result/active/binary_sha256": "$value:original",
+                "/result/live_incarnations": "$value:live",
+                "/result/updates": [],
+                "/result/pending": null
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stage-4",
+                "method": "update.stage",
+                "params": {
+                  "op_id": "$op:stage-4",
+                  "version": "4.0.0",
+                  "sha256": "$value:climbing"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "stage-4": {
+                "/result/state": "staged",
+                "/result/update_id": {
+                  "$capture": "u4"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "verify-4",
+                "method": "update.verify",
+                "params": {
+                  "op_id": "$op:verify-4",
+                  "update_id": "$value:u4"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "verify-4": {
+                "/error/data/kind": "integrity_failed",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "verify-4-receipt",
+                "method": "op.get",
+                "params": {
+                  "op_id": "$op:verify-4"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "verify-4-receipt": {
+                "/result/state": "failed",
+                "/result/error/kind": "integrity_failed"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "activate-4",
+                "method": "update.activate",
+                "params": {
+                  "op_id": "$op:activate-4",
+                  "update_id": "$value:u4"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "activate-4": {
+                "/error/data/kind": "invalid_update_state"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "foreign",
+                "method": "update.verify",
+                "params": {
+                  "op_id": "$op:foreign",
+                  "update_id": "../active"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "foreign": {
+                "/error/data/kind": "no_staged_update"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "rejected",
+                "method": "update.query",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "rejected": {
+                "/result/active_version": "1.0.0",
+                "/result/active/binary_sha256": "$value:original",
+                "/result/live_incarnations": "$value:live",
+                "/result/updates/0/state": "rejected",
+                "/result/updates/0/rejection/reason": "unsafe_archive",
+                "/result/updates/0/rejection/op_id": "$op:verify-4"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "contained",
+                "method": "fixture.update",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "contained": {
+                "/result/escaped": false
+              }
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,28 +1,43 @@
-//! `$op:<label>` placeholders: one fresh `UUIDv7` per label per case run.
+//! `$op:<label>` placeholders: one fresh `UUIDv7` per label per case run; `$value:<name>`
+//! placeholders: the reply value an earlier `$capture` matcher recorded under that name.
 
 use std::collections::BTreeMap;
 
 use serde_json::Value;
 
 const PREFIX: &str = "$op:";
+const VALUE: &str = "$value:";
 
-/// Operation identities minted for one case.
+/// Operation identities minted, and reply values captured, for one case.
 #[derive(Debug, Default)]
-pub(crate) struct Labels(BTreeMap<String, String>);
+pub(crate) struct Labels {
+    ops: BTreeMap<String, String>,
+    values: BTreeMap<String, Value>,
+}
 
 impl Labels {
-    /// Copies `value`, replacing every `$op:<label>` string with that label's identity.
+    /// Records `value` for later `$value:<name>` strings.
+    pub(crate) fn capture(&mut self, name: String, value: Value) {
+        self.values.insert(name, value);
+    }
+
+    /// Copies `value`, replacing every `$op:<label>` string with that label's identity and
+    /// every captured `$value:<name>` string with its value; an unknown name stays as is.
     pub(crate) fn resolve(&mut self, value: &Value) -> Value {
         match value {
-            Value::String(text) => match text.strip_prefix(PREFIX) {
-                Some(label) => Value::String(
-                    self.0
-                        .entry(label.to_owned())
-                        .or_insert_with(|| uuid::Uuid::now_v7().to_string())
-                        .clone(),
-                ),
-                None => value.clone(),
-            },
+            Value::String(text) => {
+                if let Some(label) = text.strip_prefix(PREFIX) {
+                    return Value::String(
+                        self.ops
+                            .entry(label.to_owned())
+                            .or_insert_with(|| uuid::Uuid::now_v7().to_string())
+                            .clone(),
+                    );
+                }
+                text.strip_prefix(VALUE)
+                    .and_then(|name| self.values.get(name))
+                    .map_or_else(|| value.clone(), Value::clone)
+            }
             Value::Array(items) => {
                 Value::Array(items.iter().map(|item| self.resolve(item)).collect())
             }
@@ -58,5 +73,13 @@ mod tests {
             .and_then(|text| uuid::Uuid::parse_str(text).ok())
             .map(|id| id.get_version_num());
         assert_eq!(version, Some(7));
+    }
+
+    #[test]
+    fn captured_values_replace_their_placeholders_and_unknown_names_stay() {
+        let mut labels = Labels::default();
+        labels.capture("id".to_owned(), json!({"n": "1"}));
+        let resolved = labels.resolve(&json!(["$value:id", "$value:other"]));
+        assert_eq!(resolved, json!([{"n": "1"}, "$value:other"]));
     }
 }

@@ -1,0 +1,14 @@
+# mutant m3a-no-ready-record (applied to the round-2 tree, reverted after the run)
+--- a/crates/ovis-terminal-services/src/update/transition.rs
++++ b/crates/ovis-terminal-services/src/update/transition.rs
+@@ -111,3 +111,2 @@
+         journal.phase = ActivationPhase::Ready;
+-        self.journal(&mut state, &journal)?;
+         #[cfg(test)]
+
+$ cargo test -p ovis-terminal-services --lib update
+exit=0
+test update::tests::crash::a_crash_after_the_ready_record_is_finished_on_open_without_a_second_restart ... FAILED
+thread 'update::tests::crash::a_crash_after_the_ready_record_is_finished_on_open_without_a_second_restart' (944406) panicked at crates/ovis-terminal-services/src/update/tests/crash.rs:35:5:
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 35 filtered out; finished in 0.45s
+SVC_EXIT=101
