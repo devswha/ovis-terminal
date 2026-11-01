@@ -120,6 +120,7 @@ impl Generation {
         shared: &Shared,
         (identity, health, endpoint): (RuntimeIdentity, Arc<Health>, Option<UnixEndpoint>),
     ) -> Result<Self, AssemblyError> {
+        let launches = super::lanes::templates::LaunchSessions::default();
         let (dispatch, log, routes) = host(&Hosting {
             state: &shared.state,
             identity,
@@ -129,6 +130,7 @@ impl Generation {
             control: Arc::clone(&shared.control),
             agents: Arc::clone(&shared.agents),
             health: Arc::clone(&health),
+            launches: launches.clone(),
         })?;
         let feed = super::feed::subscribe(&log)?;
         shared
@@ -148,6 +150,7 @@ impl Generation {
             events: Arc::clone(&events),
             stop: shared.stop.clone(),
             restart: shared.restart.clone(),
+            launches,
         });
         let transports = match shared.websocket_port {
             Some(_) => vec![TransportKind::Unix, TransportKind::Websocket],

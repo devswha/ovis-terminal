@@ -82,6 +82,7 @@ pub(super) struct Served {
     pub(super) events: Arc<super::events::EventLane>,
     pub(super) stop: super::restart::StopSignal,
     pub(super) restart: super::restart::RestartSignal,
+    pub(super) launches: super::lanes::templates::LaunchSessions,
 }
 
 impl RequestHandler for Served {
@@ -111,6 +112,11 @@ impl Served {
         match call.request.method() {
             "terminal.run" => {
                 let params: TerminalRunParams = decode(&call)?;
+                if params.template.is_some() || params.first_message.is_some() {
+                    // T35's lane plans and runs it; its launcher needs the caller's session.
+                    self.launches.record(params.op_id.as_str(), session);
+                    return self.dispatch.call(call).await;
+                }
                 let run = move |runtime: &mut super::actor::Runtime| {
                     runtime.run_terminal(&session, params)
                 };

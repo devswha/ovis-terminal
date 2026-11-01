@@ -7,7 +7,7 @@ pub(super) mod agents;
 mod machine;
 pub(super) mod remote;
 mod service;
-mod templates;
+pub(super) mod templates;
 mod update;
 mod worktrees;
 
@@ -121,6 +121,7 @@ pub(super) struct Hosting<'a> {
     pub(super) control: Arc<ovis_terminal_core::restart::Control>,
     pub(super) agents: Arc<agents::Agents>,
     pub(super) health: Arc<ovis_terminal_core::health::Health>,
+    pub(super) launches: templates::LaunchSessions,
 }
 
 fn stage<E: Into<super::StageSource>>(stage: &'static str) -> impl FnOnce(E) -> AssemblyError {

@@ -37,6 +37,7 @@ mod restart;
 mod routes;
 mod serve;
 mod session;
+mod template_runs;
 mod terminal;
 mod turns;
 mod waited;

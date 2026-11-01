@@ -28,6 +28,8 @@ mod session;
 mod stdio;
 #[path = "assembly/support.rs"]
 pub mod support;
+#[path = "assembly/template_launch.rs"]
+mod template_launch;
 #[path = "assembly/templates.rs"]
 mod templates;
 #[path = "assembly/turns.rs"]
@@ -43,10 +45,10 @@ use std::collections::BTreeSet;
 use std::process::Command;
 
 use serde_json::{Value, json};
-use support::{BIN, Served, TestResult, op_id};
+use support::{BIN, Served, TestResult};
 
 /// Schema methods no landed crate implements; each must answer `method_not_found`.
-const UNIMPLEMENTED: [&str; 16] = [
+const UNIMPLEMENTED: [&str; 15] = [
     "agent.list",
     "agent.note",
     "agent.release",
@@ -60,7 +62,6 @@ const UNIMPLEMENTED: [&str; 16] = [
     "server.start",
     "service.install",
     "service.remove",
-    "terminal.first_message",
     "terminal.history",
     "terminal.search",
 ];
@@ -190,26 +191,11 @@ fn terminal_run_spawns_a_real_program_that_list_get_and_status_report() -> TestR
 }
 
 #[test]
-fn stale_targets_unsupported_launch_fields_and_numeric_ids_are_typed_refusals() -> TestResult {
+fn stale_targets_and_numeric_ids_are_typed_refusals() -> TestResult {
     let served = Served::start()?;
     served.run_shell("only")?;
     let stale = served.refused(&["terminal", "get", "--address", "t9"], 3)?;
     assert_eq!(stale.get("kind"), Some(&json!("not_found")));
-    let first_message = json!({
-        "op_id": op_id()?, "program": {"argv": ["/bin/true"]}, "geometry": {"cols": 80, "rows": 24},
-        "cwd": "/tmp", "env": {}, "name": null, "labels": null, "parent": null, "child_policy": null,
-        "keep": null, "first_message": {"text": "hi", "deadline_ms": "1000"}, "machine": null,
-    });
-    let unsupported = served.refused(
-        &[
-            "call",
-            "terminal.run",
-            "--params",
-            &first_message.to_string(),
-        ],
-        1,
-    )?;
-    assert_eq!(unsupported.get("kind"), Some(&json!("unsupported_field")));
     let numeric = served.refused(&["call", "op.get", "--params", "{\"op_id\":7}"], 2)?;
     assert_eq!(numeric.get("kind"), Some(&json!("invalid_params")));
     let leases = served.ok(&[
