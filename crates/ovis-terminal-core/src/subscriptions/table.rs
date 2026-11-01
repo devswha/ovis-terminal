@@ -7,10 +7,12 @@ use ovis_terminal_protocol::schema::scalar::EventSeq;
 
 use super::{LossCause, LossRecord, QueueLimits, Selector, SubscriptionError};
 use crate::events::Event;
+use crate::health::ConsumerGauge;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct Lost {
     pub from: EventSeq,
+    pub through: EventSeq,
     pub cause: LossCause,
     pub persisted: bool,
 }
@@ -45,6 +47,7 @@ pub(super) struct Entry<D> {
     pub bytes: usize,
     pub phase: Phase,
     pub orphaned: bool,
+    pub gauge: Option<ConsumerGauge>,
 }
 
 impl<D> Entry<D> {
@@ -58,6 +61,7 @@ impl<D> Entry<D> {
             bytes: 0,
             phase: Phase::Active,
             orphaned: false,
+            gauge: None,
         }
     }
 
@@ -137,13 +141,17 @@ impl<D> Table<D> {
                 .front()
                 .map_or(breach.at, |(event, _)| event.cursor.seq.get());
             self.session_bytes = self.session_bytes.saturating_sub(entry.bytes);
+            entry.report_dropped(entry.bytes);
             entry.queue.clear();
             entry.bytes = 0;
-            entry.phase = Phase::Lost(Lost {
+            let lost = Lost {
                 from: EventSeq::new(from),
+                through: super::gauge::through(EventSeq::new(from), breach.at),
                 cause: breach.cause,
                 persisted: false,
-            });
+            };
+            entry.report_lost(lost);
+            entry.phase = Phase::Lost(lost);
         }
     }
 
@@ -213,6 +221,7 @@ impl<D> Table<D> {
         }
         if let Some(entry) = self.entries.get_mut(index) {
             entry.orphaned = true;
+            entry.gauge = None;
         }
         self.persisted(&[]);
     }

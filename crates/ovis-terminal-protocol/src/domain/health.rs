@@ -145,6 +145,29 @@ impl MethodLatency {
     }
 }
 
+/// Whether a status answer carries a holder and terminal census.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum CensusState {
+    /// The terminal service published `holder_count` and `live_terminals`.
+    Reported,
+    /// Nothing published a census; both counts are null rather than zero.
+    NotReported,
+}
+
+/// Schema of a census count that is always present: a decimal string, or null when no
+/// census was reported.
+pub(crate) fn nullable_count(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    generator.subschema_for::<Option<Count>>()
+}
+
+/// The census state of an answer that carries none.
+#[must_use]
+pub const fn census_not_reported() -> OpenEnum<CensusState> {
+    OpenEnum::Known(CensusState::NotReported)
+}
+
 /// Summary of what recovery found; reading it never clears it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]

@@ -1,14 +1,15 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use ovis_terminal_protocol::domain::health::{ConsumerRef, LossRange};
+use ovis_terminal_protocol::domain::health::{CensusState, ConsumerRef, LossRange};
 use ovis_terminal_protocol::errors::OpId;
 use ovis_terminal_protocol::schema::ids::{ClientId, StreamId, SubscriptionId, TerminalId};
 use ovis_terminal_protocol::schema::methods::server::{ConsumerQueue, ServerMetricsResult};
-use ovis_terminal_protocol::schema::scalar::{ByteOffset, EventSeq, TimestampMs};
+use ovis_terminal_protocol::schema::scalar::{ByteOffset, Count, EventSeq, OpenEnum, TimestampMs};
 
 use super::{
-    Health, HealthError, Latencies, MAX_CONSUMERS, MAX_LOSSES, Observed, RecoveryLedger, Settled,
+    Census, Health, HealthError, Latencies, MAX_CONSUMERS, MAX_LOSSES, Observed, RecoveryLedger,
+    Settled,
 };
 use crate::recovery::Incidents;
 use crate::registry::{
@@ -91,7 +92,7 @@ fn a_stalled_viewer_shows_its_backlog_and_lag_until_written() {
     gauge.queued(4096, TimestampMs::new(1));
     gauge.queued(100, TimestampMs::new(u64::MAX));
     let stalled = metrics(&health);
-    assert_eq!((stalled.streams, stalled.subscriptions), (1, 0));
+    assert_eq!((stalled.streams.get(), stalled.subscriptions.get()), (1, 0));
     assert_eq!(row(&stalled).queue_bytes.get(), 4196);
     assert!(row(&stalled).event_lag_ms.get() > 0);
     gauge.written(4096);
@@ -175,8 +176,8 @@ fn rows_follow_gauge_lifetimes_and_the_table_is_bounded() {
     let full = metrics(&health);
     assert_eq!(full.consumers.len(), MAX_CONSUMERS);
     assert_eq!(
-        full.subscriptions,
-        u32::try_from(MAX_CONSUMERS).expect("bound")
+        full.subscriptions.get(),
+        u64::try_from(MAX_CONSUMERS).expect("bound")
     );
     assert_eq!(full.consumers_untracked.get(), 1);
 }
@@ -217,4 +218,13 @@ fn metrics_name_the_current_lifetime_and_boot() {
     assert_eq!(read.latest_seq, EventSeq::new(9));
     let status = health.status(&[]);
     assert_eq!(status.server_boot_id, Some(read.server_boot_id));
+    assert_eq!(status.census, OpenEnum::Known(CensusState::NotReported));
+    assert_eq!((status.holder_count, status.live_terminals), (None, None));
+    health.publish_census(Census::new(2, 3));
+    let census = health.status(&[]);
+    assert_eq!(census.census, OpenEnum::Known(CensusState::Reported));
+    assert_eq!(
+        (census.holder_count, census.live_terminals),
+        (Some(Count::new(2)), Some(Count::new(3)))
+    );
 }

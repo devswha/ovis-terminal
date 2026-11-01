@@ -84,8 +84,22 @@ impl ConsumerGauge {
         }
     }
 
+    /// `bytes` more were queued for the consumer just now.
+    pub fn queued_now(&self, bytes: u64) {
+        self.queued(bytes, super::monitor::now_or_epoch());
+    }
+
     /// `bytes` were written to the consumer's transport.
     pub fn written(&self, bytes: u64) {
+        self.settle(bytes);
+    }
+
+    /// `bytes` of the backlog were dropped unsent, by a resync or a close.
+    pub fn skipped(&self, bytes: u64) {
+        self.settle(bytes);
+    }
+
+    fn settle(&self, bytes: u64) {
         let mut flow = self.0.flow();
         flow.written = flow.written.saturating_add(bytes).min(flow.queued);
         let written = flow.written;
@@ -113,8 +127,8 @@ impl ConsumerGauge {
 /// What one read of the table saw.
 #[derive(Debug)]
 pub(super) struct Rows {
-    pub(super) streams: u32,
-    pub(super) subscriptions: u32,
+    pub(super) streams: Count,
+    pub(super) subscriptions: Count,
     pub(super) consumers: Vec<ConsumerQueue>,
     pub(super) untracked: Count,
 }
@@ -174,6 +188,12 @@ impl Consumers {
         Ok(ConsumerGauge(line))
     }
 
+    /// Counts a consumer that runs without a row, such as one that named no client.
+    pub fn untracked(&self) {
+        // Relaxed: a monotonic statistic with no ordering against other memory.
+        self.untracked.fetch_add(1, Ordering::Relaxed);
+    }
+
     /// Copies every live row as of `now`, ordered by consumer; the table lock is held
     /// only to clone at most [`MAX_CONSUMERS`] handles.
     pub(super) fn rows(&self, now: TimestampMs) -> Rows {
@@ -190,7 +210,7 @@ impl Consumers {
             .iter()
             .filter(|row| matches!(row.consumer, ConsumerRef::Stream { .. }))
             .count();
-        let count = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
+        let count = |n: usize| Count::new(u64::try_from(n).unwrap_or(u64::MAX));
         Rows {
             streams: count(streams),
             subscriptions: count(consumers.len().saturating_sub(streams)),

@@ -23,7 +23,8 @@ async fn happy() -> TestResult {
         assert_eq!(output.stderr, b"", "stderr: {:?}", output.stderr);
         let status = json(&output.stdout)?;
         assert_eq!(field(&status, "/state"), "stopped");
-        assert_eq!(field(&status, "/holder_count"), 0);
+        assert_eq!(*field(&status, "/holder_count"), serde_json::Value::Null);
+        assert_eq!(field(&status, "/census"), "not_reported");
         assert_eq!(dir.entries()?, before, "status created a file");
         assert_eq!(dir.owned_processes()?, 0, "status left a process behind");
     }

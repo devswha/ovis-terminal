@@ -1431,6 +1431,21 @@
         ],
         "type": "object"
       },
+      "CensusState": {
+        "description": "Whether a status answer carries a holder and terminal census.",
+        "oneOf": [
+          {
+            "const": "reported",
+            "description": "The terminal service published `holder_count` and `live_terminals`.",
+            "type": "string"
+          },
+          {
+            "const": "not_reported",
+            "description": "Nothing published a census; both counts are null rather than zero.",
+            "type": "string"
+          }
+        ]
+      },
       "CheckoutId": {
         "description": "Opaque identity string.",
         "type": "string"
@@ -1692,10 +1707,8 @@
             "description": "Queued outbound bytes."
           },
           "resynced_events": {
-            "description": "Events dropped and later resynchronized.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/components/schemas/Count",
+            "description": "Events dropped and later resynchronized."
           }
         },
         "required": [
@@ -8000,16 +8013,12 @@
             "description": "Control-server boot the metrics were collected under."
           },
           "streams": {
-            "description": "Active attach streams.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/components/schemas/Count",
+            "description": "Active attach streams."
           },
           "subscriptions": {
-            "description": "Active event subscriptions.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/components/schemas/Count",
+            "description": "Active event subscriptions."
           }
         },
         "required": [
@@ -8092,17 +8101,33 @@
       "ServerStatusResult": {
         "description": "Result of `server.status`; observing never starts a server.",
         "properties": {
+          "census": {
+            "$ref": "#/components/schemas/CensusState",
+            "default": "not_reported",
+            "description": "Whether `holder_count` and `live_terminals` were reported; absent from an\nanswer that predates it, which reported no census either.",
+            "x-ovis-open-enum": true
+          },
           "holder_count": {
-            "description": "Live holder processes.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Count"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Live holder processes; null when no census was reported."
           },
           "live_terminals": {
-            "description": "Live terminals.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Count"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Live terminals; null when no census was reported."
           },
           "recovery_state": {
             "anyOf": [

@@ -2,12 +2,19 @@ use proptest::prelude::*;
 use serde_json::json;
 
 use super::{
-    Backlog, ConsumerLoss, ConsumerRef, LossRange, MethodLatency, RecoveryPhase, RecoveryState,
+    Backlog, CensusState, Collected, ConsumerLoss, ConsumerRef, LossRange, MethodLatency, Metrics,
+    RecoveryPhase, RecoveryState,
 };
 use crate::errors::OpId;
-use crate::schema::ids::{ClientId, MethodName, StreamId, SubscriptionId, TerminalId};
-use crate::schema::methods::server::{ConsumerQueue, ServerStatusResult};
-use crate::schema::scalar::{ByteCount, ByteOffset, Count, DurationMs, EventSeq, OpenEnum};
+use crate::schema::ids::{
+    ClientId, MethodName, RuntimeLifetimeId, ServerBootId, StreamId, SubscriptionId, TerminalId,
+};
+use crate::schema::methods::server::{ConsumerQueue, ServerMetricsResult, ServerStatusResult};
+use crate::schema::scalar::{
+    ByteCount, ByteOffset, Count, DurationMs, EventSeq, OpenEnum, TimestampMs,
+};
+
+mod wire;
 
 fn events(first: u64, last: u64) -> LossRange {
     LossRange::Events {
@@ -46,17 +53,17 @@ fn only_resynchronized_event_ranges_count_as_resynced() {
         resynced: true,
     };
     let row = queue(vec![resynced, ConsumerLoss::dropped(events(20, 29)), bytes]);
-    assert_eq!(row.resynced_events, 5);
+    assert_eq!(row.resynced_events, Count::new(5));
     assert_eq!(row.losses.len(), 3);
 }
 
 #[test]
-fn resynced_count_saturates_instead_of_wrapping() {
+fn resynced_count_saturates_at_u64_max_instead_of_wrapping() {
     let all = ConsumerLoss {
         range: events(0, u64::MAX),
         resynced: true,
     };
-    assert_eq!(queue(vec![all, all]).resynced_events, u32::MAX);
+    assert_eq!(queue(vec![all, all]).resynced_events, Count::new(u64::MAX));
 }
 
 #[test]
@@ -109,13 +116,39 @@ fn numeric_counters_and_unknown_fields_are_rejected() {
 }
 
 #[test]
-fn a_status_written_before_recovery_state_existed_still_decodes() {
+fn a_status_without_census_or_recovery_state_reports_neither() {
     let idle = json!({
         "state": "stale_endpoint", "runtime_lifetime": null, "server_boot_id": null,
-        "uptime_ms": null, "holder_count": 0, "live_terminals": 0,
+        "uptime_ms": null, "holder_count": null, "live_terminals": null,
     });
     let status: ServerStatusResult = serde_json::from_value(idle).expect("decodes");
     assert_eq!(status.recovery_state, None);
+    assert_eq!(status.census, OpenEnum::Known(CensusState::NotReported));
+    assert_eq!((status.holder_count, status.live_terminals), (None, None));
+}
+
+fn identity() -> (RuntimeLifetimeId, ServerBootId) {
+    (
+        RuntimeLifetimeId::new("runtime:59".to_owned()),
+        ServerBootId::new("boot:4".to_owned()),
+    )
+}
+
+fn metrics(streams: u64, subscriptions: u64, consumers: Vec<ConsumerQueue>) -> ServerMetricsResult {
+    let metrics = Metrics::new(
+        (
+            Count::new(streams),
+            Count::new(subscriptions),
+            EventSeq::new(0),
+        ),
+        (consumers, Count::new(0)),
+        (
+            Vec::new(),
+            Vec::new(),
+            RecoveryState::derive(false, (0, 0), false),
+        ),
+    );
+    ServerMetricsResult::new(Collected::new(identity(), TimestampMs::new(1)), metrics)
 }
 
 fn consumer_ref() -> impl Strategy<Value = ConsumerRef> {

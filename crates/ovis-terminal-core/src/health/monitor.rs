@@ -4,7 +4,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use ovis_terminal_protocol::domain::health::{Collected, Metrics};
 use ovis_terminal_protocol::schema::ids::{RuntimeLifetimeId, ServerBootId};
 use ovis_terminal_protocol::schema::methods::server::{ServerMetricsResult, ServerStatusResult};
-use ovis_terminal_protocol::schema::scalar::{DurationMs, EventSeq, TimestampMs};
+use ovis_terminal_protocol::schema::scalar::{Count, DurationMs, EventSeq, TimestampMs};
 use ovis_terminal_store::RecoveryEvidence as Quarantined;
 
 use super::{Consumers, HealthError, Latencies, RecoveryLedger};
@@ -61,7 +61,7 @@ pub struct Health {
     consumers: Consumers,
     latencies: Latencies,
     recovery: RecoveryLedger,
-    census: RwLock<Census>,
+    census: RwLock<Option<Census>>,
 }
 
 fn wall_clock() -> Result<TimestampMs, HealthError> {
@@ -71,6 +71,12 @@ fn wall_clock() -> Result<TimestampMs, HealthError> {
         .and_then(|elapsed| u64::try_from(elapsed.as_millis()).ok())
         .map(TimestampMs::new)
         .ok_or(HealthError::Clock)
+}
+
+/// Producer timestamps: a clock before the epoch stamps zero, which can only overstate
+/// lag; a metrics read still refuses such a clock with [`HealthError::Clock`].
+pub(super) fn now_or_epoch() -> TimestampMs {
+    wall_clock().unwrap_or(TimestampMs::new(0))
 }
 
 impl Health {
@@ -84,7 +90,7 @@ impl Health {
             consumers: Consumers::new(),
             latencies: Latencies::new(),
             recovery,
-            census: RwLock::new(Census::default()),
+            census: RwLock::new(None),
         }
     }
 
@@ -106,9 +112,9 @@ impl Health {
         &self.recovery
     }
 
-    /// Replaces the published census.
+    /// Replaces the published census; until the first one, status reports none.
     pub fn publish_census(&self, census: Census) {
-        *self.census.write().unwrap_or_else(PoisonError::into_inner) = census;
+        *self.census.write().unwrap_or_else(PoisonError::into_inner) = Some(census);
     }
 
     /// This server's own status; a server that answers is running.
@@ -116,13 +122,15 @@ impl Health {
     pub fn status(&self, quarantined: &[Quarantined]) -> ServerStatusResult {
         let census = *self.census.read().unwrap_or_else(PoisonError::into_inner);
         let uptime = u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX);
+        let counts = census.map(|census| {
+            (
+                Count::new(u64::from(census.holders)),
+                Count::new(u64::from(census.live_terminals)),
+            )
+        });
         ServerStatusResult::running(
             (self.lifetime.clone(), self.boot.clone()),
-            (
-                DurationMs::new(uptime),
-                census.holders,
-                census.live_terminals,
-            ),
+            (DurationMs::new(uptime), counts),
             self.recovery.state(quarantined),
         )
     }

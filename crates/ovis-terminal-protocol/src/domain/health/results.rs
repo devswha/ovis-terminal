@@ -1,6 +1,6 @@
 //! Assembling the published `server.status` and `server.metrics` results.
 
-use super::{ConsumerLoss, ConsumerRef, MethodLatency, RecoveryState};
+use super::{CensusState, ConsumerLoss, ConsumerRef, MethodLatency, RecoveryState};
 use crate::schema::ids::{ClientId, RuntimeLifetimeId, ServerBootId};
 use crate::schema::methods::server::{
     ConsumerQueue, RecoveryEvidence, ServerMetricsResult, ServerState, ServerStatusResult,
@@ -79,7 +79,7 @@ impl ConsumerQueue {
             client_id,
             queue_bytes: backlog.queue_bytes,
             event_lag_ms: backlog.event_lag_ms,
-            resynced_events: u32::try_from(resynced).unwrap_or(u32::MAX),
+            resynced_events: Count::new(resynced),
             consumer,
             losses: backlog.losses,
             losses_omitted: backlog.losses_omitted,
@@ -92,9 +92,9 @@ impl ConsumerQueue {
 #[non_exhaustive]
 pub struct Metrics {
     /// Active attach streams.
-    pub streams: u32,
+    pub streams: Count,
     /// Active event subscriptions.
-    pub subscriptions: u32,
+    pub subscriptions: Count,
     /// Tracked consumers.
     pub consumers: Vec<ConsumerQueue>,
     /// Consumers refused tracking because the table was full.
@@ -114,7 +114,7 @@ impl Metrics {
     /// count, and `(latency, recovery evidence, recovery summary)`.
     #[must_use]
     pub fn new(
-        (streams, subscriptions, latest_seq): (u32, u32, EventSeq),
+        (streams, subscriptions, latest_seq): (Count, Count, EventSeq),
         (consumers, consumers_untracked): (Vec<ConsumerQueue>, Count),
         (rpc_latency, recovery, recovery_state): (
             Vec<MethodLatency>,
@@ -157,20 +157,26 @@ impl ServerMetricsResult {
 
 impl ServerStatusResult {
     /// A server answering for itself: running since `uptime_ms` with `census`
-    /// `(holders, live terminals)`.
+    /// `(holders, live terminals)` when one was published, both null otherwise.
     #[must_use]
     pub fn running(
         (runtime_lifetime, server_boot_id): (RuntimeLifetimeId, ServerBootId),
-        (uptime_ms, holder_count, live_terminals): (DurationMs, u32, u32),
+        (uptime_ms, census): (DurationMs, Option<(Count, Count)>),
         recovery_state: RecoveryState,
     ) -> Self {
+        let state = if census.is_some() {
+            CensusState::Reported
+        } else {
+            CensusState::NotReported
+        };
         Self {
             state: OpenEnum::Known(ServerState::Running),
             runtime_lifetime: Some(runtime_lifetime),
             server_boot_id: Some(server_boot_id),
             uptime_ms: Some(uptime_ms),
-            holder_count,
-            live_terminals,
+            holder_count: census.map(|(holders, _)| holders),
+            live_terminals: census.map(|(_, terminals)| terminals),
+            census: OpenEnum::Known(state),
             recovery_state: Some(recovery_state),
         }
     }

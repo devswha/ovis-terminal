@@ -1146,10 +1146,8 @@
             "description": "Queued outbound bytes."
           },
           "resynced_events": {
-            "description": "Events dropped and later resynchronized.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/components/schemas/Count",
+            "description": "Events dropped and later resynchronized."
           }
         },
         "required": [
@@ -5518,16 +5516,12 @@
             "type": "array"
           },
           "streams": {
-            "description": "Active attach streams.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/components/schemas/Count",
+            "description": "Active attach streams."
           },
           "subscriptions": {
-            "description": "Active event subscriptions.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "$ref": "#/components/schemas/Count",
+            "description": "Active event subscriptions."
           }
         },
         "required": [
@@ -5605,16 +5599,26 @@
         "description": "Result of `server.status`; observing never starts a server.",
         "properties": {
           "holder_count": {
-            "description": "Live holder processes.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Count"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Live holder processes; null when no census was reported."
           },
           "live_terminals": {
-            "description": "Live terminals.",
-            "format": "uint32",
-            "minimum": 0,
-            "type": "integer"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Count"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Live terminals; null when no census was reported."
           },
           "runtime_lifetime": {
             "anyOf": [
