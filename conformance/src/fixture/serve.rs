@@ -20,7 +20,7 @@ use ovis_terminal_core::registry::{
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
 use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::dispatch::lanes::prompt_bridge::{Gated, PromptBridgeGate};
-use ovis_terminal_server::listen::{ServerConfig, UnixEndpoint, serve_unix};
+use ovis_terminal_server::listen::{ServeReport, ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
 use tokio::io::AsyncReadExt as _;
@@ -151,6 +151,11 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .await
         .map_err(at("join the store close"))?
         .map_err(at("close the store"))?;
+    announce_report(&report)
+}
+
+/// The serve report line: accepted connections, failures by kind, panics.
+fn announce_report(report: &ServeReport) -> Result<(), RunnerError> {
     let failures: serde_json::Map<String, Value> = report
         .failures()
         .iter()
