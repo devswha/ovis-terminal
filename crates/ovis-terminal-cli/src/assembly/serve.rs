@@ -143,6 +143,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         .reporting_to(Arc::clone(&health));
     let mut runtime = Runtime {
         control: Arc::clone(&booted.control),
+        poll: plan.holder_poll,
         journal: Arc::clone(&journal),
         holder: booted.holder,
         identity: booted.identity,

@@ -26,10 +26,6 @@ use super::error::worker_gone;
 use super::live::Live;
 use super::{AssemblyError, StageSource};
 
-/// How long the actor waits for a job, with the control released, before it looks for
-/// holder messages again.
-const POLL: Duration = Duration::from_millis(5);
-
 /// The holder link as one receive found it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Link {
@@ -50,6 +46,9 @@ type Job = Box<dyn FnOnce(&mut Runtime) + Send>;
 #[derive(Debug)]
 pub(super) struct Runtime {
     pub(super) control: Arc<Control>,
+    /// How long the actor waits for a job, with the control released, before it looks
+    /// for holder messages again.
+    pub(super) poll: Duration,
     pub(super) journal: Arc<super::journal::BootJournal>,
     pub(super) holder: Holder,
     pub(super) identity: RuntimeIdentity,
@@ -170,7 +169,7 @@ fn run(mut runtime: Runtime, jobs: &mpsc::Receiver<Job>) -> Result<(), AssemblyE
             match runtime.receive() {
                 Link::Linked => {}
                 // Waiting happens here, on the job queue, with the control released.
-                Link::Idle | Link::Restarting => match jobs.recv_timeout(POLL) {
+                Link::Idle | Link::Restarting => match jobs.recv_timeout(runtime.poll) {
                     Ok(job) => job(&mut runtime),
                     Err(RecvTimeoutError::Timeout) => {}
                     Err(RecvTimeoutError::Disconnected) => return runtime.close(),

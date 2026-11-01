@@ -70,6 +70,10 @@ pub(super) struct ServeArgs {
     /// Also serve the protocol over WebSocket on this loopback port (0 picks a free one).
     #[arg(long)]
     pub(super) websocket_port: Option<u16>,
+    /// How long the runtime waits for a request, with the control released, before it
+    /// looks for holder messages again (milliseconds).
+    #[arg(long, hide = true, default_value_t = 5)]
+    pub(super) holder_poll_ms: u64,
 }
 
 /// The two published contracts.

@@ -79,19 +79,17 @@ const DELIVERY_GRACE: std::time::Duration = std::time::Duration::from_secs(5);
 /// connection: each delivery task ends once it did, so every close precedes the
 /// connection's `$/closing`. Past the bound the restart proceeds and says so.
 async fn delivered(lane: &AttachLane<Arc<Directory>>) -> Result<(), AssemblyError> {
-    match tokio::time::timeout(DELIVERY_GRACE, lane.shutdown()).await {
-        Ok(joined) => joined.map_err(AssemblyError::stop("deliver the restart closes")),
-        Err(_) => {
-            let line = serde_json::json!({"warning": {
-                "stage": "deliver the restart closes",
-                "detail": "a stream did not take its close within the grace",
-            }});
-            let mut stderr = std::io::stderr().lock();
-            match writeln!(stderr, "{line}") {
-                Ok(()) | Err(_) => Ok(()),
-            }
+    let Ok(joined) = tokio::time::timeout(DELIVERY_GRACE, lane.shutdown()).await else {
+        let warning = serde_json::json!({"warning": {
+            "stage": "deliver the restart closes",
+            "detail": "a stream did not take its close within the grace",
+        }});
+        let mut stderr = std::io::stderr().lock();
+        match writeln!(stderr, "{warning}") {
+            Ok(()) | Err(_) => return Ok(()),
         }
-    }
+    };
+    joined.map_err(AssemblyError::stop("deliver the restart closes"))
 }
 
 /// How a generation's listeners end.

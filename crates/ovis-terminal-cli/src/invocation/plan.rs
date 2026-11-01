@@ -112,6 +112,7 @@ pub(super) fn plan(cli: Cli) -> Result<Plan, CliError> {
             root: args.root,
             stdin_lifetime: args.stdin_lifetime,
             websocket_port: args.websocket_port,
+            holder_poll: std::time::Duration::from_millis(args.holder_poll_ms),
         }),
         #[cfg(unix)]
         Command::Hold(session) => Plan::Service(crate::service::ServiceCommand::Run(

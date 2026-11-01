@@ -121,6 +121,8 @@ pub(crate) struct ServePlan {
     pub(crate) stdin_lifetime: bool,
     /// Also serve over WebSocket on this loopback port.
     pub(crate) websocket_port: Option<u16>,
+    /// How long the runtime waits for a request before it looks for holder messages.
+    pub(crate) holder_poll: std::time::Duration,
 }
 
 /// Serves until SIGINT, SIGTERM or (with `stdin_lifetime`) end of stdin; prints one

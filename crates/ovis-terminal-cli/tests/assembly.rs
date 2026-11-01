@@ -2,6 +2,8 @@
 //! methods it routes and refuses everything else with a typed error.
 #![cfg(unix)]
 
+#[path = "assembly/control.rs"]
+mod control;
 #[path = "assembly/lanes.rs"]
 mod lanes;
 #[path = "assembly/leases.rs"]
