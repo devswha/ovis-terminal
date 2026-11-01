@@ -1,6 +1,6 @@
 Plan todo 62 (wave 14): `ovis-terminal terminal attach`, a plain interactive attach client without multiplexer chrome.
 
-**Stacked on #57 (todo 31, `lane/t31-assembly`).** This branch starts at b276c50 on that lane, which builds the binary and the first attach client. The todo-62 commits are 9e009f4 and 33bc03a plus the evidence commit; the earlier commits in this diff belong to #57.
+**Stacked on #57 (todo 31, `lane/t31-assembly`).** This branch starts at b276c50 on that lane, which builds the binary and the first attach client. The todo-62 commits are 9e009f4, 33bc03a, bd0f933, the round-2 commits 2926824 and fe95709, the evidence commits and the authorized integration merge fe8f4de; the earlier commits in this diff belong to #57.
 
 Closes GAP-039, GAP-040, GAP-041, GAP-042, GAP-043, GAP-044, GAP-045, GAP-056, GAP-057, GAP-058, GAP-059, GAP-145, GAP-148, GAP-149.
 Delivers IDEAL-028, IDEAL-029, IDEAL-030, IDEAL-031, IDEAL-033, IDEAL-037, IDEAL-038, IDEAL-039, IDEAL-046, IDEAL-055, IDEAL-103.
@@ -20,6 +20,8 @@ Gap baseline: GAP-039, GAP-040, GAP-041, GAP-042, GAP-043, GAP-044, GAP-045, GAP
 
 - **Roles.** `--observe` needs no TTY. It never reads stdin, never resizes, never takes focus and never takes a controlling lease. Interact mode holds the interact lease and the geometry lease, and resizes only through `attach.resize` under that geometry lease.
 - **Explicit lease acquire and release.** Detach closes the stream, waits (bounded) for CLOSE, then reads `attach.leases` back. The record states `leases_released` and lists `leases_held`.
+- **Owners (gate round 1, B1).** A lease owner is the bearer's principal plus `--client-id`. The default label is now `cli-<pid>`, so two `terminal attach` processes are always two owners: the second is refused `lease_conflict` naming the holder and the `lease.revoked` retry boundary. This follows the plan rule "lease_conflict is reserved for competing acquisition against a live lease; held attachment reports owner and a named lease-change retry boundary". Before, both processes defaulted to `cli`, so the core lease table's same-owner re-acquire handed the second process the first one's interact lease: its typing reached the program, and its detach reported `leases_released:false`. The fix is in the CLI's identity; the core same-owner rule is unchanged. Passing the same explicit `--client-id` twice deliberately declares one owner, documented in the shipped skill.
+- **No chrome, byte for byte (gate round 1, B2).** `tests/interactive_transparency.rs` runs a probe that writes C0 (BS, HT, BEL, CR, LF), 8-bit C1 (CSI, IND, NEL), SGR, DECSET/DECRST (alternate screen, bracketed paste, cursor) and OSC (title, hyperlink with ST). It asserts three things: the outer terminal received exactly the bytes the server sent a protocol-level reference viewer of the same screen, followed only by the documented `ESC[0m` reset on detach; the server sent the program's raw bytes unchanged; and the probe really wrote every class.
 - **Held attaches.** On the wire, `attach.open` against a live interact lease answers `outcome: held` with `holder`, a `retry` boundary (`on: lease_released`, `event: lease.revoked`, the holder's lease) and an observe-only lease. It never evicts. The CLI reports this competing acquisition as `lease_conflict` (exit 11) with `holder` and `retry`.
 - **Takeover.** Takeover requires an explicit `--takeover <epoch>`. A stale epoch is `lease_epoch_mismatch` (exit 11), naming `expected_epoch` and the `current` lease (epoch and holder). A current epoch displaces the holder, whose client exits 0 with `closed.close.reason: taken_over` naming the new holder.
 - **Keys.** There is no prefix key and no client mode. Ctrl-\ (0x1c) detaches without touching the child. Every other byte, including unknown escape sequences and non-UTF-8, goes through `input.raw` unchanged, and its refusal is the server's typed error.
@@ -32,14 +34,14 @@ Gap baseline: GAP-039, GAP-040, GAP-041, GAP-042, GAP-043, GAP-044, GAP-045, GAP
 
 ## After
 
-Host: `Linux x86_64` (`docs/evidence/task-62/host.txt`). Binary `target/debug/ovis-terminal` sha256 `9e6146cb926b03ffa4f7b94c1ec9c374e0509bda8090326a3318219019353f09` (258308624 bytes, post-merge head; recorded in the evidence JSON).
+Host: `Linux x86_64` (`docs/evidence/task-62/host.txt`). Binary `target/debug/ovis-terminal` sha256 `08127fb8b4feeedadd88cf014537813b95a7f6091b08f7396a2e9c715c85e0ad` (258142856 bytes, round-2 head fe95709; recorded in the evidence JSON).
 
 Acceptance (`docs/evidence/task-62/acceptance.log`):
 
 ```
 $ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal                 exit=0
 $ cargo test -p ovis-terminal-cli --all-targets                                exit=0
-  lib 25 passed; assembly 8; attach 5; cli 2; interactive_attach 2; interactive_restore 4
+  lib 25 passed; assembly 8; attach 5; cli 2; interactive_attach 2; interactive_owners 2; interactive_restore 4; interactive_transparency 1 (49)
 $ cargo clippy -p ovis-terminal-cli --all-targets -- -D warnings               exit=0
 ```
 
@@ -51,7 +53,7 @@ $ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance --
 exit=0
 ```
 
-The happy case uses a real `serve` running `/bin/sh` as t1, with a socket observer (`phone`) attached. It runs `target/debug/ovis-terminal terminal attach --target t1` on a real outer PTY (100x30) and asserts:
+The happy case uses a real `serve` running `/bin/sh` as t1, with a socket observer (`phone`) attached. It runs `target/debug/ovis-terminal terminal attach --target t1 --client-id cli` on a real outer PTY (100x30) and asserts:
 - a typed marker is evaluated by the shell;
 - a resize is reported by the inner PTY;
 - an unknown escape sequence passes through unchanged;
@@ -71,11 +73,11 @@ exit=0
 Materialized CLI commands in the failure case, with their actual stderr records:
 
 ```
-$ target/debug/ovis-terminal --json terminal attach --target t1 --client-id rival            -> exit 11
+$ target/debug/ovis-terminal --json terminal attach --target t1   (the rival, default label cli-<pid>) -> exit 11
 {"error":{"exit_code":11,"holder":{"epoch":"1","holder":"cli","lease_id":"lease:1","role":"interact"},"kind":"lease_conflict","retry":{"event":"lease.revoked","lease":{"epoch":"1","holder":"cli",...},"on":"lease_released"},...}}
 $ target/debug/ovis-terminal --json terminal attach --target t1 --client-id bridge --takeover 7 -> exit 11
 {"error":{"current":{"epoch":"1","holder":"cli","lease_id":"lease:1","role":"interact"},"exit_code":11,"expected_epoch":"7","kind":"lease_epoch_mismatch",...}}
-$ target/debug/ovis-terminal --json terminal attach --target t1   (the holder, detaching with Ctrl-\) -> exit 0
+$ target/debug/ovis-terminal --json terminal attach --target t1 --client-id cli   (the holder, detaching with Ctrl-\) -> exit 0
 {"detached":{"displaced":null,"leases_held":[],"leases_released":true,"reason":"detach_key","stream_closed":true,...}}
 ```
 
@@ -85,7 +87,7 @@ Socket requests in the same case:
 - An ordinary `attach.open` while held returns `outcome: held`, `holder.holder: cli`, `holder.epoch: "1"`, `retry.on: lease_released`, `retry.event: lease.revoked`, `lease.role: observe` and `displaced: null`.
 - A following `attach.leases` shows `cli` still holding the interact lease (no eviction).
 
-**The plan's literal inject.** There is no `attach.takeover` wire method. EXCL-007 makes takeover an explicit, epoch-bound field of `attach.open`, not a separate verb, so the literal request is `method_not_found`. The failure case plans the literal request alongside the canonical ones, the same way #50 and #37 handled their literal injects.
+**The plan's literal inject.** `attach.takeover` *is* a released method (`schema/released.openrpc.json`; `AttachTakeoverParams` = `op_id`, `stream_id`, `target`, `takeover{lease_epoch, reason}`; its errors include `lease_epoch_mismatch`). The assembled dispatcher does not serve it yet and answers `method_not_found`; serving it is a todo-31 follow-up, and core `TerminalLeases::take_over` already returns `EpochMismatch{current}`. The plan's literal inject could not produce `lease_epoch_mismatch` even if it were routed: the runner merges it over the case's base params, which gives `{op_id, target, role, client_id, geometry, stream_mode, takeover:null, lease_epoch:"0"}`. That lacks the required `stream_id` and `takeover` object and violates `additionalProperties:false`, so a correct server answers `invalid_params`. The failure case therefore plans the literal request and asserts the binary's actual reply (`method_not_found`), the same way #50 and #37 handled their literal injects. The plan's intent, `lease_epoch_mismatch` with the current epoch, is enforced in the same case by the CLI `--takeover 7` step and the canonical `attach.open` inject below.
 - The canonical form, `--inject '{"method":"attach.open","params":{"takeover":{"lease_epoch":"7","reason":"stale takeover epoch"}}}'`, passes: exit 0, 49 assertions (`qa-failure-canonical.log`). It asserts `lease_epoch_mismatch`, and the CLI step of the same case asserts the current epoch `"1"`.
 - An inject the case does not plan fails the run: `--inject '{"method":"attach.takeover","params":{"lease_epoch":"9"}}'` exits 1 on `inject/planned` (`qa-failure-unplanned-probe.log`).
 
@@ -101,10 +103,12 @@ Raw evidence (request/response transcripts, process argv/stdout/stderr, binary h
   - Closing the outer PTY master (hangup/EOF) while attached detaches with `reason: hangup`, exit 0, `leases_released: true`, empty `attach.leases`, and the program incarnation unchanged.
 - **Stale state:**
   - A stale `--takeover` epoch gives `lease_epoch_mismatch` naming the current epoch.
-  - A competing live-lease acquisition gives `lease_conflict` with holder and retry.
+  - A competing live-lease acquisition gives `lease_conflict` with holder and retry, including two processes with the default label (`interactive_owners.rs`). The refused process's typing never reaches the program: it exits before the holder's fence line, and the program reads lines in order.
   - A current epoch displaces the holder, which reports `taken_over` (`tests/interactive_attach.rs`).
 - **Malformed input:** unknown key sequences and non-UTF-8 bytes are forwarded unchanged, and bytes after Ctrl-\ are never forwarded (unit tests plus a proptest in `attach/input.rs`; PTY test `unknown_sequences_reach_the_program_and_its_modes_are_switched_off_on_detach`).
-- **Misleading success:** every PTY test checks the outer termios against the saved copy, `attach.leases`, and the program incarnation, not only the exit code.
+- **Misleading success:**
+  - Every PTY test checks the outer termios against the saved copy, `attach.leases` and the program incarnation, not only the exit code.
+  - The transparency test checks the drawn bytes exactly, so a client that adds chrome cannot pass by still showing the program's text.
 
 ### Stability
 
@@ -131,22 +135,29 @@ Proof, under 8 busy loops pinned to CPUs 0-1 with the tests pinned to the same C
 - `cargo nextest run -p ovis-terminal-cli`: 46/46.
 - `cli/interactive-attach --case all`: 94 assertions, exit 0.
 
+**Round 2 (gate round 1 fixes), same load recipe.** 25 runs through the heavy gate of `cargo nextest run -p ovis-terminal-cli --test interactive_restore --test interactive_owners --test interactive_transparency`, with 8 busy loops pinned to CPUs 0-1 and the tests pinned there too: **25/25**, 7/7 tests each (`docs/evidence/task-62/load25-r2.log`).
+
 ### Mutants (`docs/evidence/task-62/mutants.log`)
 
-4 of 5 killed; 1 is equivalent:
+Round 2, at 2926824 through the heavy gate: **8 of 8 killed**, tree clean after every restore.
 
 | Mutant | Killed by |
 |---|---|
-| `DETACH_KEY` 0x1c -> 0x1d | `attach::input::tests::the_detach_key_ends_forwarding_mid_chunk` |
+| status line appended to every drawn chunk (`attach/screen.rs`) | `interactive_transparency::the_attach_client_draws_exactly_the_bytes_the_server_sent_and_nothing_else` |
+| `ESC[31m` before every drawn chunk | same transparency test |
+| default label back to the shared `cli` (`invocation/plan.rs`) | `interactive_owners::two_attach_processes_with_the_default_label_compete_and_the_second_is_refused` and `interactive_attach::an_observer_on_a_terminal_never_resizes_and_stays_live_after_the_operator_detaches` |
+| observer reads the geometry lease (`plan.observe && false`) | `interactive_owners::an_observer_sharing_its_operators_label_never_claims_the_owners_geometry_or_input` |
+| `DETACH_KEY` 0x1c -> 0x1d | `attach::input::tests::the_detach_key_ends_forwarding_mid_chunk` and three `attach` PTY tests |
 | stale-epoch guard never matches | `interactive_attach::a_stale_takeover_names_the_current_epoch_and_a_current_one_displaces_the_holder` |
-| `held` mapped to `Refused` | `attach::a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_terminal` and the stale-takeover test |
+| `held` mapped to `Refused` | `attach::a_second_interact_attach_is_held_with_the_owner_and_never_touches_its_terminal`, the owners competition test and the stale-takeover test |
 | alternate screen 1049 not reset | `attach::modes::tests::modes_left_on_are_reset_with_the_alternate_screen_last` and `interactive_restore::unknown_sequences_reach_the_program_and_its_modes_are_switched_off_on_detach` |
-| observer reads the geometry lease | equivalent: `geometry_lease` returns only a lease whose holder is this client, and observers are never granted geometry; the observable is asserted by `an_observer_on_a_terminal_never_resizes_and_stays_live_after_the_operator_detaches` |
+
+**Correction.** Round 1 called the observer-geometry mutant equivalent. It was not: an observer that shares its operator's client label (round 1: the shared default `cli`) reads the owner's geometry lease, and its grid reached the program (gate probe). It has the same root cause as B1, and it is now killed (see `mutants.log`).
 
 ### Gates
 
-- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` (foreground): exit 0. fmt, workspace clippy, `cargo nextest run --workspace` (1171 tests passed, 1 skipped), doc tests, workspace-hygiene (0 violations in 1165 files), manifests and json all pass (`docs/evidence/task-62/check-summary.log`).
-All gate, acceptance and QA results above are from the tree after the authorized merge of `origin/integration` 7f6d268.
+- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` (foreground): exit 0. fmt, workspace clippy, `cargo nextest run --workspace` (1174 tests passed, 1 skipped), doc tests, workspace-hygiene (0 violations in 1169 files), manifests and json all pass (`docs/evidence/task-62/check-summary.log`).
+All gate, acceptance and QA results above are from round-2 head fe95709, which sits on the authorized merge of `origin/integration` 7f6d268 (fe8f4de).
 - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked`: exit 0.
 - `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings`: exit 0 (`windows-precheck.log`).
 
@@ -155,6 +166,7 @@ All gate, acceptance and QA results above are from the tree after the authorized
 The macOS stress job runs on the stress-only branch `lane/t62-stress`, so the shared workflow file stays at base in this PR. Each run does 25 iterations of the three attach PTY test binaries plus `cli/interactive-attach --case all` on `macos-latest`.
 - Previous lane head (9e009f4): https://github.com/devswha/ovis-terminal/actions/runs/41256920783 (success).
 - This head (9e07178, merged into stress branch 50c522c): https://github.com/devswha/ovis-terminal/actions/runs/41273039178: success (25/25 iterations on `macos-latest`). The attach client is unchanged by the later integration merge, which only touched the runner and the assembled fixture's ready line.
+- Round 2 did not re-dispatch the stress job (not requested for this round). CI's `test (macos-latest)` job runs the new owners and transparency tests on every push.
 
 ## Seams
 
@@ -164,14 +176,24 @@ Files outside the write scope (`crates/ovis-terminal-cli/src/attach/`, `conforma
 - `conformance/src/runner_tests/suite.rs`: `cli/interactive-attach.json` is added in sorted position to the shared `EXECUTABLE` slice. #57's separate `ASSEMBLED` chain is kept as is. Nothing is removed from `declared.json` because the scenario was never declared there.
 - `conformance/scenarios/part-a/task-31.json` and `crates/ovis-terminal-cli/tests/attach.rs`: the todo-31 refusal kind `lease_held` is renamed to `lease_conflict`. The plan reserves `lease_conflict` for competing acquisition against a live lease.
 - `crates/ovis-terminal-cli/src/attach.rs`: the module root (submodule declarations and contract doc).
-- `crates/ovis-terminal-cli/src/invocation/{args.rs,plan.rs}`: the `--takeover <EPOCH>` flag (conflicts with `--observe`), decoded into the `LeaseEpoch` newtype as a decimal string.
+- `crates/ovis-terminal-cli/src/invocation/{args.rs,plan.rs}`:
+  - the `--takeover <EPOCH>` flag (conflicts with `--observe`), decoded into the `LeaseEpoch` newtype as a decimal string;
+  - round 2: `--client-id` defaults to `cli-<pid>` (B1).
 - `crates/ovis-terminal-cli/src/invocation/exit.rs`:
   - `interrupted` maps to exit 10 (Cancelled);
   - `lease_epoch_mismatch` maps to exit 11 (Conflict);
   - `lease_held` is removed.
 - `crates/ovis-terminal-cli/src/invocation/report.rs`: attach errors contribute their typed detail fields (`holder`, `retry`, `expected_epoch`, `current`, `stage`, `signal`) to the JSON error record.
-- `crates/ovis-terminal-cli/src/invocation/skill.md`: the shipped agent skill documents the attach roles, takeover, detach key and exit kinds.
+- `crates/ovis-terminal-cli/src/invocation/skill.md`: the shipped agent skill documents the attach roles, takeover, detach key, exit kinds and (round 2) the per-process default owner label.
 - `crates/ovis-terminal-cli/tests/{interactive_attach.rs,interactive_attach/helpers.rs,interactive_restore.rs}`: real-PTY behaviour tests (unix only, matching the attach client's unix-only transport).
+- Round 2 tests:
+  - `crates/ovis-terminal-cli/tests/interactive_owners.rs`: default-label competition, and an observer sharing its operator's label.
+  - `crates/ovis-terminal-cli/tests/interactive_transparency.rs` and `interactive_transparency/viewer.rs`: the byte-exact test and its protocol-level reference viewer.
+- `crates/ovis-terminal-cli/tests/attach/{support.rs,outer.rs}` (#57's shared PTY test support):
+  - `Outer` moved verbatim into the child module `outer.rs` and re-exported as `support::Outer`, keeping `support.rs` under the 250 pure-LOC cap (hygiene 0 violations).
+  - `Served::endpoint()` and `Outer::drawn_until_closed()` added for the transparency test.
+  - #57 has not changed `support.rs` since b276c50, so the move cannot conflict with it.
+- `crates/ovis-terminal-cli/tests/attach.rs`, `conformance/scenarios/part-a/task-31.json`, `conformance/scenarios/cli/interactive-attach.json`: assertions that name the holder `cli` now pin it with an explicit `--client-id cli` on the holder. Default-label holders are asserted as `cli-<pid>`, and the interactive-attach rival now uses the default label, so the conformance failure case also covers B1.
 - **Authorized merge of `origin/integration` 7f6d268.** PR #67 was CONFLICTING after the first push. The conflicts were all additive between #57's runner seams and integration's, and were resolved keeping both sides:
   - `conformance/src/engine.rs`: `pty` and `redact` modules;
   - `conformance/src/engine/session.rs`: `ptys` and `kept` fields;
@@ -187,5 +209,8 @@ No schema change, so the SDK was not regenerated.
 - The wire `lease_epoch_mismatch` error data names no current epoch; the server's error is outside this write scope. The CLI reads `attach.leases` after the mismatch and reports `current` (epoch and holder). That read is a separate request, so a lease change between the two calls would show the newer lease.
 - Hangup classification relies on raw mode (VMIN 1): only a hung-up terminal makes a read return zero bytes. The interact role requires a TTY on stdin and stdout, so the keyboard is always that raw terminal.
 - The attach client is unix-only (Unix socket transport). On Windows, `UnsupportedTransport` remains, as in #57.
+- `attach.takeover` is a released method that the assembled dispatcher does not serve yet (`method_not_found`). Serving it is a todo-31 follow-up outside this write scope; the CLI takes over through the `attach.open` takeover field.
+- An identical explicit `--client-id` in two processes still declares one owner, which re-acquires its own lease. This is deliberate and documented; the default never does it.
+- Gate NOTE, not changed: `interactive_attach.rs` and `attach.rs` assert that observer typing is absent with a time-bounded negative check. Observe mode never reads stdin, which `observing_needs_no_tty_and_never_forwards_input` also covers. The round-2 refused-attach check orders causally: the refused process exits before the holder types its fence.
 
 DEFERRED VERIFICATION: none. The runner executes `cli/interactive-attach`; all commands above ran with the exit codes shown.
