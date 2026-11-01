@@ -1,7 +1,10 @@
 //! The fixture's request handler: the real dispatcher plus methods served directly.
 //!
 //! Those are the read-only protocol methods `rpc.discover` and paged `terminal.output`,
-//! the fixture-only `fixture.transcript` provider write and `fixture.pty` input byte count.
+//! the fixture-only `fixture.transcript` provider write, `fixture.pty` input byte count,
+//! `fixture.bridge` extension driver, the `fixture.exit` and `fixture.program` program
+//! lifecycle stand-ins, `fixture.deliver`, which lets the sequenced terminal's holder
+//! stand-in write, and the `fixture.update` release probe.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -17,9 +20,13 @@ use ovis_terminal_server::dispatch::Dispatcher;
 use serde_json::Value;
 
 use super::agents::Directory;
+use super::bridge::Extension;
 use super::output;
+use super::processes::Programs;
 use super::prompts::Gate;
+use super::rotation::Sequenced;
 use super::serve::at;
+use super::tree::{self, Tree};
 use crate::error::RunnerError;
 
 /// Operation outcomes and agent status facts share the fixture's sequence domain.
@@ -31,26 +38,48 @@ const DIRECT: [&str; 2] = ["rpc.discover", "terminal.output"];
 /// The provider-store stand-in; served but never advertised, since it is no catalog method.
 const PROVIDER_WRITE: &str = "fixture.transcript";
 
+/// The `terminal.kill` plus `terminal.recover` stand-in of the process fixture; never advertised.
+const REPLACE_PROCESS: &str = "fixture.replace_process";
+
 /// The PTY stand-in's byte count; served but never advertised.
 const PTY_READ: &str = "fixture.pty";
+
+/// Releases the sequenced terminal's write boundary; served but never advertised.
+const DELIVER: &str = "fixture.deliver";
+
+/// The in-process extension stand-in's driver; served but never advertised.
+const EXTENSION: &str = "fixture.bridge";
+
+/// A fixture program's exit, or the replay of an older one; served but never advertised.
+const PROGRAM_EXIT: &str = "fixture.exit";
+
+/// What a fixture terminal's programs received; served but never advertised.
+const PROGRAM_READ: &str = "fixture.program";
+
+/// Fixture-only stand-ins answered beside the dispatcher.
+#[derive(Debug)]
+pub(crate) struct Probes {
+    pub(crate) gate: Arc<Gate>,
+    pub(crate) directory: Arc<Directory>,
+    pub(crate) extension: Arc<Extension>,
+    pub(crate) sequenced: Arc<Sequenced>,
+    pub(crate) tree: Arc<Tree>,
+    pub(crate) programs: Arc<Programs>,
+}
 
 #[derive(Debug)]
 pub(crate) struct FixtureHandler {
     dispatch: Arc<Dispatch>,
     root: PathBuf,
-    pty: (Arc<Gate>, Arc<Directory>),
+    probes: Probes,
 }
 
 impl FixtureHandler {
-    pub(crate) const fn new(
-        dispatch: Arc<Dispatch>,
-        root: PathBuf,
-        pty: (Arc<Gate>, Arc<Directory>),
-    ) -> Self {
+    pub(crate) const fn new(dispatch: Arc<Dispatch>, root: PathBuf, probes: Probes) -> Self {
         Self {
             dispatch,
             root,
-            pty,
+            probes,
         }
     }
 
@@ -59,7 +88,26 @@ impl FixtureHandler {
         self.dispatch
             .shutdown()
             .await
-            .map_err(at("shut the dispatcher down"))
+            .map_err(at("shut the dispatcher down"))?;
+        let programs = Arc::clone(&self.probes.programs);
+        tokio::task::spawn_blocking(move || programs.stop())
+            .await
+            .map_err(at("join the program stop"))?
+    }
+}
+
+impl FixtureHandler {
+    /// Replaces `proc`'s program; a failure is its typed fixture kind, never a fake success.
+    async fn replace(&self) -> Result<Value, BoundaryError> {
+        let programs = Arc::clone(&self.probes.programs);
+        let replaced = tokio::task::spawn_blocking(move || programs.replace()).await;
+        let outcome = replaced
+            .map_err(at("join the replacement"))
+            .and_then(|replaced| replaced);
+        outcome.map_err(|error| {
+            BoundaryError::domain(ErrorKind::from(error.kind().to_owned()), false)
+                .with_hint(error.hint())
+        })
     }
 }
 
@@ -83,7 +131,19 @@ impl RequestHandler for FixtureHandler {
             "rpc.discover" => discover(&call.request),
             "terminal.output" => output::page(&call.request),
             PROVIDER_WRITE => super::transcripts::write(&self.root, &call.request),
-            PTY_READ => super::prompts::pty((&self.pty.0, &self.pty.1), &call.request),
+            REPLACE_PROCESS => self.replace().await,
+            PTY_READ => {
+                let probes = (&*self.probes.gate, &*self.probes.directory);
+                super::prompts::pty(probes, &call.request)
+            }
+            EXTENSION => self.probes.extension.call(&call.request).await,
+            PROGRAM_EXIT => tree::exit(&self.probes.tree, &call.request).await,
+            PROGRAM_READ => tree::program(&self.probes.tree, &call.request),
+            DELIVER => {
+                let _: NoParams = decode_params(&call.request).map_err(BoundaryError::from)?;
+                self.probes.sequenced.deliver()
+            }
+            super::update::PROBE => super::update::probe(&self.root),
             _ => self.dispatch.call(call).await,
         }
     }

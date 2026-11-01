@@ -32,7 +32,7 @@ Gap baseline: GAP-039, GAP-040, GAP-041, GAP-042, GAP-043, GAP-044, GAP-045, GAP
 
 ## After
 
-Host: `Linux x86_64` (`docs/evidence/task-62/host.txt`). Binary `target/debug/ovis-terminal` sha256 `f59df2629c171071da54b5874b6a0da33dd6c2aef843679645b6660cebf2c475` (243285368 bytes; recorded in the evidence JSON).
+Host: `Linux x86_64` (`docs/evidence/task-62/host.txt`). Binary `target/debug/ovis-terminal` sha256 `9e6146cb926b03ffa4f7b94c1ec9c374e0509bda8090326a3318219019353f09` (258308624 bytes, post-merge head; recorded in the evidence JSON).
 
 Acceptance (`docs/evidence/task-62/acceptance.log`):
 
@@ -125,7 +125,8 @@ Raw evidence (request/response transcripts, process argv/stdout/stderr, binary h
 
 ### Gates
 
-- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` (foreground): exit 0. fmt, workspace clippy, `cargo nextest run --workspace` (949 tests passed, 1 skipped), doc tests, workspace-hygiene (0 violations in 957 files), manifests and json all pass (`docs/evidence/task-62/check-summary.log`).
+- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` (foreground): exit 0. fmt, workspace clippy, `cargo nextest run --workspace` (1171 tests passed, 1 skipped), doc tests, workspace-hygiene (0 violations in 1165 files), manifests and json all pass (`docs/evidence/task-62/check-summary.log`).
+All gate, acceptance and QA results above are from the tree after the authorized merge of `origin/integration` 7f6d268.
 - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked`: exit 0.
 - `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings`: exit 0 (`windows-precheck.log`).
 
@@ -140,7 +141,7 @@ The macOS stress job runs on the stress-only branch `lane/t62-stress`, so the sh
 Files outside the write scope (`crates/ovis-terminal-cli/src/attach/`, `conformance/scenarios/cli/interactive-attach/`), and why:
 
 - `conformance/scenarios/cli/interactive-attach.json`: the scenario. The runner resolves `--scenario cli/interactive-attach` to this file, so it is a file rather than a directory.
-- `conformance/src/runner_tests/suite.rs`: registers the scenario in the executable inventory. This is a separate `INTERACTIVE_ATTACH` array chained into the sorted list, the same pattern #57 used for `ASSEMBLED`, to keep the shared `EXECUTABLE` array conflict-free.
+- `conformance/src/runner_tests/suite.rs`: `cli/interactive-attach.json` is added in sorted position to the shared `EXECUTABLE` slice. #57's separate `ASSEMBLED` chain is kept as is. Nothing is removed from `declared.json` because the scenario was never declared there.
 - `conformance/scenarios/part-a/task-31.json` and `crates/ovis-terminal-cli/tests/attach.rs`: the todo-31 refusal kind `lease_held` is renamed to `lease_conflict`. The plan reserves `lease_conflict` for competing acquisition against a live lease.
 - `crates/ovis-terminal-cli/src/attach.rs`: the module root (submodule declarations and contract doc).
 - `crates/ovis-terminal-cli/src/invocation/{args.rs,plan.rs}`: the `--takeover <EPOCH>` flag (conflicts with `--observe`), decoded into the `LeaseEpoch` newtype as a decimal string.
@@ -151,13 +152,18 @@ Files outside the write scope (`crates/ovis-terminal-cli/src/attach/`, `conforma
 - `crates/ovis-terminal-cli/src/invocation/report.rs`: attach errors contribute their typed detail fields (`holder`, `retry`, `expected_epoch`, `current`, `stage`, `signal`) to the JSON error record.
 - `crates/ovis-terminal-cli/src/invocation/skill.md`: the shipped agent skill documents the attach roles, takeover, detach key and exit kinds.
 - `crates/ovis-terminal-cli/tests/{interactive_attach.rs,interactive_attach/helpers.rs,interactive_restore.rs}`: real-PTY behaviour tests (unix only, matching the attach client's unix-only transport).
+- **Authorized merge of `origin/integration` 7f6d268.** PR #67 was CONFLICTING after the first push. The conflicts were all additive between #57's runner seams and integration's, and were resolved keeping both sides:
+  - `conformance/src/engine.rs`: `pty` and `redact` modules;
+  - `conformance/src/engine/session.rs`: `ptys` and `kept` fields;
+  - `suite.rs`: as above.
+- `crates/ovis-terminal-cli/src/assembly/{boot.rs,serve.rs}`: integration's fixture launcher now requires a `writer` bearer in the ready line (`deny_unknown_fields`). Without it, both assembled-binary scenarios (`part-a/task-31`, `cli/interactive-attach`) failed with `fixture_report`. `boot.rs` is taken verbatim from #57's head (`delegate` issuing observer and writer bearers), and `serve.rs` adds the same `"writer"` ready field #57 announces, so the union with #57 stays conflict-free.
 - `docs/evidence/task-62/`: evidence.
 
 No schema change, so the SDK was not regenerated.
 
 ## Risks
 
-- This PR is stacked on #57, so its diff against `integration` includes #57's commits until #57 lands.
+- This PR is stacked on #57, so its diff against `integration` includes #57's commits until #57 lands. The `boot.rs`/`serve.rs` writer-bearer hunks are #57's own code, carried here only so the merged runner can start the assembled fixture.
 - The wire `lease_epoch_mismatch` error data names no current epoch; the server's error is outside this write scope. The CLI reads `attach.leases` after the mismatch and reports `current` (epoch and holder). That read is a separate request, so a lease change between the two calls would show the newer lease.
 - Hangup classification relies on raw mode (VMIN 1): only a hung-up terminal makes a read return zero bytes. The interact role requires a TTY on stdin and stdout, so the keyboard is always that raw terminal.
 - The attach client is unix-only (Unix socket transport). On Windows, `UnsupportedTransport` remains, as in #57.

@@ -13,12 +13,13 @@ fn a_withheld_consumer_recovers_from_its_durable_marker_and_continues() -> TestR
     let witness = world.subscribe(Start::Head, Selector::all())?;
     let withheld = world.subscribe(Start::Head, Selector::all())?;
     let mut first = None;
+    let mut seen = Vec::new();
     for value in ["one", "two", "three"] {
         let seq = world.set(1, value)?.seq.get();
         first.get_or_insert(seq);
-        scan_to(&witness.feed, seq)?;
+        seen.extend(scan_to(&witness.feed, seq)?.0);
     }
-    let (marker_seq, marker) = until_loss_event(&witness.feed)?;
+    let (marker_seq, marker) = until_loss_event(&witness.feed, &seen)?;
     // When the withheld consumer finally reads, and the next change commits.
     let (before, recovery) = until_missed(&withheld.feed)?;
     let next = world.set(2, "after")?.seq.get();
@@ -76,7 +77,7 @@ fn a_forced_close_marker_names_the_first_undelivered_event_and_reconnect_replays
         .close_forced()?
         .ok_or("undelivered events owe a marker")?;
     let back = world.subscribe(Start::Resume(cursor), Selector::all())?;
-    let (marker_seq, _) = until_loss_event(&witness.feed)?;
+    let (marker_seq, _) = until_loss_event(&witness.feed, &[])?;
     let (replayed, _) = scan_to(&back.feed, marker_seq)?;
     // Then the marker names the first undelivered event and the reconnect replays it.
     assert_eq!(
@@ -112,7 +113,7 @@ fn a_dropped_consumer_still_leaves_a_durable_marker() -> TestResult {
     let id = dropped.feed.id().clone();
     // When its connection vanishes and no further commit follows.
     drop(dropped);
-    let (_, marker) = until_loss_event(&witness.feed)?;
+    let (_, marker) = until_loss_event(&witness.feed, &[])?;
     // Then the worker committed the forced-close marker on its own.
     assert_eq!(
         (marker.subscription_id, marker.from_seq, marker.cause),

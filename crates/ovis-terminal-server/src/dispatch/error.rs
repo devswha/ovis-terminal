@@ -173,6 +173,11 @@ impl DispatchError {
                     .collect(),
             );
         }
+        if let Self::Authority(source) = self
+            && let Some(epoch) = source.principal_epoch()
+        {
+            error = error.with_principal_epoch(epoch);
+        }
         if let Self::Operation(source) = self
             && let Some(op_id) = source.op_id()
         {

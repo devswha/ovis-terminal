@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use ovis_terminal_authz::{AccessRequest, Action, Authority, Decision, ResolvedTarget};
+use ovis_terminal_authz::{AccessRequest, Action, Authority, Decision, ResolvedTarget, Session};
 use ovis_terminal_core::events::{Coordinator, EventData, SnapshotProducer};
 use ovis_terminal_core::ops::{
     Completion, Context, OperationError, OperationEvent, OperationSnapshot, Operations,
@@ -21,6 +21,10 @@ use tokio::sync::watch;
 
 use super::DispatchError;
 use crate::conn::Notifier;
+
+mod proven;
+
+pub use proven::Unsettled;
 
 /// A domain's resolved action and target, never a focus-based default.
 #[derive(Debug, Clone)]
@@ -63,6 +67,7 @@ pub struct Execution<D, P> {
     pub(super) op_id: OpId,
     pub(super) access: Access,
     pub(super) decision: Decision<RegistryIdentities>,
+    pub(super) session: Arc<Session>,
     pub(super) cancellation: watch::Receiver<bool>,
     pub(super) notifier: Notifier,
 }
@@ -96,6 +101,12 @@ impl<D, P> Execution<D, P> {
     /// The exact resolved resource covered by the authorization decision.
     pub const fn target(&self) -> &ResolvedTarget<RegistryIdentities> {
         &self.access.target
+    }
+
+    /// The authenticated session that requested the operation; authority-changing
+    /// effects act as it and the authority rechecks its grant when they run.
+    pub const fn session(&self) -> &Arc<Session> {
+        &self.session
     }
 
     /// The originating connection's bounded notification outlet.

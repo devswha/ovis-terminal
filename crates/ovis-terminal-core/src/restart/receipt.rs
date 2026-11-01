@@ -1,0 +1,203 @@
+//! What a restart preserved, lost and interrupted.
+
+use ovis_terminal_protocol::domain::restart::{InterruptedOp, InterruptedWait};
+use ovis_terminal_protocol::schema::ids::ServerBootId as WireBootId;
+use ovis_terminal_protocol::schema::methods::server::ServerTransitionResult;
+use ovis_terminal_protocol::schema::scalar::{EventSeq, Incarnation};
+use serde::{Deserialize, Serialize};
+
+use crate::registry::{ProcessIdentity, RuntimeId, ServerBootId, TerminalGeneration, TerminalId};
+
+const fn incarnation(process: &ProcessIdentity) -> Incarnation {
+    Incarnation::new(process.generation().get())
+}
+
+/// A program incarnation the holder owned when the restart began.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct Preserved {
+    /// Terminal identity.
+    pub terminal: TerminalId,
+    /// Terminal incarnation.
+    pub terminal_incarnation: TerminalGeneration,
+    /// The process: incarnation, PID and start token.
+    pub process: ProcessIdentity,
+}
+
+impl Preserved {
+    /// Names `process` running in `terminal` at `terminal_incarnation`.
+    #[must_use]
+    pub const fn new(
+        terminal: TerminalId,
+        terminal_incarnation: TerminalGeneration,
+        process: ProcessIdentity,
+    ) -> Self {
+        Self {
+            terminal,
+            terminal_incarnation,
+            process,
+        }
+    }
+
+    const fn wire(&self) -> Incarnation {
+        incarnation(&self.process)
+    }
+}
+
+/// Why an incarnation held before the boundary is not preserved.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "evidence", rename_all = "snake_case", deny_unknown_fields)]
+#[non_exhaustive]
+pub enum LossEvidence {
+    /// The holder reaped it with this status.
+    Exited {
+        /// Exit code, when it exited normally.
+        code: Option<i32>,
+        /// Signal number, when a signal ended it.
+        signal: Option<i32>,
+    },
+    /// The holder reported its end without an observable status.
+    ExitUnknown {},
+    /// The operating system no longer runs it with its recorded start token.
+    Gone {},
+    /// The successor found another process identity than the one recorded.
+    Replaced {
+        /// The identity found.
+        found: ProcessIdentity,
+    },
+    /// The holder did not report the terminal at all.
+    NotAdopted {},
+}
+
+impl LossEvidence {
+    /// Stable machine token.
+    #[must_use]
+    pub const fn kind(&self) -> &'static str {
+        match self {
+            Self::Exited { .. } => "exited",
+            Self::ExitUnknown {} => "exit_unknown",
+            Self::Gone {} => "gone",
+            Self::Replaced { .. } => "replaced",
+            Self::NotAdopted {} => "not_adopted",
+        }
+    }
+}
+
+/// An incarnation the restart began with and could not keep.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct Lost {
+    /// What was held when the restart began.
+    pub held: Preserved,
+    /// Why it is not preserved.
+    pub evidence: LossEvidence,
+}
+
+impl Lost {
+    /// `held` is lost for `evidence`.
+    #[must_use]
+    pub const fn new(held: Preserved, evidence: LossEvidence) -> Self {
+        Self { held, evidence }
+    }
+}
+
+/// How a control came up.
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum Boot {
+    /// A restart intent was on disk: the planned restart was finished from it.
+    Planned(Box<RestartReceipt>),
+    /// No restart intent: a first start, or a control that ended without a planned
+    /// restart. Nothing is claimed about a handover.
+    Unplanned,
+}
+
+/// The outcome of one completed restart.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct RestartReceipt {
+    /// Runtime lifetime, unchanged.
+    pub runtime: RuntimeId,
+    /// Boot identity replaced.
+    pub from: ServerBootId,
+    /// Boot identity of the successor.
+    pub to: ServerBootId,
+    /// Incarnations the successor proved with the same PID and start token.
+    pub preserved: Vec<Preserved>,
+    /// Incarnations held before the boundary that the successor could not prove, each
+    /// with the evidence of why; never reported as preserved.
+    pub lost: Vec<Lost>,
+    /// Operations in flight at the boundary, classified from the ledger.
+    pub interrupted_ops: Vec<InterruptedOp>,
+    /// Waits armed at the boundary; each ended `cancelled`.
+    pub interrupted_waits: Vec<InterruptedWait>,
+    /// Latest committed sequence when the intent was persisted.
+    pub seq_before: EventSeq,
+    /// Latest committed sequence once the successor recovered.
+    pub seq_after: EventSeq,
+    /// The restart was finished by a later open after a crash at a barrier.
+    pub resumed: bool,
+}
+
+impl RestartReceipt {
+    /// The published `server.restart` result.
+    #[must_use]
+    pub fn transition(&self) -> ServerTransitionResult {
+        let mut result = ServerTransitionResult::restarted(
+            (
+                WireBootId::new(self.from.to_string()),
+                WireBootId::new(self.to.to_string()),
+            ),
+            self.preserved.iter().map(Preserved::wire).collect(),
+            self.interrupted_ops
+                .iter()
+                .map(|op| op.op_id.clone())
+                .collect(),
+        );
+        result.ended_incarnations = self.lost.iter().map(|lost| lost.held.wire()).collect();
+        result
+    }
+}
+
+/// The outcome of one explicit stop.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct StopReceipt {
+    /// Boot identity that stopped.
+    pub from: ServerBootId,
+    /// Incarnations left running in their holder; none was signalled.
+    pub preserved: Vec<ProcessIdentity>,
+    /// Incarnations the stop ended, each with reaped exit evidence.
+    pub ended: Vec<ProcessIdentity>,
+    /// Launches whose process identity was still pending at the stop.
+    pub pending: Vec<TerminalId>,
+}
+
+impl StopReceipt {
+    /// A stop of `from` that left `preserved` running and ended `ended`.
+    #[must_use]
+    pub fn new(
+        from: ServerBootId,
+        (preserved, ended): (Vec<ProcessIdentity>, Vec<ProcessIdentity>),
+        pending: Vec<TerminalId>,
+    ) -> Self {
+        Self {
+            from,
+            preserved,
+            ended,
+            pending,
+        }
+    }
+
+    /// The published `server.stop` result.
+    #[must_use]
+    pub fn transition(&self) -> ServerTransitionResult {
+        ServerTransitionResult::stopped(
+            WireBootId::new(self.from.to_string()),
+            self.preserved.iter().map(incarnation).collect(),
+            self.ended.iter().map(incarnation).collect(),
+        )
+    }
+}

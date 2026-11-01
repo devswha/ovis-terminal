@@ -133,6 +133,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         "socket": socket,
         "bearer": booted.bearers.owner,
         "observer": booted.bearers.observer,
+        "writer": booted.bearers.writer,
     }}))?;
     let waited = stopped(plan.stdin_lifetime).await;
     let report = listener

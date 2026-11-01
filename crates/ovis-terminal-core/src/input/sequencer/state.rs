@@ -104,6 +104,14 @@ impl Sequencer {
         self.receipts.by_op(op_id)
     }
 
+    /// The receipt of the user entry currently with the holder, if any.
+    pub fn with_holder(&self) -> Option<&Receipt> {
+        let seq = self.in_flight.as_ref()?.sent.seq;
+        self.receipts
+            .through(seq)
+            .find(|receipt| receipt.queued_seq == seq)
+    }
+
     /// Applies a producer's report of an agent stage.
     ///
     /// # Errors

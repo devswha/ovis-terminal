@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::template_launch::FirstMessageRecord;
 use crate::errors::OpId;
 use crate::schema::common::{Expect, Geometry, MachineRef, PageInfo, PageRequest, Target};
 use crate::schema::ids::{TemplateName, TerminalId, TerminalName};
@@ -30,6 +31,19 @@ pub enum LaunchProgram {
     },
 }
 
+/// Versioned template selected by stable name; the same launch contract as an argv.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct TemplateSelector {
+    /// Template name.
+    pub name: TemplateName,
+    /// Template version; absent selects the latest.
+    pub version: Option<String>,
+    /// Task text passed as data, never interpolated into a command line.
+    pub task: Option<String>,
+}
+
 /// Parameters of `terminal.run`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -37,8 +51,10 @@ pub enum LaunchProgram {
 pub struct TerminalRunParams {
     /// Client-minted operation identity.
     pub op_id: OpId,
-    /// Program to launch.
-    pub program: LaunchProgram,
+    /// Program to launch; exactly one of `program` and `template` is required.
+    pub program: Option<LaunchProgram>,
+    /// Template to launch; exactly one of `program` and `template` is required.
+    pub template: Option<TemplateSelector>,
     /// Initial grid size.
     pub geometry: Geometry,
     /// Working directory.
@@ -68,8 +84,8 @@ pub struct TerminalRunParams {
 pub struct FirstMessage {
     /// Literal text; submitted after the agent declares readiness.
     pub text: String,
-    /// Expire the message if readiness is not declared in time.
-    pub deadline_ms: DurationMs,
+    /// Expire the message if readiness is not declared in time; absent means 30 s.
+    pub deadline_ms: Option<DurationMs>,
 }
 
 /// How a child relates to its parent incarnation.
@@ -106,6 +122,19 @@ pub struct TerminalRunResult {
     pub spawn: OpenEnum<SpawnState>,
     /// Sequence of the creation event.
     pub created_seq: EventSeq,
+    /// First message queued under this launch, when one was given.
+    pub first_message: Option<FirstMessageRecord>,
+}
+
+/// Parameters of `terminal.first_message`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct TerminalFirstMessageParams {
+    /// Operation that launched the terminal.
+    pub launch_op: OpId,
+    /// Wait up to this long for a final state before answering the current one.
+    pub settled_within_ms: Option<DurationMs>,
 }
 
 /// Parameters of `terminal.list`.
@@ -259,6 +288,28 @@ pub struct TerminalMutateResult {
     pub seq: EventSeq,
 }
 
+/// Incarnations `terminal.process_info` must still find; a mismatch reports nothing.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct ProcessExpect {
+    /// Expected terminal incarnation; a mismatch is `stale_target`.
+    pub terminal_incarnation: Option<Incarnation>,
+    /// Expected program incarnation; a mismatch is `process_replaced`.
+    pub process_incarnation: Option<Incarnation>,
+}
+
+/// Parameters of `terminal.process_info`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct TerminalProcessInfoParams {
+    /// Terminal to inspect; there is no focused-terminal fallback.
+    pub target: Target,
+    /// Incarnations the caller holds.
+    pub expect: Option<ProcessExpect>,
+}
+
 /// Result of `terminal.process_info`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
@@ -267,16 +318,22 @@ pub struct TerminalProcessInfoResult {
     pub terminal_id: TerminalId,
     /// Program the terminal launched.
     pub launcher: ProcessRecord,
-    /// Foreground process, when the platform reports it.
+    /// The launcher record while the launcher holds the foreground; `roles.foreground`
+    /// lists every foreground process.
     pub foreground: Option<ProcessRecord>,
     /// Fields this platform can report.
     pub supported_fields: Vec<String>,
+    /// Shell, launcher, foreground and background processes, each observed or
+    /// explicitly unsupported.
+    pub roles: crate::domain::process_info::ProcessRoles,
 }
 
 /// Methods of this namespace.
 pub(crate) const METHODS: &[MethodSpec] = &[
     method! {"terminal.run", Mutation, Untargeted, TerminalRunParams => TerminalRunResult,
     "Launch a program in a new terminal.", [SpawnFailed, DuplicateName, TemplateNotFound, TemplateInvalid, ParentNotFound, ParentFinished, MachineUnreachable, InvalidGeometry, LimitExceeded]},
+    method! {"terminal.first_message", Query, Untargeted, TerminalFirstMessageParams => FirstMessageRecord,
+    "Read the first message queued under a launch by its requesting principal.", []},
     method! {"terminal.list", Query, Untargeted, TerminalListParams => TerminalListResult,
     "List terminals at one pinned revision.", [MachineUnreachable]},
     method! {"terminal.get", Query, Terminal, TerminalGetParams => TerminalRecord,
@@ -293,6 +350,6 @@ pub(crate) const METHODS: &[MethodSpec] = &[
     "Set or remove terminal labels.", [LimitExceeded]},
     method! {"terminal.rename", Mutation, Terminal, TerminalRenameParams => TerminalMutateResult,
     "Set or clear a terminal's unique name.", [DuplicateName, InvalidName]},
-    method! {"terminal.process_info", Query, Terminal, TerminalGetParams => TerminalProcessInfoResult,
-    "Read launcher and foreground process facts.", [UnsupportedField]},
+    method! {"terminal.process_info", Query, Terminal, TerminalProcessInfoParams => TerminalProcessInfoResult,
+    "Read shell, launcher, foreground and background process facts.", [UnsupportedField, ProcessReplaced]},
 ];

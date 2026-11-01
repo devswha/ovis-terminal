@@ -2,24 +2,14 @@
 //! proven while the fan-out worker is held so its idle tick cannot commit them instead.
 
 use std::error::Error;
-use std::sync::mpsc::{Receiver, SyncSender, TryRecvError, sync_channel};
+use std::sync::mpsc::TryRecvError;
 
 use ovis_terminal_core::events::{Cursor, EventError};
 use ovis_terminal_core::subscriptions::{LossCause, LossRecord, Pulled, Selector, Start};
 use ovis_terminal_protocol::schema::scalar::EventSeq;
 
-use super::fixture::{BOUND, Bounds, Data, PUMP_GATE, TestResult, World};
+use super::fixture::{Bounds, Data, TestResult, World};
 use super::pulls::{pull, scan_to};
-
-/// Holds the fan-out worker inside one fan-out until the returned sender releases it.
-fn hold_worker(world: &World) -> Result<SyncSender<()>, Box<dyn Error>> {
-    let (entered, reached): (SyncSender<()>, Receiver<()>) = sync_channel(1);
-    let (release, released) = sync_channel(1);
-    *PUMP_GATE.lock().map_err(|_| "gate poisoned")? = Some((entered, released));
-    world.gate()?;
-    reached.recv_timeout(BOUND)?;
-    Ok(release)
-}
 
 /// Loss markers committed after `cursor`, read straight from the durable log.
 fn durable_markers(world: &World, cursor: Cursor) -> Result<Vec<LossRecord>, Box<dyn Error>> {
@@ -53,7 +43,7 @@ fn close_forced_returns_only_after_its_marker_is_durable() -> TestResult {
     world.set(1, "one")?;
     let second = world.set(2, "two")?.seq.get();
     scan_to(&witness.feed, second)?;
-    let release = hold_worker(&world)?;
+    let release = world.hold_worker()?;
     // When the transport force-closes it while the worker cannot commit anything.
     let record = closing
         .feed
@@ -87,7 +77,7 @@ fn missed_is_returned_only_after_its_marker_is_durable() -> TestResult {
     for value in ["one", "two"] {
         world.set(1, value)?;
     }
-    let release = hold_worker(&world)?;
+    let release = world.hold_worker()?;
     // When a consumer resumes with a replay larger than its queue, so the loss is marked
     // by the subscribing thread and only the consumer itself can commit the marker.
     let resumed = world.subscribe(Start::Resume(cursor), Selector::all())?;

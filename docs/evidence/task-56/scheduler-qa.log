@@ -1,0 +1,43 @@
+$ cargo test -p ovis-terminal-server --lib scheduler:: -- --nocapture
+
+running 28 tests
+
+thread 't56-db-panic' (2682353) panicked at crates/ovis-terminal-server/src/streams/scheduler/qa/threads.rs:44:42:
+job fails
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test streams::scheduler::budget::tests::a_refusal_holds_nothing_and_a_drop_returns_the_units ... ok
+test streams::scheduler::budget::tests::a_release_wakes_a_waiter_registered_before_it ... ok
+test streams::scheduler::budget::tests::merged_and_shrunk_holds_return_exactly_what_they_hold ... ok
+test streams::scheduler::history::tests::a_failed_append_stops_recording_with_a_typed_fault ... ok
+test streams::scheduler::history::tests::a_segment_larger_than_the_bound_is_an_invalid_config ... ok
+test streams::scheduler::history::tests::a_gap_between_segment_files_is_refused_on_open ... ok
+test streams::scheduler::history::tests::reopening_rebuilds_the_index_and_continues_the_stream ... ok
+test streams::scheduler::history::tests::retention_evicts_the_oldest_segments_and_advances_the_floor ... ok
+test streams::scheduler::qa::failure::every_refusal_maps_to_a_typed_retryable_wire_kind ... ok
+test streams::scheduler::qa::caps::event_retention_is_reserved_per_terminal_against_the_session ... ok
+test streams::scheduler::qa::history::a_terminal_without_history_refuses_history_reads ... ok
+test streams::scheduler::qa::failure::the_session_bound_refuses_and_returns_the_terminal_reservation ... ok
+test streams::scheduler::qa::threads::a_panicking_db_job_is_reported_at_shutdown ... ok
+test streams::scheduler::qa::fanout::every_viewer_receives_the_same_shared_chunk ... ok
+test streams::scheduler::qa::threads::the_db_writer_refuses_past_its_queue_and_joins_with_every_accepted_job ... ok
+test streams::scheduler::qa::threads::the_blocking_gate_refuses_one_past_its_slots ... ok
+test streams::scheduler::qa::threads::a_pump_stops_when_its_actor_has_stopped ... ok
+test streams::scheduler::qa::caps::an_exhausted_session_control_budget_refuses_but_never_refuses_stop ... ok
+test streams::scheduler::qa::caps::output_waits_for_the_session_output_budget_without_loss ... ok
+test streams::scheduler::qa::ordering::admissions_and_cancels_overtake_pending_parse_turns_while_stdin_is_stuck ... ok
+test streams::scheduler::budget::tests::held_units_never_pass_the_limit ... ok
+{"controls_while_stdin_stuck_ms":12.353}
+test streams::scheduler::qa::failure::overflow_is_refused_before_admission_and_cancel_stays_serviceable ... ok
+{"pump_reads":111,"viewer_events_lost":0}
+test streams::scheduler::qa::threads::an_owned_pump_carries_output_until_eof_and_is_joined ... ok
+test streams::scheduler::qa::ordering::a_resize_waits_behind_at_most_one_parse_turn ... ok
+test streams::scheduler::qa::history::accepted_output_is_readable_from_disk_until_retention_evicts_it ... ok
+test streams::scheduler::history::tests::reads_inside_the_window_return_the_appended_bytes ... ok
+test streams::scheduler::qa::fanout::a_slow_subscriber_is_told_exactly_how_many_events_it_lost ... ok
+{"profile":"16-pty/8-client/16-inflight/1MiB-s","requests":6560,"commits":4928,"admissions":3280,"controls":3280,"admission_max_ms":1.684,"control_max_ms":4.807,"events":39424,"event_max_ms":3.936,"events_lost":0,"rejected":0,"output_bytes":4215808,"parsed_bytes":4215808,"parse_turns":4117,"max_turn_ms":2.106}
+{"within_contract":true,"contract_ms":100,"ci_margin_ms":1000}
+test streams::scheduler::qa::profile::sixteen_ptys_eight_clients_keep_every_control_within_100_ms ... ok
+
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 39 filtered out; finished in 4.13s
+
+exit=0

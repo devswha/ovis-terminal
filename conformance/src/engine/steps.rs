@@ -100,10 +100,18 @@ impl Session<'_> {
             .as_ref()
             .ok_or(RunnerError::FixtureState)?
             .ready;
-        let bearer = match connect.principal {
-            Principal::Owner => ready.bearer.clone(),
-            Principal::Observe => ready.observer.clone(),
-        };
+        let bearer =
+            match (&connect.bearer, connect.principal) {
+                (Some(name), _) => self.kept.get(name).cloned().ok_or_else(|| {
+                    RunnerError::ScenarioInconsistent {
+                        scenario: name.clone(),
+                        detail: "a connection presents a bearer no reply kept",
+                    }
+                })?,
+                (None, Principal::Owner) => ready.bearer.clone(),
+                (None, Principal::Observe) => ready.observer.clone(),
+                (None, Principal::Writer) => ready.writer.clone(),
+            };
         if self.conns.contains_key(&connect.conn) {
             return Err(RunnerError::ScenarioInconsistent {
                 scenario: connect.conn.as_str().to_owned(),

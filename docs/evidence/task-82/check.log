@@ -1,0 +1,15 @@
+# host: Linux x86_64; base 8cab061 + task-82 diff (no Rust change); excerpt: step headers and summaries of target/t82/check.log
+$ bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh
+==> cargo +nightly fmt --all -- --check
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+     Summary [ 140.651s] 1110 tests run: 1110 passed (1 slow), 1 skipped
+==> cargo test --doc --workspace --all-features --locked
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 1096 file(s) checked
+==> bash scripts/hygiene/manifests.sh
+manifests.sh: 16 member manifest(s) checked
+==> bash scripts/hygiene/json.sh
+json.sh: 122 JSON file(s) checked
+check.sh: all steps passed
+exit 0

@@ -1,0 +1,1590 @@
+[
+  {
+    "binary": {
+      "bytes": "149835464",
+      "path": "target/debug/ovis-terminal",
+      "sha256": "985313bea3b9c937d60d59a2c30f4938439c02d1488b25335b07f516584aad7b"
+    },
+    "case": "happy",
+    "cases": [
+      {
+        "assertions": [
+          {
+            "actual": "hello",
+            "check": "hello/id",
+            "expected": "hello",
+            "passed": true
+          },
+          {
+            "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+            "check": "hello/result/machine_id",
+            "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[list]/error",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": "build",
+            "check": "reply[list]/result/templates/0/name",
+            "expected": "build",
+            "passed": true
+          },
+          {
+            "actual": {
+              "by": "declared",
+              "states": [
+                "idle"
+              ]
+            },
+            "check": "reply[list]/result/templates/0/readiness",
+            "expected": {
+              "by": "declared",
+              "states": [
+                "idle"
+              ]
+            },
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "reply[list]/result/templates/0/version",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": "2",
+            "check": "reply[list]/result/templates/1/version",
+            "expected": "2",
+            "passed": true
+          },
+          {
+            "actual": "silent",
+            "check": "reply[list]/result/templates/2/name",
+            "expected": "silent",
+            "passed": true
+          },
+          {
+            "actual": [
+              "/usr/bin/env",
+              "build-agent",
+              "--target",
+              "debug"
+            ],
+            "check": "reply[pinned]/result/argv",
+            "expected": [
+              "/usr/bin/env",
+              "build-agent",
+              "--target",
+              "debug"
+            ],
+            "passed": true
+          },
+          {
+            "actual": {
+              "ROLE": "build"
+            },
+            "check": "reply[pinned]/result/env",
+            "expected": {
+              "ROLE": "build"
+            },
+            "passed": true
+          },
+          {
+            "actual": "30000",
+            "check": "reply[pinned]/result/ready_deadline_ms",
+            "expected": "30000",
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "reply[pinned]/result/version",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": [
+              "/usr/bin/env",
+              "build-agent",
+              "--target",
+              "release"
+            ],
+            "check": "reply[latest]/result/argv",
+            "expected": [
+              "/usr/bin/env",
+              "build-agent",
+              "--target",
+              "release"
+            ],
+            "passed": true
+          },
+          {
+            "actual": "2",
+            "check": "reply[latest]/result/version",
+            "expected": "2",
+            "passed": true
+          },
+          {
+            "actual": [
+              "latest",
+              "list",
+              "pinned"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "latest",
+              "list",
+              "pinned"
+            ],
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[launch]/error",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": "01a19385-7b55-72fa-9adb-2b715ab8c427",
+            "check": "reply[launch]/result/first_message/launch_op",
+            "expected": "01a19385-7b55-72fa-9adb-2b715ab8c427",
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "reply[launch]/result/first_message/process_incarnation",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[launch]/result/first_message/queued_seq",
+            "expected": null,
+            "passed": true
+          },
+          {
+            "actual": "accepted",
+            "check": "reply[launch]/result/first_message/state",
+            "expected": "accepted",
+            "passed": true
+          },
+          {
+            "actual": "terminal:100",
+            "check": "reply[launch]/result/first_message/terminal_id",
+            "expected": "terminal:100",
+            "passed": true
+          },
+          {
+            "actual": "spawned",
+            "check": "reply[launch]/result/spawn",
+            "expected": "spawned",
+            "passed": true
+          },
+          {
+            "actual": "builder",
+            "check": "reply[launch]/result/terminal/name",
+            "expected": "builder",
+            "passed": true
+          },
+          {
+            "actual": [
+              "/usr/bin/env",
+              "build-agent",
+              "--target",
+              "debug"
+            ],
+            "check": "reply[launch]/result/terminal/process/argv",
+            "expected": [
+              "/usr/bin/env",
+              "build-agent",
+              "--target",
+              "debug"
+            ],
+            "passed": true
+          },
+          {
+            "actual": "terminal:100",
+            "check": "reply[launch]/result/terminal/terminal_id",
+            "expected": "terminal:100",
+            "passed": true
+          },
+          {
+            "actual": [
+              "launch"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "launch"
+            ],
+            "passed": true
+          },
+          {
+            "actual": [
+              "spawn-terminal:100.json"
+            ],
+            "check": "effects/files",
+            "expected": [
+              "spawn-terminal:100.json"
+            ],
+            "passed": true
+          },
+          {
+            "actual": {
+              "argv": [
+                "/usr/bin/env",
+                "build-agent",
+                "--target",
+                "debug"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100",
+                "ROLE": "build"
+              },
+              "name": "builder",
+              "parent": null
+            },
+            "check": "effects/spawn-terminal:100.json",
+            "expected": {
+              "argv": [
+                "/usr/bin/env",
+                "build-agent",
+                "--target",
+                "debug"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100",
+                "ROLE": "build"
+              },
+              "name": "builder",
+              "parent": null
+            },
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[working]/error",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": "working",
+            "check": "reply[working]/result/status/root/report/state",
+            "expected": "working",
+            "passed": true
+          },
+          {
+            "actual": [
+              "working"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "working"
+            ],
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[still]/result/queued_seq",
+            "expected": null,
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[still]/result/reason",
+            "expected": null,
+            "passed": true
+          },
+          {
+            "actual": "accepted",
+            "check": "reply[still]/result/state",
+            "expected": "accepted",
+            "passed": true
+          },
+          {
+            "actual": [
+              "still"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "still"
+            ],
+            "passed": true
+          },
+          {
+            "actual": [
+              "spawn-terminal:100.json"
+            ],
+            "check": "effects/files",
+            "expected": [
+              "spawn-terminal:100.json"
+            ],
+            "passed": true
+          },
+          {
+            "actual": {
+              "argv": [
+                "/usr/bin/env",
+                "build-agent",
+                "--target",
+                "debug"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100",
+                "ROLE": "build"
+              },
+              "name": "builder",
+              "parent": null
+            },
+            "check": "effects/spawn-terminal:100.json",
+            "expected": {
+              "argv": [
+                "/usr/bin/env",
+                "build-agent",
+                "--target",
+                "debug"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100",
+                "ROLE": "build"
+              },
+              "name": "builder",
+              "parent": null
+            },
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[idle]/error",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": "idle",
+            "check": "reply[idle]/result/status/root/report/state",
+            "expected": "idle",
+            "passed": true
+          },
+          {
+            "actual": [
+              "idle"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "idle"
+            ],
+            "passed": true
+          },
+          {
+            "actual": "01a19385-7b55-72fa-9adb-2b715ab8c427",
+            "check": "reply[sent]/result/launch_op",
+            "expected": "01a19385-7b55-72fa-9adb-2b715ab8c427",
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "reply[sent]/result/queued_seq",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[sent]/result/reason",
+            "expected": null,
+            "passed": true
+          },
+          {
+            "actual": "sent",
+            "check": "reply[sent]/result/state",
+            "expected": "sent",
+            "passed": true
+          },
+          {
+            "actual": [
+              "sent"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "sent"
+            ],
+            "passed": true
+          },
+          {
+            "actual": [
+              "input-terminal:100.json",
+              "spawn-terminal:100.json"
+            ],
+            "check": "effects/files",
+            "expected": [
+              "input-terminal:100.json",
+              "spawn-terminal:100.json"
+            ],
+            "passed": true
+          },
+          {
+            "actual": [
+              {
+                "queued_seq": "1",
+                "text": "run the build\r"
+              }
+            ],
+            "check": "effects/input-terminal:100.json",
+            "expected": [
+              {
+                "queued_seq": "1",
+                "text": "run the build\r"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "actual": {
+              "argv": [
+                "/usr/bin/env",
+                "build-agent",
+                "--target",
+                "debug"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100",
+                "ROLE": "build"
+              },
+              "name": "builder",
+              "parent": null
+            },
+            "check": "effects/spawn-terminal:100.json",
+            "expected": {
+              "argv": [
+                "/usr/bin/env",
+                "build-agent",
+                "--target",
+                "debug"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100",
+                "ROLE": "build"
+              },
+              "name": "builder",
+              "parent": null
+            },
+            "passed": true
+          },
+          {
+            "actual": "01a19385-7b55-72fa-9adb-2b715ab8c427",
+            "check": "reply[again]/result/first_message/launch_op",
+            "expected": "01a19385-7b55-72fa-9adb-2b715ab8c427",
+            "passed": true
+          },
+          {
+            "actual": "terminal:100",
+            "check": "reply[again]/result/terminal/terminal_id",
+            "expected": "terminal:100",
+            "passed": true
+          },
+          {
+            "actual": [
+              "again"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "again"
+            ],
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "reply[after]/result/queued_seq",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": "sent",
+            "check": "reply[after]/result/state",
+            "expected": "sent",
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[idle-again]/error",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": [
+              "after",
+              "idle-again"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "after",
+              "idle-again"
+            ],
+            "passed": true
+          },
+          {
+            "actual": [
+              "input-terminal:100.json",
+              "spawn-terminal:100.json"
+            ],
+            "check": "effects/files",
+            "expected": [
+              "input-terminal:100.json",
+              "spawn-terminal:100.json"
+            ],
+            "passed": true
+          },
+          {
+            "actual": [
+              {
+                "queued_seq": "1",
+                "text": "run the build\r"
+              }
+            ],
+            "check": "effects/input-terminal:100.json",
+            "expected": [
+              {
+                "queued_seq": "1",
+                "text": "run the build\r"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "actual": {
+              "argv": [
+                "/usr/bin/env",
+                "build-agent",
+                "--target",
+                "debug"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100",
+                "ROLE": "build"
+              },
+              "name": "builder",
+              "parent": null
+            },
+            "check": "effects/spawn-terminal:100.json",
+            "expected": {
+              "argv": [
+                "/usr/bin/env",
+                "build-agent",
+                "--target",
+                "debug"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100",
+                "ROLE": "build"
+              },
+              "name": "builder",
+              "parent": null
+            },
+            "passed": true
+          },
+          {
+            "actual": "7303",
+            "check": "connection[bridge]/bytes_received=bytes_decoded",
+            "expected": "7303",
+            "passed": true
+          },
+          {
+            "actual": "0",
+            "check": "fixture/panicked",
+            "expected": "0",
+            "passed": true
+          }
+        ],
+        "case": "happy",
+        "connections": [
+          {
+            "bytes_decoded": "7303",
+            "bytes_received": "7303",
+            "bytes_sent": "2168",
+            "name": "bridge",
+            "records_received": "12",
+            "transcript": [
+              {
+                "at_ms": "0",
+                "bytes": "234",
+                "direction": "sent",
+                "offset": "0",
+                "sha256": "be7df56609d97a4fcc5155edd38a8f55c1822a30e5712d6069b6f2324e291f6d",
+                "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "3",
+                "bytes": "1346",
+                "direction": "received",
+                "offset": "0",
+                "sha256": "0ff1edbd6b2c62fe94a5e6eff583f41566d43d63f214edbec849d99ef1c71d93",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.first_message\",\"terminal.keep\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"template.list\",\"template.get\",\"doc.get\",\"doc.set\",\"rpc.discover\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793476361040\",\"version\":\"0.1.0\"}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "3",
+                "bytes": "245",
+                "direction": "sent",
+                "offset": "234",
+                "sha256": "edd6bce51fabc674ef7ccef00111cb73876521f2a5e0e78b15be8ed30d4bc02e",
+                "text": "{\"id\":\"list\",\"jsonrpc\":\"2.0\",\"method\":\"template.list\",\"params\":{}}\n{\"id\":\"latest\",\"jsonrpc\":\"2.0\",\"method\":\"template.get\",\"params\":{\"name\":\"build\"}}\n{\"id\":\"pinned\",\"jsonrpc\":\"2.0\",\"method\":\"template.get\",\"params\":{\"name\":\"build\",\"version\":\"1\"}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "5",
+                "bytes": "736",
+                "direction": "received",
+                "offset": "1346",
+                "sha256": "a6b8e9174d47b164b315b2d683ed6c66733cf487b1b8563b927826ce8ebbc791",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"list\",\"result\":{\"templates\":[{\"argv\":[\"/usr/bin/env\",\"build-agent\",\"--target\",\"debug\"],\"body\":null,\"description\":\"build agent 1\",\"env\":{\"ROLE\":\"build\"},\"name\":\"build\",\"readiness\":{\"by\":\"declared\",\"states\":[\"idle\"]},\"ready_deadline_ms\":\"30000\",\"version\":\"1\"},{\"argv\":[\"/usr/bin/env\",\"build-agent\",\"--target\",\"release\"],\"body\":null,\"description\":\"build agent 2\",\"env\":{\"ROLE\":\"build\"},\"name\":\"build\",\"readiness\":{\"by\":\"declared\",\"states\":[\"idle\"]},\"ready_deadline_ms\":\"30000\",\"version\":\"2\"},{\"argv\":[\"/usr/bin/env\",\"silent-agent\"],\"body\":null,\"description\":\"an agent that never declares readiness\",\"env\":{},\"name\":\"silent\",\"readiness\":{\"by\":\"declared\",\"states\":[\"idle\"]},\"ready_deadline_ms\":\"400\",\"version\":\"1\"}]}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "6",
+                "bytes": "270",
+                "direction": "received",
+                "offset": "2082",
+                "sha256": "73669d68192263f1af249cfae510cbafdf6ec8ac1ec2e9509983d2d75e58f8bd",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"pinned\",\"result\":{\"argv\":[\"/usr/bin/env\",\"build-agent\",\"--target\",\"debug\"],\"body\":null,\"description\":\"build agent 1\",\"env\":{\"ROLE\":\"build\"},\"name\":\"build\",\"readiness\":{\"by\":\"declared\",\"states\":[\"idle\"]},\"ready_deadline_ms\":\"30000\",\"version\":\"1\"}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "7",
+                "bytes": "272",
+                "direction": "received",
+                "offset": "2352",
+                "sha256": "30294fcfd4408a587e12771d585c89e033eba8fb176692c4dc9863a11ceb829f",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"latest\",\"result\":{\"argv\":[\"/usr/bin/env\",\"build-agent\",\"--target\",\"release\"],\"body\":null,\"description\":\"build agent 2\",\"env\":{\"ROLE\":\"build\"},\"name\":\"build\",\"readiness\":{\"by\":\"declared\",\"states\":[\"idle\"]},\"ready_deadline_ms\":\"30000\",\"version\":\"2\"}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "7",
+                "bytes": "279",
+                "direction": "sent",
+                "offset": "479",
+                "sha256": "9e67eabe6a96a37c9acaa8df4ac712997c853a9ca57c3d63abe13ad01ec08b3d",
+                "text": "{\"id\":\"launch\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"cwd\":\"/\",\"first_message\":{\"deadline_ms\":\"10000\",\"text\":\"run the build\"},\"geometry\":{\"cols\":80,\"rows\":24},\"name\":\"builder\",\"op_id\":\"01a19385-7b55-72fa-9adb-2b715ab8c427\",\"template\":{\"name\":\"build\",\"version\":\"1\"}}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "21",
+                "bytes": "1065",
+                "direction": "received",
+                "offset": "2624",
+                "sha256": "01e63d36f2609c5e1a8f2704db2d899cb41debc60ae0e225053caaf3710cf159",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"launch\",\"result\":{\"created_seq\":\"0\",\"first_message\":{\"deadline_ms\":\"1793476371055\",\"launch_op\":\"01a19385-7b55-72fa-9adb-2b715ab8c427\",\"process_incarnation\":\"1\",\"queued_seq\":null,\"reason\":null,\"state\":\"accepted\",\"terminal_id\":\"terminal:100\"},\"spawn\":\"spawned\",\"terminal\":{\"address\":\"local/builder\",\"agent\":null,\"created_seq\":\"0\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"0\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"name\":\"builder\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/usr/bin/env\",\"build-agent\",\"--target\",\"debug\"],\"cwd\":\"/\",\"incarnation\":\"1\",\"pid\":null,\"start_token\":null,\"started_ms\":\"0\"},\"revision\":\"0\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:100\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"0\"}}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "21",
+                "bytes": "235",
+                "direction": "sent",
+                "offset": "758",
+                "sha256": "e32c605fef9b63464b5ced5332091e6b1b1f7f57bf0a052f9fc158b592f74f15",
+                "text": "{\"id\":\"working\",\"jsonrpc\":\"2.0\",\"method\":\"status.report\",\"params\":{\"op_id\":\"01a19385-7b63-7791-ac8e-359ec5572ff3\",\"process_token\":\"fixture-launch-token-terminal:100\",\"record\":{\"state\":\"working\"},\"seq\":\"1\",\"target\":{\"name\":\"builder\"}}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "36",
+                "bytes": "506",
+                "direction": "received",
+                "offset": "3689",
+                "sha256": "269405ea4c2b2df8cee3eafa3f9ab07b0d28dc085da16e71619b2939b4a5f355",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"working\",\"result\":{\"ingest\":{\"malformed\":\"0\",\"oversize\":\"0\",\"stale\":\"0\"},\"seq\":\"7\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":\"1\",\"reported\":true,\"root\":{\"decode_errors\":[],\"origin\":\"rpc\",\"osc\":null,\"raw\":null,\"report\":{\"app\":null,\"id\":null,\"kind\":null,\"msg\":null,\"progress\":null,\"state\":\"working\",\"title\":null},\"report_seq\":\"1\",\"seq\":\"7\",\"since_ms\":\"1793476361063\",\"turn\":\"1\"},\"session\":null,\"turn\":\"1\"}}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "37",
+                "bytes": "153",
+                "direction": "sent",
+                "offset": "993",
+                "sha256": "6559d2895aa784b3a09229310a80b5aac7c2d2d06963104eb6e72492d0027b80",
+                "text": "{\"id\":\"still\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.first_message\",\"params\":{\"launch_op\":\"01a19385-7b55-72fa-9adb-2b715ab8c427\",\"settled_within_ms\":\"300\"}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "353",
+                "bytes": "229",
+                "direction": "received",
+                "offset": "4195",
+                "sha256": "408976a80fabe2bf32916bc182bc560e4e0e569a339d8d0b8b4ccb74c1077ab7",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"still\",\"result\":{\"deadline_ms\":\"1793476371055\",\"launch_op\":\"01a19385-7b55-72fa-9adb-2b715ab8c427\",\"process_incarnation\":\"1\",\"queued_seq\":null,\"reason\":null,\"state\":\"accepted\",\"terminal_id\":\"terminal:100\"}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "353",
+                "bytes": "229",
+                "direction": "sent",
+                "offset": "1146",
+                "sha256": "28fc93fb101cc224d697d2d29028a5f6a346af9a4865db28c86c793fe8e6524a",
+                "text": "{\"id\":\"idle\",\"jsonrpc\":\"2.0\",\"method\":\"status.report\",\"params\":{\"op_id\":\"01a19385-7caf-7566-bb10-7be1cd2d83f1\",\"process_token\":\"fixture-launch-token-terminal:100\",\"record\":{\"state\":\"idle\"},\"seq\":\"2\",\"target\":{\"name\":\"builder\"}}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "371",
+                "bytes": "681",
+                "direction": "received",
+                "offset": "4424",
+                "sha256": "7f9283b3a24fec4c18f52f7f4e1730a181c9fe126bedcf87eb5fc16385292387",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"idle\",\"result\":{\"ingest\":{\"malformed\":\"0\",\"oversize\":\"0\",\"stale\":\"0\"},\"seq\":\"14\",\"status\":{\"agent_id\":null,\"finish_generation\":\"1\",\"last_turn\":{\"agent_id\":null,\"ended_on\":\"idle\",\"ended_seq\":\"14\",\"finish_generation\":\"1\",\"outcome\":\"completed\",\"process_incarnation\":\"1\",\"send_op\":null,\"session\":null,\"started_seq\":\"7\",\"turn\":\"1\"},\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":\"2\",\"reported\":true,\"root\":{\"decode_errors\":[],\"origin\":\"rpc\",\"osc\":null,\"raw\":null,\"report\":{\"app\":null,\"id\":null,\"kind\":null,\"msg\":null,\"progress\":null,\"state\":\"idle\",\"title\":null},\"report_seq\":\"2\",\"seq\":\"14\",\"since_ms\":\"1793476361396\",\"turn\":\"1\"},\"session\":null,\"turn\":\"1\"}}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "371",
+                "bytes": "153",
+                "direction": "sent",
+                "offset": "1375",
+                "sha256": "e4be41c1ae8591f3d2a6a7efc02e120a9bfd97e05dae6313f235aee7d8691063",
+                "text": "{\"id\":\"sent\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.first_message\",\"params\":{\"launch_op\":\"01a19385-7b55-72fa-9adb-2b715ab8c427\",\"settled_within_ms\":\"5000\"}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "391",
+                "bytes": "223",
+                "direction": "received",
+                "offset": "5105",
+                "sha256": "2f17fee336e25f854c0c62f99e743a0a5a3186f9ad47cdd34a84beeaae4282f5",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"sent\",\"result\":{\"deadline_ms\":\"1793476371055\",\"launch_op\":\"01a19385-7b55-72fa-9adb-2b715ab8c427\",\"process_incarnation\":\"1\",\"queued_seq\":\"1\",\"reason\":null,\"state\":\"sent\",\"terminal_id\":\"terminal:100\"}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "391",
+                "bytes": "278",
+                "direction": "sent",
+                "offset": "1528",
+                "sha256": "1ce776b6b753501596ea91452a99a1e74d029caf8cf5130f0ad57ed759d3c93c",
+                "text": "{\"id\":\"again\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"cwd\":\"/\",\"first_message\":{\"deadline_ms\":\"10000\",\"text\":\"run the build\"},\"geometry\":{\"cols\":80,\"rows\":24},\"name\":\"builder\",\"op_id\":\"01a19385-7b55-72fa-9adb-2b715ab8c427\",\"template\":{\"name\":\"build\",\"version\":\"1\"}}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "399",
+                "bytes": "1064",
+                "direction": "received",
+                "offset": "5328",
+                "sha256": "14296323d4a00bc7ea7a56fab6e63abdf3121a83c1753411ecb240b20d133d52",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"again\",\"result\":{\"created_seq\":\"0\",\"first_message\":{\"deadline_ms\":\"1793476371055\",\"launch_op\":\"01a19385-7b55-72fa-9adb-2b715ab8c427\",\"process_incarnation\":\"1\",\"queued_seq\":null,\"reason\":null,\"state\":\"accepted\",\"terminal_id\":\"terminal:100\"},\"spawn\":\"spawned\",\"terminal\":{\"address\":\"local/builder\",\"agent\":null,\"created_seq\":\"0\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"0\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"name\":\"builder\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/usr/bin/env\",\"build-agent\",\"--target\",\"debug\"],\"cwd\":\"/\",\"incarnation\":\"1\",\"pid\":null,\"start_token\":null,\"started_ms\":\"0\"},\"revision\":\"0\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:100\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"0\"}}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "399",
+                "bytes": "362",
+                "direction": "sent",
+                "offset": "1806",
+                "sha256": "fa09bc3b6c4098f0fe898f3cee5671ab1eddd921d5b580cd40862a7efa07265b",
+                "text": "{\"id\":\"idle-again\",\"jsonrpc\":\"2.0\",\"method\":\"status.report\",\"params\":{\"op_id\":\"01a19385-7cdd-7750-8ad1-137b465ab4ef\",\"process_token\":\"fixture-launch-token-terminal:100\",\"record\":{\"state\":\"idle\"},\"seq\":\"3\",\"target\":{\"name\":\"builder\"}}}\n{\"id\":\"after\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.first_message\",\"params\":{\"launch_op\":\"01a19385-7b55-72fa-9adb-2b715ab8c427\"}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "436",
+                "bytes": "224",
+                "direction": "received",
+                "offset": "6392",
+                "sha256": "61751922d9c1d9918cebc6f3528f83076d824450d014751dfabf635c7ffdd469",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"after\",\"result\":{\"deadline_ms\":\"1793476371055\",\"launch_op\":\"01a19385-7b55-72fa-9adb-2b715ab8c427\",\"process_incarnation\":\"1\",\"queued_seq\":\"1\",\"reason\":null,\"state\":\"sent\",\"terminal_id\":\"terminal:100\"}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "442",
+                "bytes": "687",
+                "direction": "received",
+                "offset": "6616",
+                "sha256": "aea013f4c423a885e2280719b84e1f0dcd9f9394279c7c9bdd5d1df1c5f29e27",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"idle-again\",\"result\":{\"ingest\":{\"malformed\":\"0\",\"oversize\":\"0\",\"stale\":\"0\"},\"seq\":\"25\",\"status\":{\"agent_id\":null,\"finish_generation\":\"1\",\"last_turn\":{\"agent_id\":null,\"ended_on\":\"idle\",\"ended_seq\":\"14\",\"finish_generation\":\"1\",\"outcome\":\"completed\",\"process_incarnation\":\"1\",\"send_op\":null,\"session\":null,\"started_seq\":\"7\",\"turn\":\"1\"},\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":\"3\",\"reported\":true,\"root\":{\"decode_errors\":[],\"origin\":\"rpc\",\"osc\":null,\"raw\":null,\"report\":{\"app\":null,\"id\":null,\"kind\":null,\"msg\":null,\"progress\":null,\"state\":\"idle\",\"title\":null},\"report_seq\":\"3\",\"seq\":\"25\",\"since_ms\":\"1793476361458\",\"turn\":\"1\"},\"session\":null,\"turn\":\"1\"}}}",
+                "unit": "line"
+              }
+            ],
+            "via": "bridge",
+            "writes": "9"
+          }
+        ],
+        "declared": {
+          "closes": [
+            "GAP-083",
+            "GAP-116"
+          ],
+          "delivers": [
+            "IDEAL-060",
+            "IDEAL-089"
+          ],
+          "excludes": [
+            "EXCL-023",
+            "EXCL-024",
+            "EXCL-025"
+          ],
+          "title": "Versioned templates launch through terminal.run and release a first message only on declared readiness",
+          "todo": "35"
+        },
+        "descriptors": [],
+        "elapsed_ms": "748",
+        "failure": null,
+        "fixture": {
+          "accepted": "1",
+          "failures": {},
+          "panicked": "0"
+        },
+        "outcome": "passed",
+        "processes": [
+          {
+            "argv": [
+              "target/debug/ovis-terminal",
+              "connect"
+            ],
+            "exit_code": 0,
+            "pid": "1317345",
+            "role": "bridge",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            }
+          },
+          {
+            "argv": [
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t35/target/debug/conformance",
+              "fixture",
+              "--root",
+              "/tmp/ovc-1315167-0"
+            ],
+            "exit_code": 0,
+            "pid": "1317212",
+            "role": "fixture",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "82",
+              "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+              "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+            }
+          }
+        ],
+        "scenario": "agent/launch",
+        "summary": "Through the bridge: template.list/get by name and version; terminal.run of pinned build@1 with a first message answers accepted with zero input; a working declaration does not release it; the idle declaration releases exactly one submission and the state becomes sent; a repeated launch under the same op_id answers the retained receipt without a second spawn or submission."
+      }
+    ],
+    "elapsed_ms": "5375",
+    "error": null,
+    "format": "ovis-conformance-evidence/1",
+    "host": {
+      "arch": "x86_64",
+      "family": "unix",
+      "os": "linux"
+    },
+    "inventory": null,
+    "result": "passed",
+    "runner_version": "0.1.0",
+    "scenario": "agent/launch",
+    "totals": {
+      "assertions": "60",
+      "cases": "1",
+      "declared_only": "0",
+      "failed": "0",
+      "passed": "1",
+      "skipped": "0"
+    }
+  },
+  {
+    "binary": {
+      "bytes": "149835464",
+      "path": "target/debug/ovis-terminal",
+      "sha256": "985313bea3b9c937d60d59a2c30f4938439c02d1488b25335b07f516584aad7b"
+    },
+    "case": "failure",
+    "cases": [
+      {
+        "assertions": [
+          {
+            "actual": "hello",
+            "check": "hello/id",
+            "expected": "hello",
+            "passed": true
+          },
+          {
+            "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+            "check": "hello/result/machine_id",
+            "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+            "passed": true
+          },
+          {
+            "actual": {
+              "method": "terminal.run",
+              "params": {
+                "first_message": {
+                  "text": "x"
+                },
+                "template": {
+                  "name": "build",
+                  "version": "missing"
+                }
+              }
+            },
+            "check": "inject/planned",
+            "expected": {
+              "method": "terminal.run",
+              "params": {
+                "first_message": {
+                  "text": "x"
+                },
+                "template": {
+                  "name": "build",
+                  "version": "missing"
+                }
+              }
+            },
+            "passed": true
+          },
+          {
+            "actual": "inject-0",
+            "check": "inject[0]/id",
+            "expected": "inject-0",
+            "passed": true
+          },
+          {
+            "actual": "template_not_found",
+            "check": "inject[0]/error/data/kind",
+            "expected": "template_not_found",
+            "passed": true
+          },
+          {
+            "actual": "01a19385-91d3-766f-b79a-ec1520347ace",
+            "check": "inject[0]/error/data/op_id",
+            "expected": {
+              "$present": true
+            },
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "inject[0]/result",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": [],
+            "check": "effects/files",
+            "expected": [],
+            "passed": true
+          },
+          {
+            "actual": "not_found",
+            "check": "reply[unknown]/error/data/kind",
+            "expected": "not_found",
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[unknown]/result",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": "invalid_params",
+            "check": "reply[both]/error/data/kind",
+            "expected": "invalid_params",
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[both]/result",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": [
+              "both",
+              "unknown"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "both",
+              "unknown"
+            ],
+            "passed": true
+          },
+          {
+            "actual": [],
+            "check": "effects/files",
+            "expected": [],
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[silent]/error",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": "accepted",
+            "check": "reply[silent]/result/first_message/state",
+            "expected": "accepted",
+            "passed": true
+          },
+          {
+            "actual": "terminal:100",
+            "check": "reply[silent]/result/terminal/terminal_id",
+            "expected": "terminal:100",
+            "passed": true
+          },
+          {
+            "actual": [
+              "silent"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "silent"
+            ],
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[expired]/result/queued_seq",
+            "expected": null,
+            "passed": true
+          },
+          {
+            "actual": "deadline_passed",
+            "check": "reply[expired]/result/reason",
+            "expected": "deadline_passed",
+            "passed": true
+          },
+          {
+            "actual": "expired",
+            "check": "reply[expired]/result/state",
+            "expected": "expired",
+            "passed": true
+          },
+          {
+            "actual": [
+              "expired"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "expired"
+            ],
+            "passed": true
+          },
+          {
+            "actual": [
+              "spawn-terminal:100.json"
+            ],
+            "check": "effects/files",
+            "expected": [
+              "spawn-terminal:100.json"
+            ],
+            "passed": true
+          },
+          {
+            "actual": {
+              "argv": [
+                "/usr/bin/env",
+                "silent-agent"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100"
+              },
+              "name": "silent",
+              "parent": null
+            },
+            "check": "effects/spawn-terminal:100.json",
+            "expected": {
+              "argv": [
+                "/usr/bin/env",
+                "silent-agent"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100"
+              },
+              "name": "silent",
+              "parent": null
+            },
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[inject]/error",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": "accepted",
+            "check": "reply[inject]/result/first_message/state",
+            "expected": "accepted",
+            "passed": true
+          },
+          {
+            "actual": [
+              "/usr/bin/env",
+              "build-agent",
+              "--target",
+              "debug"
+            ],
+            "check": "reply[inject]/result/terminal/process/argv",
+            "expected": [
+              "/usr/bin/env",
+              "build-agent",
+              "--target",
+              "debug"
+            ],
+            "passed": true
+          },
+          {
+            "actual": "terminal:101",
+            "check": "reply[inject]/result/terminal/terminal_id",
+            "expected": "terminal:101",
+            "passed": true
+          },
+          {
+            "actual": [
+              "inject"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "inject"
+            ],
+            "passed": true
+          },
+          {
+            "actual": null,
+            "check": "reply[inject-idle]/error",
+            "expected": {
+              "$present": false
+            },
+            "passed": true
+          },
+          {
+            "actual": [
+              "inject-idle"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "inject-idle"
+            ],
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "check": "reply[inject-sent]/result/queued_seq",
+            "expected": "1",
+            "passed": true
+          },
+          {
+            "actual": "sent",
+            "check": "reply[inject-sent]/result/state",
+            "expected": "sent",
+            "passed": true
+          },
+          {
+            "actual": [
+              "inject-sent"
+            ],
+            "check": "replies/exactly_one_per_id",
+            "expected": [
+              "inject-sent"
+            ],
+            "passed": true
+          },
+          {
+            "actual": [
+              "input-terminal:101.json",
+              "spawn-terminal:100.json",
+              "spawn-terminal:101.json"
+            ],
+            "check": "effects/files",
+            "expected": [
+              "input-terminal:101.json",
+              "spawn-terminal:100.json",
+              "spawn-terminal:101.json"
+            ],
+            "passed": true
+          },
+          {
+            "actual": [
+              {
+                "queued_seq": "1",
+                "text": "$(touch PWNED)\r"
+              }
+            ],
+            "check": "effects/input-terminal:101.json",
+            "expected": [
+              {
+                "queued_seq": "1",
+                "text": "$(touch PWNED)\r"
+              }
+            ],
+            "passed": true
+          },
+          {
+            "actual": {
+              "argv": [
+                "/usr/bin/env",
+                "silent-agent"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100"
+              },
+              "name": "silent",
+              "parent": null
+            },
+            "check": "effects/spawn-terminal:100.json",
+            "expected": {
+              "argv": [
+                "/usr/bin/env",
+                "silent-agent"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:100"
+              },
+              "name": "silent",
+              "parent": null
+            },
+            "passed": true
+          },
+          {
+            "actual": {
+              "argv": [
+                "/usr/bin/env",
+                "build-agent",
+                "--target",
+                "debug"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:101",
+                "ROLE": "build"
+              },
+              "name": "inject",
+              "parent": null
+            },
+            "check": "effects/spawn-terminal:101.json",
+            "expected": {
+              "argv": [
+                "/usr/bin/env",
+                "build-agent",
+                "--target",
+                "debug"
+              ],
+              "cwd": "/",
+              "env": {
+                "OVIS_TERMINAL_PROCESS_TOKEN": "fixture-launch-token-terminal:101",
+                "ROLE": "build"
+              },
+              "name": "inject",
+              "parent": null
+            },
+            "passed": true
+          },
+          {
+            "actual": "5167",
+            "check": "connection[bridge]/bytes_received=bytes_decoded",
+            "expected": "5167",
+            "passed": true
+          },
+          {
+            "actual": "0",
+            "check": "fixture/panicked",
+            "expected": "0",
+            "passed": true
+          }
+        ],
+        "case": "failure",
+        "connections": [
+          {
+            "bytes_decoded": "5167",
+            "bytes_received": "5167",
+            "bytes_sent": "1836",
+            "name": "bridge",
+            "records_received": "9",
+            "transcript": [
+              {
+                "at_ms": "0",
+                "bytes": "234",
+                "direction": "sent",
+                "offset": "0",
+                "sha256": "13b5507cc051c18a30250d9ac5b67f106936de84331c761e5e9847825b6a73d6",
+                "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "3",
+                "bytes": "1346",
+                "direction": "received",
+                "offset": "0",
+                "sha256": "90744dc1dad99c122d92f4b30bdd774769ce4c11a94b5acfe2070e8b1b182c5c",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.first_message\",\"terminal.keep\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"template.list\",\"template.get\",\"doc.get\",\"doc.set\",\"rpc.discover\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793476366802\",\"version\":\"0.1.0\"}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "3",
+                "bytes": "236",
+                "direction": "sent",
+                "offset": "234",
+                "sha256": "f68893780516fbd5fd73c1464be67a6bcaeebe9953e3366342d472361a3a324b",
+                "text": "{\"id\":\"inject-0\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"cwd\":\"/\",\"first_message\":{\"text\":\"x\"},\"geometry\":{\"cols\":80,\"rows\":24},\"op_id\":\"01a19385-91d3-766f-b79a-ec1520347ace\",\"template\":{\"name\":\"build\",\"version\":\"missing\"}}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "13",
+                "bytes": "250",
+                "direction": "received",
+                "offset": "1346",
+                "sha256": "b1ae6985c3c2515102ce5919a2870f63ae3122ae18a048a41241e3ede322bb01",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-0\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"template_not_found\",\"hint\":\"list templates and pin an existing name and version\",\"retryable\":false,\"op_id\":\"01a19385-91d3-766f-b79a-ec1520347ace\"}}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "13",
+                "bytes": "335",
+                "direction": "sent",
+                "offset": "470",
+                "sha256": "8cb9d545b19d1a4d6f005dea895dbfd21fdeefb974dd15249ef027d79edf8a9f",
+                "text": "{\"id\":\"both\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"geometry\":{\"cols\":80,\"rows\":24},\"op_id\":\"01a19385-91dd-7598-b311-99741a2df19d\",\"program\":{\"argv\":[\"/bin/true\"]},\"template\":{\"name\":\"build\"}}}\n{\"id\":\"unknown\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.first_message\",\"params\":{\"launch_op\":\"01a19385-91dd-7598-b311-9975febb386f\"}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "30",
+                "bytes": "249",
+                "direction": "received",
+                "offset": "1596",
+                "sha256": "df50bd02f502d9a834e014d77e88165e58c430560b5f5b3916956b3f90eea217",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"unknown\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_found\",\"hint\":\"pass the op_id of a terminal.run that queued a first message\",\"retryable\":false,\"op_id\":\"01a19385-91dd-7532-9baf-5eb56bc62a50\"}}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "34",
+                "bytes": "232",
+                "direction": "received",
+                "offset": "1845",
+                "sha256": "88b8a130f48f8161b5e9c0723f886d2fc3395c888ce1dd9644065fc2b25c9504",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"both\",\"error\":{\"code\":-32602,\"message\":\"operation failed\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"send either program or template, not both\",\"retryable\":false,\"op_id\":\"01a19385-91dd-7598-b311-99741a2df19d\"}}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "34",
+                "bytes": "241",
+                "direction": "sent",
+                "offset": "805",
+                "sha256": "c6b622d536e72f65e404ab4997b84cae6f6c7774419c99446aa6f7656268fd45",
+                "text": "{\"id\":\"silent\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"cwd\":\"/\",\"first_message\":{\"text\":\"never typed\"},\"geometry\":{\"cols\":80,\"rows\":24},\"name\":\"silent\",\"op_id\":\"01a19385-91f2-705d-9903-5066fc44d8c0\",\"template\":{\"name\":\"silent\"}}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "50",
+                "bytes": "1045",
+                "direction": "received",
+                "offset": "2077",
+                "sha256": "5aee2fb1dc5bd987b668a29737609dfd5791dda29f54fc12bcda7f833e685ba4",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"silent\",\"result\":{\"created_seq\":\"0\",\"first_message\":{\"deadline_ms\":\"1793476367245\",\"launch_op\":\"01a19385-91f2-705d-9903-5066fc44d8c0\",\"process_incarnation\":\"1\",\"queued_seq\":null,\"reason\":null,\"state\":\"accepted\",\"terminal_id\":\"terminal:100\"},\"spawn\":\"spawned\",\"terminal\":{\"address\":\"local/silent\",\"agent\":null,\"created_seq\":\"0\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"0\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"name\":\"silent\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/usr/bin/env\",\"silent-agent\"],\"cwd\":\"/\",\"incarnation\":\"1\",\"pid\":null,\"start_token\":null,\"started_ms\":\"0\"},\"revision\":\"0\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:100\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"0\"}}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "51",
+                "bytes": "156",
+                "direction": "sent",
+                "offset": "1046",
+                "sha256": "ddb35835d3dc66c59435177a6b2b538f655ffc944d4531986586fafac4b3ae1a",
+                "text": "{\"id\":\"expired\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.first_message\",\"params\":{\"launch_op\":\"01a19385-91f2-705d-9903-5066fc44d8c0\",\"settled_within_ms\":\"5000\"}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "460",
+                "bytes": "243",
+                "direction": "received",
+                "offset": "3122",
+                "sha256": "fcd2793c7a4d0d202ce1df4ddfa0d514e0ff45798933d7778c12134207bdc4ac",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"expired\",\"result\":{\"deadline_ms\":\"1793476367245\",\"launch_op\":\"01a19385-91f2-705d-9903-5066fc44d8c0\",\"process_incarnation\":\"1\",\"queued_seq\":null,\"reason\":\"deadline_passed\",\"state\":\"expired\",\"terminal_id\":\"terminal:100\"}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "460",
+                "bytes": "239",
+                "direction": "sent",
+                "offset": "1202",
+                "sha256": "8a5f8e1cc7b2f5af17ec2c09f8696c853e78763a286318d1b6b63c0724df1108",
+                "text": "{\"id\":\"inject\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"cwd\":\"/\",\"geometry\":{\"cols\":80,\"rows\":24},\"name\":\"inject\",\"op_id\":\"01a19385-939c-7332-8df3-09f2967bd2e7\",\"template\":{\"name\":\"build\",\"task\":\"$(touch PWNED)\",\"version\":\"1\"}}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "481",
+                "bytes": "1063",
+                "direction": "received",
+                "offset": "3365",
+                "sha256": "d5fa1d99d7b48c0fbbab6bda0a78dfef6d93e9eacd025a1f0ca4b2bf17d1f2ee",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject\",\"result\":{\"created_seq\":\"0\",\"first_message\":{\"deadline_ms\":\"1793476397274\",\"launch_op\":\"01a19385-939c-7332-8df3-09f2967bd2e7\",\"process_incarnation\":\"1\",\"queued_seq\":null,\"reason\":null,\"state\":\"accepted\",\"terminal_id\":\"terminal:101\"},\"spawn\":\"spawned\",\"terminal\":{\"address\":\"local/inject\",\"agent\":null,\"created_seq\":\"0\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"0\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"name\":\"inject\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/usr/bin/env\",\"build-agent\",\"--target\",\"debug\"],\"cwd\":\"/\",\"incarnation\":\"1\",\"pid\":null,\"start_token\":null,\"started_ms\":\"0\"},\"revision\":\"0\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:101\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"0\"}}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "481",
+                "bytes": "235",
+                "direction": "sent",
+                "offset": "1441",
+                "sha256": "c6fc1787ec837dbe82cf9a90fbbf06a1eee30c15eacf88e4974596940aec83b4",
+                "text": "{\"id\":\"inject-idle\",\"jsonrpc\":\"2.0\",\"method\":\"status.report\",\"params\":{\"op_id\":\"01a19385-93b1-71a8-8a7d-b7ecfefcb5d1\",\"process_token\":\"fixture-launch-token-terminal:101\",\"record\":{\"state\":\"idle\"},\"seq\":\"1\",\"target\":{\"name\":\"inject\"}}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "504",
+                "bytes": "509",
+                "direction": "received",
+                "offset": "4428",
+                "sha256": "c78706fcb51e8a892f0c1b1ff79725adf27b41daff53ed9d7c2e7cd71fc3e207",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-idle\",\"result\":{\"ingest\":{\"malformed\":\"0\",\"oversize\":\"0\",\"stale\":\"0\"},\"seq\":\"19\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":\"1\",\"reported\":true,\"root\":{\"decode_errors\":[],\"origin\":\"rpc\",\"osc\":null,\"raw\":null,\"report\":{\"app\":null,\"id\":null,\"kind\":null,\"msg\":null,\"progress\":null,\"state\":\"idle\",\"title\":null},\"report_seq\":\"1\",\"seq\":\"19\",\"since_ms\":\"1793476367287\",\"turn\":\"0\"},\"session\":null,\"turn\":\"0\"}}}",
+                "unit": "line"
+              },
+              {
+                "at_ms": "504",
+                "bytes": "160",
+                "direction": "sent",
+                "offset": "1676",
+                "sha256": "a910515bcdde57f43da3314ce36e5dc50643e0e0fc67261e629600eea59c7193",
+                "text": "{\"id\":\"inject-sent\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.first_message\",\"params\":{\"launch_op\":\"01a19385-939c-7332-8df3-09f2967bd2e7\",\"settled_within_ms\":\"5000\"}}\n",
+                "unit": "write"
+              },
+              {
+                "at_ms": "527",
+                "bytes": "230",
+                "direction": "received",
+                "offset": "4937",
+                "sha256": "584b57467e6b3fbe58e595d2c62ec7d8cf6e8d06a1802f6859502a8d509c6607",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-sent\",\"result\":{\"deadline_ms\":\"1793476397274\",\"launch_op\":\"01a19385-939c-7332-8df3-09f2967bd2e7\",\"process_incarnation\":\"1\",\"queued_seq\":\"1\",\"reason\":null,\"state\":\"sent\",\"terminal_id\":\"terminal:101\"}}",
+                "unit": "line"
+              }
+            ],
+            "via": "bridge",
+            "writes": "8"
+          }
+        ],
+        "declared": {
+          "closes": [
+            "GAP-083",
+            "GAP-116"
+          ],
+          "delivers": [
+            "IDEAL-060",
+            "IDEAL-089"
+          ],
+          "excludes": [
+            "EXCL-023",
+            "EXCL-024",
+            "EXCL-025"
+          ],
+          "title": "Versioned templates launch through terminal.run and release a first message only on declared readiness",
+          "todo": "35"
+        },
+        "descriptors": [],
+        "elapsed_ms": "841",
+        "failure": null,
+        "fixture": {
+          "accepted": "1",
+          "failures": {},
+          "panicked": "0"
+        },
+        "outcome": "passed",
+        "processes": [
+          {
+            "argv": [
+              "target/debug/ovis-terminal",
+              "connect"
+            ],
+            "exit_code": 0,
+            "pid": "1319800",
+            "role": "bridge",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            }
+          },
+          {
+            "argv": [
+              "/home/devswha/workspace/ovis-terminal-wt/lane-t35/target/debug/conformance",
+              "fixture",
+              "--root",
+              "/tmp/ovc-1317375-0"
+            ],
+            "exit_code": 0,
+            "pid": "1319655",
+            "role": "fixture",
+            "stderr": {
+              "bytes": "0",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "text": ""
+            },
+            "stdout": {
+              "bytes": "82",
+              "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+              "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+            }
+          }
+        ],
+        "scenario": "agent/launch",
+        "summary": "A missing template version is template_not_found before any spawn; quiet readiness is not a launch field; program plus template is invalid_params; an unknown launch is not_found; silent@1 never declares readiness and expires with zero input; task text $(touch PWNED) reaches only the first message, literally, never argv."
+      }
+    ],
+    "elapsed_ms": "5678",
+    "error": null,
+    "format": "ovis-conformance-evidence/1",
+    "host": {
+      "arch": "x86_64",
+      "family": "unix",
+      "os": "linux"
+    },
+    "inventory": null,
+    "result": "passed",
+    "runner_version": "0.1.0",
+    "scenario": "agent/launch",
+    "totals": {
+      "assertions": "40",
+      "cases": "1",
+      "declared_only": "0",
+      "failed": "0",
+      "passed": "1",
+      "skipped": "0"
+    }
+  }
+]
