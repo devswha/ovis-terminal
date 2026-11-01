@@ -275,6 +275,10 @@ pub struct AgentConversationResult {
 pub struct AgentHistoryParams {
     /// Page request.
     pub page: Option<PageRequest>,
+    /// Provider store to list: a relative path below the authorized history root; absent
+    /// lists the root. A path that leaves the root is refused as `forbidden`.
+    #[serde(default)]
+    pub store: Option<String>,
 }
 
 /// Result of `agent.history`.
@@ -308,5 +312,5 @@ pub(crate) const METHODS: &[MethodSpec] = &[
     method! {"agent.conversation", Query, Terminal, AgentConversationParams => AgentConversationResult,
     "Read conversation records with provenance.", [CursorExpired, HistoryChanged, ConversationUnavailable, FrameTooLarge]},
     method! {"agent.history", Query, Untargeted, AgentHistoryParams => AgentHistoryResult,
-    "List sessions found in authorized provider stores.", [StoreUnavailable]},
+    "List sessions found in authorized provider stores.", [StoreUnavailable, PathNotFound, TooLarge]},
 ];

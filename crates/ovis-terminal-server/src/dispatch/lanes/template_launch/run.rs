@@ -22,6 +22,7 @@ use ovis_terminal_services::templates::{LaunchPlan, PlannedMessage};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+use super::super::boundary_policy::admit_launch;
 use super::{
     Launch, LaunchRefusal, Launcher, Registry, Reservation, Shared, TemplateLaunchLane, refusal,
 };
@@ -191,6 +192,7 @@ where
     type Params = TerminalRunParams;
 
     fn resolve(&self, params: &Self::Params, session: &Session) -> Result<Access, DispatchError> {
+        admit_launch(params)?;
         let lane = &self.0;
         let access = lane.access(Action::Launch);
         let input = AccessRequest::new(Action::Input, access.target.clone(), now()?);

@@ -270,6 +270,14 @@
               }
             ],
             "description": "Page request."
+          },
+          "store": {
+            "default": null,
+            "description": "Provider store to list: a relative path below the authorized history root; absent\nlists the root. A path that leaves the root is refused as `forbidden`.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "type": "object"
@@ -12049,6 +12057,10 @@
         {
           "code": -32000,
           "message": "limit_exceeded"
+        },
+        {
+          "code": -32000,
+          "message": "too_large"
         }
       ],
       "name": "terminal.run",
@@ -18382,6 +18394,14 @@
         {
           "code": -32000,
           "message": "store_unavailable"
+        },
+        {
+          "code": -32000,
+          "message": "path_not_found"
+        },
+        {
+          "code": -32000,
+          "message": "too_large"
         }
       ],
       "name": "agent.history",
@@ -18400,6 +18420,18 @@
               }
             ],
             "description": "Page request."
+          }
+        },
+        {
+          "name": "store",
+          "required": false,
+          "schema": {
+            "default": null,
+            "description": "Provider store to list: a relative path below the authorized history root; absent\nlists the root. A path that leaves the root is refused as `forbidden`.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       ],

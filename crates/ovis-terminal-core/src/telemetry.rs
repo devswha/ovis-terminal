@@ -5,6 +5,7 @@
 
 mod context;
 mod counters;
+pub mod redaction;
 mod serialize;
 mod sink;
 

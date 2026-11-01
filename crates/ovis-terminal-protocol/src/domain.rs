@@ -2,6 +2,7 @@
 
 pub mod agent_status;
 pub mod agent_tree;
+pub mod boundary_policy;
 
 pub mod conpty;
 pub mod credential_rotation;

@@ -6,7 +6,7 @@
 //! the operation's typed failure, so a retry with the same operation id answers it again.
 
 use std::fmt::Debug;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 
 use ovis_terminal_authz::{
     Action, Authority, AuthzError, CredentialId, IssuedCredential, ResolvedTarget, Revocation,
@@ -15,6 +15,7 @@ use ovis_terminal_authz::{
 use ovis_terminal_core::events::{EventData, SnapshotProducer};
 use ovis_terminal_core::ops::{Completion, OperationEvent, OperationSnapshot};
 use ovis_terminal_core::registry::{MachineId, RegistryIdentities};
+use ovis_terminal_core::telemetry::redaction::seal;
 use ovis_terminal_protocol::domain::credential_rotation::{
     BearerText, CredentialRevokeParams, CredentialRevokeResult, CredentialRotateParams,
     CredentialRotateResult, IssuedReplacement, PrincipalStanding, RacedWrite, WithdrawnCredential,
@@ -127,13 +128,23 @@ fn replacement(issued: &IssuedCredential<RegistryIdentities>) -> IssuedReplaceme
     )
 }
 
+/// Where a rotation's new bearer sits in its result; the ledger keeps only its digest.
+const ISSUED_BEARER: &str = "/issued/bearer";
+
 /// The completion of a credential change: its result, or its refusal kept as the
-/// operation's typed failure.
+/// operation's typed failure. A bearer in the result is sealed to its digest before the
+/// receipt is written, and handed back through `shown` for the one reply that shows it.
 fn completion<D, R: Serialize>(
     outcome: Result<R, AuthzError>,
+    shown: &Mutex<Option<String>>,
 ) -> Result<Completion<D>, ovis_terminal_core::ops::OperationError> {
     match outcome {
-        Ok(result) => Ok(Completion::new(serde_json::to_value(result)?)),
+        Ok(result) => {
+            let mut stored = serde_json::to_value(result)?;
+            let bearer = seal(&mut stored, ISSUED_BEARER);
+            *shown.lock().unwrap_or_else(PoisonError::into_inner) = bearer;
+            Ok(Completion::new(stored))
+        }
         Err(error) => Ok(Completion::failed(
             DispatchError::Authority(error).boundary().data().clone(),
         )),
@@ -193,9 +204,17 @@ macro_rules! credential_method {
                 let lane = Arc::clone(&self.0);
                 let admin = Arc::clone(execution.session());
                 let at = now()?;
-                execution
-                    .commit_unit(move |_| completion(lane.$change(&admin, (&params, at))))
-                    .await
+                let shown = Arc::new(Mutex::new(None));
+                let sealed = Arc::clone(&shown);
+                let mut completed = execution
+                    .commit_unit(move |_| completion(lane.$change(&admin, (&params, at)), &sealed))
+                    .await?;
+                let bearer = shown.lock().unwrap_or_else(PoisonError::into_inner).take();
+                if let (Some(bearer), Some(slot)) = (bearer, completed.0.pointer_mut(ISSUED_BEARER))
+                {
+                    *slot = serde_json::Value::String(bearer);
+                }
+                Ok(completed)
             }
         }
     };

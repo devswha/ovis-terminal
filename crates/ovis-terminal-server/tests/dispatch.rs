@@ -29,6 +29,12 @@ pub mod targeting;
 #[path = "../src/dispatch/lanes/agent_tree/qa.rs"]
 /// Children listed by the parent's current program incarnation.
 pub mod agent_tree;
+#[path = "../src/dispatch/lanes/boundary_policy/wire_qa.rs"]
+/// The boundary policy in front of a real endpoint.
+pub mod boundary_policy;
+#[path = "../src/dispatch/lanes/boundary_policy/history_qa.rs"]
+/// `agent.history` below an authorized root.
+pub mod boundary_policy_history;
 #[path = "../src/dispatch/lanes/credential_rotation/qa.rs"]
 /// Credential rotation and per-request revalidation over a real socket.
 pub mod credential_rotation;
