@@ -57,6 +57,7 @@ impl Session<'_> {
                 }),
                 Step::ExpectFailure(expected) => self.expect_failure(expected).await,
                 Step::Inject(inject) => self.inject(inject).await,
+                Step::Gates(gates) => self.gates(gates).await,
             }
         })
     }

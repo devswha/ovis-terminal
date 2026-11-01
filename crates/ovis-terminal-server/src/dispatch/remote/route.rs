@@ -8,6 +8,7 @@ use ovis_terminal_remote::actors::Line;
 use serde_json::Value;
 
 use super::RemoteRoutes;
+use crate::dispatch::lanes::boundary_policy::is_control;
 
 const ADDRESS: &str = "params.target.address";
 const MACHINE: &str = "params.machine";
@@ -33,6 +34,8 @@ pub(super) fn action(method: &str, mutates: bool) -> Action {
         Action::Launch
     } else if mutates {
         Action::Administer
+    } else if is_control(method) {
+        Action::Subscribe
     } else {
         Action::Read
     }
@@ -103,4 +106,26 @@ fn resolve<L: Line>(
         })
         .map(|record| Some(record.machine_id))
         .ok_or_else(|| super::refusal::unknown_machine(field))
+}
+
+#[cfg(test)]
+mod tests {
+    use ovis_terminal_authz::Action;
+
+    use super::action;
+
+    #[test]
+    fn a_remote_control_call_needs_the_observing_permission_not_a_read() {
+        for method in [
+            "attach.credit",
+            "attach.close",
+            "events.subscribe",
+            "events.ack",
+        ] {
+            assert_eq!(action(method, false), Action::Subscribe, "{method}");
+        }
+        assert_eq!(action("terminal.get", false), Action::Read);
+        assert_eq!(action("input.send", true), Action::Input);
+        assert_eq!(action("doc.set", true), Action::Administer);
+    }
 }

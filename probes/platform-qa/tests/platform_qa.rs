@@ -23,7 +23,7 @@ const REQUIRED: [&str; 11] = [
 
 /// Lanes the dispatch workflow carried as per-lane jobs before it became data-driven,
 /// plus the platform QA lane. New lanes only add files, so this list is a floor.
-const LANES: [&str; 42] = [
+const LANES: [&str; 43] = [
     "agent-status",
     "agent-tree",
     "boundary-policy",
@@ -55,6 +55,7 @@ const LANES: [&str; 42] = [
     "process-info",
     "prompt-bridge",
     "prompts",
+    "quality-gates",
     "recovery",
     "restart",
     "screen",

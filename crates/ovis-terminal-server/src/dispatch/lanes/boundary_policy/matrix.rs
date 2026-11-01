@@ -63,6 +63,24 @@ pub const MUTATION_ROLES: &[(&str, Action)] = &[
     ("worktree.remove", Action::Administer),
 ];
 
+/// Each published control method (`x-effect: control`): it changes only this connection's
+/// streams or subscriptions. A test requires this list to name exactly those methods.
+pub const CONTROL_METHODS: &[&str] = &[
+    "attach.close",
+    "attach.credit",
+    "attach.repaint",
+    "events.ack",
+    "events.subscribe",
+    "events.unsubscribe",
+    "events.update",
+];
+
+/// Whether `method` is a published control method.
+#[must_use]
+pub fn is_control(method: &str) -> bool {
+    CONTROL_METHODS.binary_search(&method).is_ok()
+}
+
 /// The action of mutation `method`; `None` for a query, a control call or an unknown name.
 #[must_use]
 pub fn required_action(method: &str) -> Option<Action> {

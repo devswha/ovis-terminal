@@ -163,7 +163,8 @@ pub(crate) async fn main(cli: Cli) -> ExitCode {
         "totals": evidence.totals,
         "error": evidence.error,
         "evidence": invocation.evidence,
-        "evidence_written": written.as_ref().err().map(top_failure),
+        "evidence_written": written.is_ok(),
+        "evidence_error": written.as_ref().err().map(top_failure),
     }));
     if failed || written.is_err() {
         ExitCode::FAILURE

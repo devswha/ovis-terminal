@@ -49,6 +49,19 @@ Closes GAP-049, GAP-051, GAP-095, GAP-121. GAP-050 and the Windows served-attach
 
 The CLI busy-wait tests are Windows-only and run in `windows-smoke` and `test (windows-latest)`.
 
+**Merge of origin/integration 557af58 (todo 61 quality gates).**
+
+- Conflicts resolved:
+  - `probes/Cargo.toml` and `probes/src/lib.rs`: union of both sides' bins, tests, dependencies and modules.
+  - `Cargo.lock`: `--theirs`, then `cargo generate-lockfile --offline`, and `cargo metadata --locked` passes; the diff from integration is my dependencies only.
+  - `.github/workflows/probe-stress-macos.yml`: kept the data-driven version. Todo 61's `quality-gates` job became `probes/platform-qa/stress/quality-gates.{json,sh}`, with its script verbatim, and is added to the lane floor.
+- The new gates pass on the merged tree:
+  - `source-check` (64 rules): pass.
+  - `evidence-audit` over `docs/evidence`: pass, `docs/evidence/task-60` included, no exemption added.
+  - `quality-matrix --mode verify`: pass.
+- `conformance/traceability.json` is generated from the plan, which still names todo 60 under GAP-048 and GAP-050. That file is not hand-edited here. The plan amendment and regeneration are recorded for the orchestrator in `docs/evidence/task-60/seams.md`.
+- Gates on the merged tree (`round5-gates.log`): check.sh exit 0 (Summary [ 122.359s] 1349 tests run: 1349 passed (3 slow), 2 skipped), `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` exit 0, and the Windows clippy exit 0.
+
 **C1/C2.** This file is the committed mirror of the PR body, with no placeholders. CI results for the round-2 head go in a PR comment and the DoneClaim, so the mirror never has to change after the push. The `platform-qa` macOS stress lane is re-dispatched on the round-2 head.
 
 ## Before

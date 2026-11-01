@@ -13,6 +13,40 @@ keywords.workspace = true
 categories.workspace = true
 publish.workspace = true
 
+# Quality gates (plan todo 61): thin mains over `ovis_terminal_probes::quality`.
+[[bin]]
+name = "source-check"
+path = "quality/bin/source_check.rs"
+
+[[bin]]
+name = "evidence-audit"
+path = "quality/bin/evidence_audit.rs"
+
+[[bin]]
+name = "plan-audit"
+path = "quality/bin/plan_audit.rs"
+
+[[bin]]
+name = "ideal-audit"
+path = "quality/bin/ideal_audit.rs"
+
+[[bin]]
+name = "quality-matrix"
+path = "quality/bin/quality_matrix.rs"
+
+[[test]]
+name = "quality_gates"
+path = "quality/tests/gates.rs"
+
+[[test]]
+name = "quality_repository"
+path = "quality/tests/repository.rs"
+
+[[test]]
+name = "quality_evidence"
+path = "quality/tests/evidence_tree.rs"
+
+# Platform QA (plan todo 60): the Windows smoke runner, CI verification and their tests.
 [[bin]]
 name = "windows-smoke"
 path = "platform-qa/windows_smoke.rs"
@@ -34,11 +68,15 @@ clap = { workspace = true }
 ovis-terminal-holder = { workspace = true }
 ovis-terminal-vt = { workspace = true }
 portable-pty = { workspace = true }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
+syn = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+workspace-hygiene = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 tokio = { workspace = true }
@@ -54,8 +92,8 @@ ovis-terminal-protocol = { workspace = true }
 ovis-terminal-server = { workspace = true }
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Pipes"] }
 
-# Used by probes/platform/ and probes/platform-qa/, which src/lib.rs and the [[bin]] and
-# [[test]] targets load through paths outside src/; machete scans only src/.
+# Used by probes/platform/, probes/platform-qa/ and probes/quality/, which src/lib.rs and
+# the [[bin]] and [[test]] targets load through paths outside src/; machete scans only src/.
 [package.metadata.cargo-machete]
 ignored = [
     "clap",
@@ -64,12 +102,16 @@ ignored = [
     "ovis-terminal-protocol",
     "ovis-terminal-server",
     "portable-pty",
+    "proc-macro2",
+    "quote",
     "serde",
     "serde_json",
     "sha2",
+    "syn",
     "thiserror",
     "tracing",
     "windows-sys",
+    "workspace-hygiene",
 ]
 
 [lints]
