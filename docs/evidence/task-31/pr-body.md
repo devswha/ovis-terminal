@@ -283,6 +283,8 @@ The fixture keeps the round-4 registration phases and gains T52's peer role, pee
 - `evidence-audit` passes with 0 findings and `source-check` passes.
 - This lane's code was brought under T61's `source-check`: a test support file split, a dropped `Result` reported instead of discarded, and an `as usize` removed.
 
+**CI-only `remote/isolation` failure (6cf4cdb, ubuntu `all/all`, step 6 `reply[child-on-bravo]/error`).** CI kept no artifact. This scenario runs on the runner's protocol fixture, not the daemon composition. Reproduced the CI way (`taskset -c 104-107 cargo nextest run -p ovis-terminal-conformance -j 4`): 5/5 runs at 28/28. Unreproduced; listed as unmet. **Merge 95e45cc (T60):** Cargo.toml dependency-block union, schema and SDK unchanged; the merged gate passes.
+
 **Unreproduced.** After the stale task-31 `layout.get` assertion was fixed, one `cargo nextest run -p ovis-terminal-conformance` failed at `conformance/src/runner_tests/suite.rs:68` (`assert_eq!(ran.output.status.code(), Some(0), "{}", ran.explain())`). Its `explain()` text was lost: the test helper deletes its evidence directory, and that log was grep-filtered. Twenty reruns were all green:
 - 4 direct `all/all` runs,
 - 8 runs with two `all/all` processes in parallel,
@@ -292,7 +294,7 @@ Evidence: `/dev/shm/ovt-fixtures/t31-scratch/r5-all-*.json`, `r5-par-*.json`, `r
 
 ### Verification of round 5 (Linux 7.0.0-38-generic x86_64)
 
-- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` at 12a92e5 (after the edfdb58 and 557af58 merges): **exit 0**, `1386 tests run: 1386 passed (3 slow), 1 skipped`, `workspace-hygiene: 0 violation(s) in 1404 file(s) checked`, source-check `pass`, evidence-audit `pass` (`docs/evidence/task-31/check-r5.log`).
+- `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` at 9a5d9c6 (after the edfdb58, 557af58 and 95e45cc merges): **exit 0**, `1386 tests run: 1386 passed (3 slow), 1 skipped`, `workspace-hygiene: 0 violation(s) in 1404 file(s) checked`, source-check `pass`, evidence-audit `pass` (`docs/evidence/task-31/check-r5.log`).
 - Windows pre-check (`cargo check` and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked`, `-D warnings`): exit 0 (`windows-precheck-r5.log`).
 - `cargo nextest run -p ovis-terminal-cli`: 71/71 unloaded. `cargo nextest run -p ovis-terminal-conformance` with the real binary: 28/28, with `all/all` executing the four flipped scenarios and 32 declared.
 - Loaded runs, recipe `docs/evidence/task-31/r5-loaded/r5-25n.sh`: the product (server, holder, CLI and programs) pinned to cores 124-125 through `OVIS_TEST_PIN_CORES`, 8 busy loops there at `nice -n 10`, nextest and the test binaries on cores 100-123. Result: **25/25**, every run 71/71 in 11-13 s, no SLOW (`final25-nice10-summaries.log`).
