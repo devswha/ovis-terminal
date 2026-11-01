@@ -15,7 +15,7 @@ It is identical to `x-limits.defaults` in `schema/ovis-terminal.openrpc.json` at
 ## After
 
 - `Limits::v1` gains `graphics_sequence_max_bytes = 8 MiB` and `graphics_terminal_store_max_bytes = 32 MiB`. hello advertises them as `"8388608"` and `"33554432"`.
-- Two new events in `x-events`: `graphics.dropped` (`GraphicsDroppedData`, reason `too_large`) and `graphics.evicted` (`GraphicsEvictedData`, reason `store_full`). Both reasons are open enums. Their typed constructors are in the new `crates/ovis-terminal-protocol/src/domain/graphics.rs` (`GraphicsCaps::advertised`, `GraphicsCaps::admit`, `GraphicsEvictedData::store_full`).
+- Two new events in `x-events`: `graphics.dropped` (`GraphicsDroppedData`, reason `too_large`) and `graphics.evicted` (`GraphicsEvictedData`, reason `store_full`). Both reasons are open enums. In round 2 both data objects became closed (`#[serde(deny_unknown_fields)]`, which emits `additionalProperties: false`): exactly their five typed fields, all required, so a notice cannot carry an extra payload field. Their typed constructors are in the new `crates/ovis-terminal-protocol/src/domain/graphics.rs` (`GraphicsCaps::advertised`, `GraphicsCaps::admit`, `GraphicsEvictedData::store_full`).
 - hello now carries both caps. The recorded reply at `docs/evidence/task-86/qa-happy.json:60` has 25 `result.limits` keys, including `"graphics_sequence_max_bytes":"8388608"` and `"graphics_terminal_store_max_bytes":"33554432"`.
 - Design doc: [`docs/design/graphics.md`](https://github.com/devswha/ovis-terminal/blob/lane/t86-define-graphics-caps-and-the/docs/design/graphics.md). It covers the no-decode contract (header-only detection, keep or drop whole, viewers render), the cap table, the notice table and the layer budget.
 - Regenerated schema diff: [`schema/ovis-terminal.openrpc.json` in the PR diff](https://github.com/devswha/ovis-terminal/pull/68/files) (round 1 +137 lines, round 2 +2 lines `additionalProperties: false`; two `Limits` properties and their defaults, two events, five component schemas). The TS SDK `packages/client-ts/src/generated` was regenerated with `bun run generate`. Every generated file changed because each one embeds the schema sha256 in its header.
@@ -29,8 +29,8 @@ It is identical to `x-limits.defaults` in `schema/ovis-terminal.openrpc.json` at
 | `cargo run -p ovis-terminal-conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-86 --isolated --case happy` | 0 | 1 case, 4 assertions, incl. `/result/limits/graphics_sequence_max_bytes == "8388608"` (`qa-happy.log/json`) |
 | `... --case failure --inject '{"method":"hello","params":{"limits":{"graphics_sequence_max_bytes":8388608}}}'` | 0 | 1 case, 5 assertions: `invalid_params`, `field_path` `params.limits`, no result (`qa-failure.log/json`) |
 | `... --case all --evidence docs/evidence/task-86/conformance.json` | 0 | 2 cases, 8 assertions |
-| `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` | 0 | 1174 tests run: 1174 passed, 1 skipped; hygiene 0 violations (`check.log`) |
-| `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` / `cargo clippy ... -- -D warnings` | 0 / 0 | `windows-check.log` |
+| `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` | 0 | round 2, before the merge (ea21abb tree): 1177 passed, 1 skipped, hygiene 0 violations in 1164 files (`r2-check.log`). Round 1: 1174 passed, 1 skipped (`check.log`). The post-merge run is under Merge below |
+| `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` / `cargo clippy ... -- -D warnings` | 0 / 0 | round 2 before the merge: `r2-windows-check.log`; round 1: `windows-check.log`; post-merge under Merge below |
 | `cd packages/client-ts && bun run generate && bun run generate:check && bun run typecheck && bun test` | 0 | round 2: 30 pass, 0 fail (`r2-sdk.log`, attempt 2). Attempt 1 had 1 failure: the real-socket test ran the prebuilt `target/debug/conformance` left over from round 1 (`test/support/fixture.ts:11`), whose served document lacked the new `additionalProperties: false`. After `cargo build --locked -p ovis-terminal-cli -p ovis-terminal-conformance` (CI does the same, `ci.yml:233`), the single gate run passed. Round 1: 30 pass (`sdk.log`) |
 
 OS/arch: Linux x86_64. Correction from round 1: these conformance runs do not exercise the `ovis-terminal` binary. The scenario's `serve` step spawns the runner's protocol fixture (`target/debug/conformance fixture`, which is the real server crate, dispatcher and store; see `processes` in `qa-happy.json`), and the hello travels `via: socket` directly to it. `--binary target/debug/ovis-terminal` is recorded in the evidence, but that binary is not on this path. The repository's scenario notes say real-binary serving lands with todo 31.
@@ -46,6 +46,26 @@ Round 1 (recorded at a952c49):
 - `mutant-evicted-dropped-from-catalog.log`: the event renamed. `the_event_catalog_publishes_both_graphics_notices` fails.
 
 Note on the QA failure case: hello params are a closed schema with no `limits` field, so the injected request is refused `invalid_params` at `params.limits`. The refusal of the numeric cap form itself is proven by `graphics_caps_round_trip_u64_max_and_refuse_numbers`, not by this inject.
+
+## Merge: integration 8ac8489 (round 2)
+
+origin/integration moved to `8ac8489` (T37 conversation records, with regenerated schema and SDK), and this PR conflicted. As authorized, I merged it in `05651a7` (parents `ea21abb` and `8ac8489`); nothing was rebased or force-pushed.
+- `crates/ovis-terminal-protocol/src/schema/event_catalog.rs`: union of the two import lines (`conversation_records::RecordsAppended` and `graphics::{GraphicsDroppedData, GraphicsEvictedData}`). The catalog has `agent.records_appended` and both graphics events.
+- `.github/workflows/probe-stress-macos.yml`: integration's file, with `graphics-caps` appended last, after `conversation-records`, both to the options and as the final job.
+- `schema/ovis-terminal.openrpc.json`: regenerated with `openrpc write` rather than resolved by hand. `openrpc check` reports it fresh, and `openrpc compat schema/released.openrpc.json` exits 0 (`r2-merge-schema-compat.log`).
+- `packages/client-ts/src/generated`: integration's files taken as the base, regenerated with `bun run generate`, and committed with the merge.
+- `Cargo.lock`: no conflict and identical to integration's; `cargo metadata --locked` exits 0.
+
+Post-merge gates on `05651a7`:
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo nextest run -p ovis-terminal-core -p ovis-terminal-protocol --locked` | 0 | 562 tests run, 562 passed (`r2-merge-nextest.log`) |
+| `cargo clippy -p ovis-terminal-protocol --all-targets --all-features --locked -- -D warnings` | 0 | `r2-merge-clippy.log` |
+| `cargo run -p ovis-terminal-conformance -- --binary target/debug/ovis-terminal --scenario part-a/task-86 --isolated --case all` | 0 | 2 cases, 8 assertions (`r2-merge-conformance.log/json`) |
+| `cd packages/client-ts && bun run generate && bun run generate:check && bun run typecheck && bun test` | 0 | generate changed 0 files, so the committed SDK is fresh; 30 pass, 0 fail, run once on a freshly built fixture (`r2-merge-sdk.log`) |
+| `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` | 0 | 1207 tests run: 1207 passed, 1 skipped; hygiene 0 violations in 1182 files; 143 JSON files checked (`r2-merge-check.log`). This run started before the 2026-11-01 RAM-target host rule (`env.sh` changed at 15:59 +0900) and used the on-disk target |
+| `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` / `cargo clippy ... -- -D warnings` | 0 / 0 | `r2-merge-windows-check.log`; ran under the RAM-target rule (`CARGO_TARGET_DIR=/dev/shm/ovt-target-lane-t86`) |
 
 ## Seams
 
