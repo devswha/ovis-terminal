@@ -2,7 +2,7 @@
 //! in-process lines, until todo 52 joins two private runtimes over real endpoints.
 //!
 //! Each remote end is a stand-in runtime: it answers `server.status` with its identity and
-//! receives `$/orphaned` with the real [`Inbox`], counting how often a notice was applied.
+//! receives `$/orphaned` with the real [`ovis_terminal_remote::orphans::Inbox`], counting how often a notice was applied.
 //! `fixture.machine` freezes it (requests are read and never answered), cuts its line,
 //! reconnects it (replaying the orphan outbox) or inspects it; `fixture.remote` stands in
 //! for remote dispatch (todo 52) by sending one request through the machine's actor; and
