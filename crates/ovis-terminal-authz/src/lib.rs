@@ -15,6 +15,7 @@ mod error;
 mod family;
 mod identity;
 mod permission;
+mod rotation;
 mod scope;
 
 pub use authority::{
@@ -32,6 +33,7 @@ pub use error::{AuthzError, EndpointDefect, Exceeded, Limit, MismatchReason};
 pub use family::{Identity, IdentityFamily};
 pub use identity::{CredentialEpoch, CredentialId, PrincipalId};
 pub use permission::{Action, Permission, Role};
+pub use rotation::{PrincipalEpoch, Rotated, Rotation, Withdrawn};
 pub use scope::{Grant, Placement, ResolvedTarget, ResourceScope, ScopeResource, TargetResource};
 
 /// Cargo package name of this crate, used by the workspace layering record.

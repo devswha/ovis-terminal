@@ -2,8 +2,9 @@
 //!
 //! Those are the read-only protocol methods `rpc.discover` and paged `terminal.output`,
 //! the fixture-only `fixture.transcript` provider write, `fixture.pty` input byte count,
-//! `fixture.bridge` extension driver, and the `fixture.exit` and `fixture.program` program
-//! lifecycle stand-ins, the `fixture.remote`, `fixture.machine` and `fixture.remote_child`
+//! `fixture.bridge` extension driver, the `fixture.exit` and `fixture.program` program
+//! lifecycle stand-ins, `fixture.deliver`, which lets the sequenced terminal's holder
+//! stand-in write, the `fixture.remote`, `fixture.machine` and `fixture.remote_child`
 //! machine stand-ins, and `$/orphanedAck` answered by the machine actor lane.
 
 use std::path::PathBuf;
@@ -25,6 +26,7 @@ use super::bridge::Extension;
 use super::machines::{self, Machines};
 use super::output;
 use super::prompts::Gate;
+use super::rotation::Sequenced;
 use super::serve::at;
 use super::tree::{self, Tree};
 use crate::error::RunnerError;
@@ -40,6 +42,9 @@ const PROVIDER_WRITE: &str = "fixture.transcript";
 
 /// The PTY stand-in's byte count; served but never advertised.
 const PTY_READ: &str = "fixture.pty";
+
+/// Releases the sequenced terminal's write boundary; served but never advertised.
+const DELIVER: &str = "fixture.deliver";
 
 /// The in-process extension stand-in's driver; served but never advertised.
 const EXTENSION: &str = "fixture.bridge";
@@ -65,6 +70,7 @@ pub(crate) struct Probes {
     pub(crate) gate: Arc<Gate>,
     pub(crate) directory: Arc<Directory>,
     pub(crate) extension: Arc<Extension>,
+    pub(crate) sequenced: Arc<Sequenced>,
     pub(crate) tree: Arc<Tree>,
     pub(crate) machines: Arc<Machines>,
 }
@@ -121,6 +127,10 @@ impl RequestHandler for FixtureHandler {
             EXTENSION => self.probes.extension.call(&call.request).await,
             PROGRAM_EXIT => tree::exit(&self.probes.tree, &call.request).await,
             PROGRAM_READ => tree::program(&self.probes.tree, &call.request),
+            DELIVER => {
+                let _: NoParams = decode_params(&call.request).map_err(BoundaryError::from)?;
+                self.probes.sequenced.deliver()
+            }
             REMOTE_CALL => machines::call(&self.probes.machines, &call.request).await,
             MACHINE_CONTROL => machines::control(&self.probes.machines, &call.request).await,
             REMOTE_CHILD => machines::remote_child(&self.probes.machines, &call.request).await,

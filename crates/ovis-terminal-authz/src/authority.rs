@@ -2,8 +2,10 @@
 
 mod attest;
 mod cell;
+mod epochs;
 mod issuance;
 mod issued;
+mod rotation;
 mod secret;
 mod table;
 mod tombstone;
@@ -155,8 +157,10 @@ impl<F: IdentityFamily> Authority<F> {
                 .filter(|record| record.proves(&bearer.secret))
                 .ok_or(AuthzError::InvalidCredential)?;
             let claim = record.claim(bearer.credential);
-            record.check(&claim, presentation.at)?;
-            let principal = record.principal.clone();
+            let principal = table
+                .check_claim(&claim, presentation.at)?
+                .principal
+                .clone();
             drop(table);
             (claim, principal)
         };

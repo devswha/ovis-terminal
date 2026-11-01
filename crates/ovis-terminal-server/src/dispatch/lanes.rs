@@ -4,12 +4,14 @@ pub mod agent_status;
 pub mod agent_tree;
 
 pub mod conpty;
+pub mod credential_rotation;
 pub mod documents_retention;
 pub mod machine_actor;
 pub mod machine_identity;
 pub mod plugins;
 pub mod prompt_bridge;
 pub mod prompts;
+pub mod recovery;
 #[cfg(unix)]
 pub mod restart;
 

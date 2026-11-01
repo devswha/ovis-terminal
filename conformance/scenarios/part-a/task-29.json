@@ -1,0 +1,360 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "part-a/task-29",
+  "title": "Generate TypeScript SDK and replay neutral fixtures",
+  "todo": 29,
+  "closes": [
+    "GAP-005",
+    "GAP-018",
+    "GAP-019",
+    "GAP-041",
+    "GAP-060",
+    "GAP-078"
+  ],
+  "delivers": [
+    "IDEAL-004",
+    "IDEAL-005",
+    "IDEAL-006",
+    "IDEAL-019",
+    "IDEAL-028",
+    "IDEAL-040",
+    "IDEAL-052",
+    "IDEAL-055",
+    "IDEAL-112",
+    "IDEAL-113"
+  ],
+  "excludes": [
+    "EXCL-014",
+    "EXCL-016"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the binary's connect bridge, one framed connection carries every valid shared control frame the Bun SDK replays, answers each by id, and round-trips a document holding an offset above 2^53 and an unknown enum value byte-exactly.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": true,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021",
+              "/result/capabilities/framed": true,
+              "/result/limits/max_frame_bytes": "16777216"
+            }
+          }
+        },
+        {
+          "send_wire": {
+            "conn": "bridge",
+            "frame": "control-request"
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "w1": {
+                "/result/name": "alpha",
+                "/result/value": null
+              }
+            }
+          }
+        },
+        {
+          "send_wire": {
+            "conn": "bridge",
+            "frame": "coalesced-requests"
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "w2": {
+                "/result/name": "alpha",
+                "/result/value": null
+              },
+              "w3": {
+                "/result/name": "beta",
+                "/result/value": null
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "set-wide",
+                "method": "doc.set",
+                "params": {
+                  "op_id": "$op:wide",
+                  "name": "wide",
+                  "value": {
+                    "offset": "18446744073709551615",
+                    "above_2_53": "9007199254740993",
+                    "kind": "kind_from_a_newer_runtime"
+                  },
+                  "version": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "page-at-max",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "terminal_id": "terminal:1"
+                  },
+                  "from_offset": "18446744073709551615",
+                  "limit_bytes": "4"
+                }
+              }
+            ],
+            "split": "bytewise"
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "set-wide": {
+                "/result/value/offset": "18446744073709551615",
+                "/result/value/above_2_53": "9007199254740993",
+                "/result/value/kind": "kind_from_a_newer_runtime"
+              },
+              "page-at-max": {
+                "/result/from_offset": "67108864",
+                "/result/next_offset": "67108864",
+                "/result/data_b64": ""
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "get-wide",
+                "method": "doc.get",
+                "params": {
+                  "name": "wide"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "get-wide": {
+                "/result/value/offset": "18446744073709551615",
+                "/result/value/above_2_53": "9007199254740993",
+                "/result/value/kind": "kind_from_a_newer_runtime"
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {
+              "wide.json": {
+                "offset": "18446744073709551615",
+                "above_2_53": "9007199254740993",
+                "kind": "kind_from_a_newer_runtime"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0",
+              "/failures": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "Every shared strict rejection is typed with its field path and no effect; a numeric counter is invalid_params; a CREDIT for a channel no stream owns grants nothing and closes only that connection with a typed reason.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "connect": {
+            "conn": "credit",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "rejections": {
+            "conn": "bridge",
+            "fixture": "strict-rejections.json"
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "numeric-offset",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "terminal_id": "terminal:1"
+                  },
+                  "from_offset": 9007199254740993,
+                  "limit_bytes": "4"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "numeric-offset": {
+                "/error/data/kind": "invalid_params",
+                "/error/data/field_path": "params.from_offset"
+              }
+            }
+          }
+        },
+        {
+          "effects": {
+            "entries": {}
+          }
+        },
+        {
+          "hello": {
+            "conn": "credit",
+            "framed": true,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send_wire": {
+            "conn": "credit",
+            "frame": "credit-offset"
+          }
+        },
+        {
+          "notification": {
+            "conn": "credit",
+            "method": "$/closing",
+            "expect": {
+              "/params/reason": "unowned_channel"
+            }
+          }
+        },
+        {
+          "closed": {
+            "conn": "credit"
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "still-served",
+                "method": "doc.get",
+                "params": {
+                  "name": "alpha"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "still-served": {
+                "/result/value": null
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "closed": {
+            "conn": "bridge"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "2",
+              "/panicked": "0",
+              "/failures/unowned_channel": "1"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

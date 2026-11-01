@@ -7,6 +7,7 @@ use thiserror::Error;
 
 use crate::identity::{CredentialEpoch, CredentialId, PrincipalId};
 use crate::permission::{Action, Permission};
+use crate::rotation::PrincipalEpoch;
 
 /// Why an authentication, authorization, issuance or endpoint check refused.
 #[derive(Debug, Error)]
@@ -33,6 +34,14 @@ pub enum AuthzError {
         credential: CredentialId,
         /// Its current epoch.
         epoch: CredentialEpoch,
+        /// The current authority epoch of its principal.
+        principal_epoch: PrincipalEpoch,
+    },
+    /// A rotation named a principal epoch that another change already moved past.
+    #[error("the principal's authority is at epoch {}, not the one the rotation named", .principal_epoch.get())]
+    PrincipalEpochConflict {
+        /// The principal's current epoch.
+        principal_epoch: PrincipalEpoch,
     },
     /// No grant of the principal covers the action on the target.
     #[error("principal {principal} holds no {required} grant covering {action} on this target")]
@@ -106,6 +115,7 @@ impl AuthzError {
             Self::InvalidCredential => "invalid_credential",
             Self::CredentialExpired { .. } => "credential_expired",
             Self::CredentialRevoked { .. } => "credential_revoked",
+            Self::PrincipalEpochConflict { .. } => "version_conflict",
             Self::Forbidden { .. } => "forbidden",
             Self::GrantExceedsIssuer { .. } => "grant_exceeds_issuer",
             Self::DecisionMismatch { .. } => "decision_mismatch",
@@ -128,6 +138,9 @@ impl AuthzError {
             Self::CredentialRevoked { .. } => {
                 "re-authenticate with a current credential; queued work was not written"
             }
+            Self::PrincipalEpochConflict { .. } => {
+                "read the principal's current epoch and decide again whether to rotate"
+            }
             Self::Forbidden { .. } => "ask an administrator for a grant covering this target",
             Self::GrantExceedsIssuer { .. } => {
                 "request only permissions, scopes and expiry you hold"
@@ -144,6 +157,18 @@ impl AuthzError {
         }
     }
 
+    /// The principal's current epoch, when the failure is about its authority moving.
+    #[must_use]
+    pub const fn principal_epoch(&self) -> Option<PrincipalEpoch> {
+        match self {
+            Self::CredentialRevoked {
+                principal_epoch, ..
+            }
+            | Self::PrincipalEpochConflict { principal_epoch } => Some(*principal_epoch),
+            _ => None,
+        }
+    }
+
     /// The offending field of a malformed request, when the failure names one.
     #[must_use]
     pub fn field_path(&self) -> Option<&str> {
@@ -154,6 +179,7 @@ impl AuthzError {
             | Self::InvalidCredential
             | Self::CredentialExpired { .. }
             | Self::CredentialRevoked { .. }
+            | Self::PrincipalEpochConflict { .. }
             | Self::Forbidden { .. }
             | Self::GrantExceedsIssuer { .. }
             | Self::DecisionMismatch { .. }
