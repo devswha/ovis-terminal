@@ -124,7 +124,64 @@ fn restarted(generation: &Generation) -> Value {
 }
 
 /// Runs one server lifetime for [`super::serve`].
+/// Refuses QA seams unless `--root` is a QA fixture root (it holds a `qa-fixture` file).
+fn qa_seams_allowed(plan: &ServePlan) -> Result<(), AssemblyError> {
+    let seams = plan.qa.holder_poll_ms.is_some() || plan.qa.actor_hold.is_some();
+    let qa_root = plan
+        .root
+        .as_ref()
+        .is_some_and(|root| root.join("qa-fixture").is_file());
+    if seams && !qa_root {
+        return Err(AssemblyError::start("accept the QA seams")(
+            super::QaRootRequired,
+        ));
+    }
+    Ok(())
+}
+
+/// Serves `generation` until a stop, handing over to each successor boot control
+/// announces as completed, and returns the last generation, the old listeners' reports
+/// and how the stop came.
+async fn until_stopped(
+    shared: &Shared,
+    mut generation: Generation,
+    stdin_lifetime: bool,
+) -> Result<
+    (
+        Generation,
+        Vec<ovis_terminal_server::listen::ServeReport>,
+        Result<(), AssemblyError>,
+    ),
+    AssemblyError,
+> {
+    let mut completions = super::restart::completions(&shared.control)?;
+    let stopped = stopped(stdin_lifetime, shared.stop.clone());
+    tokio::pin!(stopped);
+    let mut reports = Vec::new();
+    let waited = loop {
+        tokio::select! {
+            waited = &mut stopped => break waited,
+            Some(_completed) = completions.recv() => {
+                // The restarting call's reply is written before its connection closes.
+                shared.restart.quiet().await;
+                let op = shared
+                    .restart
+                    .take()
+                    .unwrap_or_else(|| uuid::Uuid::now_v7().to_string());
+                let (next, ended) = generation.hand_over(shared, op).await?;
+                if let Some(report) = ended {
+                    reports.push(report);
+                    announce(&restarted(&next))?;
+                }
+                generation = next;
+            }
+        }
+    };
+    Ok((generation, reports, waited))
+}
+
 pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(), AssemblyError> {
+    qa_seams_allowed(plan)?;
     let (socket, state) = paths(plan, env)?;
     private_dir(&state)?;
     let booted = boot(&state).await?;
@@ -143,7 +200,8 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         .reporting_to(Arc::clone(&health));
     let mut runtime = Runtime {
         control: Arc::clone(&booted.control),
-        poll: plan.holder_poll,
+        poll: std::time::Duration::from_millis(plan.qa.holder_poll_ms.unwrap_or(5)),
+        qa_hold: plan.qa.actor_hold.clone(),
         journal: Arc::clone(&journal),
         status_feed: None,
         holder: booted.holder,
@@ -181,7 +239,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         stop: StopSignal::default(),
         restart: RestartSignal::default(),
     };
-    let mut generation = Generation::open(&shared, (booted.identity, health, None)).await?;
+    let generation = Generation::open(&shared, (booted.identity, health, None)).await?;
     shared.websocket_port = generation.websocket_port();
     let websocket = generation.websocket.as_ref();
     announce(&ready(
@@ -189,22 +247,8 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         &booted.bearers,
         (&recovery, websocket),
     )?)?;
-    let stopped = stopped(plan.stdin_lifetime, shared.stop.clone());
-    tokio::pin!(stopped);
-    let mut reports = Vec::new();
-    let waited = loop {
-        tokio::select! {
-            waited = &mut stopped => break waited,
-            op = shared.restart.wait() => {
-                let (next, ended) = generation.hand_over(&shared, op).await?;
-                if let Some(report) = ended {
-                    reports.push(report);
-                    announce(&restarted(&next))?;
-                }
-                generation = next;
-            }
-        }
-    };
+    let (generation, reports, waited) =
+        until_stopped(&shared, generation, plan.stdin_lifetime).await?;
     let lifetime = Lifetime {
         generation,
         shared,

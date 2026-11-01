@@ -7,6 +7,7 @@ use ovis_terminal_protocol::errors::TargetCandidate;
 use ovis_terminal_protocol::rpc::RpcRequest;
 use ovis_terminal_protocol::schema::common::NoParams;
 use ovis_terminal_protocol::schema::ids::{MachineId, TerminalId};
+use ovis_terminal_protocol::schema::limits::Limits;
 use ovis_terminal_protocol::schema::method::Effect;
 use ovis_terminal_protocol::schema::methods::all_methods;
 use ovis_terminal_protocol::schema::methods::server::ServerStatusResult;
@@ -21,8 +22,9 @@ use super::plan::typed;
 use super::report::Failure;
 use super::transport::{Session, bridge};
 
-/// Bound on one exchange in milliseconds, the protocol's ordinary deadline.
-const DEADLINE_MS: u64 = 10_000;
+/// Bound on one exchange in milliseconds: the server's deadline plus the allowance for its
+/// own answer at that deadline to arrive (see [`Limits::client_bound_ms`]).
+const DEADLINE_MS: u64 = Limits::v1().client_bound_ms().get();
 const DEADLINE: Duration = Duration::from_millis(DEADLINE_MS);
 
 fn address(context: &Context) -> Result<EndpointAddress, CliError> {

@@ -28,6 +28,7 @@ use super::directory::Directory;
 use super::error::refusal;
 use super::lanes::Dispatch;
 
+mod deadline;
 mod lanes;
 
 /// Methods served by the runtime actor and the lease table, besides the attach streams.
@@ -96,6 +97,16 @@ impl RequestHandler for Served {
     }
 
     async fn call(&self, call: Call) -> Result<Value, BoundaryError> {
+        match deadline::lifecycle_op(&call) {
+            Some(op) => deadline::within(self.route(call), op).await,
+            None => self.route(call).await,
+        }
+    }
+}
+
+impl Served {
+    /// Routes one call to its lane.
+    async fn route(&self, call: Call) -> Result<Value, BoundaryError> {
         let session = Arc::clone(&call.session);
         match call.request.method() {
             "terminal.run" => {
@@ -127,10 +138,17 @@ impl RequestHandler for Served {
             | "terminal.process_info" => self.mutate(call).await,
             "terminal.screen" | "terminal.output" | "terminal.wait_output" => self.read(call).await,
             "op.get" => {
+                // The lifecycle ledger first; an operation it does not know is one the
+                // dispatcher ran (such as server.restart), answered from its own ledger.
                 let params: OpRefParams = decode(&call)?;
-                self.actor
+                let found = self
+                    .actor
                     .call(move |runtime| runtime.operation(&session, &params.op_id))
-                    .await
+                    .await;
+                match found {
+                    Err(error) if error.kind() == "not_found" => self.dispatch.call(call).await,
+                    answered => answered,
+                }
             }
             "input.raw" | "input.send" | "input.keys" | "input.paste" => self.write(call).await,
             "attach.resize" => {
@@ -162,10 +180,9 @@ impl RequestHandler for Served {
             "server.restart" | "update.activate" | "update.rollback" => {
                 let op = call.request.params().get("op_id").and_then(Value::as_str);
                 let op = op.map(str::to_owned);
+                self.restart.begun();
                 let restarted = self.dispatch.call(call).await;
-                if let Some(op) = op {
-                    self.restart.requested(op);
-                }
+                self.restart.answered(op);
                 restarted
             }
             "input.barrier" => {

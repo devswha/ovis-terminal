@@ -127,9 +127,24 @@ pub(crate) struct ServePlan {
     pub(crate) stdin_lifetime: bool,
     /// Also serve over WebSocket on this loopback port.
     pub(crate) websocket_port: Option<u16>,
-    /// How long the runtime waits for a request before it looks for holder messages.
-    pub(crate) holder_poll: std::time::Duration,
+    /// QA seams, refused unless the root is a QA fixture root.
+    pub(crate) qa: QaSeams,
 }
+
+/// Test seams of `serve`, each documented in its help and refused unless `--root` holds a
+/// `qa-fixture` file.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct QaSeams {
+    /// The runtime's idle wait for a request, in milliseconds.
+    pub(crate) holder_poll_ms: Option<u64>,
+    /// A FIFO the runtime opens, holding the control, before its next `terminal.run`.
+    pub(crate) actor_hold: Option<PathBuf>,
+}
+
+/// A QA seam named on a root that is not a QA fixture root.
+#[derive(Debug, thiserror::Error)]
+#[error("a QA seam was named, but --root holds no qa-fixture file")]
+pub(crate) struct QaRootRequired;
 
 /// Serves until SIGINT, SIGTERM or (with `stdin_lifetime`) end of stdin; prints one
 /// ready line before serving and one report line after stopping.

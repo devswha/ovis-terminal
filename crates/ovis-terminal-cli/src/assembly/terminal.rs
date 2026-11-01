@@ -101,6 +101,7 @@ impl Runtime {
         params: TerminalRunParams,
     ) -> Result<Value, BoundaryError> {
         bounded(&params)?;
+        self.qa_hold()?;
         let op_id: OpId = params.op_id.clone();
         let grid = params.geometry;
         let (launch, token) = launch(params).map_err(|error| terminal_refusal(&error))?;
@@ -173,5 +174,19 @@ impl Runtime {
     ) -> Result<Value, BoundaryError> {
         let record = self.lifecycle(|terminals| terminals.operation(session, op_id))?;
         serde_json::to_value(record).map_err(|_| refusal("internal", "report the build"))
+    }
+}
+
+impl Runtime {
+    /// QA seam: opens the hold FIFO for reading while holding the control, once, so the
+    /// runtime and the control wait until the test opens the FIFO for writing.
+    fn qa_hold(&mut self) -> Result<(), BoundaryError> {
+        let Some(fifo) = self.qa_hold.take() else {
+            return Ok(());
+        };
+        self.control
+            .with_terminals(|_, _| Ok(std::fs::File::open(&fifo).map(drop)))
+            .map_err(|error| refusal(error.kind(), error.hint()))?
+            .map_err(|_| refusal("internal", "the QA hold FIFO could not be opened"))
     }
 }

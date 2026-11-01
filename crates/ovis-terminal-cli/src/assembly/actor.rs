@@ -49,6 +49,8 @@ pub(super) struct Runtime {
     /// How long the actor waits for a job, with the control released, before it looks
     /// for holder messages again.
     pub(super) poll: Duration,
+    /// QA seam: a FIFO opened, holding the control, before the next `terminal.run`.
+    pub(super) qa_hold: Option<std::path::PathBuf>,
     pub(super) journal: Arc<super::journal::BootJournal>,
     /// The current boot's status events, drained between jobs.
     pub(super) status_feed: Option<ovis_terminal_core::events::Delivery<super::lanes::ServedEvent>>,
