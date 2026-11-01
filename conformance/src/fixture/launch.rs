@@ -94,6 +94,18 @@ pub(crate) async fn start(
 }
 
 impl FixtureProcess {
+    /// The next line the fixture announced on stdout, awaited within the ready bound.
+    pub(crate) async fn announcement(&mut self) -> Result<Value, RunnerError> {
+        let line = tokio::time::timeout(READY_BOUND, self.stdout.next_line()).await;
+        let missing = RunnerError::FixtureReport {
+            expected: "an announcement line",
+        };
+        let Ok(Ok(Some(line))) = line else {
+            return Err(missing);
+        };
+        serde_json::from_str(&line).map_err(|_| missing)
+    }
+
     /// Closes stdin, reads the serve report and reaps the process.
     pub(crate) async fn stop(mut self) -> (Result<Value, RunnerError>, ProcessReport) {
         drop(self.stdin.take());

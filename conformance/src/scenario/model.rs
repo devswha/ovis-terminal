@@ -6,6 +6,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use super::matcher::Expect;
+pub(crate) use super::serve::{Announced, FixtureKind, Serve, Stop};
 use crate::ids::{CaseName, ConnName, ScenarioId};
 
 /// Marker that makes a file a registered, runner-executable scenario.
@@ -106,6 +107,8 @@ pub(crate) enum Step {
     Pages(Pages),
     /// Stop the fixture and check its serve report.
     Stop(Stop),
+    /// Await the fixture's next stdout announcement, such as a successor boot.
+    Announced(Announced),
     /// Splice the steps of another scenario's case.
     Include(Include),
     /// Resend one read until its reply matches, a bounded number of times.
@@ -126,22 +129,6 @@ pub(crate) enum Step {
     PtyResize(super::pty::PtyResize),
     /// Await the PTY client's exit and check its terminal settings.
     PtyExit(super::pty::PtyExit),
-}
-
-/// Fixture servers the runner can start.
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum FixtureKind {
-    /// Real server, dispatcher and store with protocol test methods.
-    Protocol,
-    /// The binary under test itself: `ovis-terminal serve`.
-    Assembled,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct Serve {
-    pub(crate) fixture: FixtureKind,
 }
 
 /// How a connection reaches the endpoint.
@@ -300,12 +287,6 @@ pub(crate) struct Pages {
     pub(crate) total_bytes: crate::ids::Decimal,
     /// Lowercase hex SHA-256 of the complete logical result.
     pub(crate) sha256: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct Stop {
-    pub(crate) expect: Expect,
 }
 
 #[derive(Debug, Clone, Deserialize)]

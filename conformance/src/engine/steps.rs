@@ -50,6 +50,7 @@ impl Session<'_> {
                     let checked = stopping.expect.check(subject, self.ctx.repo.root());
                     self.assert(checked)
                 }
+                Step::Announced(announced) => self.announced(announced).await,
                 Step::Include(include) => Err(RunnerError::ScenarioInconsistent {
                     scenario: include.scenario.to_string(),
                     detail: "an include survived planning",

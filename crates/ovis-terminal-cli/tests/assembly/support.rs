@@ -156,6 +156,11 @@ impl Served {
         })
     }
 
+    /// The root this server keeps its socket and state below.
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
     /// The parsed ready line.
     pub const fn ready(&self) -> &Value {
         &self.ready
@@ -272,6 +277,41 @@ impl Served {
         let mut line = String::new();
         BufReader::new(&stream).read_line(&mut line)?;
         Ok(serde_json::from_str(&line)?)
+    }
+
+    /// The next line the server announced on stdout, such as a successor boot.
+    ///
+    /// # Errors
+    ///
+    /// Fails when stdout ended or the line is not JSON.
+    pub fn announcement(&mut self) -> TestResult<Value> {
+        let mut line = String::new();
+        if self.stdout.read_line(&mut line)? == 0 {
+            return Err("the server's stdout ended".into());
+        }
+        Ok(serde_json::from_str(&line)?)
+    }
+
+    /// A connection on the local socket that completed hello as the owner and stays open.
+    ///
+    /// # Errors
+    ///
+    /// Fails when a socket step fails or hello is refused.
+    pub fn connected(&self) -> TestResult<BufReader<UnixStream>> {
+        let stream = UnixStream::connect(&self.socket)?;
+        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
+        let mut connection = BufReader::new(stream);
+        let hello = json!({"jsonrpc": "2.0", "id": "h", "method": "hello", "params": {
+            "generation": "1", "client": {"name": "t31", "version": "0"}, "credential": self.bearer,
+        }});
+        writeln!(connection.get_mut(), "{hello}")?;
+        let mut line = String::new();
+        connection.read_line(&mut line)?;
+        let reply: Value = serde_json::from_str(&line)?;
+        if reply.get("result").is_none() {
+            return Err(reply.to_string().into());
+        }
+        Ok(connection)
     }
 
     /// The method list hello advertises to the owner.

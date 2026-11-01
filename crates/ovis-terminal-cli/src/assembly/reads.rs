@@ -8,14 +8,18 @@
 use std::time::{Duration, Instant};
 
 use base64::Engine as _;
+use ovis_terminal_core::restart::ArmedWait;
 use ovis_terminal_core::screen::OutputRequest;
-use ovis_terminal_core::waits::{CancelScope, OutputOutcome, OutputWait, Ticket, WaitError};
-use ovis_terminal_protocol::errors::BoundaryError;
+use ovis_terminal_core::waits::{OutputOutcome, OutputWait, Ticket, WaitError};
+use ovis_terminal_protocol::domain::restart::InterruptedWait;
+use ovis_terminal_protocol::errors::{BoundaryError, OpId};
 use ovis_terminal_protocol::schema::common::{Pattern, TextFormat};
+use ovis_terminal_protocol::schema::ids::TerminalId as WireTerminalId;
 use ovis_terminal_protocol::schema::methods::terminal_read::{
     TerminalOutputParams, TerminalOutputResult, TerminalScreenParams, TerminalScreenResult,
     TerminalWaitOutputParams, TerminalWaitOutputResult,
 };
+use ovis_terminal_protocol::schema::scalar::ByteOffset;
 use ovis_terminal_server::streams::wire_modes;
 use ovis_terminal_vt::OutputOffset;
 use serde_json::{Value, json};
@@ -108,17 +112,25 @@ impl Runtime {
         }))
     }
 
-    /// Arms the wait in holder order; the caller awaits the ticket off the actor thread.
+    /// Arms the wait in holder order under the control's armed waits, so a planned restart
+    /// ends it `cancelled` with its resume cursor; the caller awaits the ticket off the
+    /// actor thread and keeps the returned guard until it resolves.
     pub(super) fn arm_output_wait(
         &mut self,
         params: &TerminalWaitOutputParams,
-    ) -> Result<(Ticket<OutputOutcome>, Instant), BoundaryError> {
+    ) -> Result<(Ticket<OutputOutcome>, Instant, ArmedWait), BoundaryError> {
         let Pattern::Text(text) = &params.pattern else {
             return Err(refusal(
                 "invalid_pattern",
                 "output waits match literal text patterns",
             ));
         };
+        let terminal = self.resolve_id(&params.target)?;
+        let armed = self.control.waits().arm(InterruptedWait::new(
+            OpId::new(uuid::Uuid::now_v7().to_string()),
+            WireTerminalId::new(terminal.to_string()),
+            ByteOffset::new(params.cursor.offset.get()),
+        ));
         let live = live_terminal((&self.directory, &mut self.live), &params.target)?;
         let wait = OutputWait::new(
             OutputOffset::new(params.cursor.offset.get()),
@@ -127,12 +139,12 @@ impl Runtime {
         .map_err(|error| wait_refusal(&error))?;
         let ticket = live
             .waits
-            .output(wait, &CancelScope::new())
+            .output(wait, armed.scope())
             .map_err(|error| wait_refusal(&error))?;
         let bound = Duration::from_millis(params.timeout_ms.get());
         let deadline = Instant::now()
             .checked_add(bound)
             .ok_or_else(|| refusal("invalid_params", "timeout_ms is too large"))?;
-        Ok((ticket, deadline))
+        Ok((ticket, deadline, armed))
     }
 }

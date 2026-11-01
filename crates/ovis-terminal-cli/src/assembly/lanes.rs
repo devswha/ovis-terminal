@@ -6,6 +6,7 @@
 mod agents;
 mod machine;
 mod service;
+mod update;
 
 use std::path::Path;
 use std::sync::Arc;
@@ -108,5 +109,6 @@ pub(super) fn host(hosting: &Hosting<'_>) -> Result<(Dispatch, Arc<DispatchLog>)
     .map_err(stage("register server.status and server.metrics"))?;
     machine::register(&mut dispatch, hosting)?;
     agents::register(&mut dispatch, hosting, &log)?;
+    update::register(&mut dispatch, hosting)?;
     Ok((dispatch, log))
 }

@@ -1,32 +1,27 @@
-//! Starting, announcing, serving until told to stop, and stopping in reverse order:
-//! connections, attach deliveries, the runtime thread, then the lease log.
+//! Starting, announcing, serving until told to stop, handing every listener and log over to
+//! the successor boot on a planned restart, and stopping in reverse order.
 
 use std::collections::BTreeMap;
 use std::io::Write as _;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use ovis_terminal_protocol::schema::limits::{Limits, TransportKind};
-use ovis_terminal_server::authn::Revalidated;
-use ovis_terminal_server::dispatch::lanes::health::Measured;
-use ovis_terminal_server::listen::{
-    EndpointDescriptor, EndpointEnvironment, Platform, ServerConfig, UnixEndpoint, serve_unix,
-};
-use ovis_terminal_server::streams::{
-    AttachHandler, AttachLane, LeaseJournal, SessionBacklog, StreamLimits, StreamSetup,
-};
+use ovis_terminal_protocol::schema::limits::Limits;
+use ovis_terminal_server::listen::{EndpointDescriptor, EndpointEnvironment, Platform};
+use ovis_terminal_server::streams::{AttachLane, SessionBacklog, StreamLimits, StreamSetup};
 use ovis_terminal_server::ws::WsServerHandle;
 use serde_json::{Value, json};
 use tokio::io::AsyncReadExt as _;
 use tokio::signal::unix::{SignalKind, signal};
 
 use super::actor::{Actor, Runtime};
-use super::boot::{LeaseLog, boot};
+use super::boot::boot;
 use super::directory::Directory;
-use super::handler::{Assembled, Served};
+use super::generation::{Generation, Shared};
+use super::journal::BootJournal;
 use super::lifetime::Lifetime;
 use super::recovery::Started;
-use super::restart::StopSignal;
+use super::restart::{RestartSignal, StopSignal};
 use super::{AssemblyError, ServePlan};
 
 /// Session-wide bound on bytes queued for all attach viewers.
@@ -120,6 +115,14 @@ fn ready(
     Ok(json!({ "ready": ready }))
 }
 
+/// The line announcing that a successor boot serves the same endpoint.
+fn restarted(generation: &Generation) -> Value {
+    json!({"restarted": {
+        "server_boot_id": generation.identity.server_boot_id().to_string(),
+        "runtime_lifetime": generation.identity.runtime_id().to_string(),
+    }})
+}
+
 /// Runs one server lifetime for [`super::serve`].
 pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(), AssemblyError> {
     let (socket, state) = paths(plan, env)?;
@@ -131,14 +134,14 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
     let directory = Arc::new(Directory::new(booted.identity.machine_id()));
     directory.recorded(&booted.recorded);
     let lane = AttachLane::new(Arc::clone(&directory));
+    let journal = Arc::new(BootJournal::new(&state, booted.leases));
     let limits = StreamLimits::advertised(&Limits::v1());
     let backlog = Arc::new(SessionBacklog::new(SESSION_BACKLOG_BYTES));
-    let journal: Arc<dyn LeaseJournal> = Arc::<LeaseLog>::clone(&booted.leases);
     let health = super::health::open(&state, booted.identity, recovery.recovery.clone())?;
-    let setup = StreamSetup::new(limits, backlog, journal).reporting_to(Arc::clone(&health));
-    let control = booted.control;
+    let setup = StreamSetup::new(limits, backlog, Arc::<BootJournal>::clone(&journal))
+        .reporting_to(Arc::clone(&health));
     let mut runtime = Runtime {
-        control: Arc::clone(&control),
+        control: Arc::clone(&booted.control),
         holder: booted.holder,
         identity: booted.identity,
         authority: Arc::clone(&booted.authority),
@@ -155,68 +158,49 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
     };
     runtime.publish_census();
     let (actor, thread) = Actor::spawn(runtime)?;
-    let (dispatch, dispatch_log) = super::lanes::host(&super::lanes::Hosting {
-        state: &state,
-        identity: booted.identity,
-        authority: Arc::clone(&booted.authority),
-        directory: Arc::clone(&directory),
-        actor: actor.clone(),
-        control,
-        status: Arc::clone(&booted.status),
-        health: Arc::clone(&health),
-    })?;
-    let stop = StopSignal::default();
-    let dispatch = Arc::new(dispatch);
-    let served = Arc::new(Served {
-        actor,
-        lane: Arc::clone(&lane),
-        dispatch: Arc::clone(&dispatch),
-        stop: stop.clone(),
-    });
-    let revalidated = Revalidated::new(
-        Arc::clone(&booted.authority),
-        Assembled {
-            attach: AttachHandler::new(Arc::clone(&served), Arc::clone(&lane)),
-            served,
-            transports: if plan.websocket_port.is_some() {
-                vec![TransportKind::Unix, TransportKind::Websocket]
-            } else {
-                vec![TransportKind::Unix]
-            },
-        },
-    );
-    let handler = Arc::new(Measured::new(health, Arc::new(revalidated)));
-    let endpoint = UnixEndpoint::bind(&socket)
-        .await
-        .map_err(AssemblyError::Endpoint)?;
-    let config = ServerConfig::new(Arc::clone(&booted.authority), booted.identity);
-    let listener =
-        serve_unix(endpoint, config, Arc::clone(&handler)).map_err(AssemblyError::Endpoint)?;
-    let websocket = match plan.websocket_port {
-        Some(port) => Some(
-            super::websocket::start(
-                port,
-                (Arc::clone(&booted.authority), booted.identity),
-                &handler,
-            )
-            .await?,
-        ),
-        None => None,
-    };
-    announce(&ready(
-        &socket,
-        &booted.bearers,
-        (&recovery, websocket.as_ref()),
-    )?)?;
-    let waited = stopped(plan.stdin_lifetime, stop).await;
-    let lifetime = Lifetime {
-        websocket,
-        listener,
+    let mut shared = Shared {
+        state,
+        socket,
+        websocket_port: plan.websocket_port,
+        authority: booted.authority,
+        directory,
         lane,
-        dispatch,
-        handler,
+        actor,
+        control: booted.control,
+        status: booted.status,
+        journal,
+        stop: StopSignal::default(),
+        restart: RestartSignal::default(),
+    };
+    let mut generation = Generation::open(&shared, (booted.identity, health)).await?;
+    shared.websocket_port = generation.websocket_port();
+    let websocket = generation.websocket.as_ref();
+    announce(&ready(
+        &shared.socket,
+        &booted.bearers,
+        (&recovery, websocket),
+    )?)?;
+    let stopped = stopped(plan.stdin_lifetime, shared.stop.clone());
+    tokio::pin!(stopped);
+    let mut reports = Vec::new();
+    let waited = loop {
+        tokio::select! {
+            waited = &mut stopped => break waited,
+            op = shared.restart.wait() => {
+                let (next, ended) = generation.hand_over(&shared, op).await?;
+                if let Some(report) = ended {
+                    reports.push(report);
+                    announce(&restarted(&next))?;
+                }
+                generation = next;
+            }
+        }
+    };
+    let lifetime = Lifetime {
+        generation,
+        shared,
         thread,
-        logs: (dispatch_log, booted.leases),
+        reports,
     };
     announce(&lifetime.stop(waited).await?)
 }

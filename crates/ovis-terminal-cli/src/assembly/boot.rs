@@ -89,7 +89,7 @@ pub(super) struct Booted {
     pub(super) inherited: Vec<ovis_terminal_core::recovery::Recorded>,
     pub(super) recorded: Vec<ovis_terminal_core::terminals::Record>,
     pub(super) status: Arc<ovis_terminal_agent::status::StatusService>,
-    pub(super) leases: Arc<LeaseLog>,
+    pub(super) leases: LeaseLog,
     pub(super) geometry: GeometryLog,
 }
 
@@ -126,7 +126,8 @@ fn delegate(
     Ok(issued.bearer().to_owned())
 }
 
-fn store(state: &Path, name: &str) -> Result<Store, AssemblyError> {
+/// Opens the store `name` below `state`.
+pub(super) fn store(state: &Path, name: &str) -> Result<Store, AssemblyError> {
     Store::open(&state.join(name), StoreOptions::default())
         .map_err(AssemblyError::start("open a store"))
 }
@@ -191,11 +192,7 @@ fn boot_blocking(state: &Path) -> Result<Booted, AssemblyError> {
     let recorded = control
         .with_terminals(|terminals, session| terminals.list(session))
         .map_err(AssemblyError::start("read the recorded terminals"))?;
-    let leases = Arc::new(Coordinator::new(
-        store(state, "leases.db")?,
-        identity,
-        NoSections,
-    ));
+    let leases = Coordinator::new(store(state, "leases.db")?, identity, NoSections);
     let geometry = Coordinator::new(store(state, "geometry.db")?, identity, NoSections);
     Ok(Booted {
         identity,

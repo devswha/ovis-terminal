@@ -33,6 +33,9 @@ pub mod stall;
 #[path = "../src/streams/qa/health.rs"]
 pub mod health;
 
+#[path = "../src/streams/qa/takeover.rs"]
+pub mod takeover;
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_real_stalled_viewer_reports_its_backlog_and_resynced_ranges() -> TestResult {
     health::a_real_stalled_viewer_reports_its_backlog_and_resynced_ranges().await
@@ -61,4 +64,9 @@ async fn paint_is_fenced_ahead_of_live_bytes_under_credit_pressure() -> TestResu
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_exited_terminal_answers_ended() -> TestResult {
     fence::an_exited_terminal_answers_ended().await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn takeover_moves_the_interact_lease_onto_the_held_stream() -> TestResult {
+    takeover::takeover_moves_the_interact_lease_onto_the_held_stream().await
 }

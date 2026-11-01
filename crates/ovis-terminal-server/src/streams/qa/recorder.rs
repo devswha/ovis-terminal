@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use ovis_terminal_core::events::{Coordinator, EventError, Filter, SnapshotProducer};
 use ovis_terminal_core::leases::{LeaseEvent, Transition};
+use ovis_terminal_protocol::schema::scalar::EventSeq;
 use ovis_terminal_server::streams::{LeaseJournal, StreamError};
 use ovis_terminal_store::{OpId, Snapshot};
 use tokio::sync::watch;
@@ -35,11 +36,11 @@ pub(crate) struct Recorder {
 }
 
 impl LeaseJournal for Recorder {
-    fn record(&self, op: OpId, transition: Transition) -> Result<(), StreamError> {
-        self.core.record(op, transition.clone())?;
+    fn record(&self, op: OpId, transition: Transition) -> Result<Option<EventSeq>, StreamError> {
+        let seq = self.core.record(op, transition.clone())?;
         self.committed
             .send_modify(|events| events.extend(transition.events));
-        Ok(())
+        Ok(seq)
     }
 }
 

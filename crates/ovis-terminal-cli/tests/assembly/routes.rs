@@ -99,6 +99,49 @@ fn metrics_count_every_settled_call_and_status_reports_the_published_census() ->
 }
 
 #[test]
+fn input_barrier_reports_the_admitted_input_reached_once_its_echo_arrived() -> TestResult {
+    let served = Served::start()?;
+    served.run_shell("shell")?;
+    let t1 = json!({"address": "t1"});
+    let sent = call(
+        &served,
+        "input.send",
+        &json!({"op_id": op_id()?, "target": t1, "expect": null,
+            "text": "echo barrier-$((6+6))", "submit": "enter", "lease_id": null}),
+    )?;
+    let queued = sent
+        .pointer("/receipt/queued_seq")
+        .cloned()
+        .ok_or_else(|| sent.to_string())?;
+    let cursor = sent
+        .pointer("/receipt/output_cursor/offset")
+        .cloned()
+        .ok_or_else(|| sent.to_string())?;
+    let waited = call(
+        &served,
+        "terminal.wait_output",
+        &json!({"target": t1, "cursor": {"offset": cursor},
+            "pattern": {"text": "barrier-12"}, "timeout_ms": "10000"}),
+    )?;
+    assert_eq!(waited.get("outcome"), Some(&json!("matched")), "{waited}");
+    let barrier = call(
+        &served,
+        "input.barrier",
+        &json!({"target": t1, "queued_seq": queued}),
+    )?;
+    assert_eq!(barrier.get("reached"), Some(&json!(true)), "{barrier}");
+    assert_eq!(barrier.get("pending_bytes"), Some(&json!("0")), "{barrier}");
+    let ahead = error(
+        &served,
+        "input.barrier",
+        &json!({"target": t1, "queued_seq": "999"}),
+    )?;
+    assert_eq!(ahead.get("kind"), Some(&json!("seq_ahead")), "{ahead}");
+    served.stop()?;
+    Ok(())
+}
+
+#[test]
 fn service_describe_and_machine_add_answer_typed_outcomes_over_the_socket() -> TestResult {
     let served = Served::start()?;
     let described = error(&served, "service.describe", &json!({}))?;

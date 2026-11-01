@@ -11,6 +11,7 @@ use ovis_terminal_protocol::schema::limits::TransportKind;
 use ovis_terminal_protocol::schema::methods::attach::{
     AttachLeasesParams, AttachOpenParams, AttachResizeParams,
 };
+use ovis_terminal_protocol::schema::methods::input::InputBarrierParams;
 use ovis_terminal_protocol::schema::methods::server::OpRefParams;
 use ovis_terminal_protocol::schema::methods::terminal::{TerminalGetParams, TerminalRunParams};
 use ovis_terminal_protocol::schema::records::LeaseRole;
@@ -28,7 +29,7 @@ use super::error::{refusal, worker_gone};
 use super::lanes::Dispatch;
 
 /// Methods served by the runtime actor and the lease table, besides the attach streams.
-pub(super) const ROUTED: [&str; 20] = [
+pub(super) const ROUTED: [&str; 21] = [
     "terminal.run",
     "terminal.list",
     "terminal.get",
@@ -47,6 +48,7 @@ pub(super) const ROUTED: [&str; 20] = [
     "input.send",
     "input.keys",
     "input.paste",
+    "input.barrier",
     "attach.resize",
     "attach.leases",
 ];
@@ -64,6 +66,7 @@ pub(super) struct Served {
     pub(super) lane: Arc<Lane>,
     pub(super) dispatch: Arc<Dispatch>,
     pub(super) stop: super::restart::StopSignal,
+    pub(super) restart: super::restart::RestartSignal,
 }
 
 impl RequestHandler for Served {
@@ -134,6 +137,21 @@ impl RequestHandler for Served {
                 let stopped = self.dispatch.call(call).await?;
                 self.stop.stopped();
                 Ok(stopped)
+            }
+            "server.restart" | "update.activate" | "update.rollback" => {
+                let op = call.request.params().get("op_id").and_then(Value::as_str);
+                let op = op.map(str::to_owned);
+                let restarted = self.dispatch.call(call).await;
+                if let Some(op) = op {
+                    self.restart.requested(op);
+                }
+                restarted
+            }
+            "input.barrier" => {
+                let params: InputBarrierParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.barrier(&params))
+                    .await
             }
             _ => self.dispatch.call(call).await,
         }

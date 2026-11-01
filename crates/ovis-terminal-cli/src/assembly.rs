@@ -7,16 +7,20 @@
 //! sequencer and geometry transitions of the same terminal.
 
 mod actor;
+mod barrier;
 mod boot;
+mod boundary;
 mod credentials;
 mod directory;
 mod discovery;
 mod error;
+mod generation;
 mod handler;
 mod health;
 mod identity;
 mod input;
 mod inspect;
+mod journal;
 mod lanes;
 mod lifetime;
 mod live;

@@ -24,6 +24,7 @@ mod pump;
 mod records;
 mod resync;
 pub mod scheduler;
+mod takeover;
 mod upstream;
 mod viewer;
 

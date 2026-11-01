@@ -162,11 +162,6 @@
       "reason": "Crash recovery (ovis_terminal_core::recovery::recover) and its admission lane (dispatch::lanes::recovery) exist, but no served binary runs recovery at an unplanned boot or registers terminal.run until todo 31 assembles it, and the runner's only fixture (todo 21) holds no holder-owned program and cannot kill and restart its own core; todo 52 composes the fault-injection scenario over real endpoints. Covered meanwhile by the real-holder socket tests in recovery::qa, lanes::recovery and domain::recovery."
     },
     {
-      "file": "recovery/restart.json",
-      "owner_todo": "48",
-      "reason": "server.restart and server.stop are routed by dispatch::lanes::restart over ovis_terminal_core::restart::Control, but no served binary registers the lane or replaces its listener at the restart boundary until todo 31 assembles it, and the runner's only fixture (todo 21) holds no holder-owned program and asserts server.stop is unserved. Covered meanwhile by the real-holder core tests (restart) and the real-socket lane tests (lanes::restart)."
-    },
-    {
       "file": "remote/identity.json",
       "owner_todo": "43",
       "reason": "machine.add/get/rename are served only by dispatchers assembled in the todo-43 lane tests: no served binary registers the lane until todo 31 assembles it, and the scenario needs two private runtimes joined by a stdio transport plus the plan's --inject/--append runner flags, which the todo-21 runner (one fixture per case) does not have; todo 52 composes remote dispatch across two private runtimes over real endpoints."
