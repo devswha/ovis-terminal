@@ -16,11 +16,25 @@ use super::hub::Hub;
 const BOUND: Duration = Duration::from_secs(10);
 const LIMIT: u64 = 64 * 1024;
 
-fn socket(name: &str) -> PathBuf {
+/// A private scratch directory removed when the test ends, passed or panicked.
+struct Scratch(PathBuf);
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        if let Err(error) = std::fs::remove_dir_all(&self.0)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            eprintln!("could not remove {}: {error}", self.0.display());
+        }
+    }
+}
+
+fn socket(name: &str) -> (Scratch, PathBuf) {
     let base = std::env::var_os("OVIS_FIXTURE_ROOT").map_or_else(std::env::temp_dir, PathBuf::from);
     let dir = base.join(format!("soak-hub-{name}-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
-    dir.join("c.sock")
+    let path = dir.join("c.sock");
+    (Scratch(dir), path)
 }
 
 fn join(path: &PathBuf, (viewer, reads): (&str, bool)) -> UnixStream {
@@ -70,7 +84,7 @@ fn progress() -> Event {
 
 #[test]
 fn a_stalled_viewer_is_cut_at_its_bound_while_a_reader_misses_nothing() {
-    let path = socket("stall");
+    let (_scratch, path) = socket("stall");
     let (inbound, events) = std::sync::mpsc::sync_channel(64);
     let mut hub = Hub::bind(&path, (inbound, LIMIT)).unwrap();
     let stalled = join(&path, ("stalled", false));
@@ -128,7 +142,7 @@ fn a_stalled_viewer_is_cut_at_its_bound_while_a_reader_misses_nothing() {
 
 #[test]
 fn a_resumed_viewer_gets_an_explicit_gap_for_events_no_longer_retained() {
-    let path = socket("gap");
+    let (_scratch, path) = socket("gap");
     let (inbound, events) = std::sync::mpsc::sync_channel(64);
     let mut hub = Hub::bind(&path, (inbound, LIMIT * 64)).unwrap();
     for _ in 0..600 {

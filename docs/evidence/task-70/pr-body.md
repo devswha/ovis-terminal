@@ -57,13 +57,14 @@ FIXTURE_EXIT=0
 
 ### Tests and mutants
 
-`cargo nextest run -p ovis-terminal-bench soak::`: 12 tests run, 12 passed. They cover the schedule (20 crashes over 72 h; the 1800 s crash times 615 s and 1365 s), every verdict rule (incomplete duration, skipped disruption, RSS limit and growth edges, planned exit, probe isolation, late/missing control, queue overrun), the fixture pass rule, the tally (changed PID, unexcused loss, offset regression), decimal counters (u64::MAX round-trip, numeric and `01` rejected), and the hub on real sockets: a stalled viewer is cut at its bound with a `viewer_cut` record while a reader gets every sequence in order, and a late resume gets an explicit gap.
+`cargo nextest run -p ovis-terminal-bench soak::`: 13 tests run, 13 passed. They cover the schedule (20 crashes over 72 h; the 1800 s crash times 615 s and 1365 s), every verdict rule (incomplete duration, skipped disruption, RSS limit and growth edges, planned exit, probe isolation, late/missing control, queue overrun), the fixture pass rule, the tally (changed PID, unexcused loss, offset regression), decimal counters (u64::MAX round-trip, numeric and `01` rejected), and the hub on real sockets: a stalled viewer is cut at its bound with a `viewer_cut` record while a reader gets every sequence in order, and a late resume gets an explicit gap.
 
 Each mutant was applied, run and reverted; each fails exactly one shipped test (`docs/evidence/task-70/mutant-*.log`):
 - M1, an incomplete run passes: `a_complete_clean_run_passes_and_each_broken_fact_fails_its_own_rule` fails.
 - M2, exact recovery accepted: `the_fixture_passes_only_without_exact_recovery_and_without_a_resend` fails.
 - M3, the stalled viewer is never cut: `a_stalled_viewer_is_cut_at_its_bound_while_a_reader_misses_nothing` fails.
 - M4, a changed PID counts as a survivor: `a_survivor_under_another_pid_or_an_unexcused_loss_is_counted` fails.
+- M5, a relative `--binary` is not pinned: `a_relative_binary_is_pinned_to_its_absolute_path_before_any_process_starts` fails.
 
 Adversarial classes and legacy defects: `docs/evidence/task-70/adversarial.md`.
 
@@ -98,6 +99,16 @@ CONFORMANCE_failure_EXIT=1
 
 It becomes executable when todo 31 serves the control endpoint (terminal.run, input.*, events.*) and the runner can run this schedule over it, or gains a step that runs an external harness. The `--inject` value has no `method`, so today's inject step cannot plan it. **Seam note (performance/terminal50):** still declared-only. Todo 31 (PR #57) has not landed, so the flip to executed stays with todo 70 or the orchestrator's re-verify after #57.
 
+### CI disk exhaustion on e54c967 (root cause)
+
+`test (ubuntu-latest)` of run 41342888203 died with `No space left on device` in the runner's own `_diag` log. Every build/test step had already passed, so no job log was uploaded. The full analysis is in `docs/evidence/task-70/ci-disk-root-cause.md`.
+
+- **Runtime writes, measured.** The soak tests write 0 bytes under fresh `OVIS_FIXTURE_ROOT` and `TMPDIR`, and nothing under the repo tree. They did leave 2 empty directories per run, also on panic; a `Scratch` drop guard now removes them (0 left afterwards).
+- **The soak binary does not run in CI.** No CI job executes it.
+- **Build footprint, measured under CI's full-debug profile.** The PR adds one 210,816,152 B `soak` binary, the same size as `terminal50`'s 207,287,424 B, plus a 7 MB test harness for `main.rs`. `test = false` on that `[[bin]]` now removes the harness.
+- **Not caused by e54c967.** The same job passed on d7255d8 with the identical footprint, and e54c967 changed nothing it builds. That job runs near the runner's about 14 GB limit. Shrinking the workspace debug footprint (`[profile.dev] debug = true`, every bench binary linking the whole bench lib) is a shared-profile follow-up.
+- **`soak.yml` is valid.** actionlint 1.7.7 reports no findings for it or any other workflow; `gh workflow view/run` answer 404 only because the file is not on the default branch.
+
 ## Seams
 
 - `bench/Cargo.toml` adds the `[[bin]] soak` entry and the `ovis-terminal-holder` dependency; `bench/src/lib.rs` adds the module and layering line; `Cargo.lock` changes by one line.
@@ -113,4 +124,4 @@ It becomes executable when todo 31 serves the control endpoint (terminal.run, in
 - **GAP-119/IDEAL-092 coverage.** The soak's "remote interruption" cuts and resumes the observing client's connection; it is not an SSH machine transport. Orphan acknowledgement replay by parent incarnation is proven by `recovery/e2e` (todo 52) and is not re-run inside this soak.
 - **Source state of the 1800 s run.** The soak binary of the acceptance run was built before a behaviour-free module split, needed for the 250-pure-LOC rule. `control.rs` was split into `io/ops/shutdown` and `drive.rs` into `tick`. The fixture run, the tests and the mutants ran on the final code.
 - **The stalled viewer was not cut inside the 1800 s run** (181417 of 262144 B before its boot ended). The cut is proven by the hub test; the 72 h profile attaches 6 stalled viewers.
-- **macOS finding, fixed.** The first stress dispatch https://github.com/devswha/ovis-terminal/actions/runs/41341596094 failed at the self-test (`soak_failed: 11 verdict rule(s) failed`, exit 1). Without `OVIS_FIXTURE_ROOT` the private root fell back to the macOS temporary directory (about 49 bytes), which pushed the dedicated holder's socket past the 103-byte limit. The default root is now `/tmp`, verified locally with `OVIS_FIXTURE_ROOT` unset (self-test exit 0), and the lane now prints each report even when it fails. Re-dispatched once: RERUN_PLACEHOLDER. The lane covers it (`soak.sh`: tests, self-test, fixture, 600 s / 50 terminals). The native 1800 s proof is Linux.
+- **macOS stress finding, fixed (diagnosis corrected).** Two stress dispatches failed at the self-test: https://github.com/devswha/ovis-terminal/actions/runs/41341596094 and https://github.com/devswha/ovis-terminal/actions/runs/41342883031. The second printed the report, whose `error.kind` was `binary_unavailable`. Holders start with `/` as their working directory, and the lane (like `soak.yml` and the literal acceptance command) passes the relative `--binary target/release/ovis-terminal`. A relative program path is resolved against the child's directory, so the binary was not found. My first explanation, a socket path over the limit under macOS's `$TMPDIR`, was a guess and was wrong. `--binary` is now pinned with `std::fs::canonicalize` while the plan is built. This is proven by `a_relative_binary_is_pinned_to_its_absolute_path_before_any_process_starts`, which mutant M5 makes fail, and by a local self-test with a relative `--binary` (exit 0). The 1800 s acceptance run passed an absolute `$CARGO_TARGET_DIR/...` path and was not affected. The `/tmp` default root stays, so holder sockets keep clear of the long macOS `$TMPDIR`. Final re-dispatch: STRESS3_PLACEHOLDER.

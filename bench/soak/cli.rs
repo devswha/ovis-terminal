@@ -165,7 +165,10 @@ impl Cli {
         if !self.isolated {
             return Err(SoakError::NotIsolated);
         }
-        let binary = self.binary.clone().ok_or_else(|| usage("pass --binary"))?;
+        let given = self.binary.as_ref().ok_or_else(|| usage("pass --binary"))?;
+        // Holders start with "/" as their working directory, so a relative path would name
+        // another file there: the binary under test is pinned to its absolute path here.
+        let binary = std::fs::canonicalize(given).map_err(|source| SoakError::Binary { source })?;
         let (terminals, seconds, label) = self.shape()?;
         let fixture = self.fixture()?;
         let duration = Duration::from_secs(seconds);

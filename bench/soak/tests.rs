@@ -5,8 +5,10 @@ mod judging;
 
 use std::time::Duration;
 
+use clap::Parser as _;
 use ovis_terminal_protocol::schema::scalar::EventSeq;
 
+use super::cli::Cli;
 use super::plan::{Kind, schedule};
 use super::wire::Line;
 
@@ -86,4 +88,32 @@ fn sequences_are_decimal_strings_and_numbers_are_rejected() {
     assert_eq!(serde_json::from_str::<Line>(&text).unwrap(), line);
     assert!(serde_json::from_str::<Line>(r#"{"gap":{"from":1,"to":"2"}}"#).is_err());
     assert!(serde_json::from_str::<Line>(r#"{"gap":{"from":"01","to":"2"}}"#).is_err());
+}
+
+#[test]
+fn a_relative_binary_is_pinned_to_its_absolute_path_before_any_process_starts() {
+    // nextest runs this crate's tests in its own directory, where Cargo.toml exists.
+    let cli = Cli::try_parse_from([
+        "soak",
+        "--binary",
+        "Cargo.toml",
+        "--isolated",
+        "--self-test",
+    ])
+    .unwrap();
+    let (_, binary) = cli.plan().unwrap();
+    assert!(binary.is_absolute(), "{}", binary.display());
+    assert_eq!(binary, std::fs::canonicalize("Cargo.toml").unwrap());
+    let missing = Cli::try_parse_from([
+        "soak",
+        "--binary",
+        "no-such-binary",
+        "--isolated",
+        "--self-test",
+    ])
+    .unwrap();
+    assert_eq!(
+        missing.plan().err().map(|error| error.kind()),
+        Some("binary_unavailable")
+    );
 }
