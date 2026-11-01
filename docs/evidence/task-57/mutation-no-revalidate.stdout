@@ -1,0 +1,24 @@
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t57/crates/ovis-terminal-server)
+warning: field `authority` is never read
+  --> crates/ovis-terminal-server/src/authn/revalidate.rs:17:5
+   |
+16 | pub struct Revalidated<H> {
+   |            ----------- field in this struct
+17 |     authority: Arc<Authority<RegistryIdentities>>,
+   |     ^^^^^^^^^
+   |
+   = note: `Revalidated` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `now` is never used
+  --> crates/ovis-terminal-server/src/authn/revalidate.rs:44:4
+   |
+44 | fn now() -> Result<TimestampMs, BoundaryError> {
+   |    ^^^
+
+   Compiling ovis-terminal-conformance v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t57/conformance)
+warning: `ovis-terminal-server` (lib) generated 2 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.52s
+     Running `target/debug/conformance --binary target/debug/ovis-terminal --scenario security/rotation --isolated --case failure --inject '{"method":"prompt.answer","params":{"prompt_id":"p1","version":1},"principal_fixture":"revoked-token"}' --evidence /home/devswha/workspace/ovis-terminal-wt/lane-t57/.omo/evidence/ovis-terminal-v1/task-57/mutation-no-revalidate.json`
+{"case":"failure","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t57/.omo/evidence/ovis-terminal-v1/task-57/mutation-no-revalidate.json","evidence_written":null,"result":"failed","scenario":"security/rotation","totals":{"assertions":"27","cases":"1","declared_only":"0","failed":"1","passed":"0","skipped":"0"}}
+exit=1

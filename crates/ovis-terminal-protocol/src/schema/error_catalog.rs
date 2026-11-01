@@ -139,6 +139,7 @@ impl JsonSchema for ErrorData {
                 "current_version": generator.subschema_for::<super::scalar::RecordVersion>(),
                 "prompt_ids": generator.subschema_for::<Vec<super::ids::PromptId>>(),
                 "unavailable": generator.subschema_for::<crate::domain::conversation_records::Unavailable>(),
+                "principal_epoch": generator.subschema_for::<super::scalar::PrincipalEpoch>(),
             },
             "required": ["kind", "hint", "retryable"],
         })

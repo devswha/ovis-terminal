@@ -1,0 +1,555 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "platform/process-info",
+  "title": "Process roles carry PID plus start token, unsupported fields are explicit, and a replaced incarnation loses its authority",
+  "todo": 55,
+  "closes": [
+    "GAP-095",
+    "GAP-096"
+  ],
+  "delivers": [
+    "IDEAL-045",
+    "IDEAL-071",
+    "IDEAL-105"
+  ],
+  "excludes": [
+    "EXCL-006",
+    "EXCL-008",
+    "EXCL-010",
+    "EXCL-026"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Through the bridge: a job-control shell runs an interpreter in the foreground and a child in the background; process_info names launcher, foreground and background with PID plus start token and the shell role as undeclared. The program is stopped and relaunched: the old incarnation is process_replaced, its agent report token is refused, and the new incarnation reports with its own token.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "roles",
+                "method": "terminal.process_info",
+                "params": {
+                  "target": {
+                    "name": "proc"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "roles": {
+                "/result/terminal_id": {
+                  "$present": true
+                },
+                "/result/launcher/incarnation": "1",
+                "/result/launcher/pid": {
+                  "$present": true
+                },
+                "/result/launcher/start_token": {
+                  "$present": true
+                },
+                "/result/roles/shell/state": "unsupported",
+                "/result/roles/shell/reason": "undeclared_role",
+                "/result/roles/launcher/state": "known",
+                "/result/roles/launcher/value/argv/value/0": "/bin/sh",
+                "/result/roles/launcher/value/start_token": {
+                  "$present": true
+                },
+                "/result/roles/foreground/state": "known",
+                "/result/roles/foreground/value/0/argv/value": [
+                  "/bin/sh",
+                  "-c",
+                  "printf FG_READY; read gate"
+                ],
+                "/result/roles/foreground/value/0/start_token": {
+                  "$present": true
+                },
+                "/result/roles/foreground/value/1": {
+                  "$present": false
+                },
+                "/result/roles/background/state": "known",
+                "/result/roles/background/value/1/start_token": {
+                  "$present": true
+                },
+                "/result/roles/background/value/2": {
+                  "$present": false
+                },
+                "/result/foreground": null,
+                "/result/supported_fields": [
+                  "launcher",
+                  "foreground",
+                  "background",
+                  "pid",
+                  "start_token",
+                  "argv",
+                  "cwd"
+                ],
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "agent-report",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:agent-report",
+                  "target": {
+                    "name": "proc"
+                  },
+                  "process_token": "fixture-process-token-proc-1",
+                  "seq": "1",
+                  "record": {
+                    "state": "working"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "agent-report": {
+                "/result/status/root/report/state": "working",
+                "/result/status/process_incarnation": "1",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "replace",
+                "method": "fixture.replace_process",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "replace": {
+                "/result/replaced": "1",
+                "/result/exit_observed": true,
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "old-incarnation",
+                "method": "terminal.process_info",
+                "params": {
+                  "target": {
+                    "name": "proc"
+                  },
+                  "expect": {
+                    "process_incarnation": "1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "old-incarnation": {
+                "/error/data/kind": "process_replaced",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "old-token",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:old-token",
+                  "target": {
+                    "name": "proc"
+                  },
+                  "process_token": "fixture-process-token-proc-1",
+                  "seq": "2",
+                  "record": {
+                    "state": "idle"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "old-token": {
+                "/error/data/kind": "not_owner",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "new-roles",
+                "method": "terminal.process_info",
+                "params": {
+                  "target": {
+                    "name": "proc"
+                  },
+                  "expect": {
+                    "process_incarnation": "2"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "new-roles": {
+                "/result/terminal_id": {
+                  "$present": true
+                },
+                "/result/launcher/incarnation": "2",
+                "/result/launcher/pid": {
+                  "$present": true
+                },
+                "/result/launcher/start_token": {
+                  "$present": true
+                },
+                "/result/roles/shell/state": "unsupported",
+                "/result/roles/shell/reason": "undeclared_role",
+                "/result/roles/launcher/state": "known",
+                "/result/roles/launcher/value/argv/value/0": "/bin/sh",
+                "/result/roles/launcher/value/start_token": {
+                  "$present": true
+                },
+                "/result/roles/foreground/state": "known",
+                "/result/roles/foreground/value/0/argv/value": [
+                  "/bin/sh",
+                  "-c",
+                  "printf FG_READY; read gate"
+                ],
+                "/result/roles/foreground/value/0/start_token": {
+                  "$present": true
+                },
+                "/result/roles/foreground/value/1": {
+                  "$present": false
+                },
+                "/result/roles/background/state": "known",
+                "/result/roles/background/value/1/start_token": {
+                  "$present": true
+                },
+                "/result/roles/background/value/2": {
+                  "$present": false
+                },
+                "/result/foreground": null,
+                "/result/supported_fields": [
+                  "launcher",
+                  "foreground",
+                  "background",
+                  "pid",
+                  "start_token",
+                  "argv",
+                  "cwd"
+                ],
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "new-token",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:new-token",
+                  "target": {
+                    "name": "proc"
+                  },
+                  "process_token": "fixture-process-token-proc-2",
+                  "seq": "10",
+                  "record": {
+                    "state": "working"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "new-token": {
+                "/result/status/root/report/state": "working",
+                "/result/status/process_incarnation": "2",
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "A misnamed target field is invalid_params at params.pane_typo with no result, an unknown name is not_found rather than any other terminal, and after a real replacement the old incarnation is process_replaced and its report token not_owner.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "protocol"
+          }
+        },
+        {
+          "connect": {
+            "conn": "bridge",
+            "via": "bridge"
+          }
+        },
+        {
+          "hello": {
+            "conn": "bridge",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/machine_id": "machine:0191f1a2-0000-7000-8000-000000000021"
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "bridge",
+            "base": {},
+            "planned": [
+              {
+                "request": {
+                  "method": "terminal.process_info",
+                  "params": {
+                    "pane_typo": "p2"
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/error/data/field_path": "params.pane_typo",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              },
+              {
+                "request": {
+                  "method": "terminal.process_info",
+                  "params": {
+                    "target": {
+                      "name": "focused"
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "not_found",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "replace",
+                "method": "fixture.replace_process",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "replace": {
+                "/result/replaced": "1",
+                "/result/exit_observed": true,
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "old-incarnation",
+                "method": "terminal.process_info",
+                "params": {
+                  "target": {
+                    "name": "proc"
+                  },
+                  "expect": {
+                    "process_incarnation": "1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "old-incarnation": {
+                "/error/data/kind": "process_replaced",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "bridge",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "old-token",
+                "method": "status.report",
+                "params": {
+                  "op_id": "$op:old-token",
+                  "target": {
+                    "name": "proc"
+                  },
+                  "process_token": "fixture-process-token-proc-1",
+                  "seq": "2",
+                  "record": {
+                    "state": "idle"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "bridge",
+            "expect": {
+              "old-token": {
+                "/error/data/kind": "not_owner",
+                "/result": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/accepted": "1",
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

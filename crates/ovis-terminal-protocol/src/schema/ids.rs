@@ -105,6 +105,14 @@ string_id!(
     SubscriptionId
 );
 string_id!(
+    /// Identity of one runtime-scoped credential, `c<n>`.
+    CredentialId
+);
+string_id!(
+    /// Name of the principal a credential authenticates.
+    PrincipalName
+);
+string_id!(
     /// Identity of one prompt record.
     PromptId
 );

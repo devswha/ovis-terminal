@@ -18,15 +18,16 @@ use ovis_terminal_core::registry::{
     ServerBootId,
 };
 use ovis_terminal_protocol::schema::scalar::TimestampMs;
+use ovis_terminal_server::authn::Revalidated;
 use ovis_terminal_server::dispatch::lanes::prompt_bridge::{Gated, PromptBridgeGate};
-use ovis_terminal_server::listen::{ServerConfig, UnixEndpoint, serve_unix};
+use ovis_terminal_server::listen::{ServeReport, ServerConfig, UnixEndpoint, serve_unix};
 use ovis_terminal_store::{Store, StoreOptions};
 use serde_json::{Value, json};
 use tokio::io::AsyncReadExt as _;
 
 use super::bridge::{Extension, QUEUE_LIMIT};
 use super::documents::{DocGet, DocSet};
-use super::handler::{Dispatch, FixtureHandler, Probes};
+use super::handler::{Dispatch, Event, FixtureHandler, Probes};
 use super::terminals::TerminalKeep;
 use crate::error::RunnerError;
 
@@ -68,13 +69,7 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     ))
     .map_err(at("bootstrap the authority"))?;
     let authority = Arc::new(authority);
-    let store = Store::open(&root.join("state.db"), StoreOptions::default())
-        .map_err(at("open the store"))?;
-    let core = Arc::new(Coordinator::new(
-        store,
-        runtime,
-        OperationProducer::new(runtime.runtime_id()),
-    ));
+    let core = open_core(root, runtime)?;
     let effects = root.join("effects");
     std::fs::create_dir(&effects).map_err(at("create the effect directory"))?;
     let mut dispatch = Dispatch::new(Arc::clone(&authority), runtime, Arc::clone(&core));
@@ -87,22 +82,38 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     dispatch
         .register(TerminalKeep::new(&effects, runtime)?)
         .map_err(at("register terminal.keep"))?;
-    let (agents, gate) = super::agents::register(&mut dispatch, runtime, Arc::clone(&core))?;
+    let (agents, gate, sequenced) =
+        super::agents::register(&mut dispatch, (runtime, Arc::clone(&core)), &authority)?;
+    super::rotation::register(&mut dispatch, &authority, (runtime, Arc::clone(&sequenced)))?;
     let (status, directory) = (Arc::clone(&agents.0), Arc::clone(&agents.1));
     super::prompts::register(&mut dispatch, (&gate, Arc::clone(&directory)), runtime)?;
+    let programs = super::processes::register(
+        &mut dispatch,
+        (root, runtime),
+        (&authority, issued.bearer(), &agents.0),
+    )
+    .await?;
     let parts = (&authority, &*core, agents.clone());
     let template = super::template_lane::register(&mut dispatch, (runtime, root), parts)?;
     let launch = (runtime, Arc::clone(&core), template);
     let tree = super::tree::register(&mut dispatch, (&agents, &gate), launch)?;
+    let fleet = (runtime, Arc::clone(&core));
+    let machines = super::machines::register(&mut dispatch, (&agents, &gate), fleet).await?;
     super::transcripts::register(&mut dispatch, agents, (runtime, root))?;
-    let observer = observer(&authority, issued.bearer())?;
+    let held = super::update::register(&mut dispatch, (root, &authority, issued.bearer()), runtime)
+        .await?;
+    let observer = delegate(&authority, issued.bearer(), ("observer", OBSERVER))?;
+    let writer = delegate(&authority, issued.bearer(), ("writer", WRITER))?;
     let prompts = Arc::clone(&gate.prompts);
     let bridge = PromptBridge::new(Arc::clone(&status), Arc::clone(&prompts), QUEUE_LIMIT);
     let probes = Probes {
         gate,
         directory: Arc::clone(&directory),
         extension: Extension::new(bridge, Arc::clone(&core)),
+        sequenced,
         tree,
+        machines,
+        programs,
     };
     let handler = Arc::new(FixtureHandler::new(
         Arc::new(dispatch),
@@ -117,10 +128,11 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     let endpoint = UnixEndpoint::bind(&socket)
         .await
         .map_err(at("bind the socket"))?;
+    let revalidated = Revalidated::new(Arc::clone(&authority), gated);
     let config = ServerConfig::new(authority, runtime);
-    let server = serve_unix(endpoint, config, Arc::new(gated)).map_err(at("serve"))?;
+    let server = serve_unix(endpoint, config, Arc::new(revalidated)).map_err(at("serve"))?;
     announce(&json!({"ready": {
-        "socket": socket, "bearer": issued.bearer(), "observer": observer,
+        "socket": socket, "bearer": issued.bearer(), "observer": observer, "writer": writer,
     }}))?;
     let mut sink = Vec::new();
     tokio::io::stdin()
@@ -133,11 +145,33 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
         .map_err(at("shut the server down"))?;
     handler.shutdown().await?;
     drop(handler);
+    tokio::task::spawn_blocking(move || held.shutdown())
+        .await
+        .map_err(at("join the update holder shutdown"))??;
     let core = Arc::try_unwrap(core).map_err(|_| at("release the coordinator")("still shared"))?;
     tokio::task::spawn_blocking(move || core.close())
         .await
         .map_err(at("join the store close"))?
         .map_err(at("close the store"))?;
+    announce_report(&report)
+}
+
+/// The coordinator over the run's SQLite store, sequencing as `runtime`.
+fn open_core(
+    root: &Path,
+    runtime: RuntimeIdentity,
+) -> Result<Arc<Coordinator<Event, OperationProducer>>, RunnerError> {
+    let store = Store::open(&root.join("state.db"), StoreOptions::default())
+        .map_err(at("open the store"))?;
+    Ok(Arc::new(Coordinator::new(
+        store,
+        runtime,
+        OperationProducer::new(runtime.runtime_id()),
+    )))
+}
+
+/// The serve report line: accepted connections, failures by kind, panics.
+fn announce_report(report: &ServeReport) -> Result<(), RunnerError> {
     let failures: serde_json::Map<String, Value> = report
         .failures()
         .iter()
@@ -150,9 +184,24 @@ pub(crate) async fn serve(root: &Path) -> Result<(), RunnerError> {
     }}))
 }
 
-/// A bearer that may only observe the machine, issued by the owner.
-fn observer(authority: &Authority<RegistryIdentities>, owner: &str) -> Result<String, RunnerError> {
-    let failed = at("issue the observer credential");
+/// May only observe the machine.
+const OBSERVER: &[Permission] = &[Permission::Observe];
+
+/// Observes, types and answers prompts on the machine; may neither take over nor
+/// administer, and is the credential the rotation scenarios withdraw.
+const WRITER: &[Permission] = &[
+    Permission::Observe,
+    Permission::Interact,
+    Permission::PromptAnswer,
+];
+
+/// A bearer of `principal` holding `permissions` on the whole machine, issued by the owner.
+fn delegate(
+    authority: &Authority<RegistryIdentities>,
+    owner: &str,
+    (principal, permissions): (&str, &[Permission]),
+) -> Result<String, RunnerError> {
+    let failed = at("issue a delegated credential");
     let now = TimestampMs::new(1);
     let admission = EndpointPolicy::new(LocalAccount::Unix(UnixUid::new(1000)))
         .admit(&PeerEvidence::Remote(RemoteTransport::Ssh))
@@ -161,9 +210,12 @@ fn observer(authority: &Authority<RegistryIdentities>, owner: &str) -> Result<St
         .authenticate(&admission, Presentation::new(owner, now))
         .map_err(at("authenticate the issuing owner"))?;
     let scope = ResourceScope::new(identity()?.machine_id(), ScopeResource::Machine);
-    let observer = PrincipalId::parse("observer").map_err(at("parse the observer principal"))?;
-    let grants = vec![Grant::new(Permission::Observe, scope)];
-    let request = IssueRequest::new(observer, grants, TimestampMs::new(u64::MAX));
+    let principal = PrincipalId::parse(principal).map_err(at("parse a delegated principal"))?;
+    let grants = permissions
+        .iter()
+        .map(|permission| Grant::new(*permission, scope.clone()))
+        .collect();
+    let request = IssueRequest::new(principal, grants, TimestampMs::new(u64::MAX));
     let issued = authority
         .issue(&owner, Issuance::new(request, now))
         .map_err(failed)?;

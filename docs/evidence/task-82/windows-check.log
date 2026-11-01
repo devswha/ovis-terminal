@@ -1,0 +1,7 @@
+# host: Linux x86_64; base 8cab061 + task-82 diff (no Rust change)
+# first attempt failed with E0463 "can't find crate for `core`": the relocated toolchain lacked the
+# x86_64-pc-windows-gnu std; fixed with `rustup target add x86_64-pc-windows-gnu` (toolchain only, no repo change)
+$ bash /home/devswha/.ovis-toolchain/with-slot.sh bash -c 'RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked && cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings'
+    Checking ovis-terminal-cli v0.1.0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 03s
+exit 0

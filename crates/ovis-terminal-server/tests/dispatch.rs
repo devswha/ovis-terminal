@@ -32,6 +32,11 @@ pub mod agent_tree;
 #[path = "../src/dispatch/lanes/conversation_records/qa.rs"]
 /// The conversation record lane: typed appends and reads over a real socket.
 pub mod conversation_records;
+#[path = "../src/dispatch/lanes/credential_rotation/qa.rs"]
+/// Credential rotation and per-request revalidation over a real socket.
+pub mod credential_rotation;
+#[path = "../src/dispatch/lanes/credential_rotation/rig.rs"]
+pub mod credential_rotation_rig;
 #[path = "../src/dispatch/lanes/prompts/qa.rs"]
 /// The prompt lane's independent answer authorization over a real socket.
 pub mod prompts;

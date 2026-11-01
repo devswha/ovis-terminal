@@ -1,0 +1,16 @@
+# scratch copy /tmp/t81-scratch (git archive of 804e508), diagnosis-only injections, never committed
+# injection A: pump.rs `Err(EventError::Missed) => { delivery = hub.refill()?; std::thread::sleep(300ms) }` (worker descheduled right after refill)
+# injection B: pulls.rs scan_to begins with std::thread::sleep(200ms) (slow consumer: the loss marker lands in the same batch as the event scanned to)
+== probe A: worker sleeps 300ms after refill (fixed qa)
+     Summary [   0.411s] 21 tests run: 21 passed, 0 skipped
+1
+== probe B: slow consumer (200ms before each scan_to) forces the marker into the scan batch (fixed qa)
+     Summary [   4.089s] 21 tests run: 21 passed, 0 skipped
+== probe B on pre-fix qa
+        FAIL [   0.369s] (13/21) ovis-terminal-core::subscriptions stall::a_stalled_fanout_worker_loses_every_subscription_and_each_recovers
+        FAIL [   5.665s] (20/21) ovis-terminal-core::subscriptions loss::a_withheld_consumer_recovers_from_its_durable_marker_and_continues
+        FAIL [   5.667s] (21/21) ovis-terminal-core::subscriptions failure
+     Summary [   5.667s] 21 tests run: 18 passed, 3 failed, 0 skipped
+        FAIL [   0.369s] (13/21) ovis-terminal-core::subscriptions stall::a_stalled_fanout_worker_loses_every_subscription_and_each_recovers
+        FAIL [   5.665s] (20/21) ovis-terminal-core::subscriptions loss::a_withheld_consumer_recovers_from_its_durable_marker_and_continues
+        FAIL [   5.667s] (21/21) ovis-terminal-core::subscriptions failure

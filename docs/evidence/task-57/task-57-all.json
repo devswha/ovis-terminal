@@ -1,0 +1,1965 @@
+{
+  "binary": {
+    "bytes": "152090048",
+    "path": "target/debug/ovis-terminal",
+    "sha256": "f2f430a36a0868639acdbc0004de0476939d4e38ddd9e87f2adc03b270f7c119"
+  },
+  "case": "all",
+  "cases": [
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[first]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[first]/result/receipt/admitted_bytes",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": {
+            "state": "queued"
+          },
+          "check": "reply[first]/result/receipt/delivery",
+          "expected": {
+            "state": "queued"
+          },
+          "passed": true
+        },
+        {
+          "actual": "text",
+          "check": "reply[first]/result/receipt/kind",
+          "expected": "text",
+          "passed": true
+        },
+        {
+          "actual": "01a19406-d981-7490-8b84-922961e42bd5",
+          "check": "reply[first]/result/receipt/op_id",
+          "expected": "01a19406-d981-7490-8b84-922961e42bd5",
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[first]/result/receipt/queued_seq",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": [
+            "first"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "first"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[held]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "reply[held]/result/bytes",
+          "expected": "0",
+          "passed": true
+        },
+        {
+          "actual": [
+            "held"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "held"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[release-first]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "01a19406-d981-7490-8b84-922961e42bd5",
+          "check": "reply[release-first]/result/settled/0/op_id",
+          "expected": "01a19406-d981-7490-8b84-922961e42bd5",
+          "passed": true
+        },
+        {
+          "actual": {
+            "outcome": "already_committed",
+            "output_offset": "0",
+            "written_bytes": "2"
+          },
+          "check": "reply[release-first]/result/settled/0/race",
+          "expected": {
+            "outcome": "already_committed",
+            "output_offset": "0",
+            "written_bytes": "2"
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[release-first]/result/settled/1",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "release-first"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "release-first"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[late]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": {
+            "state": "queued"
+          },
+          "check": "reply[late]/result/receipt/delivery",
+          "expected": {
+            "state": "queued"
+          },
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[late]/result/receipt/queued_seq",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": "invalid_encoding",
+          "check": "reply[control]/error/data/kind",
+          "expected": "invalid_encoding",
+          "passed": true
+        },
+        {
+          "actual": "01a19406-d98f-72df-a170-3614c6b1f909",
+          "check": "reply[control]/error/data/op_id",
+          "expected": "01a19406-d98f-72df-a170-3614c6b1f909",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[control]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "paste_refused",
+          "check": "reply[multiline]/error/data/kind",
+          "expected": "paste_refused",
+          "passed": true
+        },
+        {
+          "actual": "01a19406-d98f-72df-a170-36134b2eeb16",
+          "check": "reply[multiline]/error/data/op_id",
+          "expected": "01a19406-d98f-72df-a170-36134b2eeb16",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[multiline]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "control",
+            "late",
+            "multiline"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "control",
+            "late",
+            "multiline"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[before-rotate]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[before-rotate]/result/bytes",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": [
+            "before-rotate"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "before-rotate"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[rotate]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "c4",
+          "check": "reply[rotate]/result/issued/credential",
+          "expected": "c4",
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[rotate]/result/issued/epoch",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "writer",
+          "check": "reply[rotate]/result/replaced/standing/principal",
+          "expected": "writer",
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[rotate]/result/replaced/standing/principal_epoch",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": "c3",
+          "check": "reply[rotate]/result/replaced/withdrawn/credential",
+          "expected": "c3",
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[rotate]/result/replaced/withdrawn/epoch",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": "4",
+          "check": "reply[rotate]/result/replaced/writes/0/admitted_bytes",
+          "expected": "4",
+          "passed": true
+        },
+        {
+          "actual": "01a19406-d98f-72df-a170-3612106406d3",
+          "check": "reply[rotate]/result/replaced/writes/0/op_id",
+          "expected": "01a19406-d98f-72df-a170-3612106406d3",
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[rotate]/result/replaced/writes/0/queued_seq",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": {
+            "outcome": "cancelled_before_commit",
+            "reason": "credential_revoked"
+          },
+          "check": "reply[rotate]/result/replaced/writes/0/race",
+          "expected": {
+            "outcome": "cancelled_before_commit",
+            "reason": "credential_revoked"
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[rotate]/result/replaced/writes/1",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": true,
+          "check": "reply[rotate]/keep_bearer[rotated]",
+          "expected": true,
+          "passed": true
+        },
+        {
+          "actual": [
+            "rotate"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "rotate"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[release-late]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[release-late]/result/settled/0",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "release-late"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "release-late"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[after-rotate]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[after-rotate]/result/bytes",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": [
+            "after-rotate"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "after-rotate"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "credential_revoked",
+          "check": "reply[stale-socket]/error/data/kind",
+          "expected": "credential_revoked",
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[stale-socket]/error/data/principal_epoch",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[stale-socket]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "stale-socket"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "stale-socket"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "credential_revoked",
+          "check": "hello/error/data/kind",
+          "expected": "credential_revoked",
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "hello/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "219",
+          "check": "connection[replay]/bytes_received=bytes_decoded",
+          "expected": "219",
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[inspect-first]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[inspect-first]/result/result/receipt/queued_seq",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": "committed",
+          "check": "reply[inspect-first]/result/state",
+          "expected": "committed",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[again]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": {
+            "state": "queued"
+          },
+          "check": "reply[again]/result/receipt/delivery",
+          "expected": {
+            "state": "queued"
+          },
+          "passed": true
+        },
+        {
+          "actual": "3",
+          "check": "reply[again]/result/receipt/queued_seq",
+          "expected": "3",
+          "passed": true
+        },
+        {
+          "actual": [
+            "again",
+            "inspect-first"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "again",
+            "inspect-first"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "forbidden",
+          "check": "reply[self-rotate]/error/data/kind",
+          "expected": "forbidden",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[self-rotate]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "self-rotate"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "self-rotate"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[release-again]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "01a19406-d9de-777c-9e1f-5ce806a7e10f",
+          "check": "reply[release-again]/result/settled/0/op_id",
+          "expected": "01a19406-d9de-777c-9e1f-5ce806a7e10f",
+          "passed": true
+        },
+        {
+          "actual": "already_committed",
+          "check": "reply[release-again]/result/settled/0/race/outcome",
+          "expected": "already_committed",
+          "passed": true
+        },
+        {
+          "actual": "3",
+          "check": "reply[release-again]/result/settled/0/race/written_bytes",
+          "expected": "3",
+          "passed": true
+        },
+        {
+          "actual": [
+            "release-again"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "release-again"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[final]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "5",
+          "check": "reply[final]/result/bytes",
+          "expected": "5",
+          "passed": true
+        },
+        {
+          "actual": "version_conflict",
+          "check": "reply[stale-rotate]/error/data/kind",
+          "expected": "version_conflict",
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[stale-rotate]/error/data/principal_epoch",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[stale-rotate]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "final",
+            "stale-rotate"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "final",
+            "stale-rotate"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "2406",
+          "check": "connection[rotated]/bytes_received=bytes_decoded",
+          "expected": "2406",
+          "passed": true
+        },
+        {
+          "actual": "2839",
+          "check": "connection[writer]/bytes_received=bytes_decoded",
+          "expected": "2839",
+          "passed": true
+        },
+        {
+          "actual": "2945",
+          "check": "connection[owner]/bytes_received=bytes_decoded",
+          "expected": "2945",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "happy",
+      "connections": [
+        {
+          "bytes_decoded": "219",
+          "bytes_received": "219",
+          "bytes_sent": "234",
+          "name": "replay",
+          "records_received": "1",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "316e26381368602ed891e466444899785c88274a750749177bacf0480d2e093e",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "219",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "3b5416049b9980a4fe7555bbace9e62d27e839932d52aebcbb99d512cc8a75d0",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"credential_revoked\",\"hint\":\"re-authenticate with a current credential; queued work was not written\",\"retryable\":false}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "1"
+        },
+        {
+          "bytes_decoded": "2406",
+          "bytes_received": "2406",
+          "bytes_sent": "682",
+          "name": "rotated",
+          "records_received": "4",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "10bc82e3c861a04071c1978468a0207b5e8dec6d543661d96cb959110a30c4e4",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "1412",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "bd181bcc5e095d456a279aef9e1c1bb683ebfecbb327cdc81b6eee622eb6c451",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.keep\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"doc.get\",\"doc.set\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793484839389\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "284",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "621514f5ad8e8a154deb09cb208c107e0ecdc04913ab61ed1eb6949dfa63a893",
+              "text": "{\"id\":\"inspect-first\",\"jsonrpc\":\"2.0\",\"method\":\"op.get\",\"params\":{\"op_id\":\"01a19406-d981-7490-8b84-922961e42bd5\"}}\n{\"id\":\"again\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"op_id\":\"01a19406-d9de-777c-9e1f-5ce806a7e10f\",\"submit\":\"none\",\"target\":{\"name\":\"rotation\"},\"text\":\"new\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "14",
+              "bytes": "467",
+              "direction": "received",
+              "offset": "1412",
+              "sha256": "a60532b5d2c30ff9b5f09593a6c9b7f7cfb9cb23d09340e91209d1e1fb220c93",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inspect-first\",\"result\":{\"error\":null,\"method\":\"input.send\",\"op_id\":\"01a19406-d981-7490-8b84-922961e42bd5\",\"result\":{\"receipt\":{\"admitted_bytes\":\"2\",\"agent_accepted\":{\"state\":\"unknown\"},\"delivery\":{\"state\":\"queued\"},\"kind\":\"text\",\"mode_revision\":\"0\",\"op_id\":\"01a19406-d981-7490-8b84-922961e42bd5\",\"output_cursor\":\"0\",\"queued_seq\":\"1\",\"turn_ended\":{\"state\":\"unknown\"},\"turn_started\":{\"state\":\"unknown\"}}},\"state\":\"committed\",\"updated_seq\":\"3\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "27",
+              "bytes": "328",
+              "direction": "received",
+              "offset": "1879",
+              "sha256": "ce72b059b5c6744707d99a450473d48504ba781c32f7182d3c528268ed0668dd",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"again\",\"result\":{\"receipt\":{\"admitted_bytes\":\"3\",\"agent_accepted\":{\"state\":\"unknown\"},\"delivery\":{\"state\":\"queued\"},\"kind\":\"text\",\"mode_revision\":\"0\",\"op_id\":\"01a19406-d9de-777c-9e1f-5ce806a7e10f\",\"output_cursor\":\"0\",\"queued_seq\":\"3\",\"turn_ended\":{\"state\":\"unknown\"},\"turn_started\":{\"state\":\"unknown\"}}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "27",
+              "bytes": "164",
+              "direction": "sent",
+              "offset": "518",
+              "sha256": "e9cc841572dc349d031d9679d56d572796530854a457e7d44dc1c8a43842fac8",
+              "text": "{\"id\":\"self-rotate\",\"jsonrpc\":\"2.0\",\"method\":\"credential.rotate\",\"params\":{\"credential\":\"c4\",\"op_id\":\"01a19406-d9f6-7085-9d27-60816442cfeb\",\"principal_epoch\":\"2\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "27",
+              "bytes": "199",
+              "direction": "received",
+              "offset": "2207",
+              "sha256": "5796c8eebc6948411ce00499a062178d88418e486dd92ea4ef6dbdf3cca28120",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"self-rotate\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"forbidden\",\"hint\":\"ask an administrator for a grant covering this target\",\"retryable\":false}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "3"
+        },
+        {
+          "bytes_decoded": "2839",
+          "bytes_received": "2839",
+          "bytes_sent": "1048",
+          "name": "writer",
+          "records_received": "6",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "316e26381368602ed891e466444899785c88274a750749177bacf0480d2e093e",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "1412",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "2cb1b69b6a6801f0b673efb729c057275a3b3dc631b9914900bdc868151a8120",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.keep\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"doc.get\",\"doc.set\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793484839296\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "168",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "9cf9a1aec50e74db7d6a6fef6bd995986adb445ea8c418f03e7a1bbf5a6522cc",
+              "text": "{\"id\":\"first\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"op_id\":\"01a19406-d981-7490-8b84-922961e42bd5\",\"submit\":\"none\",\"target\":{\"name\":\"rotation\"},\"text\":\"ok\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "16",
+              "bytes": "328",
+              "direction": "received",
+              "offset": "1412",
+              "sha256": "1bb6a8e58a345665a4c0fb9c7577ce617b782dbc5d3addc4e5b9aa2ec632da0d",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"first\",\"result\":{\"receipt\":{\"admitted_bytes\":\"2\",\"agent_accepted\":{\"state\":\"unknown\"},\"delivery\":{\"state\":\"queued\"},\"kind\":\"text\",\"mode_revision\":\"0\",\"op_id\":\"01a19406-d981-7490-8b84-922961e42bd5\",\"output_cursor\":\"0\",\"queued_seq\":\"1\",\"turn_ended\":{\"state\":\"unknown\"},\"turn_started\":{\"state\":\"unknown\"}}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "17",
+              "bytes": "532",
+              "direction": "sent",
+              "offset": "402",
+              "sha256": "01742b22d319356de0abf61487e0df5d81dedc9cd768fe99417e4c78e172c0b8",
+              "text": "{\"id\":\"late\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"op_id\":\"01a19406-d98f-72df-a170-3612106406d3\",\"submit\":\"none\",\"target\":{\"name\":\"rotation\"},\"text\":\"late\"}}\n{\"id\":\"multiline\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"op_id\":\"01a19406-d98f-72df-a170-36134b2eeb16\",\"submit\":\"none\",\"target\":{\"name\":\"rotation\"},\"text\":\"echo a\\nrm -rf b\"}}\n{\"id\":\"control\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"op_id\":\"01a19406-d98f-72df-a170-3614c6b1f909\",\"submit\":\"none\",\"target\":{\"name\":\"rotation\"},\"text\":\"\\u001b[2J\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "53",
+              "bytes": "327",
+              "direction": "received",
+              "offset": "1740",
+              "sha256": "ef8214d1da48067a9b0435eb265416b65774c4d2d8fdf4f9bb3959dd6d4121df",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"late\",\"result\":{\"receipt\":{\"admitted_bytes\":\"4\",\"agent_accepted\":{\"state\":\"unknown\"},\"delivery\":{\"state\":\"queued\"},\"kind\":\"text\",\"mode_revision\":\"0\",\"op_id\":\"01a19406-d98f-72df-a170-3612106406d3\",\"output_cursor\":\"0\",\"queued_seq\":\"2\",\"turn_ended\":{\"state\":\"unknown\"},\"turn_started\":{\"state\":\"unknown\"}}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "66",
+              "bytes": "256",
+              "direction": "received",
+              "offset": "2067",
+              "sha256": "918e41d39983440a9bc8887bb864a7bf3f0fb63640438342d1132a4b97767264",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"control\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"invalid_encoding\",\"hint\":\"send keys with input.keys or authorized bytes with input.raw\",\"retryable\":false,\"op_id\":\"01a19406-d98f-72df-a170-3614c6b1f909\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "70",
+              "bytes": "268",
+              "direction": "received",
+              "offset": "2323",
+              "sha256": "0b0edb379be1fb1f4de6a3c08fc6d48cfe3ea7b2e356a85805a24c795a13c833",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"multiline\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"paste_refused\",\"hint\":\"send one line at a time or wait until the program enables bracketed paste\",\"retryable\":false,\"op_id\":\"01a19406-d98f-72df-a170-36134b2eeb16\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "87",
+              "bytes": "114",
+              "direction": "sent",
+              "offset": "934",
+              "sha256": "b4f3710a19e3d0487b8b7233ecd216388eb33ae95eabbcbb412bc45194c59735",
+              "text": "{\"id\":\"stale-socket\",\"jsonrpc\":\"2.0\",\"method\":\"op.get\",\"params\":{\"op_id\":\"01a19406-d981-7490-8b84-922961e42bd5\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "88",
+              "bytes": "248",
+              "direction": "received",
+              "offset": "2591",
+              "sha256": "d71f767c613e6a2baa52ea19ee4d6736da3fa3dadade21f72abae6858e32f14a",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"stale-socket\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"credential_revoked\",\"hint\":\"re-authenticate with a current credential; queued work was not written\",\"retryable\":false,\"principal_epoch\":\"2\"}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "4"
+        },
+        {
+          "bytes_decoded": "2945",
+          "bytes_received": "2945",
+          "bytes_sent": "1181",
+          "name": "owner",
+          "records_received": "10",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "a5414e157536c6a373f5dfb155e208fa53fe006f8ca3be98b8a34071c2403ca9",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "1412",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "9cbd6802011643e19d29a6cdeac103f38c5c9b0b7988b4b11bd0e1352da704aa",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.keep\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"doc.get\",\"doc.set\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793484839292\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "20",
+              "bytes": "93",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "d3aa8b0ce87f186dd0f10c2e43e5e4c437f837fb72eacd4e8974155934b9c427",
+              "text": "{\"id\":\"held\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.pty\",\"params\":{\"target\":{\"name\":\"rotation\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "20",
+              "bytes": "53",
+              "direction": "received",
+              "offset": "1412",
+              "sha256": "cf8b434c43da8b979b9e1535a42582e1427180db5b908908c533c126355d5c36",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"held\",\"result\":{\"bytes\":\"0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "20",
+              "bytes": "78",
+              "direction": "sent",
+              "offset": "327",
+              "sha256": "bd5d1f6166ff185e7fc755285e0db14a0fd6e65d521cf4848c4e5d4f1ee26299",
+              "text": "{\"id\":\"release-first\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.deliver\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "21",
+              "bytes": "228",
+              "direction": "received",
+              "offset": "1465",
+              "sha256": "fd75ecb2e9f62708ab4e9d7bcd52aef8f55f3112cc2db57a90c97938ab0ee026",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"release-first\",\"result\":{\"settled\":[{\"admitted_bytes\":\"2\",\"op_id\":\"01a19406-d981-7490-8b84-922961e42bd5\",\"queued_seq\":\"1\",\"race\":{\"outcome\":\"already_committed\",\"output_offset\":\"0\",\"written_bytes\":\"2\"}}]}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "74",
+              "bytes": "102",
+              "direction": "sent",
+              "offset": "405",
+              "sha256": "797d99796dd428519f21165b5500153644e2c36b0ccf68448d6863a60e0407bc",
+              "text": "{\"id\":\"before-rotate\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.pty\",\"params\":{\"target\":{\"name\":\"rotation\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "74",
+              "bytes": "62",
+              "direction": "received",
+              "offset": "1693",
+              "sha256": "3737d435be078404c9334ac52004d6023a3db811854c608287361b556823eeed",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"before-rotate\",\"result\":{\"bytes\":\"2\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "74",
+              "bytes": "159",
+              "direction": "sent",
+              "offset": "507",
+              "sha256": "63da15127c7435218cdcd12b48c7a5faf32b1b700535010d092368951d22a529",
+              "text": "{\"id\":\"rotate\",\"jsonrpc\":\"2.0\",\"method\":\"credential.rotate\",\"params\":{\"credential\":\"c3\",\"op_id\":\"01a19406-d9c4-76d7-92ae-6ccc66cdbe76\",\"principal_epoch\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "90",
+              "bytes": "493",
+              "direction": "received",
+              "offset": "1755",
+              "sha256": "44128381c5b8c43c1625bb907254dc7d80c721626eb2d356b496d1ef41f5f4d8",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"rotate\",\"result\":{\"issued\":{\"bearer\":\"<redacted-credential>\",\"credential\":\"c4\",\"epoch\":\"1\",\"expires_at_ms\":\"18446744073709551615\"},\"replaced\":{\"standing\":{\"principal\":\"writer\",\"principal_epoch\":\"2\"},\"withdrawn\":{\"credential\":\"c3\",\"epoch\":\"2\"},\"writes\":[{\"admitted_bytes\":\"4\",\"op_id\":\"01a19406-d98f-72df-a170-3612106406d3\",\"queued_seq\":\"2\",\"race\":{\"outcome\":\"cancelled_before_commit\",\"reason\":\"credential_revoked\"}}]}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "90",
+              "bytes": "77",
+              "direction": "sent",
+              "offset": "666",
+              "sha256": "0dc7e5faf8fdeb9b2a3b4a42e799f082595c880fdaa0ed3f9852711fafe40ae8",
+              "text": "{\"id\":\"release-late\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.deliver\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "90",
+              "bytes": "62",
+              "direction": "received",
+              "offset": "2248",
+              "sha256": "4f5a2c61e53fd19da64ba15f9024f8f013ddd4a946939bc7163463479d0d5ade",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"release-late\",\"result\":{\"settled\":[]}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "90",
+              "bytes": "101",
+              "direction": "sent",
+              "offset": "743",
+              "sha256": "ed45078aead4771c6c22d0571d4207642fc4be661db840fdc749e01e36672e55",
+              "text": "{\"id\":\"after-rotate\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.pty\",\"params\":{\"target\":{\"name\":\"rotation\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "91",
+              "bytes": "61",
+              "direction": "received",
+              "offset": "2310",
+              "sha256": "068398dff053a07e2a0d5e78c08342d3e04d1965563ef48edb8bef38ff331c63",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"after-rotate\",\"result\":{\"bytes\":\"2\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "124",
+              "bytes": "78",
+              "direction": "sent",
+              "offset": "844",
+              "sha256": "8c253dc161b0185446ed9fd206eca5cc4fe05c4b5057eefbe6854989f5c29a50",
+              "text": "{\"id\":\"release-again\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.deliver\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "125",
+              "bytes": "228",
+              "direction": "received",
+              "offset": "2371",
+              "sha256": "492ed40cc3c4b415e2f3faa0b56d1085dca88982f55c2fd5e29d723071e2c2ae",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"release-again\",\"result\":{\"settled\":[{\"admitted_bytes\":\"3\",\"op_id\":\"01a19406-d9de-777c-9e1f-5ce806a7e10f\",\"queued_seq\":\"3\",\"race\":{\"outcome\":\"already_committed\",\"output_offset\":\"0\",\"written_bytes\":\"3\"}}]}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "125",
+              "bytes": "259",
+              "direction": "sent",
+              "offset": "922",
+              "sha256": "287739bccf00d076e5d47c6740c5e7c3be3698af52848b3249e9700360b8537d",
+              "text": "{\"id\":\"final\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.pty\",\"params\":{\"target\":{\"name\":\"rotation\"}}}\n{\"id\":\"stale-rotate\",\"jsonrpc\":\"2.0\",\"method\":\"credential.rotate\",\"params\":{\"credential\":\"c4\",\"op_id\":\"01a19406-d9f7-719f-86f5-ebe9b838bfe4\",\"principal_epoch\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "125",
+              "bytes": "54",
+              "direction": "received",
+              "offset": "2599",
+              "sha256": "6818fb1ad49dd3bf056abc22151bfefb4098f82dfda45c86deedbb53dd052d40",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"final\",\"result\":{\"bytes\":\"5\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "150",
+              "bytes": "292",
+              "direction": "received",
+              "offset": "2653",
+              "sha256": "b1a379e0f5f827dec7934f7e7a107016f6b8edecba4fd179f8f7f2bef5cad55f",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"stale-rotate\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"version_conflict\",\"hint\":\"read the principal's current epoch and decide again whether to rotate\",\"retryable\":false,\"op_id\":\"01a19406-d9f7-719f-86f5-ebe9b838bfe4\",\"principal_epoch\":\"2\"}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "9"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-070",
+          "GAP-071",
+          "GAP-073",
+          "GAP-074",
+          "GAP-075",
+          "GAP-078",
+          "GAP-084",
+          "GAP-131",
+          "GAP-133"
+        ],
+        "delivers": [
+          "IDEAL-048",
+          "IDEAL-049",
+          "IDEAL-050",
+          "IDEAL-051",
+          "IDEAL-052",
+          "IDEAL-055",
+          "IDEAL-061",
+          "IDEAL-103",
+          "IDEAL-104",
+          "IDEAL-106"
+        ],
+        "excludes": [
+          "EXCL-007",
+          "EXCL-023",
+          "EXCL-026"
+        ],
+        "title": "Credentials rotate and revoke atomically; queued writes are rechecked before any byte, and no socket keeps authority",
+        "todo": "57"
+      },
+      "descriptors": [],
+      "elapsed_ms": "210",
+      "failure": null,
+      "fixture": {
+        "accepted": "4",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "target/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "1020015",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "target/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "1020018",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "target/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "1019982",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "target/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "1019979",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "/home/devswha/workspace/ovis-terminal-wt/lane-t57/target/debug/conformance",
+            "fixture",
+            "--root",
+            "/tmp/ovc-1017694-0"
+          ],
+          "exit_code": 0,
+          "pid": "1019840",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "security/rotation",
+      "summary": "Through the bridge: the writer's send to the sequenced terminal is admitted with a queued receipt within 1000 ms while the holder write boundary is held and zero PTY bytes exist; releasing it writes 2 bytes reported already_committed with the holder's delivery facts. Multiline text with submit none is refused as paste_refused (no bracketed paste) and a control sequence as invalid_encoding, both before admission. The owner rotates the writer's credential c3 at principal epoch 1: one step issues c4 and withdraws c3 at credential epoch 2 and principal epoch 2, and the writer's still-queued write is reported cancelled_before_commit (credential_revoked); releasing the boundary then writes nothing. The writer's open socket is refused credential_revoked at principal epoch 2, reconnecting with the old bearer fails hello, the kept replacement bearer reconnects, inspects its principal's earlier operation, sends again and is delivered; it may not rotate itself (forbidden) and a rotation naming stale principal epoch 1 is version_conflict at epoch 2."
+    },
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "check": "hello/result/machine_id",
+          "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[open-p1]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "p1",
+          "check": "reply[open-p1]/result/prompt_id",
+          "expected": "p1",
+          "passed": true
+        },
+        {
+          "actual": "open",
+          "check": "reply[open-p1]/result/state",
+          "expected": "open",
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[open-p1]/result/version",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": [
+            "open-p1"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "open-p1"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[queued]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": {
+            "state": "queued"
+          },
+          "check": "reply[queued]/result/receipt/delivery",
+          "expected": {
+            "state": "queued"
+          },
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[queued]/result/receipt/queued_seq",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": [
+            "queued"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "queued"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[revoke]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "writer",
+          "check": "reply[revoke]/result/standing/principal",
+          "expected": "writer",
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[revoke]/result/standing/principal_epoch",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": "c3",
+          "check": "reply[revoke]/result/withdrawn/credential",
+          "expected": "c3",
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "reply[revoke]/result/withdrawn/epoch",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": "01a19406-da65-75b0-ada1-e4c898e996dc",
+          "check": "reply[revoke]/result/writes/0/op_id",
+          "expected": "01a19406-da65-75b0-ada1-e4c898e996dc",
+          "passed": true
+        },
+        {
+          "actual": {
+            "outcome": "cancelled_before_commit",
+            "reason": "credential_revoked"
+          },
+          "check": "reply[revoke]/result/writes/0/race",
+          "expected": {
+            "outcome": "cancelled_before_commit",
+            "reason": "credential_revoked"
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[revoke]/result/writes/1",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "revoke"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "revoke"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "inject-0",
+          "check": "inject[0]/id",
+          "expected": "inject-0",
+          "passed": true
+        },
+        {
+          "actual": "credential_revoked",
+          "check": "inject[0]/error/data/kind",
+          "expected": "credential_revoked",
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "inject[0]/error/data/principal_epoch",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "inject[0]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "inject-1",
+          "check": "inject[1]/id",
+          "expected": "inject-1",
+          "passed": true
+        },
+        {
+          "actual": "credential_revoked",
+          "check": "inject[1]/error/data/kind",
+          "expected": "credential_revoked",
+          "passed": true
+        },
+        {
+          "actual": "2",
+          "check": "inject[1]/error/data/principal_epoch",
+          "expected": "2",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "inject[1]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[release]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[release]/result/settled/0",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[get-p1]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[get-p1]/result/answer",
+          "expected": null,
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[get-p1]/result/closed_seq",
+          "expected": null,
+          "passed": true
+        },
+        {
+          "actual": "open",
+          "check": "reply[get-p1]/result/state",
+          "expected": "open",
+          "passed": true
+        },
+        {
+          "actual": "1",
+          "check": "reply[get-p1]/result/version",
+          "expected": "1",
+          "passed": true
+        },
+        {
+          "actual": [
+            "get-p1",
+            "release"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "get-p1",
+            "release"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[pty]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "reply[pty]/result/bytes",
+          "expected": "0",
+          "passed": true
+        },
+        {
+          "actual": "not_found",
+          "check": "reply[unknown]/error/data/kind",
+          "expected": "not_found",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[unknown]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[revoke-again]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "3",
+          "check": "reply[revoke-again]/result/standing/principal_epoch",
+          "expected": "3",
+          "passed": true
+        },
+        {
+          "actual": "3",
+          "check": "reply[revoke-again]/result/withdrawn/epoch",
+          "expected": "3",
+          "passed": true
+        },
+        {
+          "actual": [
+            "pty",
+            "revoke-again",
+            "unknown"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "pty",
+            "revoke-again",
+            "unknown"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "credential_revoked",
+          "check": "hello/error/data/kind",
+          "expected": "credential_revoked",
+          "passed": true
+        },
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "hello/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "219",
+          "check": "connection[replay]/bytes_received=bytes_decoded",
+          "expected": "219",
+          "passed": true
+        },
+        {
+          "actual": "2229",
+          "check": "connection[writer]/bytes_received=bytes_decoded",
+          "expected": "2229",
+          "passed": true
+        },
+        {
+          "actual": "2930",
+          "check": "connection[owner]/bytes_received=bytes_decoded",
+          "expected": "2930",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "failure",
+      "connections": [
+        {
+          "bytes_decoded": "219",
+          "bytes_received": "219",
+          "bytes_sent": "234",
+          "name": "replay",
+          "records_received": "1",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "29b58c93a75494849ae65dbd1ae822043c1ccd47b5db79c5d2dd08338cefeb3d",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "219",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "3b5416049b9980a4fe7555bbace9e62d27e839932d52aebcbb99d512cc8a75d0",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"credential_revoked\",\"hint\":\"re-authenticate with a current credential; queued work was not written\",\"retryable\":false}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "1"
+        },
+        {
+          "bytes_decoded": "2229",
+          "bytes_received": "2229",
+          "bytes_sent": "748",
+          "name": "writer",
+          "records_received": "4",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "29b58c93a75494849ae65dbd1ae822043c1ccd47b5db79c5d2dd08338cefeb3d",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "1412",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "97cc5ec574eb76f3d8fb3908f0ed02ae0591e247f4ad4a2ddcee0235b0aa9ea8",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.keep\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"doc.get\",\"doc.set\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793484839511\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "16",
+              "bytes": "168",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "392ed9966d161c08cd3cd156acdcd3e2cd8cbed79b34ad3860c8f9902f037d59",
+              "text": "{\"id\":\"queued\",\"jsonrpc\":\"2.0\",\"method\":\"input.send\",\"params\":{\"op_id\":\"01a19406-da65-75b0-ada1-e4c898e996dc\",\"submit\":\"none\",\"target\":{\"name\":\"rotation\"},\"text\":\"q\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "30",
+              "bytes": "329",
+              "direction": "received",
+              "offset": "1412",
+              "sha256": "cf3326e02f9cb57266c9d9c5f37ff9fafde2a3944fca8740bf3258af44facd1f",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"queued\",\"result\":{\"receipt\":{\"admitted_bytes\":\"1\",\"agent_accepted\":{\"state\":\"unknown\"},\"delivery\":{\"state\":\"queued\"},\"kind\":\"text\",\"mode_revision\":\"0\",\"op_id\":\"01a19406-da65-75b0-ada1-e4c898e996dc\",\"output_cursor\":\"0\",\"queued_seq\":\"1\",\"turn_ended\":{\"state\":\"unknown\"},\"turn_started\":{\"state\":\"unknown\"}}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "45",
+              "bytes": "172",
+              "direction": "sent",
+              "offset": "402",
+              "sha256": "b63c9952c65e8a5e1c5d7f6f59cb5a4704609bd086cbc1599a74c1caae88a9c9",
+              "text": "{\"id\":\"inject-0\",\"jsonrpc\":\"2.0\",\"method\":\"prompt.answer\",\"params\":{\"answer\":{\"choice\":\"yes\"},\"op_id\":\"01a19406-da82-7277-b083-ee089ce0c7a4\",\"prompt_id\":\"p1\",\"version\":1}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "45",
+              "bytes": "244",
+              "direction": "received",
+              "offset": "1741",
+              "sha256": "3a9d1c0c398f35fdcfb00ca65b8c4456bef2127c0ee81ccbcd89a69014fd3f22",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-0\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"credential_revoked\",\"hint\":\"re-authenticate with a current credential; queued work was not written\",\"retryable\":false,\"principal_epoch\":\"2\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "45",
+              "bytes": "174",
+              "direction": "sent",
+              "offset": "574",
+              "sha256": "9d9045cb72f2b94eaf08f1451cf63fe130b75d1552dec0105695d7fba6044520",
+              "text": "{\"id\":\"inject-1\",\"jsonrpc\":\"2.0\",\"method\":\"prompt.answer\",\"params\":{\"answer\":{\"choice\":\"yes\"},\"op_id\":\"01a19406-da82-7277-b083-ee09b7ddec47\",\"prompt_id\":\"p1\",\"version\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "46",
+              "bytes": "244",
+              "direction": "received",
+              "offset": "1985",
+              "sha256": "dd28280a7e50957d8180964956d2b3695537d5f1aefcddcdc80c597799fbe3ad",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-1\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"credential_revoked\",\"hint\":\"re-authenticate with a current credential; queued work was not written\",\"retryable\":false,\"principal_epoch\":\"2\"}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "4"
+        },
+        {
+          "bytes_decoded": "2930",
+          "bytes_received": "2930",
+          "bytes_sent": "1233",
+          "name": "owner",
+          "records_received": "8",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "862b9081f17c984c299d52302820b06d3ca829fdcd20f92672b0746b31fd6c5b",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "1412",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "e226c386b5a47f3438f53cf52f94f1b6249c02113d0560c871c5271a1aac2e4c",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"op.get\",\"op.cancel\",\"terminal.keep\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.conversation\",\"doc.get\",\"doc.set\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793484839507\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "7",
+              "bytes": "334",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "d26dd4499869302ff5a3e6eecfdd4abd7918aa866cf175429cdd7e07c9829971",
+              "text": "{\"id\":\"open-p1\",\"jsonrpc\":\"2.0\",\"method\":\"prompt.open\",\"params\":{\"op_id\":\"01a19406-da58-77ee-8d8d-bede2f0df099\",\"process_token\":\"fixture-process-token-agent\",\"prompt\":{\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"},{\"id\":\"no\",\"label\":\"No\"}],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"text\":\"Proceed?\"},\"prompt_id\":\"p1\",\"target\":{\"name\":\"agent\"}}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "20",
+              "bytes": "355",
+              "direction": "received",
+              "offset": "1412",
+              "sha256": "88d19d72f18d45054eb9a4e57b28c373b7c0a56d6c35bae016cc00b06c7f8737",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"open-p1\",\"result\":{\"agent_id\":null,\"answer\":null,\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"},{\"id\":\"no\",\"label\":\"No\"}],\"closed_seq\":null,\"fields\":[],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"opened_seq\":\"4\",\"process_incarnation\":\"1\",\"prompt_id\":\"p1\",\"session\":null,\"state\":\"open\",\"terminal_id\":\"terminal:4\",\"text\":\"Proceed?\",\"version\":\"1\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "34",
+              "bytes": "137",
+              "direction": "sent",
+              "offset": "568",
+              "sha256": "2473f2a684b736878cbde6e6a14787969e441b016f36ed21903f85c10df8cda5",
+              "text": "{\"id\":\"revoke\",\"jsonrpc\":\"2.0\",\"method\":\"credential.revoke\",\"params\":{\"credential\":\"c3\",\"op_id\":\"01a19406-da73-75e8-a903-66e97a6d182f\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "48",
+              "bytes": "316",
+              "direction": "received",
+              "offset": "1767",
+              "sha256": "dba252d9e723fb16e5b5f183919be539bc816ba1b0553d5e5880834de08a24fd",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"revoke\",\"result\":{\"standing\":{\"principal\":\"writer\",\"principal_epoch\":\"2\"},\"withdrawn\":{\"credential\":\"c3\",\"epoch\":\"2\"},\"writes\":[{\"admitted_bytes\":\"1\",\"op_id\":\"01a19406-da65-75b0-ada1-e4c898e996dc\",\"queued_seq\":\"1\",\"race\":{\"outcome\":\"cancelled_before_commit\",\"reason\":\"credential_revoked\"}}]}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "49",
+              "bytes": "154",
+              "direction": "sent",
+              "offset": "705",
+              "sha256": "8f3fe181816ed18a27ed632b33ec4642b3db24d2f4b2851f3fcb462c283f0e33",
+              "text": "{\"id\":\"get-p1\",\"jsonrpc\":\"2.0\",\"method\":\"prompt.get\",\"params\":{\"prompt_id\":\"p1\"}}\n{\"id\":\"release\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.deliver\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "50",
+              "bytes": "57",
+              "direction": "received",
+              "offset": "2083",
+              "sha256": "154b59e35f3a15effdd1a8f89ab89f40d7f9d17e4dafe41fad0b26c12c8ce687",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"release\",\"result\":{\"settled\":[]}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "51",
+              "bytes": "354",
+              "direction": "received",
+              "offset": "2140",
+              "sha256": "f63355e2d4db8b3fd4545d9612962e0d9f87a7b66b79cda1ee1b6b5fcf7daba6",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"get-p1\",\"result\":{\"agent_id\":null,\"answer\":null,\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"},{\"id\":\"no\",\"label\":\"No\"}],\"closed_seq\":null,\"fields\":[],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"opened_seq\":\"4\",\"process_incarnation\":\"1\",\"prompt_id\":\"p1\",\"session\":null,\"state\":\"open\",\"terminal_id\":\"terminal:4\",\"text\":\"Proceed?\",\"version\":\"1\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "51",
+              "bytes": "374",
+              "direction": "sent",
+              "offset": "859",
+              "sha256": "8e4174b94929e343ec91b7fa1992dc512c34b3838b2a4ee7a384566ec7017827",
+              "text": "{\"id\":\"pty\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.pty\",\"params\":{\"target\":{\"name\":\"rotation\"}}}\n{\"id\":\"revoke-again\",\"jsonrpc\":\"2.0\",\"method\":\"credential.revoke\",\"params\":{\"credential\":\"c3\",\"op_id\":\"01a19406-da84-7482-a6b4-8cfab7dbb2e4\"}}\n{\"id\":\"unknown\",\"jsonrpc\":\"2.0\",\"method\":\"credential.revoke\",\"params\":{\"credential\":\"c99\",\"op_id\":\"01a19406-da84-7482-a6b4-8cfb4c7da3ae\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "51",
+              "bytes": "52",
+              "direction": "received",
+              "offset": "2494",
+              "sha256": "bd5beb5011eb442b782efab065121bb5127132615ef7aa8f73a769efd546ce81",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"pty\",\"result\":{\"bytes\":\"0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "84",
+              "bytes": "223",
+              "direction": "received",
+              "offset": "2546",
+              "sha256": "2251dacc393d5f61e81d9caea868d6a538afb99fa0a5fd694f3f8c39c5a23f15",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"unknown\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_found\",\"hint\":\"list credentials to find a live id\",\"retryable\":false,\"op_id\":\"01a19406-da84-7482-a6b4-8cfb4c7da3ae\"}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "86",
+              "bytes": "161",
+              "direction": "received",
+              "offset": "2769",
+              "sha256": "eea75edd186230f180a8cd89ee85d40e3d4e642d40d3f5099baa53a316d879da",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"revoke-again\",\"result\":{\"standing\":{\"principal\":\"writer\",\"principal_epoch\":\"3\"},\"withdrawn\":{\"credential\":\"c3\",\"epoch\":\"3\"},\"writes\":[]}}",
+              "unit": "line"
+            }
+          ],
+          "via": "bridge",
+          "writes": "5"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-070",
+          "GAP-071",
+          "GAP-073",
+          "GAP-074",
+          "GAP-075",
+          "GAP-078",
+          "GAP-084",
+          "GAP-131",
+          "GAP-133"
+        ],
+        "delivers": [
+          "IDEAL-048",
+          "IDEAL-049",
+          "IDEAL-050",
+          "IDEAL-051",
+          "IDEAL-052",
+          "IDEAL-055",
+          "IDEAL-061",
+          "IDEAL-103",
+          "IDEAL-104",
+          "IDEAL-106"
+        ],
+        "excludes": [
+          "EXCL-007",
+          "EXCL-023",
+          "EXCL-026"
+        ],
+        "title": "Credentials rotate and revoke atomically; queued writes are rechecked before any byte, and no socket keeps authority",
+        "todo": "57"
+      },
+      "descriptors": [],
+      "elapsed_ms": "155",
+      "failure": null,
+      "fixture": {
+        "accepted": "3",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "target/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "1020199",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "target/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "1020184",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "target/debug/ovis-terminal",
+            "connect"
+          ],
+          "exit_code": 0,
+          "pid": "1020180",
+          "role": "bridge",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          }
+        },
+        {
+          "argv": [
+            "/home/devswha/workspace/ovis-terminal-wt/lane-t57/target/debug/conformance",
+            "fixture",
+            "--root",
+            "/tmp/ovc-1017694-1"
+          ],
+          "exit_code": 0,
+          "pid": "1020050",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "security/rotation",
+      "summary": "An open prompt p1 version 1 and a queued write of the writer exist; the owner revokes c3, which reports the write cancelled_before_commit at principal epoch 2. prompt.answer over the revoked writer socket, with the plan's numeric version literal or a valid decimal one, is refused credential_revoked at principal epoch 2 before its parameters are decoded; p1 stays open at version 1 with no answer, the released boundary writes nothing and the PTY holds zero bytes. Revoking again advances both the credential and principal epoch to 3; an unknown credential is not_found; reconnecting with the revoked bearer fails hello."
+    }
+  ],
+  "elapsed_ms": "5426",
+  "error": null,
+  "format": "ovis-conformance-evidence/1",
+  "host": {
+    "arch": "x86_64",
+    "family": "unix",
+    "os": "linux"
+  },
+  "inventory": null,
+  "result": "passed",
+  "runner_version": "0.1.0",
+  "scenario": "security/rotation",
+  "totals": {
+    "assertions": "140",
+    "cases": "2",
+    "declared_only": "0",
+    "failed": "0",
+    "passed": "2",
+    "skipped": "0"
+  }
+}

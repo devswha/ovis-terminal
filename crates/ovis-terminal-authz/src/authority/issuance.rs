@@ -105,25 +105,16 @@ impl<F: IdentityFamily> Authority<F> {
         admin: &Session,
         revocation: &Revocation,
     ) -> Result<CredentialEpoch, AuthzError> {
-        self.own(admin)?;
-        let request = AccessRequest::new(
-            Action::RevokeCredential,
-            self.machine_target(),
-            revocation.at,
-        );
-        let mut table = self.write()?;
-        table.permit(admin, &request)?;
-        let epoch = table.revoke(revocation.credential)?;
-        drop(table);
-        Ok(epoch)
+        self.withdraw(admin, revocation)
+            .map(|withdrawn| withdrawn.epoch())
     }
 
-    fn machine_target(&self) -> ResolvedTarget<F> {
+    pub(super) fn machine_target(&self) -> ResolvedTarget<F> {
         ResolvedTarget::new(self.binding.machine.clone(), TargetResource::Machine)
     }
 }
 
-fn within_issuer<F: IdentityFamily>(
+pub(super) fn within_issuer<F: IdentityFamily>(
     issuer: &CredentialRecord<F>,
     request: &IssueRequest<F>,
     machine: &F::Machine,

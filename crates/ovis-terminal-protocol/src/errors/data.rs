@@ -8,7 +8,7 @@ use super::kinds::ErrorKind;
 use crate::domain::conversation_records::Unavailable;
 use crate::domain::session_binding::HistoryHead;
 use crate::schema::ids::PromptId;
-use crate::schema::scalar::{DurationMs, QueuePosition, RecordVersion, ReportSeq};
+use crate::schema::scalar::{DurationMs, PrincipalEpoch, QueuePosition, RecordVersion, ReportSeq};
 
 /// Machine-readable context attached to a boundary failure.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -63,6 +63,9 @@ pub struct ErrorData {
     /// Reason and provenance, present on a `conversation_unavailable` refusal of records.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unavailable: Option<Box<Unavailable>>,
+    /// The principal's current authority epoch, present on a credential refusal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub principal_epoch: Option<PrincipalEpoch>,
 }
 
 impl ErrorData {
@@ -85,6 +88,7 @@ impl ErrorData {
             current_version: None,
             prompt_ids: Vec::new(),
             unavailable: None,
+            principal_epoch: None,
         }
     }
 

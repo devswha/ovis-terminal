@@ -3,7 +3,8 @@
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::path::PathBuf;
-use std::sync::mpsc::{Receiver, SyncSender};
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -52,17 +53,18 @@ pub enum Data {
     },
     /// A durable subscription loss marker.
     Lost(LossRecord),
-    /// An event whose fan-out can be held by [`PUMP_GATE`].
+    /// An event whose fan-out holds the worker until [`World::hold_worker`] releases it.
     Gate(Gated),
 }
 
 type Armed = (SyncSender<()>, Receiver<()>);
 
-/// Armed once by a test: the fan-out worker announces it is serializing a gate event,
-/// then waits for release while commits continue to queue behind it.
-pub static PUMP_GATE: Mutex<Option<Armed>> = Mutex::new(None);
+/// Gates armed by [`World::hold_worker`], keyed by the gate event that springs each one,
+/// so worlds sharing one test process never take or replace each other's gate.
+static GATES: Mutex<BTreeMap<u32, Armed>> = Mutex::new(BTreeMap::new());
+static NEXT_GATE: AtomicU32 = AtomicU32::new(0);
 
-/// Payload of a gate event.
+/// Payload of a gate event: the key of the gate it springs.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[non_exhaustive]
 pub struct Gated(pub u32);
@@ -70,10 +72,13 @@ pub struct Gated(pub u32);
 impl Serialize for Gated {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         if std::thread::current().name() == Some("ovis-subscriptions") {
-            let armed = PUMP_GATE.lock().ok().and_then(|mut gate| gate.take());
+            let armed = GATES
+                .lock()
+                .ok()
+                .and_then(|mut gates| gates.remove(&self.0));
             if let Some((entered, release)) = armed {
                 entered.send(()).map_err(S::Error::custom)?;
-                release.recv_timeout(BOUND).map_err(S::Error::custom)?;
+                release.recv().map_err(S::Error::custom)?;
             }
         }
         serializer.serialize_u32(self.0)
@@ -230,17 +235,26 @@ impl World {
         Ok(cursor)
     }
 
-    /// Commits an event whose fan-out holds the worker until the armed gate is released.
+    /// Holds the fan-out worker inside the fan-out of a gate event of its own until the
+    /// returned sender releases it or is dropped; returns once the worker is held.
     ///
     /// # Errors
     ///
-    /// Returns a typed commit failure.
-    pub fn gate(&self) -> Result<Cursor, Box<dyn Error>> {
+    /// Returns a typed commit failure, or the bound passing before the worker is held.
+    pub fn hold_worker(&self) -> Result<SyncSender<()>, Box<dyn Error>> {
+        let key = NEXT_GATE.fetch_add(1, Ordering::Relaxed);
+        let (entered, reached) = sync_channel(1);
+        let (release, released) = sync_channel(1);
+        GATES
+            .lock()
+            .map_err(|_| "gates poisoned")?
+            .insert(key, (entered, released));
         let affected = vec![ResourceId::Terminal(TerminalId::try_from(1)?)];
         let op = OpId::new(Uuid::now_v7().to_string());
-        Ok(self
-            .core
-            .commit(Commit::new(op, Data::Gate(Gated(1)), affected))?)
+        self.core
+            .commit(Commit::new(op, Data::Gate(Gated(key)), affected))?;
+        reached.recv_timeout(BOUND)?;
+        Ok(release)
     }
 
     /// Installs one subscription.

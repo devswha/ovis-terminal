@@ -17,9 +17,11 @@ const EXECUTABLE: &[&str] = &[
     "agent/tree.json",
     "all/all.json",
     "part-a/task-21.json",
+    "part-a/task-29.json",
     "part-a/task-77.json",
     "part-a/task-78.json",
     "part-a/task-79.json",
+    "platform/process-info.json",
     "platform/unix-service.json",
     "protocol/deadline.json",
     "protocol/discovery.json",
@@ -27,6 +29,9 @@ const EXECUTABLE: &[&str] = &[
     "protocol/multiplex.json",
     "protocol/pagination.json",
     "protocol/strict-target.json",
+    "remote/isolation.json",
+    "security/rotation.json",
+    "services/update.json",
 ];
 
 /// Every executable file runs and passes; every other file is a listed declaration.

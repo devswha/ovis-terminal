@@ -1,0 +1,31 @@
+$ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 51.42s
+BUILD_EXIT=0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 15.68s
+$ cargo clippy --locked --manifest-path conformance/Cargo.toml --all-targets --all-features -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 53.45s
+CONF_CLIPPY_EXIT=0
+$ openrpc check / compat
+{"bytes":603947,"fresh":"schema/ovis-terminal.openrpc.json"}
+CHECK=0
+{"compatible_with":"schema/released.openrpc.json"}
+COMPAT=0
+$ conformance services/update --case all
+{"case":"all","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t47/.omo/evidence/ovis-terminal-v1/task-47/r4-update-all.json","evidence_written":null,"result":"passed","scenario":"services/update","totals":{"assertions":"137","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
+UPDATE_EXIT=0
+$ conformance all/all --case all
+{"case":"all","error":null,"evidence":"/home/devswha/workspace/ovis-terminal-wt/lane-t47/.omo/evidence/ovis-terminal-v1/task-47/r4-all-all.json","evidence_written":null,"result":"passed","scenario":"all/all","totals":{"assertions":"1849","cases":"44","declared_only":"37","failed":"0","passed":"44","skipped":"0"}}
+ALL_EXIT=0
+$ RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 45.30s
+WIN_CHECK_EXIT=0
+$ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 25s
+WIN_CLIPPY_EXIT=0
+$ bash scripts/check.sh
+$ bash scripts/check.sh (rerun after host reboot)
+(heavy gate: bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh, round-3 merge with integration 8cab061)
+json.sh: 126 JSON file(s) checked
+
+check.sh: all steps passed
+CHECK_EXIT=0

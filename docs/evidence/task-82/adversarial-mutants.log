@@ -1,0 +1,52 @@
+# host: Linux x86_64, bun 1.4.3, lane base 8cab061; each mutant applied alone, then the original restored byte-exactly
+# command per mutant: cd packages/client-ts && bun test test/generate.test.ts
+
+## mutant: identifier validation removed (render.ts: 'if (!IDENTIFIER.test(name)) {' -> 'if (false && !IDENTIFIER.test(name)) {')
+exit 1 | 6 pass | 1 fail
+(fail) a component name with no valid TypeScript identifier mapping is refused, never emitted [0.16ms]
+verdict: KILLED
+
+## mutant: collision check removed (modules.ts: 'if (earlier !== undefined) {' -> 'if (false && earlier !== undefined) {')
+exit 1 | 5 pass | 2 fail
+(fail) a name collision after mapping fails generation with the typed name_collision error naming both components [0.44ms]
+(fail) an unsupported schema or a colliding name fails generation with a typed kind [9.12ms]
+verdict: KILLED
+
+## mutant: no capitalisation (render.ts: 'word.charAt(0).toUpperCase() + word.slice(1)' -> 'word')
+exit 1 | 5 pass | 2 fail
+(fail) generation is deterministic and the committed output is that generation [13.64ms]
+(fail) schemars component names map to deterministic PascalCase identifiers at declarations and references [0.34ms]
+verdict: KILLED
+
+## mutant: references keep the raw name (render.ts: 'return typeName(ref.slice(REF_PREFIX.length));' -> 'return ref.slice(REF_PREFIX.length);')
+exit 1 | 5 pass | 2 fail
+(fail) generation is deterministic and the committed output is that generation [24.16ms]
+(fail) schemars component names map to deterministic PascalCase identifiers at declarations and references [0.40ms]
+verdict: KILLED
+
+## mutant: collision claims raw component name (modules.ts: 'claim(names, name, component);' -> 'claim(names, component, component);')
+exit 1 | 6 pass | 1 fail
+(fail) a name collision after mapping fails generation with the typed name_collision error naming both components [0.27ms]
+verdict: KILLED
+
+## after restore
+$ bun run generate:check
+$ bun scripts/generate.ts --check
+{"generated":"fresh","files":31}
+exit 0
+
+
+## stale output: one generated type hand-renamed in components.ts
+$ bun run generate:check
+$ bun scripts/generate.ts --check
+{"kind":"stale_output","hint":"run `bun run generate` and commit the result","files":["components.ts"]}
+error: script "generate:check" exited with code 1
+exit 1
+
+
+## restored
+$ bun run generate:check
+$ bun scripts/generate.ts --check
+{"generated":"fresh","files":31}
+exit 0
+33
