@@ -236,4 +236,5 @@ macOS stress dispatch:
 - Round 3: https://github.com/devswha/ovis-terminal/actions/runs/41352274612 (96ffc78) failed on the command fence.
 - Round 3b: https://github.com/devswha/ovis-terminal/actions/runs/41354657097 (edecd73) passed 13 iterations, then failed at happy iteration 14 on the repaint race.
 - Round 4: https://github.com/devswha/ovis-terminal/actions/runs/41363372326 (17415b2, the code head; the next commit changes only this body).
-- Round 5: https://github.com/devswha/ovis-terminal/actions/runs/41369910168 (5749036, the code head; the next commit changes only this body).
+- Round 5: https://github.com/devswha/ovis-terminal/actions/runs/41369910168 (5749036; superseded before it finished by the cc1ca2c merge).
+- Round 5 after the cc1ca2c merge: https://github.com/devswha/ovis-terminal/actions/runs/41371559410 (747fe9c) completed `success`, all 25 iterations of task-30 happy and failure plus `capacity/fifty`. The 1869b9e merge (44592ca) changes no task-30 code path, and no second macOS dispatch was requested.
