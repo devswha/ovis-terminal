@@ -5,14 +5,19 @@
 //! and exits with a published code. No inspection command starts, installs or restarts a
 //! server; only the explicit `serve` and `hold` verbs run one, in the foreground.
 
+pub mod agent;
 #[cfg(unix)]
 pub mod assembly;
 #[cfg(unix)]
 pub mod attach;
+pub mod commands;
 mod invocation;
 pub mod service;
+pub mod skill;
 
-pub use invocation::{CREDENTIAL_ENV, Context, Credential, ExitStatus, JSON_ENV, Report, run};
+pub use invocation::{
+    CREDENTIAL_ENV, Context, Credential, ExitStatus, JSON_ENV, PROCESS_TOKEN_ENV, Report, run,
+};
 
 /// Name of the installed binary.
 pub const BINARY_NAME: &str = "ovis-terminal";

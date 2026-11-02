@@ -11,8 +11,11 @@ use super::error::CliError;
 pub const JSON_ENV: &str = "OVIS_JSON";
 /// Variable holding the bearer credential presented in `hello`.
 pub const CREDENTIAL_ENV: &str = "OVIS_TERMINAL_CREDENTIAL";
+/// Variable the runtime sets for a program it spawned: the token that proves the program
+/// owns its terminal when it reports status, prompts or records.
+pub const PROCESS_TOKEN_ENV: &str = "OVIS_TERMINAL_PROCESS_TOKEN";
 
-/// A bearer credential; its text never appears in Debug output.
+/// A bearer credential or process token; its text never appears in Debug output.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Credential(String);
 
@@ -39,6 +42,7 @@ impl fmt::Debug for Credential {
 pub struct Context {
     endpoint: EndpointEnvironment,
     credential: Option<Credential>,
+    process_token: Option<Credential>,
     json_switch: Option<OsString>,
 }
 
@@ -52,6 +56,10 @@ impl Context {
                 .ok()
                 .filter(|bearer| !bearer.is_empty())
                 .map(Credential::new),
+            process_token: std::env::var(PROCESS_TOKEN_ENV)
+                .ok()
+                .filter(|token| !token.is_empty())
+                .map(Credential::new),
             json_switch: std::env::var_os(JSON_ENV),
         }
     }
@@ -62,6 +70,11 @@ impl Context {
 
     pub(super) const fn credential(&self) -> Option<&Credential> {
         self.credential.as_ref()
+    }
+
+    /// The process token this invocation inherited from the terminal it runs in.
+    pub(super) fn process_token(&self) -> Option<&str> {
+        self.process_token.as_ref().map(Credential::bearer)
     }
 }
 
