@@ -23,7 +23,7 @@ Gap baseline: GAP-004, GAP-021, GAP-039, GAP-060, GAP-080, GAP-098, GAP-106, GAP
 
 ## After
 
-Host: Linux x86_64 (native). Binary `/dev/shm/ovt-target-lane-t65/debug/ovis-terminal`, sha256 `d9167fc81bbb7153ae3ef5283b28a68ff3f9e733b2e178cc434fb2e4b0db5dfa` (lane CARGO_TARGET_DIR on RAM; `target/debug/ovis-terminal` in the plan's command is this path). Raw log `docs/evidence/task-65/after.log`, evidence `docs/evidence/task-65/task-65-ovis-terminal-v1.json`.
+Host: Linux x86_64 (native). Binary `/dev/shm/ovt-target-lane-t65/debug/ovis-terminal`, sha256 `bed02a402e0584b4c2e1350e5c5a3ceae468b8c1ca6d1fe3cd0320e9bcb24990` (lane CARGO_TARGET_DIR on RAM; `target/debug/ovis-terminal` in the plan's command is this path). Raw log `docs/evidence/task-65/after.log`, evidence `docs/evidence/task-65/task-65-ovis-terminal-v1.json`.
 
 ```
 $ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal                       exit=0
@@ -35,13 +35,15 @@ $ ... --case failure --inject '{"example":"prompt.answer","version":"stale"}' --
 ```
 Happy observable (`docs/evidence/task-65/qa.log`):
 ```
-run: case=happy result=passed binary={'bytes': '150984856', 'path': '/dev/shm/ovt-target-lane-t65/debug/ovis-terminal', 'sha256': 'd9167fc81bbb7153ae3ef5283b28a68ff3f9e733b2e178cc434fb2e4b0db5dfa'} host={'arch': 'x86_64', 'family': 'unix', 'os': 'linux'} totals={'assertions': '162', 'cases': '1', 'declared_only': '0', 'failed': '0', 'passed': '1', 'skipped': '0'}
+run: case=happy result=passed binary_sha256=bed02a402e0584b4c2e1350e5c5a3ceae468b8c1ca6d1fe3cd0320e9bcb24990 host={'arch': 'x86_64', 'family': 'unix', 'os': 'linux'} totals={'assertions': '162', 'cases': '1', 'declared_only': '0', 'failed': '0', 'passed': '1', 'skipped': '0'}
+  [happy] descriptor scenarios/client/migration.json#source: {"lines": "161-183", "path": ".omo/ulw-loop/01a18d5f-ed46-704a-b988-38720320ebb6/waves/plan-advice/architect.md", "section": "6. Blast radius for the Ovis client", "sha256": "449750b7a3291c752b743823772a61b50a8640d75b91a75e47a4fe7fbd14326e"}
   [happy] migration/coverage passed=True actual={"duplicate_paths": [], "extra_paths": [], "missing_paths": [], "uncited_examples": [], "undefined_examples": [], "wrong_fate": []}
   [happy] migration/coverage/paths passed=True actual="39"
   [happy] migration/policy passed=True actual={"auto_resend": [], "content_as_command": [], "guessed_keys": [], "unknown_delivery_shown": true}
   [happy] migration/packed-client/schema passed=True actual=true
   [happy] migration/contract passed=True actual={"example_unknown_methods": [], "methods_not_served": [], "unknown_capabilities": [], "unknown_events": [], "unknown_fixtures": [], "unknown_identity": [], "unserved_now_served": []}
-run: case=failure result=passed binary={'bytes': '150984856', 'path': '/dev/shm/ovt-target-lane-t65/debug/ovis-terminal', 'sha256': 'd9167fc81bbb7153ae3ef5283b28a68ff3f9e733b2e178cc434fb2e4b0db5dfa'} host={'arch': 'x86_64', 'family': 'unix', 'os': 'linux'} totals={'assertions': '24', 'cases': '1', 'declared_only': '0', 'failed': '0', 'passed': '1', 'skipped': '0'}
+run: case=failure result=passed binary_sha256=bed02a402e0584b4c2e1350e5c5a3ceae468b8c1ca6d1fe3cd0320e9bcb24990 host={'arch': 'x86_64', 'family': 'unix', 'os': 'linux'} totals={'assertions': '24', 'cases': '1', 'declared_only': '0', 'failed': '0', 'passed': '1', 'skipped': '0'}
+  [failure] descriptor scenarios/client/migration.json#source: {"lines": "161-183", "path": ".omo/ulw-loop/01a18d5f-ed46-704a-b988-38720320ebb6/waves/plan-advice/architect.md", "section": "6. Blast radius for the Ovis client", "sha256": "449750b7a3291c752b743823772a61b50a8640d75b91a75e47a4fe7fbd14326e"}
   [failure] migration/coverage passed=True actual={"duplicate_paths": [], "extra_paths": [], "missing_paths": [], "uncited_examples": [], "undefined_examples": [], "wrong_fate": []}
   [failure] migration/coverage/paths passed=True actual="39"
   [failure] migration/policy passed=True actual={"auto_resend": [], "content_as_command": [], "guessed_keys": [], "unknown_delivery_shown": true}
@@ -53,11 +55,25 @@ run: case=failure result=passed binary={'bytes': '150984856', 'path': '/dev/shm/
 ```
 The executed example's materialized socket requests are in the evidence JSON connection transcripts (`prompt.answer.injected.ovis`): `prompt.get {"prompt_id":"p1"}` -> version `"1"`; `prompt.answer {"op_id":<uuidv7>,"prompt_id":"p1","version":"0","answer":{"choice":"yes"}}` -> `error.data.kind = "version_conflict"`, `retryable: false`, no result; `prompt.get` -> `state: "open"`, `answer: null`.
 
+Packed client (round 2): `packages/client-ts/tests/guide.test.ts` extracts every `json ovis-example` block from `docs/ovis-adapter.md` and stages them as an `ovis-replay/1` fixture set, using the legacy map, server bindings and schema pins of `conformance/fixtures/ovis`, with each case pinned by its own bytes. It installs the packed tarball into a project outside the repository and runs T64's unchanged `tests/replay/{engine,replay}.ts` against the real binary and protocol fixture. `receipts.json` is not touched. CI's `client-ts` job runs it as part of `bun test`, so the guide and the client cannot drift apart unnoticed. `OVIS_GUIDE` replays another guide.
+```
+$ cd packages/client-ts && bun test ./tests/guide.test.ts
+(pass) every example the guide cites replays through the packed client
+(pass) no guide example has a failed expectation through the packed client
+(pass) the staged examples are the guide's bytes and the schema pin is the published schema
+(pass) the replay sources typecheck against the packed declarations
+ 4 pass  0 fail                                                              exit 0
+$ bun run generate:check && bun run typecheck && bun test                   -> generated fresh; tsc exit 0; 55 pass, 0 fail
+```
+Mutant M6: changing the prompt.answer card's `/result/state` expectation from "open" to "answered-bogus" (`OVIS_GUIDE=<copy>`) fails "no guide example has a failed expectation through the packed client" (bun exit 1). Logs: `docs/evidence/task-65/{bun-guide.log,client-ts-gate.log,mutant-M6-bun-guide-expectation.log,mutants.log}`.
+
+Section-6 provenance (gate note): the `migration` step records `source` = architect.md, section 6, lines 161-183, sha256 `449750b7a3291c752b743823772a61b50a8640d75b91a75e47a4fe7fbd14326e`, as an evidence descriptor that is recorded but never asserted, because the advisory is not in the repository.
+
 Tests: `cargo nextest run --locked -p ovis-terminal-conformance -p ovis-terminal-replay` -> 56 tests run: 56 passed (includes the `all/all` suite with `client/migration` now executable). 7 new unit tests in `scenarios::client_migration::tests` assert coverage reports, policy verdicts, injection rewriting and the served/unserved contract.
 
 Adversarial (each through the real runner with `--guide <mutated copy>`; exit 1 required, logs in `docs/evidence/task-65/adv-*.log`): dropped `server/mirror.ts` block -> `missing_paths: ["server/mirror.ts"]`; resend under a fresh op id -> `auto_resend: ["viewer-streams"]`; `input.keys` in place of `prompt.answer` -> `guessed_keys: ["prompt.answer"]`; screen line captured and sent as a search pattern (prompt injection) -> `content_as_command: ["terminal-content"]`; `machine.rm` listed as served -> `methods_not_served: ["machine.rm"]`; unplanned `--inject` -> `migration/inject/planned` actual null. All exit=1.
 
-Mutants (each fails a shipped test; logs `docs/evidence/task-65/mutant-*.log`): M1 coverage `missing` filter inverted (2 failed), M2 resend detection requires equal op ids (1 failed), M3 content never tainted (1 failed), M4 injection keeps the original tail (1 failed), M5 served check compares against the schema instead of `hello` (1 failed).
+Mutants (each fails a shipped test; summary `docs/evidence/task-65/mutants.log`, logs `mutant-*.log`): M1 coverage `missing` filter inverted (2 failed), M2 resend detection requires equal op ids (1 failed), M3 content never tainted (1 failed), M4 injection keeps the original tail (1 failed), M5 served check compares against the schema instead of `hello` (1 failed), M6 one guide expectation changed, replayed through the packed client (bun test 1 fail).
 
 Gates on the round commit:
 - `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` (foreground gate, memory-scoped) -> `check.sh: all steps passed`, exit 0; nextest `1587 tests run: 1587 passed (3 slow), 2 skipped`; `workspace-hygiene: 0 violation(s)`; source-check and evidence-audit passed (`docs/evidence/task-65/check.log`).
@@ -75,11 +91,11 @@ Files outside the write scope (`docs/ovis-adapter.md`, `conformance/scenarios/cl
 - `conformance/src/runner_tests/suite.rs`: `client/migration.json` added to `EXECUTABLE` in sorted position (it was never in `declared.json`).
 - `conformance/fixtures/ovis/{manifest,predicates}.json`: `ovis-replay refresh` after `client/migration` became executable (one predicate's scenario state changed).
 - `probes/platform-qa/stress/client-migration.{json,sh}`: the macOS stress lane (10 iterations of `--case all --guide docs/ovis-adapter.md` plus the `--inject` failure run); adding a lane edits nothing else.
+- `packages/client-ts/tests/guide.test.ts` (round 2; write scope widened by the gate): the packed-client replay of the guide's examples.
 - `docs/evidence/task-65/`.
 
 ## Risks
 
-- The examples replay through the Rust runner's `connect` bridge only. The packed Bun client is checked by schema identity (it ships the published OpenRPC document), not by replaying the guide examples through it: `packages/client-ts` is outside this write scope. The Bun client already replays every `fixture:` case the rows cite (`tests/fixtures.test.ts`).
 - Named product gaps recorded in the guide, not fixed here: `layout.changed`/`selection.changed` not published; `agent.list`, `agent.note`, `agent.release`, `agent.wait_children`, `doc.list`, `events.ack`, `machine.rm/login/exec/file`, `server.start`, `service.install/remove` and `terminal.history` unserved; `op.get` answers `not_found` for `input.*` operations (the unknown-delivery example asserts that answer); `events.wait` replies carry no terminal id; `schema.capabilities` reports `stream_modes: []` while plain attach works; attach across a control-server restart is uncovered; image placeholders (t85) landed after this base.
 - `migration/contract` fails as soon as a listed-unserved method becomes served. That is intended, so the guide is updated with the product.
 - The section-6 path list is copied into the scenario from the advisory in `.omo/` (not in the repo); a later advisory change needs the scenario updated.

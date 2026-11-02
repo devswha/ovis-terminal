@@ -59,6 +59,9 @@ struct Injection {
 #[serde(deny_unknown_fields)]
 pub(crate) struct Migration {
     kind: CaseKind,
+    /// Where `paths` was copied from (advisory path, section, lines, sha256); recorded in
+    /// the evidence, never asserted, since the advisory is not in the repository.
+    source: crate::evidence::Descriptors,
     paths: Vec<PathFate>,
     #[serde(default)]
     injections: Vec<Injection>,
@@ -133,6 +136,10 @@ impl Session<'_> {
                 policy::report(&guide.examples),
             ),
         ];
+        self.descriptors.push(crate::evidence::DescriptorRecord {
+            source: "scenarios/client/migration.json#source".to_owned(),
+            descriptors: step.source.clone(),
+        });
         let set = FixtureSet::load(&self.fixture_dir()).map_err(replay_failure)?;
         if step.kind == CaseKind::Failure {
             self.assert(checks)?;
