@@ -21,7 +21,12 @@ Closes GAP-127, GAP-139, GAP-140, GAP-141. Delivers IDEAL-034, IDEAL-100, IDEAL-
   - **Release profile:** unchanged `[profile.release]` (fat LTO, one codegen unit, stripped symbols, `panic = "abort"`). That is the profile the shipped binary should use. A faster profile would ship a different binary from the one QA ran.
 - **Signing and notarization: not performed.** No signing identity, notarization service or other paid service is used. `pins.json` carries the published statement, and every promotion report and manifest repeats `signing.performed: false`.
 - **THIRD_PARTY_NOTICES.md:** the existing herdr/herdr-core Apache-2.0 attribution and full license text, plus a generated inventory of all 168 crates.io crates in Cargo.lock (name, version, SPDX license, repository).
-- **`schema/released.openrpc.json` is unchanged.** Promoting a new released baseline is an orchestrator decision taken with a tagged release, and it needs a BASELINE-AMENDMENTS entry. This PR adds the gate that every built artifact must pass against the current baseline.
+- **`schema/released.openrpc.json` is intentionally frozen and is not equal to the source OpenRPC.** It is the released generation-1 baseline (sha256 `06e5e410…`, last changed in 20ee07d), and the source `schema/ovis-terminal.openrpc.json` (`410493d9…`) has grown additively past it. This PR does not change it (`git diff 1c1527d -- schema/` is empty). Three checks gate drift by compatibility rules, not byte equality:
+  1. `crates/ovis-terminal-protocol/tests/schema.rs:93-95` (`check_compatibility` and the BASELINE-AMENDMENTS ledger, also `openrpc compat`).
+  2. `release-stage stage`: the built binary must pass `ovis-terminal schema compat --released schema/released.openrpc.json`.
+  3. Native QA `released_schema_compat` on the unpacked binary.
+
+  Separately, stage requires the binary's `schema` output to equal `schema/ovis-terminal.openrpc.json` byte for byte. Promoting a new released baseline is an orchestrator decision taken with a tagged release, and it needs a ledger entry.
 
 Exclusions enforced, not copied:
 - EXCL-013: no release notes or announcement modal; the release statement lives only on the GitHub release.
@@ -31,22 +36,34 @@ Exclusions enforced, not copied:
 - V-002: deny.toml stays the license allow-list behind the inventory.
 - V-3902: release kinds come from one `thiserror` enum with `kind()`/`hint()`, not hand-maintained strings.
 
+## Round 2 (gate r1 REJECT on d14fa00)
+
+- **B1, SDK path with a relative `--out`.** `build.sh` makes `--out` absolute before it packs the SDK from `packages/client-ts`. The release.yml dry-run job runs the build jobs' exact invocation and then asserts three things: the tarball is in `release-out/sdk`, nothing exists under `packages/client-ts/release-out`, and the archive contains the SDK.
+- **M1, skipped build.** `build.sh` deletes any earlier binary before `cargo build` and refuses to continue if cargo produced none. Mutant M8, which deletes the build line, makes `build.sh` exit 1. The scenario also runs on the built artifact, not on fixture stand-ins. When `--binary` is a binary unpacked from a `build.sh` artifact, the native fixture stages it from that build's own `receipt.json` and packed SDK (`inputs: build_output`). It then checks that the staged and unpacked binaries hash to the binary under test, that the unpacked binary reports the entry's version and the source schema digest, and that the archive bytes and `.sha256` sidecar match the recorded digest. The PR dry-run job runs `release/artifacts --case all` on that binary.
+- **B2, promotion from the uploaded set.** `promote` no longer reads a staged tree. It verifies each uploaded archive and its sidecar, unpacks the archive into scratch and re-hashes every file against the entry (`verify_unpacked`). `verify` does the same and checks a staged directory only when one exists. The synthetic matrix now holds exactly what CI uploads (entries, archives, sidecars, QA receipts; staged directories removed), so every promotion test runs on the uploaded set. A new `repacked-archive` fixture rebuilds an archive around a tampered binary and re-records the archive, sidecar and QA digests. It is refused with `checksum_mismatch` naming the inner file.
+- **M2, wrong `.sha256` sidecar.** `verify_archive` requires the sidecar to equal `<sha256 of the archive bytes>  <file>`, and the matrix fixtures create sidecars through `seal`. The `wrong-sidecar` fixture is refused, and the native artifact asserts that the sidecar matches the archive bytes. Mutants M5 (unit tests) and C1 (conformance on the built binary) are caught.
+- **macOS CI (round 1):** `test` and `unix-full` on macos-latest failed because the scenario asserted `release_target: false`. On macOS the native host triple `aarch64-apple-darwin` is a release target, so that assertion is now platform-neutral.
+- **M3, failed QA check with `passed: true`.** The new `failed-native-qa` and `forged-qa-pass` fixtures are refused with `native_qa_failed` naming the check. Mutants M6 and C2 are caught.
+- **Mutants:** `mutants.log` records round 1 (M1-M4) and round 2 (M5-M8 unit level, C1-C2 conformance on the release-built binary). Every one fails a shipped test or the shipped dry-run.
+
 ## Before
 
 `absent` (no comparable baseline capability; not an executed failing test). Gap baseline: GAP-127, GAP-139, GAP-140, GAP-141. At base 1c1527d there is no `scripts/release`, release workflow or `release/` scenario, `SchemaPart` has only `Openrpc | Cli | Contract`, and THIRD_PARTY_NOTICES.md has no crate inventory (`docs/evidence/task-67/before.log:1-17`).
 
 ## After
 
-Host: Linux x86_64. `$ATTEMPT_DIR=/dev/shm/ovt-fixtures/t67-scratch/attempt`. Per host rules, `target/` is `CARGO_TARGET_DIR=/dev/shm/ovt-target-lane-t67`, so `--binary target/debug/ovis-terminal` materializes as `/dev/shm/ovt-target-lane-t67/debug/ovis-terminal` (sha256 `0ea230ead53b368d7030c2b94ea6c277a6f0ed8e6046132520386fd3f7381049`, 151442776 bytes).
+Host: Linux x86_64. `$ATTEMPT_DIR=/dev/shm/ovt-fixtures/t67-scratch/attempt`. Per host rules, `target/` is `CARGO_TARGET_DIR=/dev/shm/ovt-target-lane-t67`, so `--binary target/debug/ovis-terminal` materializes as `/dev/shm/ovt-target-lane-t67/debug/ovis-terminal` (sha256 `cf43e7af2b50c39d0ae93b97fcd01aa444ea3229634d674807f09fd449fe0d4e`, 151442776 bytes).
 
 | Command | Exit | Result |
 |---|---|---|
 | `cargo build --locked -p ovis-terminal-cli --bin ovis-terminal` | 0 | `build.log` |
-| `cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario release/artifacts --isolated --case all --evidence "$ATTEMPT_DIR/task-67-ovis-terminal-v1.json"` | 0 | `result: passed`, cases 2, assertions 63, failed 0, skipped 0 (`qa-all.log`, `evidence-all.json`) |
-| `... --case happy --evidence "$ATTEMPT_DIR/task-67-ovis-terminal-v1.json"` | 0 | assertions 27, failed 0, skipped 0 |
+| `cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary target/debug/ovis-terminal --scenario release/artifacts --isolated --case all --evidence "$ATTEMPT_DIR/task-67-ovis-terminal-v1.json"` | 0 | `result: passed`, cases 2, assertions 94, failed 0, skipped 0 (`qa-all.log`, `evidence-all.json`) |
+| the same `--case all` with `--binary` = the binary `build.sh --dry-run` built, sealed and unpacked (`release-out/install/<name>/ovis-terminal`, release profile, 17161184 bytes) | 0 | assertions 94, failed 0, skipped 0; the native fixture staged it from its own build receipt and packed SDK (`inputs: build_output`) (`qa-built-binary.log`, `evidence-built.json`) |
+| `... --case happy --evidence "$ATTEMPT_DIR/task-67-ovis-terminal-v1.json"` | 0 | assertions 46, failed 0, skipped 0 |
 | `... --case failure --inject '{"fixture":"same-generation-removed-required-output"}' --evidence "$ATTEMPT_DIR/task-67-ovis-terminal-v1.json" --append` | 0 | assertions 13, failed 0, skipped 0 (`qa-happy-failure.log`, `evidence-happy-failure.json`) |
 | `sh scripts/release/build.sh --target native --dry-run` | 0 | x86_64-unknown-linux-gnu staged as a non-release artifact: 7 files, sealed archive sha256 `6b83e15d…`, native QA 5/5 checks passed, verify 1 entry 1 sealed, "nothing was published" (`dry-run.log`) |
-| `cargo nextest run --locked -p release-stage` | 0 | 12/12 |
+| `sh scripts/release/build.sh --target native --dry-run --out release-out --runner ubuntu-24.04` (release.yml's relative `--out`) | 0 | SDK tarball in `release-out/sdk/` and inside the archive; nothing under `packages/client-ts/release-out`; `release-stage verify` on only the uploaded file kinds (entry, archive, sidecar, QA) exits 0 (`dry-run-ci-shape.log`) |
+| `cargo nextest run --locked -p release-stage` | 0 | 14/14 |
 | `cargo nextest run --locked -p ovis-terminal-cli` | 0 | 117/117 (4 new `schema compat` tests) |
 
 Materialized commands and outputs proving `compatibility_break`, from the failure case's evidence:
@@ -71,7 +88,7 @@ Adversarial (`adversarial.log`, `mutants.log`):
 - Repeated interruptions: an identical rerun after publication is `already_published` with `publish: false`; a rerun with rebuilt artifacts is `release_conflict`.
 - Mutants, each caught by a shipped test (test exit 100): M1 promotion ignores a missing target, M2 republishing over a different published manifest, M3 accepting a cross-built receipt, M4 the CLI treating a break as compatible.
 
-Gates: `bash with-slot.sh bash scripts/check.sh` -> exit 0, nextest 1591 passed / 2 skipped, every step passed (`check.log`). Windows pre-check: `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` -> exit 0; `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` -> exit 0 (`windows-precheck.log`).
+Gates: `bash with-slot.sh bash scripts/check.sh` -> exit 0, nextest 1593 passed / 2 skipped, every step passed (`check.log`). Windows pre-check: `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` -> exit 0; `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` -> exit 0 (`windows-precheck.log`).
 
 ## Seams
 

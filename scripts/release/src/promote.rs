@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 use crate::docs::{Entry, Manifest, ManifestTarget, Pins, QaReceipt, Receipt};
 use crate::error::ReleaseError;
 use crate::files::{read_json, sha256_bytes, sha256_file, write_json};
-use crate::seal::{entries, verify_archive, verify_files};
+use crate::seal::{entries, verify_archive, verify_unpacked};
 use crate::target::{Platform, RELEASE_TARGETS};
 
 /// Inputs of one promotion.
@@ -99,7 +99,7 @@ fn checked_target(
             binary: entry.checks.compat.clone(),
         });
     }
-    verify_files(&input.dir, entry)?;
+    verify_unpacked(&input.dir, entry)?;
     let archive = verify_archive(&input.dir, entry)?;
     let qa_path = input.dir.join(format!("{}.qa.json", entry.name));
     if !qa_path.is_file() {

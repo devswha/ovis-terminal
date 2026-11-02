@@ -8,6 +8,7 @@
 //! conformance runner calls [`execute`] in-process, exactly as the binary would run.
 
 pub mod binary;
+pub mod build_output;
 pub mod cli;
 pub mod docs;
 pub mod error;

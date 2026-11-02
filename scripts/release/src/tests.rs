@@ -57,6 +57,10 @@ fn each_missing_or_foreign_part_refuses_promotion_with_its_kind() {
         ("bad-manifest-hash", "checksum_mismatch"),
         ("malformed-manifest", "manifest_malformed"),
         ("conflicting-rerun", "release_conflict"),
+        ("wrong-sidecar", "checksum_mismatch"),
+        ("failed-native-qa", "native_qa_failed"),
+        ("forged-qa-pass", "native_qa_failed"),
+        ("repacked-archive", "checksum_mismatch"),
     ] {
         let (exit, report) = run(fixture);
         assert_eq!(
@@ -83,4 +87,46 @@ fn an_unknown_fixture_or_flag_is_a_usage_error() {
     assert_eq!(run("no-such-fixture").0, 2);
     let run = crate::execute(&["promote".to_owned(), "--bogus".to_owned()]);
     assert_eq!((run.exit, kind(&run.report)), (2, Some("usage")));
+}
+
+#[test]
+fn every_digest_names_what_it_failed_on() {
+    let fixture = "ovis-terminal-0.0.0-fixture";
+    for (name, file) in [
+        (
+            "bad-manifest-hash",
+            format!("{fixture}-x86_64-pc-windows-msvc.tar.gz"),
+        ),
+        (
+            "wrong-sidecar",
+            format!("{fixture}-aarch64-apple-darwin.tar.gz.sha256"),
+        ),
+        (
+            "repacked-archive",
+            format!("{fixture}-x86_64-unknown-linux-musl/ovis-terminal"),
+        ),
+    ] {
+        let (_, report) = run(name);
+        assert_eq!(
+            at(&report, "/details/file"),
+            Value::from(file),
+            "{name}: {report}"
+        );
+    }
+}
+
+#[test]
+fn a_qa_receipt_claiming_a_pass_over_failed_checks_is_refused_by_check_name() {
+    let (_, report) = run("forged-qa-pass");
+    assert_eq!(
+        at(&report, "/details/failed"),
+        serde_json::json!(["synthetic"]),
+        "{report}"
+    );
+    let (_, report) = run("failed-native-qa");
+    assert_eq!(
+        at(&report, "/details/failed"),
+        serde_json::json!(["synthetic", "receipt does not pass"]),
+        "{report}"
+    );
 }

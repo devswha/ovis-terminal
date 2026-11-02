@@ -1,7 +1,9 @@
 //! A synthetic five-target staging directory for the promotion fixtures.
 //!
-//! Each target has a sealed artifact, a pinned native receipt and a passing native QA receipt. Its binaries
-//! are placeholder bytes; only the promotion gate, never a binary, is under test here.
+//! Each target has a sealed archive with its `.sha256` sidecar, a pinned native receipt and a
+//! passing native QA receipt; the staged directories are removed, exactly as the release
+//! workflow uploads only entries, archives, sidecars and QA receipts to the promote job. Its
+//! binaries are placeholder bytes; only the promotion gate, never a binary, is under test.
 
 use std::path::Path;
 
@@ -9,7 +11,8 @@ use serde_json::json;
 
 use crate::docs::{Checks, Entry, Pins, QaCheck, QaReceipt, Receipt};
 use crate::error::ReleaseError;
-use crate::files::{pack, sha256_file, write_json};
+use crate::files::write_json;
+use crate::seal::seal;
 use crate::stage::records;
 use crate::target::{Platform, RELEASE_TARGETS, binary_name};
 
@@ -44,38 +47,41 @@ fn one(dir: &Path, pins: &Pins, (target, salt): (&str, &str)) -> Result<(), Rele
         .map_err(ReleaseError::io("write", &binary))?;
     let receipt = receipt(target, pins)?;
     write_json(&artifact.join("receipt.json"), &receipt)?;
-    let archive = pack(dir, &name)?;
-    let (sha256, bytes) = sha256_file(&dir.join(&archive))?;
-    let entry = Entry {
-        format: "ovis-release-entry/1".to_owned(),
-        name: name.clone(),
-        version: VERSION.to_owned(),
-        generation: "1".to_owned(),
-        target: target.to_owned(),
-        release_target: true,
-        files: records(&artifact)?,
-        checks: Checks {
-            schema_matches_source: true,
-            versions: [("binary".to_owned(), VERSION.to_owned())].into(),
-            compat: json!({ "exit": 0, "synthetic": true }),
-            notice_crates: "0".to_owned(),
-            apache_attribution: true,
+    let entry_path = dir.join(format!("{name}.entry.json"));
+    write_json(
+        &entry_path,
+        &Entry {
+            format: "ovis-release-entry/1".to_owned(),
+            name: name.clone(),
+            version: VERSION.to_owned(),
+            generation: "1".to_owned(),
+            target: target.to_owned(),
+            release_target: true,
+            files: records(&artifact)?,
+            checks: Checks {
+                schema_matches_source: true,
+                versions: [("binary".to_owned(), VERSION.to_owned())].into(),
+                compat: json!({ "exit": 0, "synthetic": true }),
+                notice_crates: "0".to_owned(),
+                apache_attribution: true,
+            },
+            receipt: receipt.clone(),
+            archive: None,
         },
-        receipt: receipt.clone(),
-        archive: Some(crate::docs::ArchiveRecord {
-            file: archive,
-            sha256: sha256.clone(),
-            bytes,
-        }),
-    };
-    write_json(&dir.join(format!("{name}.entry.json")), &entry)?;
+    )?;
+    let sealed = seal(&entry_path)?;
+    std::fs::remove_dir_all(&artifact).map_err(ReleaseError::io("remove", &artifact))?;
     let qa = QaReceipt {
         format: "ovis-release-qa/1".to_owned(),
         name: name.clone(),
         target: target.to_owned(),
         host: receipt.host,
         runner: receipt.runner,
-        archive_sha256: sha256,
+        archive_sha256: sealed
+            .get("sha256")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_owned(),
         checks: vec![QaCheck {
             check: "synthetic".to_owned(),
             passed: true,

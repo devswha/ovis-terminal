@@ -83,7 +83,29 @@ jobs:
         run: cargo run --locked --quiet -p release-stage -- notices --repo . --check
       - name: native dry run
         run: sh scripts/release/build.sh --target native --dry-run --out release-out --runner ubuntu-24.04
-      - name: release/artifacts conformance (happy and failure)
+      - name: the dry run staged the packed SDK and the uploaded set verifies
+        shell: bash
+        run: |
+          # The relative --out above is the build jobs' invocation: the SDK tarball must land
+          # in release-out/sdk and inside the artifact, not under packages/client-ts.
+          set -- release-out/sdk/ovis-terminal-client-*.tgz
+          test -f "$1"
+          test ! -e packages/client-ts/release-out
+          tar -tzf release-out/stage/*.tar.gz | grep -q '/ovis-terminal-client-.*\.tgz$'
+          # promote sees only what the build jobs upload: entries, archives, sidecars, QA.
+          mkdir uploaded
+          cp release-out/stage/*.entry.json release-out/stage/*.tar.gz release-out/stage/*.tar.gz.sha256 release-out/stage/*.qa.json uploaded/
+          cargo run --locked --quiet -p release-stage -- verify --dir uploaded
+      - name: release/artifacts conformance on the binary build.sh built and unpacked
+        shell: bash
+        run: |
+          # The native fixture stages this binary from its own receipt and packed SDK, then
+          # unpacks and runs it and compares version, schema and digests with the entry.
+          binary="$(ls -d "$PWD"/release-out/install/*/ovis-terminal)"
+          cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- \
+            --binary "$binary" --scenario release/artifacts --isolated --case all \
+            --evidence release-evidence/task-67-built.json
+      - name: release/artifacts conformance (happy and failure, debug binary)
         shell: bash
         run: |
           set -o pipefail

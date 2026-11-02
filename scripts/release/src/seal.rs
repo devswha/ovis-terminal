@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 
 use crate::docs::{ArchiveRecord, Entry};
 use crate::error::ReleaseError;
-use crate::files::{pack, read_json, sha256_file, write_json};
+use crate::files::{pack, read_json, sha256_file, unpack, write_json};
 use crate::stage::records;
 
 /// The directory holding `entry` (its staging directory).
@@ -48,11 +48,13 @@ pub(crate) fn verify_files(dir: &Path, entry: &Entry) -> Result<(), ReleaseError
     Ok(())
 }
 
-/// Requires the sealed archive beside the entry to hash to its record.
+/// Requires the sealed archive beside the entry, and its `.sha256` sidecar, to match the
+/// entry's archive record.
 ///
 /// # Errors
 ///
-/// [`ReleaseError::Unsealed`] or [`ReleaseError::ChecksumMismatch`].
+/// [`ReleaseError::Unsealed`] or [`ReleaseError::ChecksumMismatch`] naming the archive or
+/// its sidecar.
 pub(crate) fn verify_archive(dir: &Path, entry: &Entry) -> Result<ArchiveRecord, ReleaseError> {
     let archive = entry
         .archive
@@ -61,15 +63,52 @@ pub(crate) fn verify_archive(dir: &Path, entry: &Entry) -> Result<ArchiveRecord,
             name: entry.name.clone(),
         })?;
     let (actual, _) = sha256_file(&dir.join(&archive.file))?;
-    if actual == archive.sha256 {
-        Ok(archive)
-    } else {
-        Err(ReleaseError::ChecksumMismatch {
+    if actual != archive.sha256 {
+        return Err(ReleaseError::ChecksumMismatch {
             file: archive.file,
             recorded: archive.sha256,
             actual,
-        })
+        });
     }
+    let sidecar = format!("{}.sha256", archive.file);
+    let written = std::fs::read_to_string(dir.join(&sidecar)).unwrap_or_default();
+    if written != sidecar_line(&archive.sha256, &archive.file) {
+        let actual = written
+            .split_whitespace()
+            .next()
+            .unwrap_or("missing")
+            .to_owned();
+        return Err(ReleaseError::ChecksumMismatch {
+            file: sidecar,
+            recorded: archive.sha256,
+            actual,
+        });
+    }
+    Ok(archive)
+}
+
+/// The `sha256sum`-format line of a `.sha256` sidecar.
+pub(crate) fn sidecar_line(sha256: &str, file: &str) -> String {
+    format!("{sha256}  {file}\n")
+}
+
+/// Unpacks the sealed archive into a scratch directory beside it and requires its files to
+/// be exactly the entry's files, so the archive, not a staged directory, is what is checked.
+///
+/// # Errors
+///
+/// [`ReleaseError::ChecksumMismatch`] for a file the archive changed, added or lost, or
+/// `tar` and file failures.
+pub(crate) fn verify_unpacked(dir: &Path, entry: &Entry) -> Result<(), ReleaseError> {
+    let archive = verify_archive(dir, entry)?;
+    let scratch = dir.join(format!(".unpacked-{}", entry.name));
+    if scratch.exists() {
+        std::fs::remove_dir_all(&scratch).map_err(ReleaseError::io("clear", &scratch))?;
+    }
+    unpack(&dir.join(&archive.file), &scratch)?;
+    let checked = verify_files(&scratch, entry);
+    std::fs::remove_dir_all(&scratch).map_err(ReleaseError::io("remove", &scratch))?;
+    checked
 }
 
 /// Re-verifies the staged files, packs `<name>.tar.gz` and records it in the entry.
@@ -91,7 +130,7 @@ pub(crate) fn seal(entry_path: &Path) -> Result<Value, ReleaseError> {
     write_json(entry_path, &entry)?;
     std::fs::write(
         dir.join(format!("{file}.sha256")),
-        format!("{sha256}  {file}\n"),
+        sidecar_line(&sha256, &file),
     )
     .map_err(ReleaseError::io("write", dir))?;
     Ok(json!({ "sealed": file, "sha256": sha256, "bytes": bytes }))
@@ -119,7 +158,8 @@ pub(crate) fn entries(dir: &Path) -> Result<Vec<Entry>, ReleaseError> {
         .collect()
 }
 
-/// Verifies every entry of `dir`: closed shape, staged files and, when sealed, the archive.
+/// Verifies every entry of `dir`: closed shape, the staged files when the staged directory
+/// is present, and, when sealed, the archive, its sidecar and the archive's contents.
 ///
 /// # Errors
 ///
@@ -128,9 +168,11 @@ pub(crate) fn verify(dir: &Path) -> Result<Value, ReleaseError> {
     let entries = entries(dir)?;
     let mut sealed = 0_usize;
     for entry in &entries {
-        verify_files(dir, entry)?;
+        if dir.join(&entry.name).is_dir() {
+            verify_files(dir, entry)?;
+        }
         if entry.archive.is_some() {
-            verify_archive(dir, entry)?;
+            verify_unpacked(dir, entry)?;
             sealed = sealed.saturating_add(1);
         }
     }

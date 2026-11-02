@@ -40,15 +40,21 @@ target_dir=${CARGO_TARGET_DIR:-$repo/target}
 [ -n "$out" ] || out="$target_dir/release-stage/$target"
 rm -rf "$out"
 mkdir -p "$out/sdk"
+# Absolute from here on: the SDK is packed from packages/client-ts, not the repository root.
+out=$(cd "$out" && pwd)
 
 stage_tool() {
     cargo run --locked --quiet -p release-stage -- "$@"
 }
 
-echo "==> build ovis-terminal for $target (release profile)"
-cargo build --locked --release -p ovis-terminal-cli --bin ovis-terminal --target "$target"
 binary="$target_dir/$target/release/ovis-terminal"
 case "$target" in *-windows-*) binary="$binary.exe" ;; esac
+# A binary left by an earlier build must never be staged in place of this one.
+rm -f "$binary"
+
+echo "==> build ovis-terminal for $target (release profile)"
+cargo build --locked --release -p ovis-terminal-cli --bin ovis-terminal --target "$target"
+[ -f "$binary" ] || { echo "build.sh: cargo produced no $binary" >&2; exit 1; }
 
 echo "==> pack the TypeScript SDK"
 (
