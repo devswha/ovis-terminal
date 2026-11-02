@@ -10,6 +10,7 @@ pub mod poll;
 pub mod process;
 pub mod pty;
 pub mod redact;
+pub mod replay;
 pub mod root;
 pub mod run;
 pub mod session;

@@ -201,7 +201,13 @@ The block's acceptance commands name `-p conformance`, but the package is `ovis-
 - `crates/ovis-terminal-protocol/src/schema/records{.rs,/lease.rs,/attach.rs}`, `crates/ovis-terminal-server/src/streams/records.rs`, `schema/ovis-terminal.openrpc.json`, `packages/client-ts/src/generated/`, `conformance/ideal-map.json`: the `checkpoint_inexact` contract change.
 - `probes/platform-qa/stress/attach-input.{json,sh}`: this lane's macOS stress lane, which keeps evidence as `*.evidence.log`.
 - `docs/evidence/task-30/`.
-- Merges of `origin/integration`: 1abcced (T70), 60076f7 (F2a) and cc1ca2c (F2b, T84), each authorized. The cc1ca2c merge conflicted only in generated files: `packages/client-ts/src/generated/*` and `conformance/ideal-map.json`. They were taken from integration, then regenerated:
+- Merges of `origin/integration`: 1abcced (T70), 60076f7 (F2a), cc1ca2c (F2b, T84) and 1869b9e (T64), each authorized. The 1869b9e merge:
+  - `conformance/src/scenario/model.rs` and `engine/steps.rs`: union of the `StreamData` and `Replay` step variants.
+  - `crates/ovis-terminal-cli/src/assembly/reads.rs`: union of the screen imports.
+  - T64's `engine/replay.rs` `Serve` initializer gained `qa_output_ring_bytes: None`.
+  - The OpenRPC document is unchanged by 1869b9e (the binary's `schema openrpc` equals it).
+  - `ovis-replay refresh` moved the pins in `conformance/fixtures/ovis/manifest.json` (schema and `ideal-map.json` hashes: this lane adds `Checkpoint.inexact`) and dropped `part-a/task-30` from `predicates.json`'s declaration-only list, because it now executes. A second refresh is stable.
+- Earlier merge, cc1ca2c: The cc1ca2c merge conflicted only in generated files: `packages/client-ts/src/generated/*` and `conformance/ideal-map.json`. They were taken from integration, then regenerated:
   - The schema from the merged binary equals the merged `schema/ovis-terminal.openrpc.json` byte for byte, with `Checkpoint.inexact` and T84's release field.
   - `quality-matrix --mode contract` exits 0.
   - `bun run generate` is fresh; typecheck passes and `bun test` passes 47/47.

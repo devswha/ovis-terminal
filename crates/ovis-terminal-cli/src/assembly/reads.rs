@@ -1,5 +1,7 @@
-//! `terminal.screen`, `terminal.output` and `terminal.wait_output` from the live screen of
-//! each incarnation; reads never write to the program or move a viewport.
+//! `terminal.screen`, `terminal.search`, `terminal.output` and `terminal.wait_output` from the
+//! live screen of each incarnation; reads never write to the program or move a viewport.
+//! A search names the revision it must run against: a pinned snapshot answers it unchanged
+//! while output keeps flowing, and one no longer pinned is the typed `stale_revision`.
 //!
 //! An output wait is armed on the actor thread, in the same order as every holder fact,
 //! and awaited off it. A cursor already behind retention when armed is `cursor_expired`;
@@ -9,7 +11,7 @@ use std::time::{Duration, Instant};
 
 use base64::Engine as _;
 use ovis_terminal_core::restart::ArmedWait;
-use ovis_terminal_core::screen::{OutputRequest, ScreenError};
+use ovis_terminal_core::screen::{Needle, OutputRequest, ScreenError, SearchRequest};
 use ovis_terminal_core::waits::{OutputOutcome, OutputWait, Ticket, WaitError};
 use ovis_terminal_protocol::domain::restart::InterruptedWait;
 use ovis_terminal_protocol::errors::{BoundaryError, OpId};
@@ -17,7 +19,7 @@ use ovis_terminal_protocol::schema::common::{Pattern, TextFormat};
 use ovis_terminal_protocol::schema::ids::TerminalId as WireTerminalId;
 use ovis_terminal_protocol::schema::methods::terminal_read::{
     TerminalOutputParams, TerminalOutputResult, TerminalScreenParams, TerminalScreenResult,
-    TerminalWaitOutputParams, TerminalWaitOutputResult,
+    TerminalSearchParams, TerminalSearchResult, TerminalWaitOutputParams, TerminalWaitOutputResult,
 };
 use ovis_terminal_protocol::schema::scalar::ByteOffset;
 use ovis_terminal_server::streams::wire_modes;
@@ -83,6 +85,44 @@ impl Runtime {
             "modes": wire_modes(&view.modes, view.mode_revision),
             "title": view.title,
             "truncated": false,
+        }))
+    }
+
+    pub(super) fn search(&mut self, params: &TerminalSearchParams) -> Result<Value, BoundaryError> {
+        let Pattern::Text(text) = &params.pattern else {
+            return Err(refusal("format_unsupported", "search literal text"));
+        };
+        let needle =
+            Needle::new(text.clone()).map_err(|error| refusal(error.kind(), error.hint()))?;
+        let limit = std::num::NonZeroU32::new(params.limit)
+            .ok_or_else(|| refusal("invalid_params", "request a positive limit"))?;
+        let mut request = SearchRequest::new(needle, limit);
+        if let Some(revision) = params.revision {
+            let wanted = serde_json::to_value(revision)
+                .and_then(serde_json::from_value)
+                .map_err(internal("convert the search revision"))?;
+            request = request.at(wanted);
+        }
+        let live = live_terminal((&self.directory, &mut self.live), &params.target)?;
+        let found = live
+            .hub
+            .screen()
+            .search(&request)
+            .map_err(|error| refusal(error.kind(), error.hint()))?;
+        let width = u16::try_from(text.chars().count()).unwrap_or(u16::MAX);
+        let matches: Vec<Value> = found
+            .matches
+            .iter()
+            .map(|hit| {
+                let col = u16::try_from(hit.char_index).unwrap_or(u16::MAX);
+                json!({"line": hit.line.to_string(), "col": col, "len": width})
+            })
+            .collect();
+        checked::<TerminalSearchResult>(json!({
+            "matches": matches,
+            "revision": found.meta.revision.get().to_string(),
+            "complete": found.complete,
+            "floor_line": found.searched.first.to_string(),
         }))
     }
 

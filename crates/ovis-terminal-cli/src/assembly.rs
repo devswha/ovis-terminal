@@ -25,6 +25,7 @@ mod inspect;
 mod journal;
 mod lanes;
 mod layout;
+mod lease_feed;
 mod lease_ops;
 mod lifetime;
 mod live;

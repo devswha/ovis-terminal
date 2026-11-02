@@ -58,6 +58,11 @@ impl TerminalStreams {
         viewer.close_now(StreamClose::new(StreamCloseReason::ClientClosed, at.wire()));
         viewer.wake.notify_one();
         drop(state);
+        // The reply must not precede the revocation: from the moment `attach.close`
+        // answers, a write presenting this stream's lease is refused. `attach.close` carries
+        // no op id, so the release is journaled under a minted one, as the pump's detach is;
+        // that later detach finds nothing left to revoke.
+        self.release(stream, super::pump::detach_op())?;
         Ok(at)
     }
 
@@ -114,7 +119,8 @@ impl TerminalStreams {
         Ok(())
     }
 
-    /// Revokes the leases of `stream`'s owner unless another stream of that owner remains;
+    /// Revokes the leases of `stream`'s owner unless another open stream of that owner
+    /// remains (a closed one awaiting detach does not count);
     /// the stream itself stays so its CLOSE can still be delivered.
     pub(super) fn release(&self, stream: &StreamId, op: OpId) -> Result<(), StreamError> {
         let mut state = self.lock()?;
@@ -124,7 +130,7 @@ impl TerminalStreams {
         let shared = state
             .viewers
             .iter()
-            .any(|(id, other)| id != stream && other.owner == owner);
+            .any(|(id, other)| id != stream && other.owner == owner && !other.is_closed());
         let transition = if shared {
             None
         } else {
@@ -168,3 +174,6 @@ fn stall_close(viewer: &mut Viewer) {
     ));
     viewer.wake.notify_one();
 }
+
+#[cfg(test)]
+mod tests;
