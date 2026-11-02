@@ -23,6 +23,7 @@ pub(super) enum Plan {
     Skill,
     NewOp,
     Schema(SchemaPart),
+    Compat(std::path::PathBuf),
     Endpoint,
     Bridge,
     Status,
@@ -117,7 +118,7 @@ pub(super) fn plan(cli: Cli, token: Option<&str>) -> Result<Plan, CliError> {
     };
     Ok(match command {
         Command::Connect => Plan::Bridge,
-        Command::Schema { part } => Plan::Schema(part),
+        Command::Schema { part, released } => super::compat::plan(part, released)?,
         Command::Endpoint => Plan::Endpoint,
         Command::Server(ServerCommand::Status) => Plan::Status,
         Command::Server(ServerCommand::Metrics(args)) => {

@@ -602,6 +602,6 @@ A credential grants permissions; a role is a named bundle. No permission implies
 | 12 | forbidden | forbidden, unauthenticated, invalid_credential, credential_expired, credential_revoked, peer_rejected, not_authorized, no_lease, raw_not_authorized, takeover_not_authorized, attach_refused, not_owner |
 | 13 | outcome_unknown | outcome_unknown, server_restart, deadline_exceeded, manager_timeout, holder_not_ready |
 
-Kinds this binary reports itself and exits 1 with: `transport_failed`, `connection_closed`, `invalid_response`, `internal`, `pipe_busy_timeout`, `serve_failed`, `stop_failed`, `server_refused`, `terminal_hung_up`, `finished`, `endpoint_insecure`, `endpoint_io`, `not_a_socket`. Any other kind a newer server returns also exits 1.
+Kinds this binary reports itself and exits 1 with: `transport_failed`, `connection_closed`, `invalid_response`, `internal`, `pipe_busy_timeout`, `serve_failed`, `stop_failed`, `server_refused`, `terminal_hung_up`, `finished`, `endpoint_insecure`, `endpoint_io`, `not_a_socket`, `baseline_unreadable`, `baseline_malformed`, `generation_mismatch`, `compatibility_break`. Any other kind a newer server returns also exits 1.
 
 Environment: `OVIS_TERMINAL_SOCKET`, `OVIS_TERMINAL_SESSION`, `XDG_RUNTIME_DIR`, `XDG_STATE_HOME`, `HOME`, `USERNAME`, `OVIS_JSON`, `OVIS_TERMINAL_CREDENTIAL`, `OVIS_TERMINAL_PROCESS_TOKEN`.

@@ -134,6 +134,8 @@ pub(crate) enum Step {
     PtyExit(super::pty::PtyExit),
     /// Run planned quality gates in-process, or only the one `--inject` names.
     Gates(super::gates::Gates),
+    /// Run planned release-stage checks in-process, or only the one `--inject` names.
+    Release(super::release::Release),
     /// Read one attach stream until a marker and check its bytes and control records.
     GraphicsTranscript(crate::fixture::graphics::GraphicsTranscript),
     /// Audit the Ovis consumer fixture set and replay its cases of one kind.

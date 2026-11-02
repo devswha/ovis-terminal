@@ -1,0 +1,366 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "release/artifacts",
+  "title": "Verified release artifacts: native staging, released-schema gate and promotion refusals",
+  "todo": 67,
+  "closes": [
+    "GAP-127",
+    "GAP-139",
+    "GAP-140",
+    "GAP-141"
+  ],
+  "delivers": [
+    "IDEAL-034",
+    "IDEAL-100",
+    "IDEAL-112",
+    "IDEAL-113",
+    "IDEAL-114"
+  ],
+  "excludes": [
+    "EXCL-013",
+    "EXCL-016",
+    "EXCL-021"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "The binary under test reports itself compatible with schema/released.openrpc.json (ovis-terminal --json schema compat --released). The same binary is staged for this host, sealed into a checksummed archive, unpacked as an installer would and run natively: versions, manual, schema and released compatibility agree, every file re-hashes and the notices list every Cargo.lock crate with the Apache-2.0 attribution. A complete five-target matrix with native receipts promotes as a dry run that never publishes and states that nothing is signed.",
+      "steps": [
+        {
+          "release": {
+            "planned": [
+              {
+                "request": {
+                  "fixture": "released-baseline"
+                },
+                "args": [
+                  "fixture",
+                  "released-baseline",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 0,
+                "report": {
+                  "/verdict": "pass",
+                  "/compatible": true,
+                  "/binary/exit": 0,
+                  "/binary/stdout/compatible": true,
+                  "/binary/stdout/generation": "1",
+                  "/binary/argv": {
+                    "$contains": [
+                      "schema",
+                      "compat",
+                      "--released"
+                    ]
+                  }
+                }
+              },
+              {
+                "request": {
+                  "fixture": "native-artifact"
+                },
+                "args": [
+                  "fixture",
+                  "native-artifact",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 0,
+                "report": {
+                  "/verdict": "pass",
+                  "/staged/release_target": false,
+                  "/sealed/sha256": {
+                    "$present": true
+                  },
+                  "/qa/passed": true,
+                  "/verified/entries": "1",
+                  "/verified/sealed": "1",
+                  "/entry/checks/schema_matches_source": true,
+                  "/entry/checks/apache_attribution": true,
+                  "/entry/checks/notice_crates": {
+                    "$at_least": "100"
+                  },
+                  "/entry/checks/compat/exit": 0,
+                  "/entry/checks/compat/stdout/compatible": true,
+                  "/entry/files": {
+                    "$present": true
+                  }
+                }
+              },
+              {
+                "request": {
+                  "fixture": "complete-matrix-dry-run"
+                },
+                "args": [
+                  "fixture",
+                  "complete-matrix-dry-run",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 0,
+                "report": {
+                  "/verdict": "pass",
+                  "/outcome": "dry_run",
+                  "/targets": "5",
+                  "/supported": [
+                    "linux/x86_64",
+                    "linux/aarch64",
+                    "macos/x86_64",
+                    "macos/aarch64",
+                    "windows/x86_64"
+                  ],
+                  "/signing/performed": false,
+                  "/manifest_sha256": {
+                    "$present": true
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "A released baseline of the same generation that requires an output this build lacks makes the binary answer compatibility_break, the stage exit 1 with no entry written and the repository baseline unchanged. A tampered binary is checksum_mismatch, an entry with an unknown field is manifest_malformed, a matrix without the Windows artifact is target_missing, a missing native QA receipt is native_qa_missing, a macOS receipt from a Linux host is cross_build_refused, an unpinned SQLite is target_receipt_invalid, lost Apache attribution is notices_missing, a rerun after publication is already_published with publish false, and a rerun with different artifacts is release_conflict. With --inject only the named fixture runs.",
+      "steps": [
+        {
+          "release": {
+            "planned": [
+              {
+                "request": {
+                  "fixture": "same-generation-removed-required-output"
+                },
+                "args": [
+                  "fixture",
+                  "same-generation-removed-required-output",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 1,
+                "report": {
+                  "/verdict": "fail",
+                  "/kind": "compatibility_break",
+                  "/exit": 1,
+                  "/details/binary/exit": 1,
+                  "/details/binary/stderr/error/kind": "compatibility_break",
+                  "/details/binary/stderr/error/exit_code": 1,
+                  "/released_unchanged": true,
+                  "/entries_written": "0",
+                  "/details/binary/stderr/error/breaks/0/rule": "output_property_removed",
+                  "/details/binary/stderr/error/breaks/0/path": "server.status ->.release_fixture_required_output",
+                  "/details/binary/argv": {
+                    "$contains": [
+                      "schema",
+                      "compat",
+                      "--released"
+                    ]
+                  }
+                }
+              },
+              {
+                "request": {
+                  "fixture": "bad-manifest-hash"
+                },
+                "args": [
+                  "fixture",
+                  "bad-manifest-hash",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 1,
+                "report": {
+                  "/kind": "checksum_mismatch",
+                  "/details/file": "ovis-terminal-0.0.0-fixture-x86_64-pc-windows-msvc/ovis-terminal.exe"
+                }
+              },
+              {
+                "request": {
+                  "fixture": "malformed-manifest"
+                },
+                "args": [
+                  "fixture",
+                  "malformed-manifest",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 1,
+                "report": {
+                  "/kind": "manifest_malformed"
+                }
+              },
+              {
+                "request": {
+                  "fixture": "missing-windows-artifact"
+                },
+                "args": [
+                  "fixture",
+                  "missing-windows-artifact",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 1,
+                "report": {
+                  "/kind": "target_missing",
+                  "/details/missing": [
+                    "x86_64-pc-windows-msvc"
+                  ]
+                }
+              },
+              {
+                "request": {
+                  "fixture": "missing-native-qa"
+                },
+                "args": [
+                  "fixture",
+                  "missing-native-qa",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 1,
+                "report": {
+                  "/kind": "native_qa_missing"
+                }
+              },
+              {
+                "request": {
+                  "fixture": "cross-built-macos"
+                },
+                "args": [
+                  "fixture",
+                  "cross-built-macos",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 1,
+                "report": {
+                  "/kind": "cross_build_refused"
+                }
+              },
+              {
+                "request": {
+                  "fixture": "unpinned-sqlite"
+                },
+                "args": [
+                  "fixture",
+                  "unpinned-sqlite",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 1,
+                "report": {
+                  "/kind": "target_receipt_invalid",
+                  "/details/field": "sqlite"
+                }
+              },
+              {
+                "request": {
+                  "fixture": "missing-notices"
+                },
+                "args": [
+                  "fixture",
+                  "missing-notices",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 1,
+                "report": {
+                  "/kind": "notices_missing"
+                }
+              },
+              {
+                "request": {
+                  "fixture": "rerun-after-publish"
+                },
+                "args": [
+                  "fixture",
+                  "rerun-after-publish",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 0,
+                "report": {
+                  "/runs/0/outcome": "promote",
+                  "/runs/0/publish": true,
+                  "/runs/1/outcome": "already_published",
+                  "/runs/1/publish": false
+                }
+              },
+              {
+                "request": {
+                  "fixture": "conflicting-rerun"
+                },
+                "args": [
+                  "fixture",
+                  "conflicting-rerun",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root"
+                ],
+                "exit": 1,
+                "report": {
+                  "/kind": "release_conflict"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

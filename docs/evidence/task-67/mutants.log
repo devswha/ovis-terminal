@@ -1,0 +1,47 @@
+### M1 promote ignores a missing target
+file: scripts/release/src/promote.rs
+- '    if !missing.is_empty() {\n        return Err(ReleaseError::TargetMissing'
++ '    if missing.is_empty() && !missing.is_empty() {\n        return Err(ReleaseError::TargetMissing'
+$ cargo nextest run --locked -p release-stage --no-fail-fast
+exit=0
+        FAIL [   0.032s] (10/12) release-stage tests::each_missing_or_foreign_part_refuses_promotion_with_its_kind
+     Summary [   0.035s] 12 tests run: 11 passed, 1 failed, 0 skipped
+test_exit=100
+
+
+
+### M2 republish over a different published manifest
+file: scripts/release/src/promote.rs
+- '.is_some_and(|published| *published != manifest)'
++ '.is_some_and(|published| *published != manifest && published.version.is_empty())'
+$ cargo nextest run --locked -p release-stage --no-fail-fast
+exit=0
+        FAIL [   0.178s] (12/12) release-stage tests::each_missing_or_foreign_part_refuses_promotion_with_its_kind
+     Summary [   0.180s] 12 tests run: 11 passed, 1 failed, 0 skipped
+test_exit=100
+
+
+
+### M3 cross-built receipt accepted
+file: scripts/release/src/promote.rs
+- '    if receipt.host != Platform::of_triple(target)? {\n        return Err(ReleaseError::CrossBuildRefused'
++ '    if receipt.host != Platform::of_triple(target)? && target.is_empty() {\n        return Err(ReleaseError::CrossBuildRefused'
+$ cargo nextest run --locked -p release-stage --no-fail-fast
+exit=0
+        FAIL [   0.072s] (12/12) release-stage tests::each_missing_or_foreign_part_refuses_promotion_with_its_kind
+     Summary [   0.073s] 12 tests run: 11 passed, 1 failed, 0 skipped
+test_exit=100
+
+
+
+### M4 CLI treats a compatibility break as compatible
+file: crates/ovis-terminal-cli/src/invocation/compat.rs
+- '    if !breaks.is_empty() {\n        return Err(CliError::CompatibilityBreak { breaks });'
++ '    if breaks.is_empty() && !breaks.is_empty() {\n        return Err(CliError::CompatibilityBreak { breaks });'
+$ cargo nextest run --locked -p ovis-terminal-cli -E 'test(compat)' --no-fail-fast
+exit=0
+        FAIL [   0.492s] (4/4) ovis-terminal-cli invocation::compat::tests::a_baseline_requiring_an_output_this_build_lacks_is_a_compatibility_break
+     Summary [   0.493s] 4 tests run: 3 passed, 1 failed, 113 skipped
+test_exit=100
+
+

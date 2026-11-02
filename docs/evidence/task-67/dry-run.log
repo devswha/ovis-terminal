@@ -1,0 +1,136 @@
+Linux x86_64
+==> build ovis-terminal for x86_64-unknown-linux-gnu (release profile)
+warning: linker stderr: ignoring deprecated linker optimization setting "1"
+  |
+  = note: `#[warn(linker_messages)]` on by default
+
+warning: `ovis-terminal-cli` (bin "ovis-terminal") generated 1 warning
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.07s
+==> pack the TypeScript SDK
+bun install v1.4.3 (c6da4a4d3)
+
+Done! Checked 8 packages (no changes) [2.00ms]
+$ bun scripts/generate.ts --check
+{"generated":"fresh","files":31}
+$ bun scripts/build.ts
+{"built":"dist","generated_files":31,"entries":["dist/index.js","dist/protocol.js"]}
+$ bun scripts/pack.ts --destination "/dev/shm/ovt-target-lane-t67/release-stage/x86_64-unknown-linux-gnu/sdk"
+{"tarball":"/dev/shm/ovt-target-lane-t67/release-stage/x86_64-unknown-linux-gnu/sdk/ovis-terminal-client-0.1.0.tgz","sha256":"36de7adffab4276a9748546bddee3bc2f034c381ff11343c1940c5c7a95d6393"}
+==> observe the C toolchain
+==> receipt, stage, seal, native QA, verify
+{
+  "argv": [
+    "release-stage",
+    "receipt",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "--runner",
+    "local",
+    "--repo",
+    "/home/devswha/workspace/ovis-terminal-wt/lane-t67",
+    "--out",
+    "/dev/shm/ovt-target-lane-t67/release-stage/x86_64-unknown-linux-gnu/receipt.json",
+    "--observe",
+    "compiler=clang version 22.1.8 (/home/devswha/.ovis-toolchain/cargo/bin/zigcc-linker)",
+    "--observe",
+    "linker=/home/devswha/.ovis-toolchain/cargo/bin/zigcc-linker"
+  ],
+  "host": {
+    "arch": "x86_64",
+    "os": "linux"
+  },
+  "receipt": "/dev/shm/ovt-target-lane-t67/release-stage/x86_64-unknown-linux-gnu/receipt.json",
+  "rustc": "1.99.1",
+  "sqlite": "3.54.1",
+  "tool": "release-stage",
+  "verdict": "pass"
+}
+{
+  "argv": [
+    "release-stage",
+    "stage",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "--binary",
+    "/dev/shm/ovt-target-lane-t67/x86_64-unknown-linux-gnu/release/ovis-terminal",
+    "--sdk",
+    "/dev/shm/ovt-target-lane-t67/release-stage/x86_64-unknown-linux-gnu/sdk/ovis-terminal-client-0.1.0.tgz",
+    "--receipt",
+    "/dev/shm/ovt-target-lane-t67/release-stage/x86_64-unknown-linux-gnu/receipt.json",
+    "--repo",
+    "/home/devswha/workspace/ovis-terminal-wt/lane-t67",
+    "--out",
+    "/dev/shm/ovt-target-lane-t67/release-stage/x86_64-unknown-linux-gnu/stage"
+  ],
+  "files": "7",
+  "host": {
+    "arch": "x86_64",
+    "os": "linux"
+  },
+  "release_target": false,
+  "staged": "ovis-terminal-0.1.0-x86_64-unknown-linux-gnu",
+  "target": "x86_64-unknown-linux-gnu",
+  "tool": "release-stage",
+  "verdict": "pass"
+}
+{
+  "argv": [
+    "release-stage",
+    "seal",
+    "--entry",
+    "/dev/shm/ovt-target-lane-t67/release-stage/x86_64-unknown-linux-gnu/stage/ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.entry.json"
+  ],
+  "bytes": "7534893",
+  "host": {
+    "arch": "x86_64",
+    "os": "linux"
+  },
+  "sealed": "ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz",
+  "sha256": "16d3713f124f8b50ef196f7b1ac586ee13e82e1e19d2ffa79825b5d152f7c901",
+  "tool": "release-stage",
+  "verdict": "pass"
+}
+{
+  "argv": [
+    "release-stage",
+    "qa",
+    "--entry",
+    "/dev/shm/ovt-target-lane-t67/release-stage/x86_64-unknown-linux-gnu/stage/ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.entry.json",
+    "--install-dir",
+    "/dev/shm/ovt-target-lane-t67/release-stage/x86_64-unknown-linux-gnu/install",
+    "--released",
+    "/home/devswha/workspace/ovis-terminal-wt/lane-t67/schema/released.openrpc.json",
+    "--runner",
+    "local"
+  ],
+  "checks": "5",
+  "host": {
+    "arch": "x86_64",
+    "os": "linux"
+  },
+  "passed": true,
+  "qa": "ovis-terminal-0.1.0-x86_64-unknown-linux-gnu",
+  "tool": "release-stage",
+  "verdict": "pass"
+}
+{
+  "argv": [
+    "release-stage",
+    "verify",
+    "--dir",
+    "/dev/shm/ovt-target-lane-t67/release-stage/x86_64-unknown-linux-gnu/stage"
+  ],
+  "entries": "1",
+  "host": {
+    "arch": "x86_64",
+    "os": "linux"
+  },
+  "sealed": "1",
+  "tool": "release-stage",
+  "verdict": "pass",
+  "verified": [
+    "ovis-terminal-0.1.0-x86_64-unknown-linux-gnu"
+  ]
+}
+build.sh: dry run staged x86_64-unknown-linux-gnu in /dev/shm/ovt-target-lane-t67/release-stage/x86_64-unknown-linux-gnu/stage; nothing was published
+build.sh exit=0

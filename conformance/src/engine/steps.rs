@@ -65,6 +65,7 @@ impl Session<'_> {
                 | Step::PtyResize(_)
                 | Step::PtyExit(_) => self.pty(step).await,
                 Step::Gates(gates) => self.gates(gates).await,
+                Step::Release(release) => self.release(release).await,
                 Step::GraphicsTranscript(step) => self.graphics_transcript(step).await,
                 Step::Replay(replay) => self.replay(replay).await,
             }

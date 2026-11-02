@@ -1,6 +1,7 @@
 //! One invocation: parse, plan, execute, report.
 
 mod args;
+mod compat;
 mod context;
 mod discovery;
 mod error;
@@ -56,6 +57,8 @@ async fn execute(plan: Plan, mode: OutputMode, context: &Context) -> Result<Repo
         Plan::Schema(SchemaPart::Openrpc) => return Ok(discovery::openrpc()?),
         Plan::Schema(SchemaPart::Cli) => discovery::cli_contract(),
         Plan::Schema(SchemaPart::Contract) => return Ok(discovery::contract(mode)?),
+        Plan::Schema(SchemaPart::Compat) => return Err(CliError::ReleasedFlag.into()),
+        Plan::Compat(released) => compat::compat(&released)?,
         Plan::Endpoint => discovery::endpoint(context)?,
         Plan::Status => execute::status(context).await?,
         Plan::Call(request) => execute::call(context, &request).await?,

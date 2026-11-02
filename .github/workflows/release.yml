@@ -1,0 +1,270 @@
+name: release
+
+# Release artifacts (plan todo 67).
+#
+# pull_request: one native dry run on ubuntu (build.sh --target native --dry-run, which
+#   stages the x86_64-unknown-linux-gnu host build as a non-release artifact), the
+#   release-stage tests, the notices freshness check and the release/artifacts conformance
+#   scenario. The five-target matrix is not run on pull requests: two macOS runners, an
+#   arm runner and Windows with fat-LTO builds would exceed the PR budget.
+# push of a v* tag, or workflow_dispatch: the five native target jobs, then the
+#   orchestrator-only promote job. promote runs even when a target job failed, so a missing
+#   artifact is a typed `target_missing` failure, never a silently smaller release.
+#   It publishes only on a tag push or with publish=true, through the protected `release`
+#   environment; a version already published with the same manifest is never published
+#   again, and a different one is refused.
+#
+# Every target builds natively on its own OS and architecture (macOS on macOS runners with
+# the pinned Xcode SDK; no Linux-to-macOS cross build). Nothing is code-signed or
+# notarized and no paid service is used; pins.json carries the published statement.
+
+on:
+  pull_request:
+    paths:
+      - scripts/release/**
+      - .github/workflows/release.yml
+      - schema/**
+      - THIRD_PARTY_NOTICES.md
+      - Cargo.lock
+      - crates/ovis-terminal-cli/**
+      - conformance/scenarios/release/**
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the promoted release (otherwise promote is a dry run)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  # Same as ci.yml (F2b): debug builds keep only line tables so the runner disk holds the
+  # conformance build. The shipped binary uses [profile.release] from Cargo.toml (fat LTO,
+  # one codegen unit, stripped symbols, abort on panic).
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+
+jobs:
+  dry-run:
+    if: github.event_name == 'pull_request'
+    name: dry-run (ubuntu, native)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: pin C toolchain (Linux gcc 14.2.0)
+        shell: bash
+        run: |
+          test "$(gcc-14 -dumpfullversion)" = "14.2.0"
+          {
+            echo "CC=gcc-14"
+            echo "AR=gcc-ar-14"
+            echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=gcc-14"
+          } >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - name: release-stage tests
+        run: cargo test --locked -p release-stage
+      - name: notices inventory is fresh
+        run: cargo run --locked --quiet -p release-stage -- notices --repo . --check
+      - name: native dry run
+        run: sh scripts/release/build.sh --target native --dry-run --out release-out --runner ubuntu-24.04
+      - name: release/artifacts conformance (happy and failure)
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build --locked -p ovis-terminal-cli --bin ovis-terminal
+          cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- \
+            --binary target/debug/ovis-terminal --scenario release/artifacts --isolated --case all \
+            --evidence release-evidence/task-67.json
+          cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- \
+            --binary target/debug/ovis-terminal --scenario release/artifacts --isolated --case failure \
+            --inject '{"fixture":"same-generation-removed-required-output"}' \
+            --evidence release-evidence/task-67.json --append
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-dry-run
+          path: |
+            release-out/stage/
+            release-out/receipt.json
+            release-evidence/
+
+  build:
+    if: github.event_name != 'pull_request'
+    name: build (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            runner: ubuntu-24.04
+          - target: aarch64-unknown-linux-musl
+            runner: ubuntu-24.04-arm
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+          - target: aarch64-apple-darwin
+            runner: macos-15
+          - target: x86_64-pc-windows-msvc
+            runner: windows-2025
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: pin C toolchain (Linux musl, gcc 14.2.0)
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools gcc-14
+          test "$(gcc-14 -dumpfullversion)" = "14.2.0"
+          musl="$(dpkg-query -W -f='${Version}' musl-tools)"
+          test "${musl%%-*}" = "1.2.4"
+          upper="$(printf '%s' "$TARGET" | tr 'a-z-' 'A-Z_')"
+          lower="$(printf '%s' "$TARGET" | tr '-' '_')"
+          {
+            echo "REALGCC=gcc-14"
+            echo "CC_${lower}=musl-gcc"
+            echo "CARGO_TARGET_${upper}_LINKER=musl-gcc"
+          } >> "$GITHUB_ENV"
+      - name: pin C toolchain (macOS Xcode 16.4, native SDK)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app
+          version="$(xcodebuild -version)"
+          test "${version%%$'\n'*}" = "Xcode 16.4"
+          clang --version
+          uname -m
+      - name: pin C toolchain (Windows MSVC 14.44)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          toolset: "14.44"
+      - name: use the pinned MSVC linker
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          banner="$(cl.exe 2>&1 || :)"
+          [[ "$banner" == *"Version 19.44."* ]]
+          linker="${VCToolsInstallDir}bin\HostX64\x64\link.exe"
+          test -f "$linker"
+          echo "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$linker" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - name: build, stage, seal and native QA
+        shell: bash
+        run: sh scripts/release/build.sh --target "${{ matrix.target }}" --out release-out --runner "${{ matrix.runner }}"
+      - name: native behaviour of the unpacked binary (cli/manual conformance)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          binary="$(ls -d "$PWD"/release-out/install/*/ovis-terminal)"
+          cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- \
+            --binary "$binary" --scenario cli/manual --isolated --case all \
+            --evidence release-out/native-cli-manual.json
+      - name: native behaviour of the unpacked binary (Windows offline verbs)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          binary="$(ls -d "$PWD"/release-out/install/*/ovis-terminal.exe)"
+          "$binary" --json --version
+          "$binary" --json schema compat --released schema/released.openrpc.json
+          "$binary" --json server status
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stage-${{ matrix.target }}
+          if-no-files-found: error
+          path: |
+            release-out/stage/*.entry.json
+            release-out/stage/*.tar.gz
+            release-out/stage/*.tar.gz.sha256
+            release-out/stage/*.qa.json
+
+  promote:
+    # Runs after every target job, passed or not: a missing artifact must fail here.
+    if: always() && github.event_name != 'pull_request'
+    needs: build
+    name: promote (orchestrator)
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: stage-*
+          merge-multiple: true
+          path: staged
+      - name: version, tag and publish decision
+        id: plan
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_INPUT: ${{ inputs.publish }}
+        run: |
+          pkgid="$(cargo pkgid -p ovis-terminal-cli)"
+          version="${pkgid##*[#@]}"
+          tag="v${version}"
+          if [ "${GITHUB_REF_TYPE}" = tag ] && [ "${GITHUB_REF_NAME}" != "$tag" ]; then
+            echo "tag ${GITHUB_REF_NAME} does not name version ${version}" >&2
+            exit 1
+          fi
+          publish=false
+          if [ "${GITHUB_REF_TYPE}" = tag ] || [ "$PUBLISH_INPUT" = true ]; then publish=true; fi
+          existing=()
+          if gh release view "$tag" --json tagName > /dev/null 2>&1; then
+            gh release download "$tag" --pattern release-manifest.json --output published-manifest.json
+            existing=(--existing published-manifest.json)
+          fi
+          dry=()
+          [ "$publish" = true ] || dry=(--dry-run)
+          cargo run --locked --quiet -p release-stage -- promote --dir staged --version "$version" \
+            --pins scripts/release/pins.json "${existing[@]}" "${dry[@]}" | tee promote.json
+          outcome="$(sed -n 's/^  "outcome": "\(.*\)",$/\1/p' promote.json)"
+          echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: publish
+        if: steps.plan.outputs.outcome == 'promote'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          statement="$(sed -n 's/^    "statement": "\(.*\)"$/\1/p' scripts/release/pins.json)"
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes "$statement" \
+            staged/*.tar.gz staged/SHA256SUMS staged/release-manifest.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-manifest
+          path: |
+            staged/release-manifest.json
+            staged/SHA256SUMS
+            promote.json
