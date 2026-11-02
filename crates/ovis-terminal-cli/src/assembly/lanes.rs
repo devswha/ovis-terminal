@@ -18,6 +18,7 @@ use ovis_terminal_agent::status::AgentStatusEvent;
 use ovis_terminal_authz::Authority;
 use ovis_terminal_core::docs::DocChanged;
 use ovis_terminal_core::events::{Coordinator, EventData};
+use ovis_terminal_core::leases::LeaseEvent;
 use ovis_terminal_core::ops::{OperationEvent, OperationProducer};
 use ovis_terminal_core::registry::{RegistryIdentities, RuntimeIdentity};
 use ovis_terminal_core::subscriptions::LossRecord;
@@ -42,6 +43,8 @@ pub(super) enum ServedEvent {
     Worktree(WorktreeEvent),
     /// A subscription lost matching events.
     Lost(LossRecord),
+    /// An attach lease was granted, moved or revoked (published from the lease journal).
+    Lease(LeaseEvent),
 }
 
 impl ServedEvent {
@@ -52,6 +55,7 @@ impl ServedEvent {
             Self::Doc(event) => serde_json::to_value(event),
             Self::Worktree(event) => serde_json::to_value(event),
             Self::Lost(loss) => serde_json::to_value(loss),
+            Self::Lease(event) => super::lease_feed::payload(event),
         }
     }
 }
@@ -63,6 +67,7 @@ impl EventData for ServedEvent {
             Self::Doc(event) => event.event_type(),
             Self::Worktree(event) => event.event_type(),
             Self::Lost(_) => "subscription.lost",
+            Self::Lease(event) => event.event_type(),
         }
     }
 
@@ -71,6 +76,7 @@ impl EventData for ServedEvent {
             Self::Agent(event) => event.at_sequence(seq),
             Self::Doc(event) => event.at_sequence(seq),
             Self::Worktree(event) => event.at_sequence(seq),
+            Self::Lease(event) => event.at_sequence(seq),
             Self::Lost(_) => {}
         }
     }
@@ -91,6 +97,12 @@ impl From<AgentStatusEvent> for ServedEvent {
 impl From<WorktreeEvent> for ServedEvent {
     fn from(event: WorktreeEvent) -> Self {
         Self::Worktree(event)
+    }
+}
+
+impl From<LeaseEvent> for ServedEvent {
+    fn from(event: LeaseEvent) -> Self {
+        Self::Lease(event)
     }
 }
 

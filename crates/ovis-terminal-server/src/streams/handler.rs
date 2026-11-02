@@ -184,21 +184,23 @@ impl<T: TerminalDirectory> AttachLane<T> {
         serde_json::to_value(result).map_err(|error| StreamError::from(error).boundary())
     }
 
-    fn stream_call(&self, call: &Call) -> Result<Value, BoundaryError> {
+    async fn stream_call(&self, call: &Call) -> Result<Value, BoundaryError> {
         let params: AttachStreamParams = decode(call)?;
-        let reply = || -> Result<Value, StreamError> {
+        let reply = async {
             let hub = self.owned(call.session.principal(), &params.stream_id)?;
             let result = if call.request.method() == "attach.close" {
-                let at = hub.close(&params.stream_id)?;
+                // Closing commits the lease revocation to the store, off the executor.
+                let (worker, stream) = (Arc::clone(&hub), params.stream_id.clone());
+                let at = tokio::task::spawn_blocking(move || worker.close(&stream)).await??;
                 AttachStreamResult::new(params.stream_id.clone(), at.wire(), None)
             } else {
                 let checkpoint = hub.repaint(&params.stream_id)?;
                 let at = checkpoint.stream_offset;
                 AttachStreamResult::new(params.stream_id.clone(), at, Some(checkpoint))
             };
-            Ok(serde_json::to_value(result)?)
+            Ok::<Value, StreamError>(serde_json::to_value(result)?)
         };
-        reply().map_err(|error| error.boundary())
+        reply.await.map_err(|error| error.boundary())
     }
 }
 
@@ -213,7 +215,7 @@ impl<H: RequestHandler, T: TerminalDirectory> RequestHandler for AttachHandler<H
         match call.request.method() {
             "attach.open" => self.lane.open(call).await,
             "attach.credit" => self.lane.credit(&call),
-            "attach.close" | "attach.repaint" => self.lane.stream_call(&call),
+            "attach.close" | "attach.repaint" => self.lane.stream_call(&call).await,
             "attach.takeover" => self.lane.takeover(call).await,
             _ => self.inner.call(call).await,
         }

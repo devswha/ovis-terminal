@@ -73,10 +73,17 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 /// Reads `path` once, from one open handle, so identity and bytes describe one file.
+///
+/// Containment was proven when the session was bound; the path is re-resolved on every
+/// read, so a transcript (or a directory above it) replaced by a link leaving the store
+/// afterwards is refused instead of followed.
 pub(super) fn read(path: &TranscriptPath) -> Result<Content, BindingError> {
     let missing = |source| BindingError::SourceMissing { source };
     let file = File::open(path.as_path()).map_err(missing)?;
     let identity = identity(&file.metadata().map_err(missing)?).map_err(missing)?;
+    if !still_bound(path, identity).map_err(missing)? {
+        return Err(BindingError::OutsideStores);
+    }
     let mut bytes = Vec::new();
     file.take(MAX_BYTES.saturating_add(1))
         .read_to_end(&mut bytes)
@@ -93,6 +100,13 @@ pub(super) fn read(path: &TranscriptPath) -> Result<Content, BindingError> {
         },
         bytes,
     })
+}
+
+/// Whether `path` still resolves to itself, through no link, and names the opened file.
+fn still_bound(path: &TranscriptPath, opened: FileIdentity) -> std::io::Result<bool> {
+    let resolved = std::fs::canonicalize(path.as_path())?;
+    let named = identity(&std::fs::symlink_metadata(path.as_path())?)?;
+    Ok(resolved == path.as_path() && named == opened)
 }
 
 impl Content {

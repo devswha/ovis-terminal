@@ -111,6 +111,7 @@ pub(super) struct Generation {
     log: Arc<DispatchLog>,
     events: Arc<super::events::EventLane>,
     handler: Arc<Handler>,
+    journal: Arc<BootJournal>,
 }
 
 impl Generation {
@@ -132,6 +133,7 @@ impl Generation {
             health: Arc::clone(&health),
             launches: launches.clone(),
         })?;
+        shared.journal.publish_to(Some(Arc::clone(&log)));
         let feed = super::feed::subscribe(&log)?;
         shared
             .actor
@@ -190,6 +192,7 @@ impl Generation {
             log,
             events,
             handler,
+            journal: Arc::clone(&shared.journal),
         })
     }
 
@@ -219,6 +222,7 @@ impl Generation {
             .shutdown()
             .await
             .map_err(AssemblyError::stop("join dispatched operations"))?;
+        self.journal.publish_to(None);
         drop((self.dispatch, self.handler));
         self.events.shutdown()?;
         Ok(Ended {

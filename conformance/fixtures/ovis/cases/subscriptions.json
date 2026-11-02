@@ -1,0 +1,222 @@
+{
+  "format": "ovis-replay/1",
+  "id": "subscriptions",
+  "server": "assembled",
+  "kind": "happy",
+  "ideals": [
+    "IDEAL-015",
+    "IDEAL-018",
+    "IDEAL-024",
+    "IDEAL-112"
+  ],
+  "gaps": [
+    "GAP-020",
+    "GAP-021",
+    "GAP-139"
+  ],
+  "excludes": [
+    "EXCL-014",
+    "EXCL-015"
+  ],
+  "adversarial": [
+    "flaky_tests",
+    "cancel_resume"
+  ],
+  "steps": [
+    {
+      "call": {
+        "conn": "phone",
+        "id": "subscribe",
+        "method": "events.subscribe",
+        "params": {
+          "filter": {
+            "types": [
+              "doc.changed"
+            ]
+          },
+          "snapshot": true,
+          "cursor": null
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/subscription_id": {
+            "$capture": "sub"
+          },
+          "/result/snapshot_seq": {
+            "$present": true
+          },
+          "/result/snapshot": []
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "phone",
+        "id": "subscribe-again",
+        "method": "events.subscribe",
+        "params": {
+          "filter": {
+            "types": [
+              "doc.changed"
+            ]
+          },
+          "snapshot": false,
+          "cursor": null
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/subscription_id": {
+            "$capture": "sub2"
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "set",
+        "method": "doc.set",
+        "params": {
+          "op_id": "$op:set",
+          "name": "ovis",
+          "value": {
+            "status": "future_status",
+            "offset": "18446744073709551615"
+          },
+          "version": "0"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/version": "1",
+          "/result/seq": {
+            "$capture": "seq1"
+          }
+        }
+      }
+    },
+    {
+      "event": {
+        "conn": "phone",
+        "method": "event",
+        "expect": {
+          "/params/type": "doc.changed",
+          "/params/seq": "$value:seq1",
+          "/params/data/name": "ovis"
+        }
+      }
+    },
+    {
+      "event": {
+        "conn": "phone",
+        "method": "event",
+        "expect": {
+          "/params/type": "doc.changed",
+          "/params/seq": "$value:seq1",
+          "/params/data/name": "ovis"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "phone",
+        "id": "narrow",
+        "method": "events.update",
+        "params": {
+          "subscription_id": "$value:sub2",
+          "filter": {
+            "types": [
+              "status.changed"
+            ]
+          }
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "set-again",
+        "method": "doc.set",
+        "params": {
+          "op_id": "$op:set-again",
+          "name": "ovis",
+          "value": {
+            "status": "future_status",
+            "offset": "0"
+          },
+          "version": "1"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/version": "2",
+          "/result/seq": {
+            "$capture": "seq2"
+          }
+        }
+      }
+    },
+    {
+      "event": {
+        "conn": "phone",
+        "method": "event",
+        "expect": {
+          "/params/type": "doc.changed",
+          "/params/seq": "$value:seq2",
+          "/params/subscription_id": "$value:sub"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "get",
+        "method": "doc.get",
+        "params": {
+          "name": "ovis"
+        },
+        "expect": {
+          "/result/value/offset": "0",
+          "/result/version": "2"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "discover",
+        "method": "rpc.discover",
+        "params": {},
+        "expect": {
+          "/result/info/version": "$bind:schema_version"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "phone",
+        "id": "unsubscribe",
+        "method": "events.unsubscribe",
+        "params": {
+          "subscription_id": "$value:sub2"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          }
+        }
+      }
+    }
+  ]
+}

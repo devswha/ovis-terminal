@@ -5,6 +5,7 @@ use ovis_terminal_protocol::rpc::{RpcRequest, parse_request};
 use ovis_terminal_protocol::schema::common::Target;
 use ovis_terminal_protocol::schema::decode_params;
 use ovis_terminal_protocol::schema::methods::input::InputSendParams;
+use ovis_terminal_protocol::schema::methods::layout::LayoutEditParams;
 use ovis_terminal_protocol::schema::methods::terminal::{TerminalGetParams, TerminalKillParams};
 use ovis_terminal_protocol::schema::methods::terminal_read::{
     TerminalHistoryParams, TerminalSearchParams,
@@ -112,6 +113,22 @@ fn missing_nested_field_names_its_full_path() {
     assert_eq!(
         rejected_path::<TerminalKillParams>(&params),
         "params.escalation.term_ms"
+    );
+}
+
+#[test]
+fn misspelled_target_is_named_instead_of_the_field_it_left_absent() {
+    // The typo leaves the split without its pane; the typo itself is the offending path.
+    let typo = json!({"op_id": "o1", "edit": {"op": "split_pane", "axis": "horizontal"},
+        "pane_id_typo": "other-pane"});
+    assert_eq!(
+        rejected_path::<LayoutEditParams>(&typo),
+        "params.pane_id_typo"
+    );
+    let incomplete = json!({"op_id": "o1", "edit": {"op": "split_pane", "axis": "horizontal"}});
+    assert_eq!(
+        rejected_path::<LayoutEditParams>(&incomplete),
+        "params.edit.pane_id"
     );
 }
 
