@@ -1,0 +1,1264 @@
+$ uname -sm: Linux x86_64
+$ TMPDIR=/dev/shm/ovt-fixtures/t68-scratch cargo run --locked --manifest-path probes/Cargo.toml --bin install-probe -- --script ./install.sh --isolated --evidence "$ATTEMPT_DIR/task-68-ovis-terminal-v1.json"
+   Compiling ovis-terminal-probes v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t68/probes)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.60s
+     Running `/dev/shm/ovt-target-lane-t68/debug/install-probe --script ./install.sh --isolated --evidence /dev/shm/ovt-fixtures/t68-scratch/attempt-acceptance/task-68-ovis-terminal-v1.json`
+{
+  "argv": [
+    "install-probe",
+    "--script",
+    "./install.sh",
+    "--isolated",
+    "--evidence",
+    "/dev/shm/ovt-fixtures/t68-scratch/attempt-acceptance/task-68-ovis-terminal-v1.json"
+  ],
+  "binary": {
+    "path": "/dev/shm/ovt-target-lane-t68/debug/ovis-terminal",
+    "sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+    "version": "0.1.0"
+  },
+  "cases": [
+    {
+      "case": "happy",
+      "checks": [
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 0 outcome installed",
+          "detail": {
+            "exit": 0,
+            "outcome": "installed",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "the installed binary is the binary under test",
+          "detail": {
+            "actual": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "expected": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28"
+          },
+          "passed": true
+        },
+        {
+          "check": "the report names the installed binary's hash",
+          "detail": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+          "passed": true
+        },
+        {
+          "check": "the installed binary reports the release version",
+          "detail": "ovis-terminal 0.1.0\n",
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_VERSION=\"$FIXTURE_VERSION\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 0 outcome installed",
+          "detail": {
+            "exit": 0,
+            "outcome": "installed",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/download/v0.1.0\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" sh install.sh --check -> exit 0 outcome verified",
+          "detail": {
+            "exit": 0,
+            "outcome": "verified",
+            "stderr": ""
+          },
+          "passed": true
+        },
+        {
+          "check": "no runtime or service was started",
+          "detail": {
+            "state": "stopped"
+          },
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" sh install.sh --uninstall -> exit 0 outcome removed",
+          "detail": {
+            "exit": 0,
+            "outcome": "removed",
+            "stderr": ""
+          },
+          "passed": true
+        },
+        {
+          "check": "removal leaves no install directory",
+          "detail": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install",
+          "passed": true
+        },
+        {
+          "check": "nothing outside the install directory changed",
+          "detail": [],
+          "passed": true
+        }
+      ],
+      "checks_total": "10",
+      "commands": [
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 0,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "binary": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install/bin/ovis-terminal",
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install",
+            "mode": "isolated",
+            "outcome": "installed",
+            "platform": "linux/x86_64",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "target": "x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n",
+          "stdout": "{\"outcome\":\"installed\",\"mode\":\"isolated\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install\",\"binary\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install/bin/ovis-terminal\",\"version\":\"0.1.0\",\"target\":\"x86_64-unknown-linux-gnu\",\"platform\":\"linux/x86_64\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "\"$ATTEMPT_DIR/install/bin/ovis-terminal\" --version",
+          "exit": 0,
+          "report": null,
+          "stderr": "",
+          "stdout": "ovis-terminal 0.1.0\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_VERSION=\"$FIXTURE_VERSION\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 0,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "binary": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install/bin/ovis-terminal",
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install",
+            "mode": "isolated",
+            "outcome": "installed",
+            "platform": "linux/x86_64",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "target": "x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/download/v0.1.0\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n",
+          "stdout": "{\"outcome\":\"installed\",\"mode\":\"isolated\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install\",\"binary\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install/bin/ovis-terminal\",\"version\":\"0.1.0\",\"target\":\"x86_64-unknown-linux-gnu\",\"platform\":\"linux/x86_64\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" sh install.sh --check",
+          "exit": 0,
+          "report": {
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install",
+            "outcome": "verified",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "runtime": "stopped",
+            "version": "0.1.0"
+          },
+          "stderr": "",
+          "stdout": "{\"outcome\":\"verified\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install\",\"version\":\"0.1.0\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"runtime\":\"stopped\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "\"$ATTEMPT_DIR/install/bin/ovis-terminal\" --json server status",
+          "exit": 0,
+          "report": {
+            "census": "not_reported",
+            "holder_count": null,
+            "live_terminals": null,
+            "recovery_state": null,
+            "runtime_lifetime": null,
+            "server_boot_id": null,
+            "state": "stopped",
+            "uptime_ms": null
+          },
+          "stderr": "",
+          "stdout": "{\"census\":\"not_reported\",\"holder_count\":null,\"live_terminals\":null,\"recovery_state\":null,\"runtime_lifetime\":null,\"server_boot_id\":null,\"state\":\"stopped\",\"uptime_ms\":null}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" sh install.sh --uninstall",
+          "exit": 0,
+          "report": {
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install",
+            "kept": [],
+            "outcome": "removed",
+            "release": "ovis-terminal-0.1.0-x86_64-unknown-linux-gnu"
+          },
+          "stderr": "",
+          "stdout": "{\"outcome\":\"removed\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/happy/attempt/install\",\"release\":\"ovis-terminal-0.1.0-x86_64-unknown-linux-gnu\",\"kept\":[]}\n"
+        }
+      ],
+      "failed": "0",
+      "observed": {
+        "install_dir_removed": true,
+        "installed_binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+        "installed_version": "ovis-terminal 0.1.0",
+        "outside_unchanged": true,
+        "service_started": false
+      },
+      "passed": true
+    },
+    {
+      "case": "checksum-mismatch",
+      "checks": [
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 0 outcome installed",
+          "detail": {
+            "exit": 0,
+            "outcome": "installed",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$CORRUPT_RELEASES_URL\" sh install.sh -> exit 1 kind checksum_mismatch",
+          "detail": {
+            "exit": 1,
+            "kind": "checksum_mismatch",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/corrupt/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\ninstall.sh: error: checksum_mismatch: ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz does not hash to the manifest digest\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "the prior binary hash is identical",
+          "detail": [
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28"
+          ],
+          "passed": true
+        },
+        {
+          "check": "nothing outside the install directory changed",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "the install directory is unchanged",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "no runtime or service was started",
+          "detail": {
+            "state": "stopped"
+          },
+          "passed": true
+        }
+      ],
+      "checks_total": "6",
+      "commands": [
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 0,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "binary": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/checksum-mismatch/attempt/install/bin/ovis-terminal",
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/checksum-mismatch/attempt/install",
+            "mode": "isolated",
+            "outcome": "installed",
+            "platform": "linux/x86_64",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "target": "x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n",
+          "stdout": "{\"outcome\":\"installed\",\"mode\":\"isolated\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/checksum-mismatch/attempt/install\",\"binary\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/checksum-mismatch/attempt/install/bin/ovis-terminal\",\"version\":\"0.1.0\",\"target\":\"x86_64-unknown-linux-gnu\",\"platform\":\"linux/x86_64\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$CORRUPT_RELEASES_URL\" sh install.sh",
+          "exit": 1,
+          "report": {
+            "actual": "1181f0dbbfed7f7e2bfe4d54890b32d8c6a8abb8f7bcab132408b12069e921ab",
+            "exit": 1,
+            "file": "ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz",
+            "hint": "the download does not hash to the release manifest; nothing was replaced, retry or report the release",
+            "kind": "checksum_mismatch",
+            "message": "ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz does not hash to the manifest digest",
+            "outcome": "refused",
+            "recorded": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/corrupt/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\ninstall.sh: error: checksum_mismatch: ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz does not hash to the manifest digest\n",
+          "stdout": "{\"outcome\":\"refused\",\"kind\":\"checksum_mismatch\",\"exit\":1,\"hint\":\"the download does not hash to the release manifest; nothing was replaced, retry or report the release\",\"message\":\"ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz does not hash to the manifest digest\",\"file\":\"ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\",\"recorded\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"actual\":\"1181f0dbbfed7f7e2bfe4d54890b32d8c6a8abb8f7bcab132408b12069e921ab\"}\n"
+        },
+        {
+          "command": "\"$ATTEMPT_DIR/install/bin/ovis-terminal\" --json server status",
+          "exit": 0,
+          "report": {
+            "census": "not_reported",
+            "holder_count": null,
+            "live_terminals": null,
+            "recovery_state": null,
+            "runtime_lifetime": null,
+            "server_boot_id": null,
+            "state": "stopped",
+            "uptime_ms": null
+          },
+          "stderr": "",
+          "stdout": "{\"census\":\"not_reported\",\"holder_count\":null,\"live_terminals\":null,\"recovery_state\":null,\"runtime_lifetime\":null,\"server_boot_id\":null,\"state\":\"stopped\",\"uptime_ms\":null}\n"
+        }
+      ],
+      "failed": "0",
+      "observed": {
+        "binary_unchanged": true,
+        "install_unchanged": true,
+        "outside_unchanged": true,
+        "service_started": false
+      },
+      "passed": true
+    },
+    {
+      "case": "traversal",
+      "checks": [
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 0 outcome installed",
+          "detail": {
+            "exit": 0,
+            "outcome": "installed",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$TRAVERSAL_RELEASES_URL\" sh install.sh -> exit 1 kind unsafe_archive",
+          "detail": {
+            "exit": 1,
+            "kind": "unsafe_archive",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/traversal/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\ninstall.sh: error: unsafe_archive: ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz holds a .. path component\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "the prior binary hash is identical",
+          "detail": [
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28"
+          ],
+          "passed": true
+        },
+        {
+          "check": "nothing outside the install directory changed",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "the install directory is unchanged",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "no runtime or service was started",
+          "detail": {
+            "state": "stopped"
+          },
+          "passed": true
+        },
+        {
+          "check": "no archive member escaped",
+          "detail": [],
+          "passed": true
+        }
+      ],
+      "checks_total": "7",
+      "commands": [
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 0,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "binary": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/traversal/attempt/install/bin/ovis-terminal",
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/traversal/attempt/install",
+            "mode": "isolated",
+            "outcome": "installed",
+            "platform": "linux/x86_64",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "target": "x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n",
+          "stdout": "{\"outcome\":\"installed\",\"mode\":\"isolated\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/traversal/attempt/install\",\"binary\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/traversal/attempt/install/bin/ovis-terminal\",\"version\":\"0.1.0\",\"target\":\"x86_64-unknown-linux-gnu\",\"platform\":\"linux/x86_64\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$TRAVERSAL_RELEASES_URL\" sh install.sh",
+          "exit": 1,
+          "report": {
+            "exit": 1,
+            "hint": "the archive holds a path outside its own directory or a link; it was not unpacked",
+            "kind": "unsafe_archive",
+            "message": "ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz holds a .. path component",
+            "outcome": "refused",
+            "path": "ovis-terminal-0.1.0-x86_64-unknown-linux-gnu/../../escaped"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/traversal/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\ninstall.sh: error: unsafe_archive: ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz holds a .. path component\n",
+          "stdout": "{\"outcome\":\"refused\",\"kind\":\"unsafe_archive\",\"exit\":1,\"hint\":\"the archive holds a path outside its own directory or a link; it was not unpacked\",\"message\":\"ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz holds a .. path component\",\"path\":\"ovis-terminal-0.1.0-x86_64-unknown-linux-gnu/../../escaped\"}\n"
+        },
+        {
+          "command": "\"$ATTEMPT_DIR/install/bin/ovis-terminal\" --json server status",
+          "exit": 0,
+          "report": {
+            "census": "not_reported",
+            "holder_count": null,
+            "live_terminals": null,
+            "recovery_state": null,
+            "runtime_lifetime": null,
+            "server_boot_id": null,
+            "state": "stopped",
+            "uptime_ms": null
+          },
+          "stderr": "",
+          "stdout": "{\"census\":\"not_reported\",\"holder_count\":null,\"live_terminals\":null,\"recovery_state\":null,\"runtime_lifetime\":null,\"server_boot_id\":null,\"state\":\"stopped\",\"uptime_ms\":null}\n"
+        }
+      ],
+      "failed": "0",
+      "observed": {
+        "binary_unchanged": true,
+        "escaped_files": [],
+        "install_unchanged": true,
+        "outside_unchanged": true,
+        "service_started": false
+      },
+      "passed": true
+    },
+    {
+      "case": "unknown-target",
+      "checks": [
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 0 outcome installed",
+          "detail": {
+            "exit": 0,
+            "outcome": "installed",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$UNKNOWN_TARGET_RELEASES_URL\" sh install.sh -> exit 4 kind unknown_target",
+          "detail": {
+            "exit": 4,
+            "kind": "unknown_target",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/unknown-target/latest/download\ninstall.sh: error: unknown_target: release 0.1.0 has no linux/x86_64 artifact\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "the prior binary hash is identical",
+          "detail": [
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28"
+          ],
+          "passed": true
+        },
+        {
+          "check": "nothing outside the install directory changed",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "the install directory is unchanged",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "no runtime or service was started",
+          "detail": {
+            "state": "stopped"
+          },
+          "passed": true
+        }
+      ],
+      "checks_total": "6",
+      "commands": [
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 0,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "binary": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unknown-target/attempt/install/bin/ovis-terminal",
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unknown-target/attempt/install",
+            "mode": "isolated",
+            "outcome": "installed",
+            "platform": "linux/x86_64",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "target": "x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n",
+          "stdout": "{\"outcome\":\"installed\",\"mode\":\"isolated\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unknown-target/attempt/install\",\"binary\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unknown-target/attempt/install/bin/ovis-terminal\",\"version\":\"0.1.0\",\"target\":\"x86_64-unknown-linux-gnu\",\"platform\":\"linux/x86_64\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$UNKNOWN_TARGET_RELEASES_URL\" sh install.sh",
+          "exit": 4,
+          "report": {
+            "exit": 4,
+            "hint": "this release publishes no artifact for this OS and architecture",
+            "kind": "unknown_target",
+            "message": "release 0.1.0 has no linux/x86_64 artifact",
+            "outcome": "refused",
+            "platform": "linux/x86_64"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/unknown-target/latest/download\ninstall.sh: error: unknown_target: release 0.1.0 has no linux/x86_64 artifact\n",
+          "stdout": "{\"outcome\":\"refused\",\"kind\":\"unknown_target\",\"exit\":4,\"hint\":\"this release publishes no artifact for this OS and architecture\",\"message\":\"release 0.1.0 has no linux/x86_64 artifact\",\"platform\":\"linux/x86_64\"}\n"
+        },
+        {
+          "command": "\"$ATTEMPT_DIR/install/bin/ovis-terminal\" --json server status",
+          "exit": 0,
+          "report": {
+            "census": "not_reported",
+            "holder_count": null,
+            "live_terminals": null,
+            "recovery_state": null,
+            "runtime_lifetime": null,
+            "server_boot_id": null,
+            "state": "stopped",
+            "uptime_ms": null
+          },
+          "stderr": "",
+          "stdout": "{\"census\":\"not_reported\",\"holder_count\":null,\"live_terminals\":null,\"recovery_state\":null,\"runtime_lifetime\":null,\"server_boot_id\":null,\"state\":\"stopped\",\"uptime_ms\":null}\n"
+        }
+      ],
+      "failed": "0",
+      "observed": {
+        "binary_unchanged": true,
+        "install_unchanged": true,
+        "outside_unchanged": true,
+        "service_started": false
+      },
+      "passed": true
+    },
+    {
+      "case": "version-mismatch",
+      "checks": [
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 0 outcome installed",
+          "detail": {
+            "exit": 0,
+            "outcome": "installed",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$MISLABELED_RELEASES_URL\" sh install.sh -> exit 1 kind version_mismatch",
+          "detail": {
+            "exit": 1,
+            "kind": "version_mismatch",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/mislabeled/latest/download\ninstall.sh: download ovis-terminal-99.0.0-x86_64-unknown-linux-gnu.tar.gz\ninstall.sh: error: version_mismatch: the unpacked binary reports 0.1.0, not 99.0.0\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "the prior binary hash is identical",
+          "detail": [
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28"
+          ],
+          "passed": true
+        },
+        {
+          "check": "nothing outside the install directory changed",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "the install directory is unchanged",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "no runtime or service was started",
+          "detail": {
+            "state": "stopped"
+          },
+          "passed": true
+        }
+      ],
+      "checks_total": "6",
+      "commands": [
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 0,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "binary": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/version-mismatch/attempt/install/bin/ovis-terminal",
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/version-mismatch/attempt/install",
+            "mode": "isolated",
+            "outcome": "installed",
+            "platform": "linux/x86_64",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "target": "x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n",
+          "stdout": "{\"outcome\":\"installed\",\"mode\":\"isolated\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/version-mismatch/attempt/install\",\"binary\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/version-mismatch/attempt/install/bin/ovis-terminal\",\"version\":\"0.1.0\",\"target\":\"x86_64-unknown-linux-gnu\",\"platform\":\"linux/x86_64\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$MISLABELED_RELEASES_URL\" sh install.sh",
+          "exit": 1,
+          "report": {
+            "actual": "0.1.0",
+            "exit": 1,
+            "hint": "the unpacked binary does not report the release version it was published as",
+            "kind": "version_mismatch",
+            "message": "the unpacked binary reports 0.1.0, not 99.0.0",
+            "outcome": "refused",
+            "recorded": "99.0.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/mislabeled/latest/download\ninstall.sh: download ovis-terminal-99.0.0-x86_64-unknown-linux-gnu.tar.gz\ninstall.sh: error: version_mismatch: the unpacked binary reports 0.1.0, not 99.0.0\n",
+          "stdout": "{\"outcome\":\"refused\",\"kind\":\"version_mismatch\",\"exit\":1,\"hint\":\"the unpacked binary does not report the release version it was published as\",\"message\":\"the unpacked binary reports 0.1.0, not 99.0.0\",\"recorded\":\"99.0.0\",\"actual\":\"0.1.0\"}\n"
+        },
+        {
+          "command": "\"$ATTEMPT_DIR/install/bin/ovis-terminal\" --json server status",
+          "exit": 0,
+          "report": {
+            "census": "not_reported",
+            "holder_count": null,
+            "live_terminals": null,
+            "recovery_state": null,
+            "runtime_lifetime": null,
+            "server_boot_id": null,
+            "state": "stopped",
+            "uptime_ms": null
+          },
+          "stderr": "",
+          "stdout": "{\"census\":\"not_reported\",\"holder_count\":null,\"live_terminals\":null,\"recovery_state\":null,\"runtime_lifetime\":null,\"server_boot_id\":null,\"state\":\"stopped\",\"uptime_ms\":null}\n"
+        }
+      ],
+      "failed": "0",
+      "observed": {
+        "binary_unchanged": true,
+        "install_unchanged": true,
+        "outside_unchanged": true,
+        "service_started": false
+      },
+      "passed": true
+    },
+    {
+      "case": "unwritable",
+      "checks": [
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 0 outcome installed",
+          "detail": {
+            "exit": 0,
+            "outcome": "installed",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 3 kind unwritable_destination",
+          "detail": {
+            "exit": 3,
+            "kind": "unwritable_destination",
+            "stderr": "install.sh: error: unwritable_destination: /dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unwritable/attempt/install is not writable\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "the prior binary hash is identical",
+          "detail": [
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28"
+          ],
+          "passed": true
+        },
+        {
+          "check": "nothing outside the install directory changed",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "the install directory is unchanged",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/locked/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 3 kind unwritable_destination",
+          "detail": {
+            "exit": 3,
+            "kind": "unwritable_destination",
+            "stderr": "install.sh: error: unwritable_destination: cannot create /dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unwritable/attempt/locked/install\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "a read-only parent gets no install directory",
+          "detail": false,
+          "passed": true
+        },
+        {
+          "check": "no runtime or service was started",
+          "detail": {
+            "state": "stopped"
+          },
+          "passed": true
+        }
+      ],
+      "checks_total": "8",
+      "commands": [
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 0,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "binary": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unwritable/attempt/install/bin/ovis-terminal",
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unwritable/attempt/install",
+            "mode": "isolated",
+            "outcome": "installed",
+            "platform": "linux/x86_64",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "target": "x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n",
+          "stdout": "{\"outcome\":\"installed\",\"mode\":\"isolated\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unwritable/attempt/install\",\"binary\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unwritable/attempt/install/bin/ovis-terminal\",\"version\":\"0.1.0\",\"target\":\"x86_64-unknown-linux-gnu\",\"platform\":\"linux/x86_64\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 3,
+          "report": {
+            "exit": 3,
+            "hint": "the install directory cannot be created or written; choose a writable OVIS_TERMINAL_INSTALL_DIR",
+            "kind": "unwritable_destination",
+            "message": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unwritable/attempt/install is not writable",
+            "outcome": "refused"
+          },
+          "stderr": "install.sh: error: unwritable_destination: /dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unwritable/attempt/install is not writable\n",
+          "stdout": "{\"outcome\":\"refused\",\"kind\":\"unwritable_destination\",\"exit\":3,\"hint\":\"the install directory cannot be created or written; choose a writable OVIS_TERMINAL_INSTALL_DIR\",\"message\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unwritable/attempt/install is not writable\"}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/locked/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 3,
+          "report": {
+            "exit": 3,
+            "hint": "the install directory cannot be created or written; choose a writable OVIS_TERMINAL_INSTALL_DIR",
+            "kind": "unwritable_destination",
+            "message": "cannot create /dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unwritable/attempt/locked/install",
+            "outcome": "refused"
+          },
+          "stderr": "install.sh: error: unwritable_destination: cannot create /dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unwritable/attempt/locked/install\n",
+          "stdout": "{\"outcome\":\"refused\",\"kind\":\"unwritable_destination\",\"exit\":3,\"hint\":\"the install directory cannot be created or written; choose a writable OVIS_TERMINAL_INSTALL_DIR\",\"message\":\"cannot create /dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/unwritable/attempt/locked/install\"}\n"
+        },
+        {
+          "command": "\"$ATTEMPT_DIR/install/bin/ovis-terminal\" --json server status",
+          "exit": 0,
+          "report": {
+            "census": "not_reported",
+            "holder_count": null,
+            "live_terminals": null,
+            "recovery_state": null,
+            "runtime_lifetime": null,
+            "server_boot_id": null,
+            "state": "stopped",
+            "uptime_ms": null
+          },
+          "stderr": "",
+          "stdout": "{\"census\":\"not_reported\",\"holder_count\":null,\"live_terminals\":null,\"recovery_state\":null,\"runtime_lifetime\":null,\"server_boot_id\":null,\"state\":\"stopped\",\"uptime_ms\":null}\n"
+        }
+      ],
+      "failed": "0",
+      "observed": {
+        "binary_unchanged": true,
+        "install_unchanged": true,
+        "outside_unchanged": true,
+        "service_started": false
+      },
+      "passed": true
+    },
+    {
+      "case": "interrupted-download",
+      "checks": [
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 0 outcome installed",
+          "detail": {
+            "exit": 0,
+            "outcome": "installed",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "the cancelled installer exits through its TERM trap",
+          "detail": {
+            "exit": 143,
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/stall/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\nTerminated\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "the prior binary hash is identical",
+          "detail": [
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28"
+          ],
+          "passed": true
+        },
+        {
+          "check": "no partial download or workspace is left",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 0 outcome installed",
+          "detail": {
+            "exit": 0,
+            "outcome": "installed",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "the installed binary is the binary under test",
+          "detail": {
+            "actual": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "expected": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28"
+          },
+          "passed": true
+        },
+        {
+          "check": "no runtime or service was started",
+          "detail": {
+            "state": "stopped"
+          },
+          "passed": true
+        }
+      ],
+      "checks_total": "7",
+      "commands": [
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 0,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "binary": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/interrupted-download/attempt/install/bin/ovis-terminal",
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/interrupted-download/attempt/install",
+            "mode": "isolated",
+            "outcome": "installed",
+            "platform": "linux/x86_64",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "target": "x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n",
+          "stdout": "{\"outcome\":\"installed\",\"mode\":\"isolated\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/interrupted-download/attempt/install\",\"binary\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/interrupted-download/attempt/install/bin/ovis-terminal\",\"version\":\"0.1.0\",\"target\":\"x86_64-unknown-linux-gnu\",\"platform\":\"linux/x86_64\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$STALL_RELEASES_URL\" sh install.sh",
+          "exit": 143,
+          "report": null,
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/stall/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\nTerminated\n",
+          "stdout": ""
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 0,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "binary": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/interrupted-download/attempt/install/bin/ovis-terminal",
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/interrupted-download/attempt/install",
+            "mode": "isolated",
+            "outcome": "installed",
+            "platform": "linux/x86_64",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "target": "x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n",
+          "stdout": "{\"outcome\":\"installed\",\"mode\":\"isolated\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/interrupted-download/attempt/install\",\"binary\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/interrupted-download/attempt/install/bin/ovis-terminal\",\"version\":\"0.1.0\",\"target\":\"x86_64-unknown-linux-gnu\",\"platform\":\"linux/x86_64\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "\"$ATTEMPT_DIR/install/bin/ovis-terminal\" --json server status",
+          "exit": 0,
+          "report": {
+            "census": "not_reported",
+            "holder_count": null,
+            "live_terminals": null,
+            "recovery_state": null,
+            "runtime_lifetime": null,
+            "server_boot_id": null,
+            "state": "stopped",
+            "uptime_ms": null
+          },
+          "stderr": "",
+          "stdout": "{\"census\":\"not_reported\",\"holder_count\":null,\"live_terminals\":null,\"recovery_state\":null,\"runtime_lifetime\":null,\"server_boot_id\":null,\"state\":\"stopped\",\"uptime_ms\":null}\n"
+        }
+      ],
+      "failed": "0",
+      "observed": {
+        "binary_unchanged": true,
+        "install_unchanged": true,
+        "installed_binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+        "service_started": false
+      },
+      "passed": true
+    },
+    {
+      "case": "running-runtime",
+      "checks": [
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 0 outcome installed",
+          "detail": {
+            "exit": 0,
+            "outcome": "installed",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 5 kind runtime_running",
+          "detail": {
+            "exit": 5,
+            "kind": "runtime_running",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\ninstall.sh: error: runtime_running: a running runtime uses this environment; its binary was not replaced\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "the prior binary hash is identical",
+          "detail": [
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28"
+          ],
+          "passed": true
+        },
+        {
+          "check": "nothing outside the install directory changed",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "the install directory is unchanged",
+          "detail": [],
+          "passed": true
+        },
+        {
+          "check": "the runtime announced itself",
+          "detail": 331,
+          "passed": true
+        },
+        {
+          "check": "the installer delegates to update.stage",
+          "detail": "update.stage",
+          "passed": true
+        },
+        {
+          "check": "the runtime ran until stdin closed",
+          "detail": 0,
+          "passed": true
+        },
+        {
+          "check": "no runtime or service was started",
+          "detail": {
+            "state": "stopped"
+          },
+          "passed": true
+        }
+      ],
+      "checks_total": "9",
+      "commands": [
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 0,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "binary": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/running-runtime/attempt/install/bin/ovis-terminal",
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/running-runtime/attempt/install",
+            "mode": "isolated",
+            "outcome": "installed",
+            "platform": "linux/x86_64",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "target": "x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n",
+          "stdout": "{\"outcome\":\"installed\",\"mode\":\"isolated\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/running-runtime/attempt/install\",\"binary\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/running-runtime/attempt/install/bin/ovis-terminal\",\"version\":\"0.1.0\",\"target\":\"x86_64-unknown-linux-gnu\",\"platform\":\"linux/x86_64\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 5,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "delegate": "update.stage",
+            "exit": 5,
+            "hint": "a running runtime uses this installation; stage the verified release with update.stage instead",
+            "kind": "runtime_running",
+            "message": "a running runtime uses this environment; its binary was not replaced",
+            "outcome": "refused",
+            "verified_release": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/running-runtime/attempt/install/releases/ovis-terminal-0.1.0-x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\ninstall.sh: error: runtime_running: a running runtime uses this environment; its binary was not replaced\n",
+          "stdout": "{\"outcome\":\"refused\",\"kind\":\"runtime_running\",\"exit\":5,\"hint\":\"a running runtime uses this installation; stage the verified release with update.stage instead\",\"message\":\"a running runtime uses this environment; its binary was not replaced\",\"delegate\":\"update.stage\",\"version\":\"0.1.0\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"verified_release\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/running-runtime/attempt/install/releases/ovis-terminal-0.1.0-x86_64-unknown-linux-gnu\"}\n"
+        },
+        {
+          "command": "exec \"$ATTEMPT_DIR/install/bin/ovis-terminal\" serve --stdin-lifetime",
+          "exit": 0,
+          "report": null,
+          "stderr": "",
+          "stdout": ""
+        },
+        {
+          "command": "\"$ATTEMPT_DIR/install/bin/ovis-terminal\" --json server status",
+          "exit": 0,
+          "report": {
+            "census": "not_reported",
+            "holder_count": null,
+            "live_terminals": null,
+            "recovery_state": null,
+            "runtime_lifetime": null,
+            "server_boot_id": null,
+            "state": "stopped",
+            "uptime_ms": null
+          },
+          "stderr": "",
+          "stdout": "{\"census\":\"not_reported\",\"holder_count\":null,\"live_terminals\":null,\"recovery_state\":null,\"runtime_lifetime\":null,\"server_boot_id\":null,\"state\":\"stopped\",\"uptime_ms\":null}\n"
+        }
+      ],
+      "failed": "0",
+      "observed": {
+        "binary_unchanged": true,
+        "delegate": "update.stage",
+        "install_unchanged": true,
+        "outside_unchanged": true,
+        "ready": true,
+        "service_started": false
+      },
+      "passed": true
+    },
+    {
+      "case": "foreign-uninstall",
+      "checks": [
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/outside\" sh install.sh --uninstall -> exit 3 kind not_installed",
+          "detail": {
+            "exit": 3,
+            "kind": "not_installed",
+            "stderr": "install.sh: error: not_installed: /dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/foreign-uninstall/attempt/outside has no install-receipt.json\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "a foreign directory keeps every file",
+          "detail": [],
+          "passed": true
+        }
+      ],
+      "checks_total": "2",
+      "commands": [
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/outside\" sh install.sh --uninstall",
+          "exit": 3,
+          "report": {
+            "exit": 3,
+            "hint": "the directory holds no install receipt, so nothing in it is known to be ours",
+            "kind": "not_installed",
+            "message": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/foreign-uninstall/attempt/outside has no install-receipt.json",
+            "outcome": "refused"
+          },
+          "stderr": "install.sh: error: not_installed: /dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/foreign-uninstall/attempt/outside has no install-receipt.json\n",
+          "stdout": "{\"outcome\":\"refused\",\"kind\":\"not_installed\",\"exit\":3,\"hint\":\"the directory holds no install receipt, so nothing in it is known to be ours\",\"message\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/foreign-uninstall/attempt/outside has no install-receipt.json\"}\n"
+        }
+      ],
+      "failed": "0",
+      "observed": {
+        "outside_unchanged": true
+      },
+      "passed": true
+    },
+    {
+      "case": "corruption",
+      "checks": [
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 0 outcome installed",
+          "detail": {
+            "exit": 0,
+            "outcome": "installed",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" sh install.sh --check -> exit 1 kind checksum_mismatch",
+          "detail": {
+            "exit": 1,
+            "kind": "checksum_mismatch",
+            "stderr": "install.sh: error: checksum_mismatch: /dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install/bin/ovis-terminal was changed after install\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 0 outcome installed",
+          "detail": {
+            "exit": 0,
+            "outcome": "installed",
+            "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n"
+          },
+          "passed": true
+        },
+        {
+          "check": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" sh install.sh --check -> exit 0 outcome verified",
+          "detail": {
+            "exit": 0,
+            "outcome": "verified",
+            "stderr": ""
+          },
+          "passed": true
+        },
+        {
+          "check": "the installed binary is the binary under test",
+          "detail": {
+            "actual": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "expected": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28"
+          },
+          "passed": true
+        },
+        {
+          "check": "no runtime or service was started",
+          "detail": {
+            "state": "stopped"
+          },
+          "passed": true
+        }
+      ],
+      "checks_total": "6",
+      "commands": [
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 0,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "binary": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install/bin/ovis-terminal",
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install",
+            "mode": "isolated",
+            "outcome": "installed",
+            "platform": "linux/x86_64",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "target": "x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n",
+          "stdout": "{\"outcome\":\"installed\",\"mode\":\"isolated\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install\",\"binary\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install/bin/ovis-terminal\",\"version\":\"0.1.0\",\"target\":\"x86_64-unknown-linux-gnu\",\"platform\":\"linux/x86_64\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" sh install.sh --check",
+          "exit": 1,
+          "report": {
+            "actual": "54df8f9583a5dc0ba76dd51454325176ea84905ebd284ab2d68f7d192489e853",
+            "exit": 1,
+            "hint": "the download does not hash to the release manifest; nothing was replaced, retry or report the release",
+            "kind": "checksum_mismatch",
+            "message": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install/bin/ovis-terminal was changed after install",
+            "outcome": "refused",
+            "recorded": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28"
+          },
+          "stderr": "install.sh: error: checksum_mismatch: /dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install/bin/ovis-terminal was changed after install\n",
+          "stdout": "{\"outcome\":\"refused\",\"kind\":\"checksum_mismatch\",\"exit\":1,\"hint\":\"the download does not hash to the release manifest; nothing was replaced, retry or report the release\",\"message\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install/bin/ovis-terminal was changed after install\",\"recorded\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"actual\":\"54df8f9583a5dc0ba76dd51454325176ea84905ebd284ab2d68f7d192489e853\"}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+          "exit": 0,
+          "report": {
+            "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+            "binary": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install/bin/ovis-terminal",
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install",
+            "mode": "isolated",
+            "outcome": "installed",
+            "platform": "linux/x86_64",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "target": "x86_64-unknown-linux-gnu",
+            "version": "0.1.0"
+          },
+          "stderr": "install.sh: release manifest from http://127.0.0.1:33477/good/latest/download\ninstall.sh: download ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz\n",
+          "stdout": "{\"outcome\":\"installed\",\"mode\":\"isolated\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install\",\"binary\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install/bin/ovis-terminal\",\"version\":\"0.1.0\",\"target\":\"x86_64-unknown-linux-gnu\",\"platform\":\"linux/x86_64\",\"archive_sha256\":\"9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" sh install.sh --check",
+          "exit": 0,
+          "report": {
+            "binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+            "dir": "/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install",
+            "outcome": "verified",
+            "releases_url": "http://127.0.0.1:33477/good",
+            "runtime": "stopped",
+            "version": "0.1.0"
+          },
+          "stderr": "",
+          "stdout": "{\"outcome\":\"verified\",\"dir\":\"/dev/shm/ovt-fixtures/t68-scratch/ovis-install-probe-524697-1793594505947035449/corruption/attempt/install\",\"version\":\"0.1.0\",\"binary_sha256\":\"ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28\",\"runtime\":\"stopped\",\"releases_url\":\"http://127.0.0.1:33477/good\"}\n"
+        },
+        {
+          "command": "\"$ATTEMPT_DIR/install/bin/ovis-terminal\" --json server status",
+          "exit": 0,
+          "report": {
+            "census": "not_reported",
+            "holder_count": null,
+            "live_terminals": null,
+            "recovery_state": null,
+            "runtime_lifetime": null,
+            "server_boot_id": null,
+            "state": "stopped",
+            "uptime_ms": null
+          },
+          "stderr": "",
+          "stdout": "{\"census\":\"not_reported\",\"holder_count\":null,\"live_terminals\":null,\"recovery_state\":null,\"runtime_lifetime\":null,\"server_boot_id\":null,\"state\":\"stopped\",\"uptime_ms\":null}\n"
+        }
+      ],
+      "failed": "0",
+      "observed": {
+        "installed_binary_sha256": "ee5ac827397e82d34e36600b47df429a99c29e79cfdd85039120a5a973d1cb28",
+        "service_started": false
+      },
+      "passed": true
+    }
+  ],
+  "cases_run": "10",
+  "exit": 0,
+  "failed": "0",
+  "fixture": {
+    "archive": "ovis-terminal-0.1.0-x86_64-unknown-linux-gnu.tar.gz",
+    "archive_sha256": "9d0f5f5bea0a117cfdb985fe611bde062d75761d820c75cc7b51ee2eb4184449",
+    "env": [
+      {
+        "name": "FIXTURE_RELEASES_URL",
+        "value": "http://127.0.0.1:33477/good"
+      },
+      {
+        "name": "CORRUPT_RELEASES_URL",
+        "value": "http://127.0.0.1:33477/corrupt"
+      },
+      {
+        "name": "TRAVERSAL_RELEASES_URL",
+        "value": "http://127.0.0.1:33477/traversal"
+      },
+      {
+        "name": "UNKNOWN_TARGET_RELEASES_URL",
+        "value": "http://127.0.0.1:33477/unknown-target"
+      },
+      {
+        "name": "MISLABELED_RELEASES_URL",
+        "value": "http://127.0.0.1:33477/mislabeled"
+      },
+      {
+        "name": "STALL_RELEASES_URL",
+        "value": "http://127.0.0.1:33477/stall/good"
+      },
+      {
+        "name": "FIXTURE_VERSION",
+        "value": "0.1.0"
+      }
+    ],
+    "mislabeled_version": "99.0.0",
+    "version": "0.1.0"
+  },
+  "host": {
+    "arch": "x86_64",
+    "os": "linux"
+  },
+  "script": {
+    "path": "/home/devswha/workspace/ovis-terminal-wt/lane-t68/install.sh",
+    "sha256": "86e8848775cf491aef8307746572e07942141bf567e148173b681bb3e05d0e2b"
+  },
+  "tool": "install-probe",
+  "verdict": "pass"
+}
+exit=0

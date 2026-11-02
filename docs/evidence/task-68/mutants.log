@@ -1,0 +1,33 @@
+{
+  "m1-skip-digest": {
+    "case": "checksum-mismatch",
+    "probe_exit": 1,
+    "failed_checks": [
+      "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$CORRUPT_RELEASES_URL\" sh install.sh -> exit 1 kind checksum_mismatch"
+    ]
+  },
+  "m2-skip-dotdot": {
+    "case": "traversal",
+    "probe_exit": 1,
+    "failed_checks": [
+      "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$TRAVERSAL_RELEASES_URL\" sh install.sh -> exit 1 kind unsafe_archive"
+    ]
+  },
+  "m3-skip-version": {
+    "case": "version-mismatch",
+    "probe_exit": 1,
+    "failed_checks": [
+      "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$MISLABELED_RELEASES_URL\" sh install.sh -> exit 1 kind version_mismatch",
+      "the install directory is unchanged"
+    ]
+  },
+  "m4-runtime-always-stopped": {
+    "case": "running-runtime",
+    "probe_exit": 1,
+    "failed_checks": [
+      "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh -> exit 5 kind runtime_running",
+      "the install directory is unchanged",
+      "the installer delegates to update.stage"
+    ]
+  }
+}

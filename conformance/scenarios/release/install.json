@@ -1,0 +1,332 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "release/install",
+  "title": "Isolated installer: verified staged installs, typed refusals that keep the prior binary, and removal that leaves outside paths alone",
+  "todo": 68,
+  "closes": [
+    "GAP-001",
+    "GAP-017",
+    "GAP-127",
+    "GAP-141"
+  ],
+  "delivers": [
+    "IDEAL-001",
+    "IDEAL-014",
+    "IDEAL-100",
+    "IDEAL-114"
+  ],
+  "excludes": [
+    "EXCL-013",
+    "EXCL-020",
+    "EXCL-027"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "The binary under test is staged and sealed by release-stage into a real artifact with a release manifest and served on loopback. `OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh` installs it (latest and pinned), the installed binary hashes to the binary under test and reports its version, --check verifies it, server status stays stopped, --uninstall removes the install directory, and nothing in the private home, XDG tree, attempt directory or checkout top level changed.",
+      "steps": [
+        {
+          "release": {
+            "planned": [
+              {
+                "request": {
+                  "fixture": "happy"
+                },
+                "tool": "install-probe",
+                "args": [
+                  "--script",
+                  "$repo/install.sh",
+                  "--isolated",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root/install-probe",
+                  "--case",
+                  "happy"
+                ],
+                "exit": 0,
+                "report": {
+                  "/verdict": "pass",
+                  "/failed": "0",
+                  "/exit": 0,
+                  "/host/os": {
+                    "$present": true
+                  },
+                  "/host/arch": {
+                    "$present": true
+                  },
+                  "/binary/sha256": {
+                    "$present": true
+                  },
+                  "/script/sha256": {
+                    "$present": true
+                  },
+                  "/fixture/archive_sha256": {
+                    "$present": true
+                  },
+                  "/cases_run": "1",
+                  "/cases/0/case": "happy",
+                  "/cases/0/passed": true,
+                  "/cases/0/failed": "0",
+                  "/cases/0/commands/0/command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$FIXTURE_RELEASES_URL\" sh install.sh",
+                  "/cases/0/commands/0/exit": 0,
+                  "/cases/0/commands/0/report/outcome": "installed",
+                  "/cases/0/commands/0/report/mode": "isolated",
+                  "/cases/0/commands/0/report/binary_sha256": {
+                    "$present": true
+                  },
+                  "/cases/0/commands/1/exit": 0,
+                  "/cases/0/commands/1/command": "\"$ATTEMPT_DIR/install/bin/ovis-terminal\" --version",
+                  "/cases/0/commands/2/report/outcome": "installed",
+                  "/cases/0/commands/3/report/outcome": "verified",
+                  "/cases/0/commands/4/report/state": "stopped",
+                  "/cases/0/commands/5/report/outcome": "removed",
+                  "/cases/0/observed/installed_binary_sha256": {
+                    "$present": true
+                  },
+                  "/cases/0/observed/installed_version": {
+                    "$present": true
+                  },
+                  "/cases/0/observed/install_dir_removed": true,
+                  "/cases/0/observed/outside_unchanged": true,
+                  "/cases/0/observed/service_started": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "The QA injection serves an archive with one flipped byte under an intact manifest and sidecar: install.sh exits 1 with checksum_mismatch, the prior binary hash and the whole install directory are identical and no runtime started. The adversarial runs refuse a `..` archive member (unsafe_archive, nothing escaped), an unshipped platform (unknown_target, exit 4), a binary that does not report the published version (version_mismatch), read-only destinations (unwritable_destination, exit 3), a download cancelled mid-transfer (exit 143, then a resumed install), a live runtime (runtime_running, exit 5, delegated to update.stage), the removal of a directory without an install receipt (not_installed) and a binary corrupted after install (--check checksum_mismatch, repaired by reinstalling).",
+      "steps": [
+        {
+          "release": {
+            "planned": [
+              {
+                "request": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$CORRUPT_RELEASES_URL\" sh install.sh",
+                "tool": "install-probe",
+                "args": [
+                  "--script",
+                  "$repo/install.sh",
+                  "--isolated",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root/install-probe",
+                  "--case",
+                  "checksum-mismatch"
+                ],
+                "exit": 0,
+                "report": {
+                  "/verdict": "pass",
+                  "/failed": "0",
+                  "/exit": 0,
+                  "/host/os": {
+                    "$present": true
+                  },
+                  "/host/arch": {
+                    "$present": true
+                  },
+                  "/binary/sha256": {
+                    "$present": true
+                  },
+                  "/script/sha256": {
+                    "$present": true
+                  },
+                  "/fixture/archive_sha256": {
+                    "$present": true
+                  },
+                  "/cases_run": "1",
+                  "/cases/0/case": "checksum-mismatch",
+                  "/cases/0/passed": true,
+                  "/cases/0/failed": "0",
+                  "/cases/0/commands/1/command": "OVIS_TERMINAL_INSTALL_DIR=\"$ATTEMPT_DIR/install\" OVIS_TERMINAL_RELEASES_URL=\"$CORRUPT_RELEASES_URL\" sh install.sh",
+                  "/cases/0/commands/1/exit": 1,
+                  "/cases/0/commands/1/report/kind": "checksum_mismatch",
+                  "/cases/0/commands/1/report/outcome": "refused",
+                  "/cases/0/commands/1/report/hint": {
+                    "$present": true
+                  },
+                  "/cases/0/commands/1/report/recorded": {
+                    "$present": true
+                  },
+                  "/cases/0/commands/1/report/actual": {
+                    "$present": true
+                  },
+                  "/cases/0/commands/2/report/state": "stopped",
+                  "/cases/0/observed/binary_unchanged": true,
+                  "/cases/0/observed/install_unchanged": true,
+                  "/cases/0/observed/outside_unchanged": true,
+                  "/cases/0/observed/service_started": false
+                }
+              },
+              {
+                "request": {
+                  "fixture": "adversarial"
+                },
+                "tool": "install-probe",
+                "args": [
+                  "--script",
+                  "$repo/install.sh",
+                  "--isolated",
+                  "--binary",
+                  "$binary",
+                  "--repo",
+                  "$repo",
+                  "--scratch",
+                  "$root/install-probe",
+                  "--case",
+                  "traversal,unknown-target,version-mismatch,unwritable,interrupted-download,running-runtime,foreign-uninstall,corruption"
+                ],
+                "exit": 0,
+                "report": {
+                  "/verdict": "pass",
+                  "/failed": "0",
+                  "/exit": 0,
+                  "/host/os": {
+                    "$present": true
+                  },
+                  "/host/arch": {
+                    "$present": true
+                  },
+                  "/binary/sha256": {
+                    "$present": true
+                  },
+                  "/script/sha256": {
+                    "$present": true
+                  },
+                  "/fixture/archive_sha256": {
+                    "$present": true
+                  },
+                  "/cases_run": "8",
+                  "/cases/0/case": "traversal",
+                  "/cases/0/passed": true,
+                  "/cases/0/failed": "0",
+                  "/cases/1/case": "unknown-target",
+                  "/cases/1/passed": true,
+                  "/cases/1/failed": "0",
+                  "/cases/2/case": "version-mismatch",
+                  "/cases/2/passed": true,
+                  "/cases/2/failed": "0",
+                  "/cases/3/case": "unwritable",
+                  "/cases/3/passed": true,
+                  "/cases/3/failed": "0",
+                  "/cases/4/case": "interrupted-download",
+                  "/cases/4/passed": true,
+                  "/cases/4/failed": "0",
+                  "/cases/5/case": "running-runtime",
+                  "/cases/5/passed": true,
+                  "/cases/5/failed": "0",
+                  "/cases/6/case": "foreign-uninstall",
+                  "/cases/6/passed": true,
+                  "/cases/6/failed": "0",
+                  "/cases/7/case": "corruption",
+                  "/cases/7/passed": true,
+                  "/cases/7/failed": "0",
+                  "/cases/0/commands/1/exit": 1,
+                  "/cases/0/commands/1/report/kind": "unsafe_archive",
+                  "/cases/0/commands/1/report/outcome": "refused",
+                  "/cases/0/commands/1/report/hint": {
+                    "$present": true
+                  },
+                  "/cases/0/observed/binary_unchanged": true,
+                  "/cases/0/observed/install_unchanged": true,
+                  "/cases/0/observed/outside_unchanged": true,
+                  "/cases/0/observed/service_started": false,
+                  "/cases/0/observed/escaped_files": [],
+                  "/cases/1/commands/1/exit": 4,
+                  "/cases/1/commands/1/report/kind": "unknown_target",
+                  "/cases/1/commands/1/report/outcome": "refused",
+                  "/cases/1/commands/1/report/hint": {
+                    "$present": true
+                  },
+                  "/cases/1/commands/1/report/platform": {
+                    "$present": true
+                  },
+                  "/cases/1/observed/binary_unchanged": true,
+                  "/cases/1/observed/install_unchanged": true,
+                  "/cases/1/observed/outside_unchanged": true,
+                  "/cases/1/observed/service_started": false,
+                  "/cases/2/commands/1/exit": 1,
+                  "/cases/2/commands/1/report/kind": "version_mismatch",
+                  "/cases/2/commands/1/report/outcome": "refused",
+                  "/cases/2/commands/1/report/hint": {
+                    "$present": true
+                  },
+                  "/cases/2/commands/1/report/recorded": "99.0.0",
+                  "/cases/2/observed/binary_unchanged": true,
+                  "/cases/2/observed/install_unchanged": true,
+                  "/cases/2/observed/outside_unchanged": true,
+                  "/cases/2/observed/service_started": false,
+                  "/cases/3/commands/1/exit": 3,
+                  "/cases/3/commands/1/report/kind": "unwritable_destination",
+                  "/cases/3/commands/1/report/outcome": "refused",
+                  "/cases/3/commands/1/report/hint": {
+                    "$present": true
+                  },
+                  "/cases/3/commands/2/exit": 3,
+                  "/cases/3/commands/2/report/kind": "unwritable_destination",
+                  "/cases/3/commands/2/report/outcome": "refused",
+                  "/cases/3/commands/2/report/hint": {
+                    "$present": true
+                  },
+                  "/cases/3/observed/binary_unchanged": true,
+                  "/cases/3/observed/install_unchanged": true,
+                  "/cases/3/observed/outside_unchanged": true,
+                  "/cases/3/observed/service_started": false,
+                  "/cases/4/commands/1/exit": 143,
+                  "/cases/4/observed/binary_unchanged": true,
+                  "/cases/4/observed/install_unchanged": true,
+                  "/cases/4/commands/2/report/outcome": "installed",
+                  "/cases/4/observed/service_started": false,
+                  "/cases/5/commands/1/exit": 5,
+                  "/cases/5/commands/1/report/kind": "runtime_running",
+                  "/cases/5/commands/1/report/outcome": "refused",
+                  "/cases/5/commands/1/report/hint": {
+                    "$present": true
+                  },
+                  "/cases/5/commands/1/report/delegate": "update.stage",
+                  "/cases/5/commands/1/report/verified_release": {
+                    "$present": true
+                  },
+                  "/cases/5/observed/binary_unchanged": true,
+                  "/cases/5/observed/install_unchanged": true,
+                  "/cases/5/observed/ready": true,
+                  "/cases/5/observed/delegate": "update.stage",
+                  "/cases/5/commands/2/exit": 0,
+                  "/cases/5/commands/3/report/state": "stopped",
+                  "/cases/6/commands/0/exit": 3,
+                  "/cases/6/commands/0/report/kind": "not_installed",
+                  "/cases/6/commands/0/report/outcome": "refused",
+                  "/cases/6/commands/0/report/hint": {
+                    "$present": true
+                  },
+                  "/cases/6/observed/outside_unchanged": true,
+                  "/cases/7/commands/1/exit": 1,
+                  "/cases/7/commands/1/report/kind": "checksum_mismatch",
+                  "/cases/7/commands/1/report/outcome": "refused",
+                  "/cases/7/commands/1/report/hint": {
+                    "$present": true
+                  },
+                  "/cases/7/commands/2/report/outcome": "installed",
+                  "/cases/7/commands/3/report/outcome": "verified",
+                  "/cases/7/observed/service_started": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
