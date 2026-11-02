@@ -41,19 +41,20 @@ fn passed(scenario: &str, case: &str) -> TestResult<Ran> {
 }
 
 /// A split-write program's screen equals an independent VT fed its raw bytes at once; it
-/// saw one query reply, and a late paint of it is exact.
+/// saw one query reply, and a late observer's paints plus the tail rebuild that screen.
 fn reconstructs_from_raw_bytes(ran: &Ran) -> TestResult {
-    let raw = held(ran, "reply[fx-raw]/result/data_b64")?
-        .as_str()
-        .ok_or("raw output")?;
-    let (lines, cursor) = oracle::replay(raw)?;
+    let raw = oracle::bytes(ran, "reply[fx-raw]/result/data_b64")?;
+    let replayed = oracle::screen(&raw)?;
     let shown: Vec<String> =
         serde_json::from_value(held(ran, "reply[fx-screen]/result/lines")?.clone())?;
     assert_eq!(
-        lines, shown,
+        replayed.lines, shown,
         "the daemon's screen equals a VT fed the raw bytes at once"
     );
-    assert_eq!(held(ran, "reply[fx-screen]/result/cursor")?, &cursor);
+    assert_eq!(
+        held(ran, "reply[fx-screen]/result/cursor")?,
+        &replayed.cursor
+    );
     assert_eq!(
         shown.get(..3),
         Some(
@@ -67,7 +68,7 @@ fn reconstructs_from_raw_bytes(ran: &Ran) -> TestResult {
         *held(ran, "reply[late]/result/first_paint/inexact")?,
         serde_json::json!([])
     );
-    Ok(())
+    oracle::late_paint_and_tail_rebuild_the_screen(ran)
 }
 
 /// The QA ring overflowed into a floor at head - ring, a resynced observer within its credit
@@ -163,6 +164,7 @@ fn happy() -> TestResult {
         held(&ran, "reply[screen]/result/output_offset")?
     );
     reconstructs_from_raw_bytes(&ran)?;
+    oracle::repaint_after_overflow_and_tail_rebuild_the_screen(&ran)?;
     overflow_is_accounted(&ran)?;
     Ok(())
 }

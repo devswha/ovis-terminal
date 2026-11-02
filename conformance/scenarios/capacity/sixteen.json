@@ -1,12 +1,8 @@
 {
+  "format": "ovis-conformance/1",
   "scenario": "capacity/sixteen",
-  "title": "Exact 16-PTY profile: every admission and committed-event sample within 100 ms",
+  "title": "Exact 16-PTY profile: admissions within 100 ms, every delivery and armed exit event exact",
   "todo": 30,
-  "closes": [],
-  "delivers": [
-    "IDEAL-027",
-    "IDEAL-051"
-  ],
   "platforms": [
     "linux",
     "macos"
@@ -14,7 +10,7 @@
   "cases": [
     {
       "case": "happy",
-      "summary": "Sixteen one-line /usr/bin/head -n 1 terminals on one server (ideal-state.md:259 profile). All sixteen input.send admissions, all sixteen committed echo deliveries (each matched exactly at its own admission cursor) and all sixteen exit events must each answer within 100 ms of being awaited.",
+      "summary": "Sixteen one-line /usr/bin/head -n 1 terminals on one server (ideal-state.md:259 profile). An exit wait per terminal is armed on its own connection before any input (fenced by a terminal.list reply on that connection, which the server reads after the sixteen waits). All sixteen input.send admissions must then answer within 100 ms; every exit wait reports matched (armed before the exit; a late wait would answer already_satisfied) and every echo is delivered exactly at its own admission cursor. The 100 ms bound on deliveries and exit events is the declared capacity/sixteen-latency.",
       "steps": [
         {
           "serve": {
@@ -30,6 +26,21 @@
         {
           "hello": {
             "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "exits",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "exits",
             "framed": false,
             "expect": {
               "/id": "hello"
@@ -79,7 +90,12 @@
             "conn": "control",
             "expect": {
               "cat1": {
-                "/result/terminal/address": "t1"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat1"
+                }
               }
             }
           }
@@ -127,7 +143,12 @@
             "conn": "control",
             "expect": {
               "cat2": {
-                "/result/terminal/address": "t2"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat2"
+                }
               }
             }
           }
@@ -175,7 +196,12 @@
             "conn": "control",
             "expect": {
               "cat3": {
-                "/result/terminal/address": "t3"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat3"
+                }
               }
             }
           }
@@ -223,7 +249,12 @@
             "conn": "control",
             "expect": {
               "cat4": {
-                "/result/terminal/address": "t4"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat4"
+                }
               }
             }
           }
@@ -271,7 +302,12 @@
             "conn": "control",
             "expect": {
               "cat5": {
-                "/result/terminal/address": "t5"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat5"
+                }
               }
             }
           }
@@ -319,7 +355,12 @@
             "conn": "control",
             "expect": {
               "cat6": {
-                "/result/terminal/address": "t6"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat6"
+                }
               }
             }
           }
@@ -367,7 +408,12 @@
             "conn": "control",
             "expect": {
               "cat7": {
-                "/result/terminal/address": "t7"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat7"
+                }
               }
             }
           }
@@ -415,7 +461,12 @@
             "conn": "control",
             "expect": {
               "cat8": {
-                "/result/terminal/address": "t8"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat8"
+                }
               }
             }
           }
@@ -463,7 +514,12 @@
             "conn": "control",
             "expect": {
               "cat9": {
-                "/result/terminal/address": "t9"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat9"
+                }
               }
             }
           }
@@ -511,7 +567,12 @@
             "conn": "control",
             "expect": {
               "cat10": {
-                "/result/terminal/address": "t10"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat10"
+                }
               }
             }
           }
@@ -559,7 +620,12 @@
             "conn": "control",
             "expect": {
               "cat11": {
-                "/result/terminal/address": "t11"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat11"
+                }
               }
             }
           }
@@ -607,7 +673,12 @@
             "conn": "control",
             "expect": {
               "cat12": {
-                "/result/terminal/address": "t12"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat12"
+                }
               }
             }
           }
@@ -655,7 +726,12 @@
             "conn": "control",
             "expect": {
               "cat13": {
-                "/result/terminal/address": "t13"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat13"
+                }
               }
             }
           }
@@ -703,7 +779,12 @@
             "conn": "control",
             "expect": {
               "cat14": {
-                "/result/terminal/address": "t14"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat14"
+                }
               }
             }
           }
@@ -751,7 +832,12 @@
             "conn": "control",
             "expect": {
               "cat15": {
-                "/result/terminal/address": "t15"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat15"
+                }
               }
             }
           }
@@ -799,7 +885,229 @@
             "conn": "control",
             "expect": {
               "cat16": {
-                "/result/terminal/address": "t16"
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat16"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "exits",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "exit1",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat1"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit2",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat2"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit3",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat3"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit4",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat4"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit5",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat5"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit6",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat6"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit7",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat7"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit8",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat8"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit9",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat9"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit10",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat10"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit11",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat11"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit12",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat12"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit13",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat13"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit14",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat14"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit15",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat15"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit16",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat16"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "armed",
+                "method": "terminal.list",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "exits",
+            "expect": {
+              "armed": {
+                "/error": {
+                  "$present": false
+                }
               }
             }
           }
@@ -815,7 +1123,7 @@
                 "params": {
                   "op_id": "$op:admit1",
                   "target": {
-                    "address": "t1"
+                    "address": "$value:addr_cat1"
                   },
                   "expect": null,
                   "text": "pty-1-ok",
@@ -830,7 +1138,7 @@
                 "params": {
                   "op_id": "$op:admit2",
                   "target": {
-                    "address": "t2"
+                    "address": "$value:addr_cat2"
                   },
                   "expect": null,
                   "text": "pty-2-ok",
@@ -845,7 +1153,7 @@
                 "params": {
                   "op_id": "$op:admit3",
                   "target": {
-                    "address": "t3"
+                    "address": "$value:addr_cat3"
                   },
                   "expect": null,
                   "text": "pty-3-ok",
@@ -860,7 +1168,7 @@
                 "params": {
                   "op_id": "$op:admit4",
                   "target": {
-                    "address": "t4"
+                    "address": "$value:addr_cat4"
                   },
                   "expect": null,
                   "text": "pty-4-ok",
@@ -875,7 +1183,7 @@
                 "params": {
                   "op_id": "$op:admit5",
                   "target": {
-                    "address": "t5"
+                    "address": "$value:addr_cat5"
                   },
                   "expect": null,
                   "text": "pty-5-ok",
@@ -890,7 +1198,7 @@
                 "params": {
                   "op_id": "$op:admit6",
                   "target": {
-                    "address": "t6"
+                    "address": "$value:addr_cat6"
                   },
                   "expect": null,
                   "text": "pty-6-ok",
@@ -905,7 +1213,7 @@
                 "params": {
                   "op_id": "$op:admit7",
                   "target": {
-                    "address": "t7"
+                    "address": "$value:addr_cat7"
                   },
                   "expect": null,
                   "text": "pty-7-ok",
@@ -920,7 +1228,7 @@
                 "params": {
                   "op_id": "$op:admit8",
                   "target": {
-                    "address": "t8"
+                    "address": "$value:addr_cat8"
                   },
                   "expect": null,
                   "text": "pty-8-ok",
@@ -935,7 +1243,7 @@
                 "params": {
                   "op_id": "$op:admit9",
                   "target": {
-                    "address": "t9"
+                    "address": "$value:addr_cat9"
                   },
                   "expect": null,
                   "text": "pty-9-ok",
@@ -950,7 +1258,7 @@
                 "params": {
                   "op_id": "$op:admit10",
                   "target": {
-                    "address": "t10"
+                    "address": "$value:addr_cat10"
                   },
                   "expect": null,
                   "text": "pty-10-ok",
@@ -965,7 +1273,7 @@
                 "params": {
                   "op_id": "$op:admit11",
                   "target": {
-                    "address": "t11"
+                    "address": "$value:addr_cat11"
                   },
                   "expect": null,
                   "text": "pty-11-ok",
@@ -980,7 +1288,7 @@
                 "params": {
                   "op_id": "$op:admit12",
                   "target": {
-                    "address": "t12"
+                    "address": "$value:addr_cat12"
                   },
                   "expect": null,
                   "text": "pty-12-ok",
@@ -995,7 +1303,7 @@
                 "params": {
                   "op_id": "$op:admit13",
                   "target": {
-                    "address": "t13"
+                    "address": "$value:addr_cat13"
                   },
                   "expect": null,
                   "text": "pty-13-ok",
@@ -1010,7 +1318,7 @@
                 "params": {
                   "op_id": "$op:admit14",
                   "target": {
-                    "address": "t14"
+                    "address": "$value:addr_cat14"
                   },
                   "expect": null,
                   "text": "pty-14-ok",
@@ -1025,7 +1333,7 @@
                 "params": {
                   "op_id": "$op:admit15",
                   "target": {
-                    "address": "t15"
+                    "address": "$value:addr_cat15"
                   },
                   "expect": null,
                   "text": "pty-15-ok",
@@ -1040,7 +1348,7 @@
                 "params": {
                   "op_id": "$op:admit16",
                   "target": {
-                    "address": "t16"
+                    "address": "$value:addr_cat16"
                   },
                   "expect": null,
                   "text": "pty-16-ok",
@@ -1252,6 +1560,109 @@
           }
         },
         {
+          "replies": {
+            "conn": "exits",
+            "expect": {
+              "exit1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit4": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit5": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit6": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit7": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit9": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit10": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit11": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit12": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit13": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit14": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit15": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit16": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
           "send": {
             "conn": "control",
             "requests": [
@@ -1261,7 +1672,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t1"
+                    "address": "$value:addr_cat1"
                   },
                   "cursor": "$value:cur1",
                   "pattern": {
@@ -1276,7 +1687,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t2"
+                    "address": "$value:addr_cat2"
                   },
                   "cursor": "$value:cur2",
                   "pattern": {
@@ -1291,7 +1702,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t3"
+                    "address": "$value:addr_cat3"
                   },
                   "cursor": "$value:cur3",
                   "pattern": {
@@ -1306,7 +1717,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t4"
+                    "address": "$value:addr_cat4"
                   },
                   "cursor": "$value:cur4",
                   "pattern": {
@@ -1321,7 +1732,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t5"
+                    "address": "$value:addr_cat5"
                   },
                   "cursor": "$value:cur5",
                   "pattern": {
@@ -1336,7 +1747,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t6"
+                    "address": "$value:addr_cat6"
                   },
                   "cursor": "$value:cur6",
                   "pattern": {
@@ -1351,7 +1762,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t7"
+                    "address": "$value:addr_cat7"
                   },
                   "cursor": "$value:cur7",
                   "pattern": {
@@ -1366,7 +1777,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t8"
+                    "address": "$value:addr_cat8"
                   },
                   "cursor": "$value:cur8",
                   "pattern": {
@@ -1381,7 +1792,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t9"
+                    "address": "$value:addr_cat9"
                   },
                   "cursor": "$value:cur9",
                   "pattern": {
@@ -1396,7 +1807,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t10"
+                    "address": "$value:addr_cat10"
                   },
                   "cursor": "$value:cur10",
                   "pattern": {
@@ -1411,7 +1822,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t11"
+                    "address": "$value:addr_cat11"
                   },
                   "cursor": "$value:cur11",
                   "pattern": {
@@ -1426,7 +1837,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t12"
+                    "address": "$value:addr_cat12"
                   },
                   "cursor": "$value:cur12",
                   "pattern": {
@@ -1441,7 +1852,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t13"
+                    "address": "$value:addr_cat13"
                   },
                   "cursor": "$value:cur13",
                   "pattern": {
@@ -1456,7 +1867,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t14"
+                    "address": "$value:addr_cat14"
                   },
                   "cursor": "$value:cur14",
                   "pattern": {
@@ -1471,7 +1882,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t15"
+                    "address": "$value:addr_cat15"
                   },
                   "cursor": "$value:cur15",
                   "pattern": {
@@ -1486,7 +1897,7 @@
                 "method": "terminal.wait_output",
                 "params": {
                   "target": {
-                    "address": "t16"
+                    "address": "$value:addr_cat16"
                   },
                   "cursor": "$value:cur16",
                   "pattern": {
@@ -1501,7 +1912,6 @@
         {
           "replies": {
             "conn": "control",
-            "within_ms": 100,
             "expect": {
               "deliver1": {
                 "/error": {
@@ -1619,341 +2029,6 @@
           }
         },
         {
-          "send": {
-            "conn": "control",
-            "requests": [
-              {
-                "jsonrpc": "2.0",
-                "id": "exit1",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t1"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit2",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t2"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit3",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t3"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit4",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t4"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit5",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t5"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit6",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t6"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit7",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t7"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit8",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t8"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit9",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t9"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit10",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t10"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit11",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t11"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit12",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t12"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit13",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t13"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit14",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t14"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit15",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t15"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              },
-              {
-                "jsonrpc": "2.0",
-                "id": "exit16",
-                "method": "events.wait",
-                "params": {
-                  "target": {
-                    "address": "t16"
-                  },
-                  "exit": true,
-                  "timeout_ms": "10000"
-                }
-              }
-            ]
-          }
-        },
-        {
-          "replies": {
-            "conn": "control",
-            "within_ms": 100,
-            "expect": {
-              "exit1": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit2": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit3": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit4": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit5": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit6": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit7": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit8": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit9": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit10": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit11": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit12": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit13": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit14": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit15": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              },
-              "exit16": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": {
-                  "$present": true
-                }
-              }
-            }
-          }
-        },
-        {
           "hangup": {
             "conn": "control"
           }
@@ -1961,6 +2036,16 @@
         {
           "closed": {
             "conn": "control"
+          }
+        },
+        {
+          "hangup": {
+            "conn": "exits"
+          }
+        },
+        {
+          "closed": {
+            "conn": "exits"
           }
         },
         {

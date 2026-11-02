@@ -284,6 +284,36 @@
       "owner_todo": "60",
       "status": "deferred",
       "reason": "Deferred: no served attach over the Windows named pipe in v1. GAP-048's Windows half (an ordered attach stream to a client over the pipe) has no v1 deliverer; platform/matrix runs on Linux and macOS, and todo 60's Windows smoke proves only the holder's ordered ConPTY read, so the matrix does not claim GAP-048."
+    },
+    {
+      "id": "GAP-056",
+      "scenario": "part-a/task-30",
+      "owner_todo": "30",
+      "reason": "GAP-056: part-a/task-30 no longer claims it (gate r4 N4): the geometry lease is exercised only by attach/resize (a resize applied under the geometry lease), while deterministic release/transfer and the ordered geometry events are the declared attach/geometry, which the composed daemon cannot pass (geometry events are never delivered to subscribers). Todo 30 reclaims it when attach/geometry becomes executable."
+    },
+    {
+      "id": "GAP-073",
+      "scenario": "part-a/task-30",
+      "owner_todo": "30",
+      "reason": "GAP-073: part-a/task-30 no longer claims it (gate r4 N4): delivery offsets and whole, ordered submissions are asserted, but partial-write failure needs a holder write-fault injection that neither the runner nor a QA seam provides. Todo 30 reclaims it with that seam."
+    },
+    {
+      "id": "IDEAL-037",
+      "scenario": "part-a/task-30",
+      "owner_todo": "30",
+      "reason": "IDEAL-037: part-a/task-30 no longer claims it (gate r4 N4): only the resize under the geometry lease is executed (attach/resize); explicit release and deterministic transfer are not, and the declared attach/geometry waits on geometry event delivery. Todo 30 reclaims it when attach/geometry becomes executable."
+    },
+    {
+      "id": "IDEAL-038",
+      "scenario": "part-a/task-30",
+      "owner_todo": "30",
+      "reason": "IDEAL-038: part-a/task-30 no longer claims it (gate r4 N4): the ordered geometry.changed / geometry.checkpoint / geometry.input_ready records are the declared attach/geometry; the composed daemon never delivers them to subscribers. Todo 30 reclaims it when that scenario becomes executable."
+    },
+    {
+      "id": "IDEAL-050",
+      "scenario": "part-a/task-30",
+      "owner_todo": "30",
+      "reason": "IDEAL-050: part-a/task-30 no longer claims it (gate r4 N4): atomicity against another writer and delivery offsets are asserted (attach-input/adversarial two-writer drain), but explicit partial-write failure is not exercised (needs a holder write-fault injection). Todo 30 reclaims it with that seam."
     }
   ]
 }

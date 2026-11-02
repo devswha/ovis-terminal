@@ -9,13 +9,11 @@
     "GAP-043",
     "GAP-046",
     "GAP-052",
-    "GAP-056",
     "GAP-060",
     "GAP-061",
     "GAP-063",
     "GAP-070",
     "GAP-071",
-    "GAP-073",
     "GAP-074",
     "GAP-075",
     "GAP-076",
@@ -31,15 +29,12 @@
     "IDEAL-031",
     "IDEAL-032",
     "IDEAL-035",
-    "IDEAL-037",
-    "IDEAL-038",
     "IDEAL-039",
     "IDEAL-040",
     "IDEAL-041",
     "IDEAL-044",
     "IDEAL-048",
     "IDEAL-049",
-    "IDEAL-050",
     "IDEAL-051",
     "IDEAL-052",
     "IDEAL-053",
@@ -63,11 +58,23 @@
   "cases": [
     {
       "case": "happy",
-      "summary": "Runs attach-input/all: first-paint parity, admission-before-delivery, the exact output-wait marker, the operator lease, bounded shared storage with an accounted overflow gap, and checkpoint/tail reconstruction (split UTF-8/CSI and a replayed DSR query) checked against an independent VT. The exact 16-PTY latency profile is the declared capacity/sixteen.",
+      "summary": "Runs attach-input/all (first-paint parity, admission before delivery, the exact output-wait marker, the operator lease, bounded shared storage with an accounted overflow gap, and client-side checkpoint plus tail reconstruction on a normal and an overflowed terminal against uninterrupted VTs), capacity/sixteen (the exact 16-PTY profile: admissions within 100 ms, exit waits armed before the exits, exact deliveries) and attach/resize (a resize applied while input is queued). The 100 ms event bound, ordered geometry events and the session budget are declared.",
       "steps": [
         {
           "include": {
             "scenario": "attach-input/all",
+            "case": "happy"
+          }
+        },
+        {
+          "include": {
+            "scenario": "capacity/sixteen",
+            "case": "happy"
+          }
+        },
+        {
+          "include": {
+            "scenario": "attach/resize",
             "case": "happy"
           }
         }

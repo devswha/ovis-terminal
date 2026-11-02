@@ -4,7 +4,7 @@
     {
       "file": "attach/geometry.json",
       "owner_todo": "30",
-      "reason": "Product capability missing: geometry events are never delivered to subscribers. A resize under the geometry lease answers applied (revision advances, the program sees SIGWINCH and prints 30 100), but geometry.changed / geometry.checkpoint / geometry.input_ready are committed only to the daemon's geometry log and no events.subscribe filtered to them receives any record (20 000 ms bound, step 19; also no new checkpoint/input_ready control record on the attach stream). Executable once the composed daemon publishes the geometry log into the event hub in order (IDEAL-037/038)."
+      "reason": "Product capability missing: geometry events are never delivered to subscribers. The resize itself is executed and asserted in attach/resize (applied at 100x30, the program's SIGWINCH report is its first output, queued input released whole), but geometry.changed / geometry.checkpoint / geometry.input_ready are committed only to the daemon's geometry log and no events.subscribe filtered to them receives any record (20 000 ms bound, step 19; no new checkpoint/input_ready control record on the attach stream either). Executable once the composed daemon publishes the geometry log into the event hub in order (IDEAL-037/038)."
     },
     {
       "file": "capacity/session-budget.json",
@@ -12,9 +12,9 @@
       "reason": "Product capability missing: the session-wide input budget is not enforced by the composed daemon (it lives in the todo-56 scheduler, which is not in serve's path). Measured: five stalled terminals accepted 25 writes of 3 MiB = 75 MiB (11 MiB past the advertised session_input_bytes 67108864) with no backpressure or limit_exceeded; only the per-terminal 16 MiB queue refuses (input_overflow). Executable once admission charges a session-wide input budget and refuses with typed backpressure before it is exceeded."
     },
     {
-      "file": "capacity/sixteen.json",
+      "file": "capacity/sixteen-latency.json",
       "owner_todo": "30",
-      "reason": "Product bound not met: 16-PTY committed-event delivery exceeds 100 ms because output ingestion across terminals is serialized (~50 ms per terminal). Measured on Linux x86_64 debug: admissions 3-19 ms (all within 100 ms); echo deliveries 22, 81, 111, 193, 220, 291, 304, 388, 444, 499, 559, 627, 691, 709, 811, 840 ms for t1-t16 (t16 840 ms > 100 ms; earlier run t16 ~838 ms); exit events 15-64 ms. Executable once ingestion delivers every terminal's committed output within 100 ms under this profile (IDEAL-027/051)."
+      "reason": "Product bound not met: under the exact 16-PTY profile, committed events reach their waiters one terminal at a time (~50 ms each), so the 100 ms bound on deliveries and exit events fails. Measured on Linux x86_64 debug, from the admission batch: admissions 2-19 ms (executed and asserted in capacity/sixteen); echo deliveries 22, 81, 111, 193, 220, 291, 304, 388, 444, 499, 559, 627, 691, 709, 811, 840 ms for t1-t16; exit waits armed before the exits report matched at 80, 126, 224, 239, 304, 359, 415, 508, 543, 630, 730, 746, 797, 865, 929, 979 ms. Executable once output and exit ingestion deliver every terminal's committed events within 100 ms under this profile (IDEAL-027)."
     },
     {
       "file": "part-a/task-1.json",

@@ -849,7 +849,10 @@
                 "/result/gap": false,
                 "/result/from_offset": "$value:floor",
                 "/result/floor_offset": "$value:floor",
-                "/result/next_offset": "$value:screen_offset"
+                "/result/next_offset": "$value:screen_offset",
+                "/result/data_b64": {
+                  "$present": true
+                }
               }
             }
           }
@@ -892,6 +895,159 @@
                 }
               }
             }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "resume",
+                "method": "attach.credit",
+                "params": {
+                  "stream_id": "$value:observer_stream",
+                  "acknowledged": "$value:repaint_so"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "resume": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/stream_id": "$value:observer_stream"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "tail",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:tail",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "echo tail-$((2*3))",
+                  "submit": "enter",
+                  "lease_id": "$value:operator_lease"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "tail": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/output_cursor": {
+                  "$capture": "tail_cursor"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "tail_from"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "tail-seen",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "cursor": "$value:tail_cursor",
+                  "pattern": {
+                    "text": "tail-6\r\n$ "
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "tail-seen": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/cursor/offset": {
+                  "$capture": "tail_end"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "tail-raw",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "from_offset": "$value:tail_from",
+                  "limit_bytes": "4096"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "tail-raw": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/gap": false,
+                "/result/from_offset": "$value:tail_from",
+                "/result/next_offset": "$value:tail_end",
+                "/result/data_b64": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "stream_data": {
+            "id": "t1",
+            "conn": "observer",
+            "stream": "$value:observer_stream",
+            "from": "$value:repaint_so",
+            "until": "tail-6\r\n$ "
           }
         },
         {
@@ -1099,6 +1255,9 @@
                 "/result/first_paint/inexact": [],
                 "/result/stream_id": {
                   "$capture": "late"
+                },
+                "/result/first_paint/output_offset": {
+                  "$capture": "late_paint_at"
                 }
               }
             }
@@ -1127,7 +1286,10 @@
                 "/error": {
                   "$present": false
                 },
-                "/result/checkpoint/inexact": []
+                "/result/checkpoint/inexact": [],
+                "/result/stream_offset": {
+                  "$capture": "late_so"
+                }
               }
             }
           }
@@ -1205,6 +1367,15 @@
                 }
               }
             }
+          }
+        },
+        {
+          "stream_data": {
+            "id": "t2",
+            "conn": "observer",
+            "stream": "$value:late",
+            "from": "0",
+            "until": "NEXT[x]\r\n"
           }
         },
         {

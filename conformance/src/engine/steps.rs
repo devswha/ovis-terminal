@@ -65,6 +65,7 @@ impl Session<'_> {
                 | Step::PtyExit(_) => self.pty(step).await,
                 Step::Gates(gates) => self.gates(gates).await,
                 Step::GraphicsTranscript(step) => self.graphics_transcript(step).await,
+                Step::StreamData(step) => self.stream_data(step).await,
             }
         })
     }

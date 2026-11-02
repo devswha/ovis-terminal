@@ -1,0 +1,402 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "attach/resize",
+  "title": "A resize under the geometry lease while input is queued",
+  "todo": 30,
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "A child that does not read its PTY has one interact submission queued when its geometry owner resizes it 80x24 to 100x30: the resize answers applied at 100x30, the program's own report of the new grid (stty size on SIGWINCH, \"30 100\") is the first output after its ready marker, and ctrl+c then releases the queued submission whole. The ordered geometry events are the declared attach/geometry.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.resize",
+                  "events.subscribe"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "grid",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:grid",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "stty -echo -icanon noflsh; trap 'stty size' WINCH; trap 'exec cat' INT; printf STALLED; while :; do sleep 1; done"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "grid",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "grid": {
+                "/result/terminal/address": {
+                  "$capture": "addr_grid"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "ready",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_grid"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "STALLED"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "ready": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/cursor/offset": {
+                  "$capture": "ready_end"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:open",
+                  "target": {
+                    "address": "$value:addr_grid"
+                  },
+                  "role": "interact",
+                  "client_id": "pane",
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/lease_id": {
+                  "$capture": "lease"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "leases",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_grid"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "leases": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/geometry_owner/holder": "pane",
+                "/result/geometry_owner/lease_id": {
+                  "$capture": "geo"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "queued",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:queued",
+                  "target": {
+                    "address": "$value:addr_grid"
+                  },
+                  "expect": null,
+                  "text": "queued-1",
+                  "submit": "enter",
+                  "lease_id": "$value:lease"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "queued": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/queued_seq": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "resize",
+                "method": "attach.resize",
+                "params": {
+                  "op_id": "$op:resize",
+                  "target": {
+                    "address": "$value:addr_grid"
+                  },
+                  "lease_id": "$value:geo",
+                  "geometry": {
+                    "cols": 100,
+                    "rows": 30
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "resize": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "applied",
+                "/result/geometry": {
+                  "cols": 100,
+                  "rows": 30
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "new-grid",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_grid"
+                  },
+                  "cursor": {
+                    "offset": "$value:ready_end"
+                  },
+                  "pattern": {
+                    "text": "30 100"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "new-grid": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:ready_end"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "release",
+                "method": "input.keys",
+                "params": {
+                  "op_id": "$op:release",
+                  "target": {
+                    "address": "$value:addr_grid"
+                  },
+                  "expect": null,
+                  "keys": [
+                    "ctrl+c"
+                  ],
+                  "lease_id": "$value:lease"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "release": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/queued_seq": "2"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "drained",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_grid"
+                  },
+                  "cursor": {
+                    "offset": "$value:ready_end"
+                  },
+                  "pattern": {
+                    "text": "queued-1\r\n"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "drained": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

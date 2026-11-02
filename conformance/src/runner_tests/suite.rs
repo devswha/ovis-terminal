@@ -56,10 +56,12 @@ const ASSEMBLED: [&str; 7] = [
 ];
 
 /// Plan todo 30's attach, input and capacity scenarios over the assembled binary.
-const ATTACH_INPUT: [&str; 4] = [
+const ATTACH_INPUT: [&str; 6] = [
     "attach-input/adversarial.json",
     "attach-input/all.json",
+    "attach/resize.json",
     "capacity/fifty.json",
+    "capacity/sixteen.json",
     "part-a/task-30.json",
 ];
 
