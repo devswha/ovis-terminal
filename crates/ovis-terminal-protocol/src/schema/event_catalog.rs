@@ -7,7 +7,7 @@ use super::events::{
 use super::method::{EventSpec, event};
 use super::methods::agent::AgentNoteResult;
 use super::methods::doc::DocEntry;
-use super::methods::layout::{LayoutTree, Selection};
+use super::methods::layout::{LayoutChangedData, SelectionChangedData};
 use super::methods::machine::MachineRecord;
 use super::methods::plugin::PluginRunRecord;
 use super::methods::server::{OpRecord, RecoveryEvidence};
@@ -152,11 +152,11 @@ pub(super) const EVENTS: &[EventSpec] = &[
         "A boot or restart boundary recorded recovery evidence.",
         RecoveryEvidence
     ),
-    event!("layout.changed", "The layout changed.", LayoutTree),
+    event!("layout.changed", "The layout changed.", LayoutChangedData),
     event!(
         "selection.changed",
         "One client's selection changed.",
-        Selection
+        SelectionChangedData
     ),
     event!("worktree.changed", "A checkout changed.", WorktreeRecord),
     event!("plugin.run", "A plugin run changed state.", PluginRunRecord),

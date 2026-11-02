@@ -1,5 +1,8 @@
 //! Thin layout (`layout.*`) and per-client selection (`selection.*`) by explicit ID.
 
+mod events;
+
+pub use events::{LayoutChangedData, SelectionChangeCause, SelectionChangedData};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

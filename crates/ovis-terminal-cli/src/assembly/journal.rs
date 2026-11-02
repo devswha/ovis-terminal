@@ -21,7 +21,8 @@ use super::lanes::DispatchLog;
 pub(super) struct BootJournal {
     state: PathBuf,
     log: Mutex<Option<LeaseLog>>,
-    /// The serving boot's dispatch log, where committed lease events reach subscribers.
+    /// The serving boot's dispatch log, where committed lease and layout events reach
+    /// subscribers.
     feed: Mutex<Option<Arc<DispatchLog>>>,
 }
 
@@ -38,6 +39,14 @@ impl BootJournal {
     /// Publishes later lease events to `feed`, or to no subscriber once the boot ends.
     pub(super) fn publish_to(&self, feed: Option<Arc<DispatchLog>>) {
         *self.feed.lock().unwrap_or_else(PoisonError::into_inner) = feed;
+    }
+
+    /// The serving boot's dispatch log, absent between boots.
+    pub(super) fn feed(&self) -> Option<Arc<DispatchLog>> {
+        self.feed
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
     }
 
     /// Each update replaces the whole slot, so a poisoned lock still holds a usable value.
@@ -88,12 +97,7 @@ impl LeaseJournal for BootJournal {
             || Err(StreamError::Journal(EventError::AdmissionWithdrawn)),
             |log| log.record(op.clone(), transition.clone()),
         )?;
-        let feed = self
-            .feed
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .clone();
-        if let Some(feed) = feed {
+        if let Some(feed) = self.feed() {
             feed.record(op, transition)?;
         }
         Ok(committed)
