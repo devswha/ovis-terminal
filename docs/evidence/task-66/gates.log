@@ -1,3 +1,20 @@
+# gate round 1 fix (advertised surface = served surface)
+$ bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh
+     Summary [ 115.167s] 1508 tests run: 1508 passed (4 slow), 2 skipped
+check.sh: all steps passed
+exit=0
+
+$ RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 25.88s
+exit=0
+
+$ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 31.96s
+exit=0
+
+$ cargo test --locked -p ovis-terminal-cli --all-targets
+exit=0 (111 passed: lib 48, assembly 45, attach 5, cli 2, interactive 11)
+
 # round 3 (review fix: supplied fields checked before needs_target), tree before commit
 $ bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh
      Summary [ 114.482s] 1507 tests run: 1507 passed (3 slow), 2 skipped

@@ -5,9 +5,8 @@ use ovis_terminal_protocol::domain::conversation_records::{
 };
 use ovis_terminal_protocol::schema::common::NoParams;
 use ovis_terminal_protocol::schema::methods::agent::{
-    AgentConversationParams, AgentHistoryParams, AgentListParams, AgentNoteParams,
-    AgentRegisterParams, AgentReleaseParams, AgentTargetParams, AgentUpdateSessionParams,
-    AgentWaitChildrenParams,
+    AgentConversationParams, AgentHistoryParams, AgentRegisterParams, AgentTargetParams,
+    AgentUpdateSessionParams,
 };
 use ovis_terminal_protocol::schema::methods::status::{
     PromptAnswerParams, PromptCloseParams, PromptGetParams, PromptListParams, PromptOpenParams,
@@ -26,8 +25,10 @@ const fn spec(method: &'static str, check: Check, (token, target): (bool, Target
     }
 }
 
-/// Every typed verb of the agent domain, in catalog order.
-pub(crate) const VERBS: [VerbSpec; 24] = [
+/// Every typed verb of the agent domain this build serves, in catalog order. `agent.list`,
+/// `agent.note`, `agent.release` and `agent.wait_children` are catalog methods `serve` does
+/// not route, so they have no verb.
+pub(crate) const VERBS: [VerbSpec; 20] = [
     spec(
         "agent.register",
         check::<AgentRegisterParams>,
@@ -39,33 +40,13 @@ pub(crate) const VERBS: [VerbSpec; 24] = [
         (false, TargetUse::Required),
     ),
     spec(
-        "agent.list",
-        check::<AgentListParams>,
-        (false, TargetUse::Absent),
-    ),
-    spec(
         "agent.update_session",
         check::<AgentUpdateSessionParams>,
         (true, TargetUse::Required),
     ),
     spec(
-        "agent.release",
-        check::<AgentReleaseParams>,
-        (true, TargetUse::Required),
-    ),
-    spec(
         "agent.children",
         check::<AgentTargetParams>,
-        (false, TargetUse::Required),
-    ),
-    spec(
-        "agent.note",
-        check::<AgentNoteParams>,
-        (false, TargetUse::Required),
-    ),
-    spec(
-        "agent.wait_children",
-        check::<AgentWaitChildrenParams>,
         (false, TargetUse::Required),
     ),
     spec(

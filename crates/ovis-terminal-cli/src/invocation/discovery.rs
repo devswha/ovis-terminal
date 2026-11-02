@@ -77,6 +77,7 @@ fn commands(command: &clap::Command, prefix: &str, out: &mut Vec<Value>) {
             out.push(json!({
                 "command": path,
                 "about": sub.get_about().map(ToString::to_string),
+                "method": crate::agent::method_of(&path),
                 "arguments": arguments(sub),
             }));
         }

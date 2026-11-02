@@ -12,10 +12,19 @@ pub mod table;
 
 pub(crate) use table::VERBS;
 
+/// The method the typed verb at command `path` (such as `agent update-session`) sends.
+pub(crate) fn method_of(path: &str) -> Option<&'static str> {
+    VERBS
+        .into_iter()
+        .chain(crate::commands::SERVER)
+        .map(|verb| verb.method)
+        .find(|method| method.replace('.', " ").replace('_', "-") == path)
+}
+
 /// `ovis-terminal (agent | status | prompt | turn | template) <verb>`.
 #[derive(Debug, Subcommand)]
 pub(crate) enum DomainCommand {
-    /// Declared agents: registration, session binding, children, notes and records.
+    /// Declared agents: registration, session binding, children and records.
     #[command(subcommand)]
     Agent(AgentVerb),
     /// Status reported by the program that owns a terminal.
@@ -39,18 +48,10 @@ pub(crate) enum AgentVerb {
     Register(Mutate),
     /// Read the agent of one terminal; `agent` is null for a plain program.
     Get(Read),
-    /// List registered agents.
-    List(Plain),
     /// Bind or replace the agent's provider session reference.
     UpdateSession(Mutate),
-    /// End the agent registration; the terminal keeps running.
-    Release(Mutate),
     /// List the agent's child terminals and their lifecycle facts.
     Children(Read),
-    /// Deliver a note from the agent to one of its children.
-    Note(Mutate),
-    /// Wait until the agent's children settle, within a bound.
-    WaitChildren(Read),
     /// Read the agent's conversation blocks from a cursor.
     Conversation(Read),
     /// Append conversation records reported by the owning program.
@@ -125,12 +126,8 @@ impl AgentVerb {
         match self {
             Self::Register(args) => ("agent.register", args.into()),
             Self::Get(args) => ("agent.get", args.into()),
-            Self::List(args) => ("agent.list", args.into()),
             Self::UpdateSession(args) => ("agent.update_session", args.into()),
-            Self::Release(args) => ("agent.release", args.into()),
             Self::Children(args) => ("agent.children", args.into()),
-            Self::Note(args) => ("agent.note", args.into()),
-            Self::WaitChildren(args) => ("agent.wait_children", args.into()),
             Self::Conversation(args) => ("agent.conversation", args.into()),
             Self::AppendRecords(args) => ("agent.append_records", args.into()),
             Self::Records(args) => ("agent.records", args.into()),

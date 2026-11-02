@@ -7,9 +7,9 @@ history, ownership and revocation, and what a trusted extension may and may not 
 ends with a synthetic producer that the `cli/manual` conformance scenario executes
 against the real binary.
 
-Every command below parses and plans against the build this file ships with; every
-JSON block marked `// params of <method>` decodes as that method's closed params type.
-Both are checked by the CLI crate's tests. `ovis-terminal schema contract` is the full
+Every command below is executed against a running `serve` of the build this file ships
+with, and every JSON block marked `// params of <method>` is sent to it; the CLI crate's
+tests require each one to be served and well-formed. `ovis-terminal schema contract` is the full
 reference.
 
 ## 1. What the runtime gives a spawned program
@@ -51,7 +51,6 @@ returns `agent: null`, and `not_found` means the terminal itself does not exist.
 
 ```sh
 ovis-terminal --json agent get --address t1
-ovis-terminal --json agent list
 ```
 
 ## 3. Report status
@@ -139,13 +138,24 @@ status.
   or registration presenting another terminal's token is refused and changes nothing:
   `not_owner` from the status, agent and record lanes, `forbidden` from the prompt bridge
   gate; both exit 12. A restarted program gets a new token; the old one stops working.
-- `agent release` ends the registration; the terminal keeps running.
+- A registration belongs to the process incarnation that made it. This build serves no
+  explicit release: `agent.release` (like `agent.list`, `agent.note` and
+  `agent.wait_children`) is a catalog method `serve` does not route, and it answers
+  `method_not_found`.
+- A producer withdraws what it reported with `status clear`; the terminal keeps running.
+- An attach client gives up its leases by closing its stream (`attach.close`, or Ctrl-\
+  in `ovis-terminal terminal attach`); `attach.leases` shows who holds a terminal now.
 - Credentials are revoked with `credential.revoke`; a revoked credential cannot report
   even with a valid process token.
 
+```sh
+ovis-terminal --json status clear --address t1 --op-id 01900000-0000-7000-8000-000000000106
+ovis-terminal --json call attach.leases --params '{"target":{"address":"t1"}}'
+```
+
 ```json
-// params of agent.release
-{"op_id": "01900000-0000-7000-8000-000000000106", "target": {"address": "t1"}, "process_token": "token-from-the-environment"}
+// params of status.clear
+{"op_id": "01900000-0000-7000-8000-000000000107", "target": {"address": "t1"}, "process_token": "token-from-the-environment"}
 ```
 
 ## 8. Trusted-extension boundaries

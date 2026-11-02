@@ -1,6 +1,6 @@
 # Task 66 adversarial pass
 
-Binary sha256 `c7919923c742395e70329438dc7a7472240cfd143a138368a07ff76dae8997bd`, Linux x86_64
+Binary sha256 `5fbb5ae7a640c1c6e5cf760b4a095b855f9b49030a12144bdfb45c8d9624969d`, Linux x86_64
 (`binary-runs.log` holds every materialized run with argv, exit code, stdout and stderr).
 
 ## Malformed input: refused before any connection
@@ -50,3 +50,16 @@ and that `accept()` is still `WouldBlock` after each.
 | M3 `not_owner` no longer exits 12 | `producer::a_producer_reports_with_its_inherited_token_and_a_foreign_token_is_refused` |
 | M4 inherited token overrides an explicit params token | `commands::tests::an_explicit_token_in_params_wins_over_the_inherited_one` |
 | M5 targetless verb answers `needs_target` without checking the supplied fields (round 3) | `invocation::manual_tests::a_targetless_verb_needs_a_target_only_when_every_supplied_field_is_valid` (`Ok(true)` vs `Err("invalid_params")`), `tests/cli.rs` `failure` (exit 13 `deadline_exceeded` after 15 s on the idle listener, not 2), `cli/manual` failure case (exit 7, not 2) |
+
+## Gate round 1: advertised surface equals served surface
+
+- Every `sh` example line in the manual and the onboarding guide runs through `/bin/sh` against `serve`, using the real spawn token and the binary on `PATH`. Every `// params of` block is sent with `call`. None may answer `method_not_found`, `unknown_method`, `usage`, `invalid_params` or unparsable output.
+- `hello.methods` contains the method of every typed verb `schema cli` lists.
+- Every `<group> <verb>` the two documents name is a command of the build.
+- Removed unserved verbs: `agent list`, `agent note`, `agent release`, `agent wait-children`. They are named as not served in the manual and as a gap in the PR.
+
+| mutant | killed by |
+|---|---|
+| M6 re-add an unserved `agent list` verb | `manual_examples::hello_advertises_the_method_of_every_typed_verb` |
+| M7 document `agent list` again in the onboarding guide | `invocation::manual_tests::every_typed_verb_the_docs_name_is_a_command_of_this_build`, `manual_examples::every_documented_command_and_params_example_is_served_by_this_build` (`usage`) |
+| M8 `schema cli` names no method (vacuous hello check) | `invocation::manual_tests::every_typed_verb_command_names_the_method_it_sends` (and the hello test) |

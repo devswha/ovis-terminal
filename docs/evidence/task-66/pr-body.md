@@ -4,7 +4,7 @@ Plan todo 66 (wave 18). Closes GAP-137, GAP-138, GAP-141, GAP-145, GAP-146, GAP-
 
 ## What changed
 
-- **Typed agent verbs.** `ovis-terminal agent|status|prompt|turn|template <verb>` plus `server metrics|stop|restart`: 27 verbs, each sending one published method (`src/agent.rs`, `src/commands.rs`). A verb takes exactly the flags its closed params type takes (`--op-id` for a mutation, `--terminal-id|--address|--name` for a terminal-scoped method, `--params` for the rest). The merged params decode as the closed type before any connection. A terminal-scoped verb without a target exits 7 with `needs_target` and the live candidates; a field given twice is `usage`. A test checks every verb against the published schema (op_id iff mutation, process_token use, target required/optional/absent).
+- **Typed agent verbs.** `ovis-terminal agent|status|prompt|turn|template <verb>` plus `server metrics|stop|restart`: 23 verbs, each sending one published method this build's `serve` routes (`src/agent.rs`, `src/commands.rs`). A verb takes exactly the flags its closed params type takes (`--op-id` for a mutation, `--terminal-id|--address|--name` for a terminal-scoped method, `--params` for the rest). The merged params decode as the closed type before any connection. A terminal-scoped verb without a target exits 7 with `needs_target` and the live candidates; a field given twice is `usage`. A test checks every verb against the published schema (op_id iff mutation, process_token use, target required/optional/absent).
 - **Producer token.** Reporting verbs fill `process_token` from `OVIS_TERMINAL_PROCESS_TOKEN` (the variable the runtime sets for a spawned program) when `--params` names none. The token is never printed (redacted Debug) and is listed in `schema cli`.
 - **`not_owner` exits 12 (forbidden).** It used to fall through to exit 1.
 - **Embedded manual and contract.** The manual moved to `src/skill/manual.md`; `docs/skill/ovis-terminal.md` is a byte-equal shipped copy (tested). `ovis-terminal schema contract` renders `docs/runtime-contract.md` from this build's types: methods with effect, targeting, params/result types and error kinds; events; every server error kind with recovery; limits; roles and the permission each action needs; exit codes with kinds, the binary's own exit-1 kinds and the environment. It is platform-neutral: the per-platform commands (`serve`, `hold` and `terminal attach` are Unix only, Windows `service` verbs differ) live in the manual and `schema cli`, and a test pins that the rendering does not depend on the command grammar. The stated behaviour is `src/skill/contract.md`, from the recovered full advisory with the plan's binding overrides applied and listed. The shipped file must equal the rendering (tested).
@@ -22,11 +22,11 @@ $ <run-root>/bin/hc ls
 {"hidden_finished":0,"terminals":[{"address":"t1","agent":"bash",...,"state":"live","turn":0}]}
 ```
 
-Piped `hc ls` prints JSON without `--json` while `run`/`read` print text: the output mode depends on isatty. Gap baseline: GAP-137 (isatty output mode), GAP-138 (focus fallback and unsafe targetless automation), GAP-141 (hidden flags and undiscoverable failure kinds), GAP-145..149 (chrome and prefix modes, brand manifests, toasts and sounds, discarded unknown input, foreground promotion).
+Piped `hc ls` prints JSON without `--json` while `run`/`read` print text: the output mode depends on isatty. Path correction: the plan cites the durable copy as `docs/evidence/baseline/hc-s02-run-ls.log`, which does not exist; todo 1 stored it as `docs/evidence/baseline/smoke/hc-s02-run-ls.log` (the copy cited above, lines 16-18). Gap baseline: GAP-137 (isatty output mode), GAP-138 (focus fallback and unsafe targetless automation), GAP-141 (hidden flags and undiscoverable failure kinds), GAP-145..149 (chrome and prefix modes, brand manifests, toasts and sounds, discarded unknown input, foreground promotion).
 
 ## After
 
-Linux x86_64, binary sha256 `c7919923c742395e70329438dc7a7472240cfd143a138368a07ff76dae8997bd` (`$CARGO_TARGET_DIR/debug/ovis-terminal`; the lane target lives on RAM, never `<worktree>/target`).
+Linux x86_64, binary sha256 `5fbb5ae7a640c1c6e5cf760b4a095b855f9b49030a12144bdfb45c8d9624969d` (`$CARGO_TARGET_DIR/debug/ovis-terminal`; the lane target lives on RAM, never `<worktree>/target`).
 
 ```
 $ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal                      # exit 0
@@ -91,6 +91,18 @@ $ RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-
 $ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings          # exit 0
 ```
 
+**Round 4 (gate r1 REJECT on f8fc2fa, `.omo/evidence/ovis-terminal-v1-task-66-gate-review.md`):** the manual and the onboarding guide advertised `agent list`, `agent note`, `agent release` and `agent wait-children`, but `serve` routes none of `agent.list`, `agent.note`, `agent.release` or `agent.wait_children`. They answer `method_not_found` (exit 4), and the parse-only example test could not see that. No handler, lane or domain function exists for them (the only hit is a boundary-policy matrix row), so wiring them is new server work. Instead:
+- The four verbs are removed from the grammar (`VERBS` is 20 plus the 3 `server` verbs). The manual names the four as catalog methods this build does not serve. The onboarding revocation step now uses served methods: `status clear`, `attach.leases` / `attach.close`, `credential.revoke`, and the registration ending with its process incarnation.
+- `schema cli` now names the `method` each typed verb sends.
+- New `tests/assembly/manual_examples.rs`:
+  - `every_documented_command_and_params_example_is_served_by_this_build` executes every `sh` line of the manual and the guide through `/bin/sh` against `serve`, with the real spawn token, and sends every `// params of` block with `call`. It fails on `method_not_found`, `unknown_method`, `usage`, `invalid_params` or unparsed output.
+  - `hello_advertises_the_method_of_every_typed_verb` requires `hello.methods` to contain every `schema cli` method.
+- New unit tests: `every_typed_verb_the_docs_name_is_a_command_of_this_build` covers every `<group> <verb>` in code spans and command lines of both documents. `every_typed_verb_command_names_the_method_it_sends` guards against a vacuous hello check.
+- The executed test found one more documentation bug: the manual's `turn wait` example had no `turn` or `send_op` and was refused `invalid_params`. It now names `"turn":"1"`.
+- The duplicate `fenced()` copies and the test-only word splitter are gone; one `fenced()` remains, in the served-binary test.
+- Mutants, all killed (`mutants.log`): M6 re-adds an unserved `agent list` verb and fails the hello test. M7 documents `agent list` again and fails both the documented-verb unit test and the executed-examples test (`usage`). M8 blanks the method field and fails the coverage test.
+- Lane result: `cargo test -p ovis-terminal-cli --all-targets` exit 0, 111 passed; clippy exit 0; `cli/manual` all / happy / failure exit 0 (122 / 71 / 29 assertions).
+
 **Round 3 (adversarial review on 8905649):** a targetless `agent get --params '{"bogus":1}'` answered `needs_target` (exit 7) after candidate discovery instead of refusing the malformed params. Supplied fields are now checked first. `commands::plan` returns the merged params with a stand-in target (`{"address": "t1"}`; every required `target` of the typed verbs is the common `Target` type), and `invocation::plan::verb` decodes that probe as the method's closed params type before it answers `needs_target`. So only an otherwise valid targetless invocation lists candidates (IDEAL-111), and a malformed one exits 2 before any connection. Tests:
 - `invocation::manual_tests::a_targetless_verb_needs_a_target_only_when_every_supplied_field_is_valid` checks that `agent get` and `turn wait --params '{"timeout_ms":"1000"}'` give needs_target, while an unknown field, a numeric `seq` and a missing `timeout_ms` give invalid_params.
 - `tests/cli.rs` `failure` runs the targetless `agent get --params '{"bogus":1}'` and `turn wait` against a bound idle listener: exit 2, and `accept()` is still `WouldBlock`.
@@ -111,7 +123,7 @@ Every file outside the write scope (`docs/skill/`, `src/skill/`, `src/agent/`, `
 - `crates/ovis-terminal-cli/src/invocation/{args,plan,context,error,report,discovery,exit,text}.rs`, `invocation.rs`, `invocation/manual_tests.rs`: the dispatch registration (flattened `DomainCommand`, `server metrics|stop|restart`, `schema contract`), planning of typed verbs, the inherited process token, the `Command` error variant, the published exit-1 kind list, `not_owner` -> exit 12, inert text rendering, and the grammar tests, which must live inside `invocation` to reach the private grammar.
 - `crates/ovis-terminal-cli/src/invocation/skill.md` -> `src/skill/manual.md` (moved).
 - `crates/ovis-terminal-cli/Cargo.toml`: `ovis-terminal-authz` is a dependency on every platform (the contract renders the role table on Windows too); it was unix-only plus a dev-dependency. `Cargo.lock` unchanged.
-- `crates/ovis-terminal-cli/tests/assembly.rs` + `tests/assembly/producer.rs`: the synthetic producer process test. `tests/cli.rs`: three agent-verb refusals added to the idle-listener parse-before-connect loop.
+- `crates/ovis-terminal-cli/tests/assembly.rs` + `tests/assembly/producer.rs` + `tests/assembly/manual_examples.rs`: the synthetic producer process test, and the test that executes every documented example against `serve` and checks every typed verb's method against `hello`. `tests/cli.rs`: three agent-verb refusals added to the idle-listener parse-before-connect loop.
 - `conformance/scenarios/cli/manual.json`: the runner maps `--scenario cli/manual` to this file; the `cli/manual/` directory would not be found.
 - `conformance/src/{invocation.rs,invocation/tests.rs,scenario/model.rs,engine.rs,engine/steps.rs,engine/commands.rs}`: the plan's literal failure inject is a command line, not JSON, so the runner accepts it and selects a planned command run. Binary runs gained label resolution and captures, so `--skill` and `schema` versions are compared without pinning a version string.
 - `conformance/src/runner_tests/suite.rs`: `cli/manual.json` added to `EXECUTABLE` in sorted position. It was never in `declared.json`.
@@ -121,6 +133,8 @@ Every file outside the write scope (`docs/skill/`, `src/skill/`, `src/agent/`, `
 Seams owed by todo 66 according to landed PRs: #57 already routes `machine.add` through `MachineAddAttached` and calls through `RemoteDispatch` in the served binary. `ServiceLanes`, `MachineAdd::restricted`, reconnect and the second fixture dispatcher for `worktree.*` are untouched here; see Risks.
 
 ### Seams outside the write scope (named gaps)
+
+- **Unserved agent catalog methods (gate r1), for F4 / P5:** `agent.list`, `agent.note`, `agent.release` and `agent.wait_children` are in the OpenRPC catalog, but this build's `serve` routes none of them; they answer `method_not_found` (exit 4). No handler, lane or domain function exists in `crates/ovis-terminal-server`, `crates/ovis-terminal-agent` or `crates/ovis-terminal-cli/src/assembly`. This build ships no verb for them, and the manual names them as not served. Once they are served, add the verbs back to `src/agent/table.rs`. `hello_advertises_the_method_of_every_typed_verb` then proves they are routed.
 
 - **Event publication (from T64's DoneClaim), for F4:** the assembled daemon never publishes `lease.revoked`, `layout.changed` or `selection.changed` to event subscribers. These events are in the catalog (`## Events` of `docs/runtime-contract.md`), but the wiring lives in `crates/ovis-terminal-cli/src/assembly/` (events lane, lease table, layout service), which is outside todo 66's write scope. This PR does not change it and makes no claim that subscribers receive these three events.
 

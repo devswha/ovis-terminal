@@ -80,9 +80,7 @@ whose other fields are valid but that names no target exits 7 with `needs_target
 `candidates`; a malformed one exits 2 first, before any connection.
 
 - Agents: `ovis-terminal agent register`, `ovis-terminal agent get`,
-  `ovis-terminal agent list`, `ovis-terminal agent update-session`,
-  `ovis-terminal agent release`, `ovis-terminal agent children`,
-  `ovis-terminal agent note`, `ovis-terminal agent wait-children`,
+  `ovis-terminal agent update-session`, `ovis-terminal agent children`,
   `ovis-terminal agent conversation`, `ovis-terminal agent append-records`,
   `ovis-terminal agent records`, `ovis-terminal agent history`.
 - Status: `ovis-terminal status get`, `ovis-terminal status report`,
@@ -93,14 +91,20 @@ whose other fields are valid but that names no target exits 7 with `needs_target
 - Turns: `ovis-terminal turn get`, `ovis-terminal turn wait`.
 - Templates: `ovis-terminal template list`, `ovis-terminal template get`.
 
-Examples (every line parses and plans against this build):
+Every verb sends a method this build's `serve` routes; `ovis-terminal --json schema cli`
+names each verb's `method`, and `hello.methods` lists what a server routes. The catalog
+methods `agent.list`, `agent.note`, `agent.release` and `agent.wait_children` are not
+served by this build: they have no verb, and `ovis-terminal call` with them answers
+`method_not_found` (exit 4).
+
+Examples (the CLI crate's tests execute every line against `serve` of this build):
 
 ```sh
 ovis-terminal --json agent get --address t1
 ovis-terminal --json agent register --address t1 --op-id 01900000-0000-7000-8000-000000000001 --params '{"label":"my-agent","session":null}'
 ovis-terminal --json status report --address t1 --op-id 01900000-0000-7000-8000-000000000002 --params '{"seq":"1","record":{"state":"working"}}'
 ovis-terminal --json prompt list --address t1
-ovis-terminal --json turn wait --address t1 --params '{"timeout_ms":"30000"}'
+ovis-terminal --json turn wait --address t1 --params '{"turn":"1","timeout_ms":"1000"}'
 ```
 
 `agent get` answers `{"agent": null, ...}` for a terminal that runs a plain program;

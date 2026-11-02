@@ -1,8 +1,8 @@
 {
   "binary": {
-    "bytes": "146180760",
+    "bytes": "145936520",
     "path": "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
-    "sha256": "c7919923c742395e70329438dc7a7472240cfd143a138368a07ff76dae8997bd"
+    "sha256": "5fbb5ae7a640c1c6e5cf760b4a095b855f9b49030a12144bdfb45c8d9624969d"
   },
   "case": "all",
   "cases": [
@@ -23,7 +23,7 @@
           "passed": true
         },
         {
-          "actual": "# ovis-terminal agent manual\n\n`ovis-terminal` is the agent-facing client of the ovis-terminal runtime. It draws\nnothing and never prompts. This manual ships inside the binary and describes exactly\nthis build; `ovis-terminal --skill --json` returns it with the version and protocol\ngeneration it belongs to, and `ovis-terminal schema` returns the protocol of the same\nversion.\n\n## Output contract\n\n- Add `--json` (or set `OVIS_JSON=1`) for machine output. The mode never depends on\n  whether stdout is a terminal: under a PTY and through a pipe the channels are the same.\n- Success: one JSON document on stdout, nothing on stderr, exit 0.\n- Failure: nothing on stdout, one `{\"error\": {...}}` object on stderr, and a non-zero\n  exit code from the table below. `error.kind` is the stable token to branch on;\n  `error.origin` is `cli` when this binary refused or failed, `server` when the\n  runtime returned a typed error (its `data` fields are passed through); `error.hint`\n  says what to do next and `error.exit_code` repeats the exit code.\n- The command line is parsed and every typed parameter is checked before any socket\n  is opened. A usage error exits 2 without contacting the endpoint.\n- Text mode is for people. A string value is printed with its control characters\n  escaped, so program text (a prompt, a screen line) can never start a line of its own\n  or reach your terminal as a control sequence. Never pipe output into a shell.\n\n## Discovery (offline, side-effect free)\n\n- `ovis-terminal --skill` prints this manual.\n- `ovis-terminal schema` prints the OpenRPC document this build speaks (same bytes as\n  `schema/ovis-terminal.openrpc.json` of its source tree); `info.version` is the version\n  `--skill --json` reports.\n- `ovis-terminal schema cli` prints every command, flag, environment variable and exit\n  code of this binary as JSON.\n- `ovis-terminal schema contract` prints the runtime contract reference: every method,\n  event, error kind, limit, role and exit code, generated from this build's types.\n- `ovis-terminal endpoint` prints the endpoint this invocation resolves to\n  (`OVIS_TERMINAL_SOCKET`, `OVIS_TERMINAL_SESSION`, `XDG_RUNTIME_DIR`, `XDG_STATE_HOME`,\n  `HOME`, `USERNAME`) without touching it.\n\nNone of these, and no inspection command, starts, installs or restarts a server. Only\nthe explicit `serve` and `hold` verbs below run one, in the foreground.\n\n## Credentials and roles\n\n- The bearer credential is read from `OVIS_TERMINAL_CREDENTIAL` and is never printed.\n  `serve` prints an owner bearer and an observe-only bearer when it starts.\n- A credential grants permissions; roles bundle them. `observer` may read and subscribe,\n  `interactor` may also type, resize, launch and change layout, and `owner` holds every\n  permission, including takeover, prompt answers, raw input, reports and administration.\n  `ovis-terminal schema contract` lists the permission every action needs.\n- A program the runtime spawned finds its process token in `OVIS_TERMINAL_PROCESS_TOKEN`.\n  The token proves which program owns a terminal; the verbs that report as that program\n  send it automatically when `--params` names none. A token of another terminal is\n  refused (`not_owner`, or `forbidden` at the prompt bridge gate; exit 12) and changes\n  nothing.\n\n## Commands that reach the endpoint\n\n- `ovis-terminal server status` reports `running`, `stopped`, `unreachable` or\n  `stale_endpoint`. A stopped server stays stopped.\n- `ovis-terminal server metrics` reads stream, queue, lag and latency metrics.\n- `ovis-terminal server stop --op-id ID --params '{\"scope\": ...}'` and\n  `ovis-terminal server restart --op-id ID` are explicit mutations.\n- `ovis-terminal terminal list` lists terminals.\n- `ovis-terminal terminal get --terminal-id ID | --address ADDR | --name NAME` reads one\n  record. Without a target it exits 7 with `needs_target` and `candidates`; it never\n  picks a terminal for you. `candidates_listed` is false when no server answered.\n- `ovis-terminal op get --op-id ID` and `ovis-terminal op cancel --op-id ID` inspect or\n  cancel an operation.\n- `ovis-terminal call METHOD --params JSON` sends any published method except `hello`.\n- `ovis-terminal connect` relays stdin and stdout to the endpoint; stdout carries\n  protocol bytes only.\n\n## Typed agent verbs\n\nEach verb sends one published method. Its flags are exactly what that method's closed\nparams type takes: `--op-id ID` for a mutation, one of `--terminal-id`, `--address` or\n`--name` for a terminal-scoped method, and `--params JSON` for every other field. A\nfield given both as a flag and in `--params` is a usage error. A terminal-scoped verb\nwhose other fields are valid but that names no target exits 7 with `needs_target` and\n`candidates`; a malformed one exits 2 first, before any connection.\n\n- Agents: `ovis-terminal agent register`, `ovis-terminal agent get`,\n  `ovis-terminal agent list`, `ovis-terminal agent update-session`,\n  `ovis-terminal agent release`, `ovis-terminal agent children`,\n  `ovis-terminal agent note`, `ovis-terminal agent wait-children`,\n  `ovis-terminal agent conversation`, `ovis-terminal agent append-records`,\n  `ovis-terminal agent records`, `ovis-terminal agent history`.\n- Status: `ovis-terminal status get`, `ovis-terminal status report`,\n  `ovis-terminal status clear`. A report with a `seq` not above the current one is\n  refused with the current sequence.\n- Prompts: `ovis-terminal prompt list`, `ovis-terminal prompt get`,\n  `ovis-terminal prompt open`, `ovis-terminal prompt answer`, `ovis-terminal prompt close`.\n- Turns: `ovis-terminal turn get`, `ovis-terminal turn wait`.\n- Templates: `ovis-terminal template list`, `ovis-terminal template get`.\n\nExamples (every line parses and plans against this build):\n\n```sh\novis-terminal --json agent get --address t1\novis-terminal --json agent register --address t1 --op-id 01900000-0000-7000-8000-000000000001 --params '{\"label\":\"my-agent\",\"session\":null}'\novis-terminal --json status report --address t1 --op-id 01900000-0000-7000-8000-000000000002 --params '{\"seq\":\"1\",\"record\":{\"state\":\"working\"}}'\novis-terminal --json prompt list --address t1\novis-terminal --json turn wait --address t1 --params '{\"timeout_ms\":\"30000\"}'\n```\n\n`agent get` answers `{\"agent\": null, ...}` for a terminal that runs a plain program;\n`not_found` means the terminal does not exist.\n\n## Serving (Unix)\n\n- `ovis-terminal serve [--root DIR] [--stdin-lifetime]` runs the control server in the\n  foreground: endpoint, authority, stores, a shared holder and every routed method.\n  With `--root` the socket is `DIR/run/s.sock` and state lives in `DIR/state`;\n  otherwise the resolved endpoint is used. It prints one line\n  `{\"ready\": {\"socket\", \"bearer\", \"observer\"}}` (owner and observe-only bearers) before\n  serving, stops on SIGINT, SIGTERM or, with `--stdin-lifetime`, end of stdin, and then\n  prints one `{\"report\": {...}}` line. Programs it launched end with it.\n- `hello` lists exactly the methods `serve` routes; every other catalog method answers\n  `method_not_found`, never a placeholder result.\n- `ovis-terminal hold [--session S]` runs the session holder in the foreground, owned by\n  no service manager.\n\n## Attaching (Unix)\n\n- `ovis-terminal terminal attach --target ADDR | --terminal-id ID | --name NAME` attaches\n  this terminal: stdout carries the program's screen, the terminal is raw while\n  attached, typed bytes go to the program only under the interact lease, window\n  resizes are applied under the geometry lease, and Ctrl-\\ detaches. Ctrl-C goes to\n  the program. It needs a TTY on stdin and stdout (`not_a_tty`, exit 2, otherwise).\n- There is no prefix key and no client mode: every byte other than Ctrl-\\, unknown\n  escape sequences and non-UTF-8 bytes included, reaches the program unchanged through\n  `input.raw`, or the server's typed refusal ends the attach.\n- Another holder is never displaced: a held lease exits 11 with `lease_conflict`, the\n  holder's lease record in `holder` and the lease change to retry after in `retry`.\n- The lease belongs to the connection that acquired it and is recorded under\n  `--client-id`, which defaults to `cli-<pid>`. A second attach is always another owner,\n  even under the same `--client-id`: it exits 11 with `lease_conflict` and cannot type.\n- `--takeover EPOCH` displaces the interact holder only at its current epoch and with\n  the takeover grant; a stale epoch exits 11 with `lease_epoch_mismatch`, the epoch\n  sent in `expected_epoch` and the current lease in `current`.\n- `--observe` needs no TTY, never reads stdin, never writes input and never resizes;\n  on a terminal, Ctrl-\\ (SIGQUIT) detaches it.\n- The outcome record goes to stderr: `{\"detached\": {\"reason\", \"stream_closed\",\n  \"leases_released\", \"leases_held\", \"displaced\", ...}}` (exit 0) for Ctrl-\\, a hung-up\n  terminal, SIGINT, SIGTERM, SIGHUP or SIGQUIT, or the error record for a refusal; a\n  signal before the stream is attached exits 10 with `interrupted` and its `stage`; a\n  lost connection exits 4 with `connection_lost`. The outer terminal's settings, and\n  the modes the program switched on (alternate screen, mouse, bracketed paste, cursor\n  keys, keyboard protocol, hidden cursor), are restored on every one of these.\n\n## Holder service (Unix)\n\nThe session holder owns every PTY and outlives the command that started it. Only\n`status` is read-only; every other verb is an explicit mutation and names its manager.\n\n- `ovis-terminal service status [--session S]` reports `running`, `stopped`,\n  `unreachable` or `stale_endpoint` from the discovery record, the recorded process's\n  start token and one connection attempt. It never starts, installs or repairs anything,\n  and lists `missing_prerequisites` for surviving a logout.\n- `ovis-terminal service install --manager systemd-user|launchd` writes and loads the\n  service definition; `ovis-terminal service uninstall --manager ...` removes only a\n  definition this runtime wrote, after the holder stopped.\n- `ovis-terminal service start --manager systemd-user|launchd|detached` starts the\n  holder. `detached` puts it in its own session with no manager: it survives the\n  starting command and its terminal, but not a logout that ends every user process.\n- `ovis-terminal service stop` stops the holder and lists the holder process and every\n  terminal and process it ended. A stale endpoint is reported, not cleaned; the next\n  `service start` replaces an endpoint whose process is proven gone.\n- `ovis-terminal service run` is the holder process itself, executed by the manager or\n  by `start`; do not run it by hand.\n\n## Exit codes\n\n| code | name | kinds |\n|---|---|---|\n| 0 | success | |\n| 1 | failure | any kind not listed below |\n| 2 | usage | usage, invalid_params, unknown_method, invalid_json_switch, not_a_tty, endpoint and service path configuration kinds |\n| 3 | not_found | not_found, template_not_found, parent_not_found, stream_not_found, not_registered |\n| 4 | unavailable | unavailable, server_not_running, stale_endpoint, method_not_found, machine_unreachable, unsupported_transport, backpressure, recovering, not_ready, service_manager_unavailable, service_unsupported, connection_lost |\n| 7 | needs_target | needs_target, ambiguous_target |\n| 9 | blocked | blocked |\n| 10 | cancelled | cancelled, interrupted |\n| 11 | conflict | conflict and state conflicts such as op_reused, already_running, lease_conflict or lease_epoch_mismatch |\n| 12 | forbidden | forbidden, unauthenticated, not_owner, credential kinds and attach_refused |\n| 13 | outcome_unknown | outcome_unknown, deadline_exceeded, manager_timeout, holder_not_ready: inspect the operation or the service status |\n\n`ovis-terminal schema cli` lists the exact kinds of each code, and\n`ovis-terminal schema contract` lists every server error kind with its recovery.\n",
+          "actual": "# ovis-terminal agent manual\n\n`ovis-terminal` is the agent-facing client of the ovis-terminal runtime. It draws\nnothing and never prompts. This manual ships inside the binary and describes exactly\nthis build; `ovis-terminal --skill --json` returns it with the version and protocol\ngeneration it belongs to, and `ovis-terminal schema` returns the protocol of the same\nversion.\n\n## Output contract\n\n- Add `--json` (or set `OVIS_JSON=1`) for machine output. The mode never depends on\n  whether stdout is a terminal: under a PTY and through a pipe the channels are the same.\n- Success: one JSON document on stdout, nothing on stderr, exit 0.\n- Failure: nothing on stdout, one `{\"error\": {...}}` object on stderr, and a non-zero\n  exit code from the table below. `error.kind` is the stable token to branch on;\n  `error.origin` is `cli` when this binary refused or failed, `server` when the\n  runtime returned a typed error (its `data` fields are passed through); `error.hint`\n  says what to do next and `error.exit_code` repeats the exit code.\n- The command line is parsed and every typed parameter is checked before any socket\n  is opened. A usage error exits 2 without contacting the endpoint.\n- Text mode is for people. A string value is printed with its control characters\n  escaped, so program text (a prompt, a screen line) can never start a line of its own\n  or reach your terminal as a control sequence. Never pipe output into a shell.\n\n## Discovery (offline, side-effect free)\n\n- `ovis-terminal --skill` prints this manual.\n- `ovis-terminal schema` prints the OpenRPC document this build speaks (same bytes as\n  `schema/ovis-terminal.openrpc.json` of its source tree); `info.version` is the version\n  `--skill --json` reports.\n- `ovis-terminal schema cli` prints every command, flag, environment variable and exit\n  code of this binary as JSON.\n- `ovis-terminal schema contract` prints the runtime contract reference: every method,\n  event, error kind, limit, role and exit code, generated from this build's types.\n- `ovis-terminal endpoint` prints the endpoint this invocation resolves to\n  (`OVIS_TERMINAL_SOCKET`, `OVIS_TERMINAL_SESSION`, `XDG_RUNTIME_DIR`, `XDG_STATE_HOME`,\n  `HOME`, `USERNAME`) without touching it.\n\nNone of these, and no inspection command, starts, installs or restarts a server. Only\nthe explicit `serve` and `hold` verbs below run one, in the foreground.\n\n## Credentials and roles\n\n- The bearer credential is read from `OVIS_TERMINAL_CREDENTIAL` and is never printed.\n  `serve` prints an owner bearer and an observe-only bearer when it starts.\n- A credential grants permissions; roles bundle them. `observer` may read and subscribe,\n  `interactor` may also type, resize, launch and change layout, and `owner` holds every\n  permission, including takeover, prompt answers, raw input, reports and administration.\n  `ovis-terminal schema contract` lists the permission every action needs.\n- A program the runtime spawned finds its process token in `OVIS_TERMINAL_PROCESS_TOKEN`.\n  The token proves which program owns a terminal; the verbs that report as that program\n  send it automatically when `--params` names none. A token of another terminal is\n  refused (`not_owner`, or `forbidden` at the prompt bridge gate; exit 12) and changes\n  nothing.\n\n## Commands that reach the endpoint\n\n- `ovis-terminal server status` reports `running`, `stopped`, `unreachable` or\n  `stale_endpoint`. A stopped server stays stopped.\n- `ovis-terminal server metrics` reads stream, queue, lag and latency metrics.\n- `ovis-terminal server stop --op-id ID --params '{\"scope\": ...}'` and\n  `ovis-terminal server restart --op-id ID` are explicit mutations.\n- `ovis-terminal terminal list` lists terminals.\n- `ovis-terminal terminal get --terminal-id ID | --address ADDR | --name NAME` reads one\n  record. Without a target it exits 7 with `needs_target` and `candidates`; it never\n  picks a terminal for you. `candidates_listed` is false when no server answered.\n- `ovis-terminal op get --op-id ID` and `ovis-terminal op cancel --op-id ID` inspect or\n  cancel an operation.\n- `ovis-terminal call METHOD --params JSON` sends any published method except `hello`.\n- `ovis-terminal connect` relays stdin and stdout to the endpoint; stdout carries\n  protocol bytes only.\n\n## Typed agent verbs\n\nEach verb sends one published method. Its flags are exactly what that method's closed\nparams type takes: `--op-id ID` for a mutation, one of `--terminal-id`, `--address` or\n`--name` for a terminal-scoped method, and `--params JSON` for every other field. A\nfield given both as a flag and in `--params` is a usage error. A terminal-scoped verb\nwhose other fields are valid but that names no target exits 7 with `needs_target` and\n`candidates`; a malformed one exits 2 first, before any connection.\n\n- Agents: `ovis-terminal agent register`, `ovis-terminal agent get`,\n  `ovis-terminal agent update-session`, `ovis-terminal agent children`,\n  `ovis-terminal agent conversation`, `ovis-terminal agent append-records`,\n  `ovis-terminal agent records`, `ovis-terminal agent history`.\n- Status: `ovis-terminal status get`, `ovis-terminal status report`,\n  `ovis-terminal status clear`. A report with a `seq` not above the current one is\n  refused with the current sequence.\n- Prompts: `ovis-terminal prompt list`, `ovis-terminal prompt get`,\n  `ovis-terminal prompt open`, `ovis-terminal prompt answer`, `ovis-terminal prompt close`.\n- Turns: `ovis-terminal turn get`, `ovis-terminal turn wait`.\n- Templates: `ovis-terminal template list`, `ovis-terminal template get`.\n\nEvery verb sends a method this build's `serve` routes; `ovis-terminal --json schema cli`\nnames each verb's `method`, and `hello.methods` lists what a server routes. The catalog\nmethods `agent.list`, `agent.note`, `agent.release` and `agent.wait_children` are not\nserved by this build: they have no verb, and `ovis-terminal call` with them answers\n`method_not_found` (exit 4).\n\nExamples (the CLI crate's tests execute every line against `serve` of this build):\n\n```sh\novis-terminal --json agent get --address t1\novis-terminal --json agent register --address t1 --op-id 01900000-0000-7000-8000-000000000001 --params '{\"label\":\"my-agent\",\"session\":null}'\novis-terminal --json status report --address t1 --op-id 01900000-0000-7000-8000-000000000002 --params '{\"seq\":\"1\",\"record\":{\"state\":\"working\"}}'\novis-terminal --json prompt list --address t1\novis-terminal --json turn wait --address t1 --params '{\"turn\":\"1\",\"timeout_ms\":\"1000\"}'\n```\n\n`agent get` answers `{\"agent\": null, ...}` for a terminal that runs a plain program;\n`not_found` means the terminal does not exist.\n\n## Serving (Unix)\n\n- `ovis-terminal serve [--root DIR] [--stdin-lifetime]` runs the control server in the\n  foreground: endpoint, authority, stores, a shared holder and every routed method.\n  With `--root` the socket is `DIR/run/s.sock` and state lives in `DIR/state`;\n  otherwise the resolved endpoint is used. It prints one line\n  `{\"ready\": {\"socket\", \"bearer\", \"observer\"}}` (owner and observe-only bearers) before\n  serving, stops on SIGINT, SIGTERM or, with `--stdin-lifetime`, end of stdin, and then\n  prints one `{\"report\": {...}}` line. Programs it launched end with it.\n- `hello` lists exactly the methods `serve` routes; every other catalog method answers\n  `method_not_found`, never a placeholder result.\n- `ovis-terminal hold [--session S]` runs the session holder in the foreground, owned by\n  no service manager.\n\n## Attaching (Unix)\n\n- `ovis-terminal terminal attach --target ADDR | --terminal-id ID | --name NAME` attaches\n  this terminal: stdout carries the program's screen, the terminal is raw while\n  attached, typed bytes go to the program only under the interact lease, window\n  resizes are applied under the geometry lease, and Ctrl-\\ detaches. Ctrl-C goes to\n  the program. It needs a TTY on stdin and stdout (`not_a_tty`, exit 2, otherwise).\n- There is no prefix key and no client mode: every byte other than Ctrl-\\, unknown\n  escape sequences and non-UTF-8 bytes included, reaches the program unchanged through\n  `input.raw`, or the server's typed refusal ends the attach.\n- Another holder is never displaced: a held lease exits 11 with `lease_conflict`, the\n  holder's lease record in `holder` and the lease change to retry after in `retry`.\n- The lease belongs to the connection that acquired it and is recorded under\n  `--client-id`, which defaults to `cli-<pid>`. A second attach is always another owner,\n  even under the same `--client-id`: it exits 11 with `lease_conflict` and cannot type.\n- `--takeover EPOCH` displaces the interact holder only at its current epoch and with\n  the takeover grant; a stale epoch exits 11 with `lease_epoch_mismatch`, the epoch\n  sent in `expected_epoch` and the current lease in `current`.\n- `--observe` needs no TTY, never reads stdin, never writes input and never resizes;\n  on a terminal, Ctrl-\\ (SIGQUIT) detaches it.\n- The outcome record goes to stderr: `{\"detached\": {\"reason\", \"stream_closed\",\n  \"leases_released\", \"leases_held\", \"displaced\", ...}}` (exit 0) for Ctrl-\\, a hung-up\n  terminal, SIGINT, SIGTERM, SIGHUP or SIGQUIT, or the error record for a refusal; a\n  signal before the stream is attached exits 10 with `interrupted` and its `stage`; a\n  lost connection exits 4 with `connection_lost`. The outer terminal's settings, and\n  the modes the program switched on (alternate screen, mouse, bracketed paste, cursor\n  keys, keyboard protocol, hidden cursor), are restored on every one of these.\n\n## Holder service (Unix)\n\nThe session holder owns every PTY and outlives the command that started it. Only\n`status` is read-only; every other verb is an explicit mutation and names its manager.\n\n- `ovis-terminal service status [--session S]` reports `running`, `stopped`,\n  `unreachable` or `stale_endpoint` from the discovery record, the recorded process's\n  start token and one connection attempt. It never starts, installs or repairs anything,\n  and lists `missing_prerequisites` for surviving a logout.\n- `ovis-terminal service install --manager systemd-user|launchd` writes and loads the\n  service definition; `ovis-terminal service uninstall --manager ...` removes only a\n  definition this runtime wrote, after the holder stopped.\n- `ovis-terminal service start --manager systemd-user|launchd|detached` starts the\n  holder. `detached` puts it in its own session with no manager: it survives the\n  starting command and its terminal, but not a logout that ends every user process.\n- `ovis-terminal service stop` stops the holder and lists the holder process and every\n  terminal and process it ended. A stale endpoint is reported, not cleaned; the next\n  `service start` replaces an endpoint whose process is proven gone.\n- `ovis-terminal service run` is the holder process itself, executed by the manager or\n  by `start`; do not run it by hand.\n\n## Exit codes\n\n| code | name | kinds |\n|---|---|---|\n| 0 | success | |\n| 1 | failure | any kind not listed below |\n| 2 | usage | usage, invalid_params, unknown_method, invalid_json_switch, not_a_tty, endpoint and service path configuration kinds |\n| 3 | not_found | not_found, template_not_found, parent_not_found, stream_not_found, not_registered |\n| 4 | unavailable | unavailable, server_not_running, stale_endpoint, method_not_found, machine_unreachable, unsupported_transport, backpressure, recovering, not_ready, service_manager_unavailable, service_unsupported, connection_lost |\n| 7 | needs_target | needs_target, ambiguous_target |\n| 9 | blocked | blocked |\n| 10 | cancelled | cancelled, interrupted |\n| 11 | conflict | conflict and state conflicts such as op_reused, already_running, lease_conflict or lease_epoch_mismatch |\n| 12 | forbidden | forbidden, unauthenticated, not_owner, credential kinds and attach_refused |\n| 13 | outcome_unknown | outcome_unknown, deadline_exceeded, manager_timeout, holder_not_ready: inspect the operation or the service status |\n\n`ovis-terminal schema cli` lists the exact kinds of each code, and\n`ovis-terminal schema contract` lists every server error kind with its recovery.\n",
           "check": "binary/stdout/manual",
           "expected": {
             "$present": true
@@ -24644,7 +24644,7 @@
           "passed": true
         },
         {
-          "actual": "7e6b5291cfcf4c6a8d829e28676faa99",
+          "actual": "a68668913a70440eb149212ce6a9eb84",
           "check": "reply[screen1]/result/lines/0",
           "expected": {
             "$capture": "token1"
@@ -24658,7 +24658,7 @@
           "passed": true
         },
         {
-          "actual": "8d6351cd5cbd4864a23a5487572f27d0",
+          "actual": "d2d6742a2c5b4dd09236a06e0c1380c3",
           "check": "reply[screen2]/result/lines/0",
           "expected": {
             "$capture": "token2"
@@ -24925,8 +24925,8 @@
       "case": "happy",
       "connections": [
         {
-          "bytes_decoded": "7721",
-          "bytes_received": "7721",
+          "bytes_decoded": "7719",
+          "bytes_received": "7719",
           "bytes_sent": "2801",
           "name": "control",
           "records_received": "12",
@@ -24936,7 +24936,7 @@
               "bytes": "234",
               "direction": "sent",
               "offset": "0",
-              "sha256": "94b1eac585c86d61e9131414235789177ecc22175fa68f9dbd5852ab8f19db2b",
+              "sha256": "9cf800de3b8e2b5c392e0f869923c793cc72e769d1f58954bae4cfa30848bdef",
               "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
               "unit": "write"
             },
@@ -24945,39 +24945,39 @@
               "bytes": "2604",
               "direction": "received",
               "offset": "0",
-              "sha256": "231e885c410db2c17eda731d0097240680fba7ea3cdfc19827abe43043dd3c41",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a1997b-4fb3-776c-acb1-a1230d0c9478\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793576357962\",\"version\":\"0.1.0\"}}",
+              "sha256": "853f156875bf87d6afbe43ae706ffbdcbd51f8e7d0b0a54ad6ea1eaa63958659",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a1999c-3898-7184-be2a-05843dcba126\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793578514744\",\"version\":\"0.1.0\"}}",
               "unit": "line"
             },
             {
-              "at_ms": "1",
+              "at_ms": "0",
               "bytes": "843",
               "direction": "sent",
               "offset": "234",
-              "sha256": "70af636280d11162eded65b6adc9839567d3f384b7953db055e8d45129b410c4",
-              "text": "{\"id\":\"run1\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"producer\",\"op_id\":\"01a1997b-504a-755f-b5b7-645c8c7d0252\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"]}}}\n{\"id\":\"run2\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"foreign\",\"op_id\":\"01a1997b-504b-725f-bd04-a0b6bfce7ab3\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"]}}}\n",
+              "sha256": "b96ffe20268867691edc25c02861b3b6a00d9b67998655e5b27fa3b6d99c9c88",
+              "text": "{\"id\":\"run1\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"producer\",\"op_id\":\"01a1999c-3939-7713-9cb7-89bf95c3a6f7\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"]}}}\n{\"id\":\"run2\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"foreign\",\"op_id\":\"01a1999c-3939-7713-9cb7-89c09f2a70c8\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"]}}}\n",
               "unit": "write"
             },
             {
-              "at_ms": "32",
-              "bytes": "948",
+              "at_ms": "31",
+              "bytes": "947",
               "direction": "received",
               "offset": "2604",
-              "sha256": "53d31d293d7b674471aff43db8645a240345fdf2f2471559eb5a02a95739a3c1",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run1\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a1997b-4fb3-776c-acb1-a1230d0c9478\",\"name\":\"producer\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":3191805,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:7709384\",\"started_ms\":\"1793576357988\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
+              "sha256": "5ee9822b8a837e6b1bb09f699b83fea58a880ce6b04a28dd8ad2f0cf7fb18092",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run1\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a1999c-3898-7184-be2a-05843dcba126\",\"name\":\"producer\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":695621,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:7925062\",\"started_ms\":\"1793578514771\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
               "unit": "line"
             },
             {
-              "at_ms": "73",
-              "bytes": "952",
+              "at_ms": "72",
+              "bytes": "951",
               "direction": "received",
-              "offset": "3552",
-              "sha256": "e65a805684f2c8714aeab0de7febf3ec070d507f4a4343f86c56d6c0aa7edf79",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run2\",\"result\":{\"created_seq\":\"12\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t2\",\"agent\":null,\"created_seq\":\"12\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"15\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a1997b-4fb3-776c-acb1-a1230d0c9478\",\"name\":\"foreign\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":3191811,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:7709387\",\"started_ms\":\"1793576358031\"},\"revision\":\"15\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:2\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"15\"}}}",
+              "offset": "3551",
+              "sha256": "1df2d0339d141ef9bb26abcc0a8800296fecd7556f2eb7c2544a06adbcf102ab",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run2\",\"result\":{\"created_seq\":\"12\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t2\",\"agent\":null,\"created_seq\":\"12\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"15\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a1999c-3898-7184-be2a-05843dcba126\",\"name\":\"foreign\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":695701,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:7925065\",\"started_ms\":\"1793578514812\"},\"revision\":\"15\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:2\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"15\"}}}",
               "unit": "line"
             },
             {
-              "at_ms": "74",
+              "at_ms": "72",
               "bytes": "346",
               "direction": "sent",
               "offset": "1077",
@@ -24986,25 +24986,25 @@
               "unit": "write"
             },
             {
-              "at_ms": "79",
+              "at_ms": "77",
               "bytes": "287",
               "direction": "received",
-              "offset": "4504",
+              "offset": "4502",
               "sha256": "2ba253d0a6fb6a40fcc32c5bcddd5a81b56227e50034f9984f808302b597ed17",
               "text": "{\"jsonrpc\":\"2.0\",\"id\":\"ready1\",\"result\":{\"cursor\":{\"offset\":\"39\"},\"matched_at\":\"34\",\"outcome\":\"matched\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
               "unit": "line"
             },
             {
-              "at_ms": "79",
+              "at_ms": "77",
               "bytes": "287",
               "direction": "received",
-              "offset": "4791",
+              "offset": "4789",
               "sha256": "70d4cf16d80ddd1ed0a9ec1dc35a7b011231bd73ee814670d1f185bdc89509d6",
               "text": "{\"jsonrpc\":\"2.0\",\"id\":\"ready2\",\"result\":{\"cursor\":{\"offset\":\"39\"},\"matched_at\":\"34\",\"outcome\":\"matched\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
               "unit": "line"
             },
             {
-              "at_ms": "79",
+              "at_ms": "77",
               "bytes": "226",
               "direction": "sent",
               "offset": "1423",
@@ -25013,57 +25013,57 @@
               "unit": "write"
             },
             {
-              "at_ms": "80",
+              "at_ms": "78",
               "bytes": "330",
               "direction": "received",
-              "offset": "5078",
-              "sha256": "eb2ecd57cb880646bbed155be96be302fac5b82d72ad48f1bc601c46195bd742",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"screen1\",\"result\":{\"cursor\":{\"col\":0,\"row\":2,\"visible\":true},\"lines\":[\"7e6b5291cfcf4c6a8d829e28676faa99\",\"READY\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"],\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"41\",\"revision\":\"41\",\"title\":null,\"truncated\":false}}",
+              "offset": "5076",
+              "sha256": "0bcf1ff1a52e5853bc0809096e5d37148ae14a5dd8b55f633c48fa04cd271dc1",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"screen1\",\"result\":{\"cursor\":{\"col\":0,\"row\":2,\"visible\":true},\"lines\":[\"a68668913a70440eb149212ce6a9eb84\",\"READY\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"],\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"41\",\"revision\":\"41\",\"title\":null,\"truncated\":false}}",
               "unit": "line"
             },
             {
-              "at_ms": "80",
+              "at_ms": "78",
               "bytes": "330",
               "direction": "received",
-              "offset": "5408",
-              "sha256": "c02de78990e220520cf399123fe4f4f826d9ca102f30e7ce5e6d72a63b22d482",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"screen2\",\"result\":{\"cursor\":{\"col\":0,\"row\":2,\"visible\":true},\"lines\":[\"8d6351cd5cbd4864a23a5487572f27d0\",\"READY\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"],\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"41\",\"revision\":\"41\",\"title\":null,\"truncated\":false}}",
+              "offset": "5406",
+              "sha256": "ab35335018f8f09cf5872537f95ca96bba1242d7bd844a901b1f3cabfae88219",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"screen2\",\"result\":{\"cursor\":{\"col\":0,\"row\":2,\"visible\":true},\"lines\":[\"d2d6742a2c5b4dd09236a06e0c1380c3\",\"READY\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"],\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"41\",\"revision\":\"41\",\"title\":null,\"truncated\":false}}",
               "unit": "line"
             },
             {
-              "at_ms": "80",
+              "at_ms": "78",
               "bytes": "239",
               "direction": "sent",
               "offset": "1649",
-              "sha256": "32779af90b5dead90b324c04c760b18efea3d2d884799cdd52c6157d7d83ab22",
-              "text": "{\"id\":\"register\",\"jsonrpc\":\"2.0\",\"method\":\"agent.register\",\"params\":{\"label\":\"synthetic-producer\",\"op_id\":\"01a1997b-509a-7682-a4fe-1cad50efc9d1\",\"process_token\":\"7e6b5291cfcf4c6a8d829e28676faa99\",\"session\":null,\"target\":{\"address\":\"t1\"}}}\n",
+              "sha256": "e2720ad3e905ba136963a932618a1020e104cdf22a04fabe6158d1e786ce62fe",
+              "text": "{\"id\":\"register\",\"jsonrpc\":\"2.0\",\"method\":\"agent.register\",\"params\":{\"label\":\"synthetic-producer\",\"op_id\":\"01a1999c-3987-7555-9585-0c3a77c8ea02\",\"process_token\":\"a68668913a70440eb149212ce6a9eb84\",\"session\":null,\"target\":{\"address\":\"t1\"}}}\n",
               "unit": "write"
             },
             {
-              "at_ms": "93",
+              "at_ms": "92",
               "bytes": "229",
               "direction": "received",
-              "offset": "5738",
-              "sha256": "7dc1d5c8eede54e52f1809cb28e1d6592906eb770729f929eb8c853481d0ceb8",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"register\",\"result\":{\"agent\":{\"agent_id\":\"agent:01a1997b-50a6-73a6-95c5-3fbd24732e35\",\"history_id\":null,\"label\":\"synthetic-producer\",\"process_incarnation\":\"1\",\"revision\":\"4\",\"session\":null},\"revision\":\"4\"}}",
+              "offset": "5736",
+              "sha256": "e9cb9818c4d19dc6da98fc1e5a328a3f2447564d8aec420e24082415005b3e1e",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"register\",\"result\":{\"agent\":{\"agent_id\":\"agent:01a1999c-3993-764e-add1-117c4d884695\",\"history_id\":null,\"label\":\"synthetic-producer\",\"process_incarnation\":\"1\",\"revision\":\"4\",\"session\":null},\"revision\":\"4\"}}",
               "unit": "line"
             },
             {
-              "at_ms": "94",
+              "at_ms": "92",
               "bytes": "247",
               "direction": "sent",
               "offset": "1888",
-              "sha256": "73158db54ae0e42bc7d27031b536db26f9cf7a633eedd9a2040acbf418c6082c",
-              "text": "{\"id\":\"report\",\"jsonrpc\":\"2.0\",\"method\":\"status.report\",\"params\":{\"op_id\":\"01a1997b-50a7-7232-b6fb-fe4a8abfd98d\",\"process_token\":\"7e6b5291cfcf4c6a8d829e28676faa99\",\"record\":{\"msg\":\"reading\",\"state\":\"working\"},\"seq\":\"1\",\"target\":{\"address\":\"t1\"}}}\n",
+              "sha256": "7ec2982a3da106d40e84b71bb0cd3ea31919863154bdfab4061f6a29d6a4cec8",
+              "text": "{\"id\":\"report\",\"jsonrpc\":\"2.0\",\"method\":\"status.report\",\"params\":{\"op_id\":\"01a1999c-3994-70d6-a59d-dafda73a82e5\",\"process_token\":\"a68668913a70440eb149212ce6a9eb84\",\"record\":{\"msg\":\"reading\",\"state\":\"working\"},\"seq\":\"1\",\"target\":{\"address\":\"t1\"}}}\n",
               "unit": "write"
             },
             {
-              "at_ms": "106",
+              "at_ms": "105",
               "bytes": "550",
               "direction": "received",
-              "offset": "5967",
-              "sha256": "690c0bccc7bb8e23f765f546376214baf022a477e093b91da3bc60a25506390d",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"report\",\"result\":{\"ingest\":{\"malformed\":\"0\",\"oversize\":\"0\",\"stale\":\"0\"},\"seq\":\"8\",\"status\":{\"agent_id\":\"agent:01a1997b-50a6-73a6-95c5-3fbd24732e35\",\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":\"1\",\"reported\":true,\"root\":{\"decode_errors\":[],\"origin\":\"rpc\",\"osc\":null,\"raw\":null,\"report\":{\"app\":null,\"id\":null,\"kind\":null,\"msg\":\"reading\",\"progress\":null,\"state\":\"working\",\"title\":null},\"report_seq\":\"1\",\"seq\":\"8\",\"since_ms\":\"1793576358059\",\"turn\":\"1\"},\"session\":null,\"turn\":\"1\"}}}",
+              "offset": "5965",
+              "sha256": "f26f5f242ba33e2e983a26eebba5fe3d3c7f530f6995655bdd331e7da2a26a5a",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"report\",\"result\":{\"ingest\":{\"malformed\":\"0\",\"oversize\":\"0\",\"stale\":\"0\"},\"seq\":\"8\",\"status\":{\"agent_id\":\"agent:01a1999c-3993-764e-add1-117c4d884695\",\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":\"1\",\"reported\":true,\"root\":{\"decode_errors\":[],\"origin\":\"rpc\",\"osc\":null,\"raw\":null,\"report\":{\"app\":null,\"id\":null,\"kind\":null,\"msg\":\"reading\",\"progress\":null,\"state\":\"working\",\"title\":null},\"report_seq\":\"1\",\"seq\":\"8\",\"since_ms\":\"1793578514841\",\"turn\":\"1\"},\"session\":null,\"turn\":\"1\"}}}",
               "unit": "line"
             },
             {
@@ -25071,21 +25071,21 @@
               "bytes": "229",
               "direction": "sent",
               "offset": "2135",
-              "sha256": "73cf0a5576b4a744769bb601b2775605911cd5c55581917f914f98c5d4f89229",
-              "text": "{\"id\":\"foreign\",\"jsonrpc\":\"2.0\",\"method\":\"status.report\",\"params\":{\"op_id\":\"01a1997b-50b4-70a6-b8f9-ed712e4dc1d3\",\"process_token\":\"8d6351cd5cbd4864a23a5487572f27d0\",\"record\":{\"state\":\"idle\"},\"seq\":\"2\",\"target\":{\"address\":\"t1\"}}}\n",
+              "sha256": "b509ff5bbc5004331d3920d7aaa31487091962eb30c454dc6aca3ca79e7e80fd",
+              "text": "{\"id\":\"foreign\",\"jsonrpc\":\"2.0\",\"method\":\"status.report\",\"params\":{\"op_id\":\"01a1999c-39a2-71b2-9be0-19c2b1236819\",\"process_token\":\"d2d6742a2c5b4dd09236a06e0c1380c3\",\"record\":{\"state\":\"idle\"},\"seq\":\"2\",\"target\":{\"address\":\"t1\"}}}\n",
               "unit": "write"
             },
             {
-              "at_ms": "121",
+              "at_ms": "129",
               "bytes": "251",
               "direction": "received",
-              "offset": "6517",
-              "sha256": "fce1f1dbe532925538a5419f636c04c87a71072e1f8c74754d98b9bc32b727a8",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"foreign\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_owner\",\"hint\":\"report with the token handed to the terminal's current program\",\"retryable\":false,\"op_id\":\"01a1997b-50b4-70a6-b8f9-ed712e4dc1d3\"}}}",
+              "offset": "6515",
+              "sha256": "c317b3ce1af61945ed60192d5a5374a77d7dca5e67755694b7bac7a7aace413b",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"foreign\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_owner\",\"hint\":\"report with the token handed to the terminal's current program\",\"retryable\":false,\"op_id\":\"01a1999c-39a2-71b2-9be0-19c2b1236819\"}}}",
               "unit": "line"
             },
             {
-              "at_ms": "122",
+              "at_ms": "130",
               "bytes": "90",
               "direction": "sent",
               "offset": "2364",
@@ -25094,30 +25094,30 @@
               "unit": "write"
             },
             {
-              "at_ms": "136",
+              "at_ms": "149",
               "bytes": "549",
               "direction": "received",
-              "offset": "6768",
-              "sha256": "5c2d31006be8a468640c6b2cd0d9ce55157206417f7140dcfe35f944350cd60f",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"after\",\"result\":{\"ingest\":{\"malformed\":\"0\",\"oversize\":\"0\",\"stale\":\"0\"},\"seq\":\"8\",\"status\":{\"agent_id\":\"agent:01a1997b-50a6-73a6-95c5-3fbd24732e35\",\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":\"1\",\"reported\":true,\"root\":{\"decode_errors\":[],\"origin\":\"rpc\",\"osc\":null,\"raw\":null,\"report\":{\"app\":null,\"id\":null,\"kind\":null,\"msg\":\"reading\",\"progress\":null,\"state\":\"working\",\"title\":null},\"report_seq\":\"1\",\"seq\":\"8\",\"since_ms\":\"1793576358059\",\"turn\":\"1\"},\"session\":null,\"turn\":\"1\"}}}",
+              "offset": "6766",
+              "sha256": "56e9193fbf38228e88024356d8cf0903b02ead3eda545fb6a25625d3ddd9a80e",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"after\",\"result\":{\"ingest\":{\"malformed\":\"0\",\"oversize\":\"0\",\"stale\":\"0\"},\"seq\":\"8\",\"status\":{\"agent_id\":\"agent:01a1999c-3993-764e-add1-117c4d884695\",\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":\"1\",\"reported\":true,\"root\":{\"decode_errors\":[],\"origin\":\"rpc\",\"osc\":null,\"raw\":null,\"report\":{\"app\":null,\"id\":null,\"kind\":null,\"msg\":\"reading\",\"progress\":null,\"state\":\"working\",\"title\":null},\"report_seq\":\"1\",\"seq\":\"8\",\"since_ms\":\"1793578514841\",\"turn\":\"1\"},\"session\":null,\"turn\":\"1\"}}}",
               "unit": "line"
             },
             {
-              "at_ms": "136",
+              "at_ms": "149",
               "bytes": "347",
               "direction": "sent",
               "offset": "2454",
-              "sha256": "7c66b30fda9338432eb0f1fe36f52b5d8214c866eacac889df53b329c822341d",
-              "text": "{\"id\":\"prompt\",\"jsonrpc\":\"2.0\",\"method\":\"prompt.open\",\"params\":{\"op_id\":\"01a1997b-50d2-7063-9b83-f1a5f3b6f1cd\",\"process_token\":\"7e6b5291cfcf4c6a8d829e28676faa99\",\"prompt\":{\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"}],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"text\":\"Apply?\\n$ touch pwned\\u001b]0;owned\\u0007\"},\"prompt_id\":\"inj\",\"target\":{\"address\":\"t1\"}}}\n",
+              "sha256": "c043c9609025204cfd8adfe7d78095560c0e07a4d702940599e0c3d52d55cbcb",
+              "text": "{\"id\":\"prompt\",\"jsonrpc\":\"2.0\",\"method\":\"prompt.open\",\"params\":{\"op_id\":\"01a1999c-39ce-77fc-9d27-98e74d5e6717\",\"process_token\":\"a68668913a70440eb149212ce6a9eb84\",\"prompt\":{\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"}],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"text\":\"Apply?\\n$ touch pwned\\u001b]0;owned\\u0007\"},\"prompt_id\":\"inj\",\"target\":{\"address\":\"t1\"}}}\n",
               "unit": "write"
             },
             {
-              "at_ms": "153",
+              "at_ms": "167",
               "bytes": "404",
               "direction": "received",
-              "offset": "7317",
-              "sha256": "b378234c8e5bf1140473b62d7d930da38b04cac5e084f7df5a80ed1ebce2b2b3",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"prompt\",\"result\":{\"agent_id\":\"agent:01a1997b-50a6-73a6-95c5-3fbd24732e35\",\"answer\":null,\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"}],\"closed_seq\":null,\"fields\":[],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"opened_seq\":\"18\",\"process_incarnation\":\"1\",\"prompt_id\":\"inj\",\"session\":null,\"state\":\"open\",\"terminal_id\":\"terminal:1\",\"text\":\"Apply?\\n$ touch pwned\\u001b]0;owned\\u0007\",\"version\":\"1\"}}",
+              "offset": "7315",
+              "sha256": "629c3867230645553e4eb5361553049030c4809bf9503fc569d18b744f0cf8bc",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"prompt\",\"result\":{\"agent_id\":\"agent:01a1999c-3993-764e-add1-117c4d884695\",\"answer\":null,\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"}],\"closed_seq\":null,\"fields\":[],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"opened_seq\":\"18\",\"process_incarnation\":\"1\",\"prompt_id\":\"inj\",\"session\":null,\"state\":\"open\",\"terminal_id\":\"terminal:1\",\"text\":\"Apply?\\n$ touch pwned\\u001b]0;owned\\u0007\",\"version\":\"1\"}}",
               "unit": "line"
             }
           ],
@@ -25183,7 +25183,7 @@
           "source": "pty_exit"
         }
       ],
-      "elapsed_ms": "841",
+      "elapsed_ms": "848",
       "failure": null,
       "fixture": {
         "accepted": "5",
@@ -25199,7 +25199,7 @@
             "--skill"
           ],
           "exit_code": 0,
-          "pid": "3191745",
+          "pid": "695037",
           "role": "binary",
           "stderr": {
             "bytes": "0",
@@ -25207,8 +25207,8 @@
             "text": ""
           },
           "stdout": {
-            "bytes": "12082",
-            "sha256": "5f0a39cbf03329188479af9b59236a9a6b5e7c1a2396974d167eff56e76afca6",
+            "bytes": "12373",
+            "sha256": "2b3129f071abe1e4bc8cb2c8859f4b9f8035858fc94d762e63ad37481feac123",
             "text": null
           }
         },
@@ -25219,7 +25219,7 @@
             "schema"
           ],
           "exit_code": 0,
-          "pid": "3191746",
+          "pid": "695040",
           "role": "binary",
           "stderr": {
             "bytes": "0",
@@ -25240,7 +25240,7 @@
             "contract"
           ],
           "exit_code": 0,
-          "pid": "3191761",
+          "pid": "695144",
           "role": "binary",
           "stderr": {
             "bytes": "0",
@@ -25261,7 +25261,7 @@
             "status"
           ],
           "exit_code": 0,
-          "pid": "3191762",
+          "pid": "695187",
           "role": "binary",
           "stderr": {
             "bytes": "0",
@@ -25284,7 +25284,7 @@
             "t1"
           ],
           "exit_code": 0,
-          "pid": "3191821",
+          "pid": "695724",
           "role": "binary",
           "stderr": {
             "bytes": "0",
@@ -25293,8 +25293,8 @@
           },
           "stdout": {
             "bytes": "187",
-            "sha256": "15e34d8751cf2be4f7dd8b05d45e2e3a29fe2a09cb2040231c1f4558676fe761",
-            "text": "{\"agent\":{\"agent_id\":\"agent:01a1997b-50a6-73a6-95c5-3fbd24732e35\",\"history_id\":null,\"label\":\"synthetic-producer\",\"process_incarnation\":\"1\",\"revision\":\"4\",\"session\":null},\"revision\":\"20\"}\n"
+            "sha256": "4536fe26bb8fcb4a456d012dc5aedbfe25a5037ed8caf288e32dfced7d8220cd",
+            "text": "{\"agent\":{\"agent_id\":\"agent:01a1999c-3993-764e-add1-117c4d884695\",\"history_id\":null,\"label\":\"synthetic-producer\",\"process_incarnation\":\"1\",\"revision\":\"4\",\"session\":null},\"revision\":\"20\"}\n"
           }
         },
         {
@@ -25316,8 +25316,8 @@
           },
           "stdout": {
             "bytes": "188",
-            "sha256": "d05499995513610d7c2443ae30a003d14b3b76be7ad5eef409263b7d5c55974d",
-            "text": "{\"agent\":{\"agent_id\":\"agent:01a1997b-50a6-73a6-95c5-3fbd24732e35\",\"history_id\":null,\"label\":\"synthetic-producer\",\"process_incarnation\":\"1\",\"revision\":\"4\",\"session\":null},\"revision\":\"23\"}\r\n"
+            "sha256": "7583b1c35c3f9a44dfc926ca2ec0b563e9b5524ba8eba6fb6e0801cc88c0da93",
+            "text": "{\"agent\":{\"agent_id\":\"agent:01a1999c-3993-764e-add1-117c4d884695\",\"history_id\":null,\"label\":\"synthetic-producer\",\"process_incarnation\":\"1\",\"revision\":\"4\",\"session\":null},\"revision\":\"23\"}\r\n"
           }
         },
         {
@@ -25330,7 +25330,7 @@
             "{\"prompt_id\":\"inj\"}"
           ],
           "exit_code": 0,
-          "pid": "3191833",
+          "pid": "695769",
           "role": "binary",
           "stderr": {
             "bytes": "0",
@@ -25339,8 +25339,8 @@
           },
           "stdout": {
             "bytes": "363",
-            "sha256": "e938e954b5471177fdb3b6e021910f6b04bd8fe9c932c0d1f5615766e53e8ba5",
-            "text": "{\"agent_id\":\"agent:01a1997b-50a6-73a6-95c5-3fbd24732e35\",\"answer\":null,\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"}],\"closed_seq\":null,\"fields\":[],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"opened_seq\":\"18\",\"process_incarnation\":\"1\",\"prompt_id\":\"inj\",\"session\":null,\"state\":\"open\",\"terminal_id\":\"terminal:1\",\"text\":\"Apply?\\n$ touch pwned\\u001b]0;owned\\u0007\",\"version\":\"1\"}\n"
+            "sha256": "a23736f36ef09d3f65426fe93476aafbbc68c584e5e14596c2eaedd921be0fc9",
+            "text": "{\"agent_id\":\"agent:01a1999c-3993-764e-add1-117c4d884695\",\"answer\":null,\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"}],\"closed_seq\":null,\"fields\":[],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"opened_seq\":\"18\",\"process_incarnation\":\"1\",\"prompt_id\":\"inj\",\"session\":null,\"state\":\"open\",\"terminal_id\":\"terminal:1\",\"text\":\"Apply?\\n$ touch pwned\\u001b]0;owned\\u0007\",\"version\":\"1\"}\n"
           }
         },
         {
@@ -25351,12 +25351,12 @@
             "get"
           ],
           "exit_code": 7,
-          "pid": "3191834",
+          "pid": "695774",
           "role": "binary",
           "stderr": {
             "bytes": "469",
-            "sha256": "be6fdfb0f4de371346b04a43e2c92856aa83f21c8e2c93628034bc0935d843c7",
-            "text": "{\"error\":{\"candidates\":[{\"machine_id\":\"machine:01a1997b-4fb3-776c-acb1-a1230d0c9478\",\"runtime_lifetime\":\"runtime:1\",\"terminal_id\":\"terminal:1\"},{\"machine_id\":\"machine:01a1997b-4fb3-776c-acb1-a1230d0c9478\",\"runtime_lifetime\":\"runtime:1\",\"terminal_id\":\"terminal:2\"}],\"candidates_listed\":true,\"exit_code\":7,\"hint\":\"repeat with --terminal-id, --address or --name naming one candidate\",\"kind\":\"needs_target\",\"message\":\"the command needs an explicit target\",\"origin\":\"cli\"}}\n"
+            "sha256": "557ad59a82f22f81f1793054064e2a418c1fb93aaa92772cbc56830422cf8e5f",
+            "text": "{\"error\":{\"candidates\":[{\"machine_id\":\"machine:01a1999c-3898-7184-be2a-05843dcba126\",\"runtime_lifetime\":\"runtime:1\",\"terminal_id\":\"terminal:1\"},{\"machine_id\":\"machine:01a1999c-3898-7184-be2a-05843dcba126\",\"runtime_lifetime\":\"runtime:1\",\"terminal_id\":\"terminal:2\"}],\"candidates_listed\":true,\"exit_code\":7,\"hint\":\"repeat with --terminal-id, --address or --name naming one candidate\",\"kind\":\"needs_target\",\"message\":\"the command needs an explicit target\",\"origin\":\"cli\"}}\n"
           },
           "stdout": {
             "bytes": "0",
@@ -25370,10 +25370,10 @@
             "serve",
             "--stdin-lifetime",
             "--root",
-            "/tmp/ovc-3191465-0/srv"
+            "/tmp/ovc-694297-0/srv"
           ],
           "exit_code": 0,
-          "pid": "3191769",
+          "pid": "695192",
           "role": "fixture",
           "stderr": {
             "bytes": "0",
@@ -25813,8 +25813,8 @@
       "case": "failure",
       "connections": [
         {
-          "bytes_decoded": "3476",
-          "bytes_received": "3476",
+          "bytes_decoded": "3475",
+          "bytes_received": "3475",
           "bytes_sent": "580",
           "name": "control",
           "records_received": "2",
@@ -25824,7 +25824,7 @@
               "bytes": "234",
               "direction": "sent",
               "offset": "0",
-              "sha256": "55e93e8e7840d7c23ad3e645592c68f375bbe3646595e89a773db0411beb27e2",
+              "sha256": "7a6a716557452dddce665371451c133f886a1ce57c70b7da565f478ea7eede6a",
               "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
               "unit": "write"
             },
@@ -25833,26 +25833,26 @@
               "bytes": "2604",
               "direction": "received",
               "offset": "0",
-              "sha256": "17f188da02873571c7343fda9013e8906b2c532dd19bc2a39017160aa639196f",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a1997b-5257-739a-bcbd-cd4eae6cb54e\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793576358645\",\"version\":\"0.1.0\"}}",
+              "sha256": "708f54138522021581ac788f62e66488d4ac9ac35b888f40a892bed10e9fbdd0",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a1999c-3b51-7738-87fd-646f547aea37\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793578515436\",\"version\":\"0.1.0\"}}",
               "unit": "line"
             },
             {
-              "at_ms": "0",
+              "at_ms": "1",
               "bytes": "346",
               "direction": "sent",
               "offset": "234",
-              "sha256": "cefa7265c45281b9a249c0308f50a51eb74441c9e4d9ae8fe024fe88b0425e05",
-              "text": "{\"id\":\"run1\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a1997b-52f5-7473-aa77-f5f0ecb1dc60\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
+              "sha256": "1a3c384c6f71d1ecddd43d5beddf991c6395fac3d0a234e9d05fb2d980c1362e",
+              "text": "{\"id\":\"run1\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a1999c-3bed-7386-b650-5529d7b3c82f\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
               "unit": "write"
             },
             {
-              "at_ms": "33",
-              "bytes": "872",
+              "at_ms": "32",
+              "bytes": "871",
               "direction": "received",
               "offset": "2604",
-              "sha256": "fc42eae29d024e5cd5c5d47db11bd05f2b2842cbaa1a987bbde0d23465a6d82b",
-              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run1\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a1997b-5257-739a-bcbd-cd4eae6cb54e\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":3192034,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:7709452\",\"started_ms\":\"1793576358674\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
+              "sha256": "fb400cd0b1b3e06274db74e385dd45beadea0ab80ba0c535c6b39fc6a2d561ed",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run1\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a1999c-3b51-7738-87fd-646f547aea37\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":696007,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:7925132\",\"started_ms\":\"1793578515465\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
               "unit": "line"
             }
           ],
@@ -25894,7 +25894,7 @@
         "todo": "66"
       },
       "descriptors": [],
-      "elapsed_ms": "451",
+      "elapsed_ms": "457",
       "failure": null,
       "fixture": {
         "accepted": "4",
@@ -25912,7 +25912,7 @@
             "--json"
           ],
           "exit_code": 2,
-          "pid": "3191848",
+          "pid": "695929",
           "role": "binary",
           "stderr": {
             "bytes": "218",
@@ -25935,7 +25935,7 @@
             "{\"bogus\":1}"
           ],
           "exit_code": 2,
-          "pid": "3191849",
+          "pid": "695935",
           "role": "binary",
           "stderr": {
             "bytes": "233",
@@ -25960,7 +25960,7 @@
             "{\"bogus\":1}"
           ],
           "exit_code": 2,
-          "pid": "3191850",
+          "pid": "695939",
           "role": "binary",
           "stderr": {
             "bytes": "233",
@@ -25987,7 +25987,7 @@
             "{\"process_token\":\"x\",\"seq\":1,\"record\":{\"state\":\"working\"}}"
           ],
           "exit_code": 2,
-          "pid": "3191858",
+          "pid": "695940",
           "role": "binary",
           "stderr": {
             "bytes": "229",
@@ -26009,12 +26009,12 @@
             "list"
           ],
           "exit_code": 2,
-          "pid": "3191871",
+          "pid": "695948",
           "role": "binary",
           "stderr": {
-            "bytes": "167",
-            "sha256": "46131417382a4e5b36e16689858ad48365bfde2ae3834272055bc14ee7c45032",
-            "text": "{\"error\":{\"exit_code\":2,\"hint\":\"run `ovis-terminal --json schema cli` for every command and flag\",\"kind\":\"usage\",\"message\":\"--skill takes no command\",\"origin\":\"cli\"}}\n"
+            "bytes": "206",
+            "sha256": "94c47e6c499dc595eebbcf56dd49d2e5b7a3aca9cdee2b45664d29a20818df00",
+            "text": "{\"error\":{\"exit_code\":2,\"hint\":\"run `ovis-terminal --json schema cli` for every command and flag\",\"kind\":\"usage\",\"message\":\"the command line does not parse: unrecognized subcommand 'list'\",\"origin\":\"cli\"}}\n"
           },
           "stdout": {
             "bytes": "0",
@@ -26032,12 +26032,12 @@
             "t1"
           ],
           "exit_code": 4,
-          "pid": "3191882",
+          "pid": "695953",
           "role": "binary",
           "stderr": {
-            "bytes": "240",
-            "sha256": "643d229b52f3529bc5345947163f2dd3c0c09b17016d9b1eb3ce6906570798e6",
-            "text": "{\"error\":{\"exit_code\":4,\"hint\":\"start the server explicitly; inspection never starts one\",\"kind\":\"server_not_running\",\"message\":\"no control server answers at /tmp/ovc-3191465-1/ovis-terminal/default.sock\",\"origin\":\"cli\",\"state\":\"stopped\"}}\n"
+            "bytes": "239",
+            "sha256": "e17f6c7fcbee5625e8d4f2ec916610374199f2604ad7c5cb95ba6d48ee045afc",
+            "text": "{\"error\":{\"exit_code\":4,\"hint\":\"start the server explicitly; inspection never starts one\",\"kind\":\"server_not_running\",\"message\":\"no control server answers at /tmp/ovc-694297-1/ovis-terminal/default.sock\",\"origin\":\"cli\",\"state\":\"stopped\"}}\n"
           },
           "stdout": {
             "bytes": "0",
@@ -26053,12 +26053,12 @@
             "get"
           ],
           "exit_code": 7,
-          "pid": "3192038",
+          "pid": "696055",
           "role": "binary",
           "stderr": {
             "bytes": "349",
-            "sha256": "161eac7b6978d9e5fd0c155f22e439e46b6b5933c6f45c6dce04681b752fe668",
-            "text": "{\"error\":{\"candidates\":[{\"machine_id\":\"machine:01a1997b-5257-739a-bcbd-cd4eae6cb54e\",\"runtime_lifetime\":\"runtime:1\",\"terminal_id\":\"terminal:1\"}],\"candidates_listed\":true,\"exit_code\":7,\"hint\":\"repeat with --terminal-id, --address or --name naming one candidate\",\"kind\":\"needs_target\",\"message\":\"the command needs an explicit target\",\"origin\":\"cli\"}}\n"
+            "sha256": "45a52ac88a39145929815c4fd0a018919e2e7aa6bea57d3471bcb058d175fd05",
+            "text": "{\"error\":{\"candidates\":[{\"machine_id\":\"machine:01a1999c-3b51-7738-87fd-646f547aea37\",\"runtime_lifetime\":\"runtime:1\",\"terminal_id\":\"terminal:1\"}],\"candidates_listed\":true,\"exit_code\":7,\"hint\":\"repeat with --terminal-id, --address or --name naming one candidate\",\"kind\":\"needs_target\",\"message\":\"the command needs an explicit target\",\"origin\":\"cli\"}}\n"
           },
           "stdout": {
             "bytes": "0",
@@ -26076,7 +26076,7 @@
             "t1"
           ],
           "exit_code": 0,
-          "pid": "3192039",
+          "pid": "696117",
           "role": "binary",
           "stderr": {
             "bytes": "0",
@@ -26099,7 +26099,7 @@
             "t9"
           ],
           "exit_code": 3,
-          "pid": "3192052",
+          "pid": "696250",
           "role": "binary",
           "stderr": {
             "bytes": "189",
@@ -26118,10 +26118,10 @@
             "serve",
             "--stdin-lifetime",
             "--root",
-            "/tmp/ovc-3191465-1/srv"
+            "/tmp/ovc-694297-1/srv"
           ],
           "exit_code": 0,
-          "pid": "3191886",
+          "pid": "695963",
           "role": "fixture",
           "stderr": {
             "bytes": "0",
@@ -26139,7 +26139,7 @@
       "summary": "With no server running, malformed invocations exit 2 with a structured usage error before any connection (a well-formed agent get against the same absent endpoint exits 4, so an attempted connection would have shown): an unknown flag, an unknown params field with and without a target, a numeric u64 seq and --skill combined with a command. Against the real served binary a targetless agent get exits 7 with needs_target and the live candidate, a plain shell answers agent null and a missing terminal is not_found."
     }
   ],
-  "elapsed_ms": "1538",
+  "elapsed_ms": "1527",
   "error": null,
   "format": "ovis-conformance-evidence/1",
   "host": {
