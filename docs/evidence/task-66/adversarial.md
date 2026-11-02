@@ -1,6 +1,6 @@
 # Task 66 adversarial pass
 
-Binary sha256 `5fbb5ae7a640c1c6e5cf760b4a095b855f9b49030a12144bdfb45c8d9624969d`, Linux x86_64
+Binary sha256 `c955ba1920cd2418c346229a9fb358fdc6f6d92e615845fdeaca59fa144c9296`, Linux x86_64
 (`binary-runs.log` holds every materialized run with argv, exit code, stdout and stderr).
 
 ## Malformed input: refused before any connection
@@ -63,3 +63,12 @@ and that `accept()` is still `WouldBlock` after each.
 | M6 re-add an unserved `agent list` verb | `manual_examples::hello_advertises_the_method_of_every_typed_verb` |
 | M7 document `agent list` again in the onboarding guide | `invocation::manual_tests::every_typed_verb_the_docs_name_is_a_command_of_this_build`, `manual_examples::every_documented_command_and_params_example_is_served_by_this_build` (`usage`) |
 | M8 `schema cli` names no method (vacuous hello check) | `invocation::manual_tests::every_typed_verb_command_names_the_method_it_sends` (and the hello test) |
+
+## Gate round 2: documented mutations must succeed
+
+- Misleading-success class: the executed-examples test no longer uses a deny-list. Every example must exit 0 unless the docs declare `# exits <code> <kind>`, and that declared outcome is asserted exactly. `op_expired`, `agent_conflict`, `invalid_session` and `conversation_unavailable` were all found this way.
+- The owning-token flow is asserted end to end: register, label read back, report, clear, then the cleared status read back.
+
+| mutant | killed by |
+|---|---|
+| M9 stale `01900000` op id back in the revocation example | `manual_examples::the_onboarding_flow_registers_reports_and_clears_with_the_owning_token` (`op_expired`, exit 1, expected 0) |

@@ -140,3 +140,16 @@ test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 43 filtered out;
 PROCESS_EXIT=101
 
 
+
+## M9 a stale 01900000 op id back in the onboarding revocation example [gate round 2]
+$ (mutated docs/producer-onboarding.md: status clear --op-id 01900000-0000-7000-8000-000000000106) cargo test --locked -p ovis-terminal-cli --test assembly manual_examples
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test manual_examples::hello_advertises_the_method_of_every_typed_verb ... ok
+test manual_examples::the_onboarding_flow_registers_reports_and_clears_with_the_owning_token ... FAILED
+test manual_examples::every_manual_example_succeeds_against_serve ... ok
+ovis-terminal --json status clear --address t1 --op-id 01900000-0000-7000-8000-000000000106: expected exit 0 None, got Some(1) Some("op_expired")
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 43 filtered out; finished in 1.48s
+EXIT=101
+
+

@@ -21,6 +21,7 @@ pub(super) const REQUEST_ID: &str = "cli";
 #[derive(Debug)]
 pub(super) enum Plan {
     Skill,
+    NewOp,
     Schema(SchemaPart),
     Endpoint,
     Bridge,
@@ -137,6 +138,7 @@ pub(super) fn plan(cli: Cli, token: Option<&str>) -> Result<Plan, CliError> {
             Some(params) => Plan::Call(typed::<TerminalGetParams>("terminal.get", &params)?),
             None => Plan::NeedsTarget,
         },
+        Command::Op(OpCommand::New) => Plan::NewOp,
         Command::Op(OpCommand::Get(args)) => Plan::Call(typed::<OpRefParams>(
             "op.get",
             &json!({ "op_id": args.op_id }),

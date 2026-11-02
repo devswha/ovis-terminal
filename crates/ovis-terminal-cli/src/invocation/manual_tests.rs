@@ -201,3 +201,17 @@ fn every_kind_this_binary_reports_is_published() {
         );
     }
 }
+
+#[test]
+fn op_new_prints_a_fresh_v7_id_each_time() {
+    let ids: Vec<uuid::Uuid> = (0..2)
+        .map(|_| {
+            let report = super::discovery::new_op(super::context::OutputMode::Text);
+            let text = String::from_utf8_lossy(report.stdout()).into_owned();
+            let id = text.strip_suffix('\n').expect("one line");
+            uuid::Uuid::parse_str(id).expect("a UUID")
+        })
+        .collect();
+    assert!(ids.iter().all(|id| id.get_version_num() == 7), "{ids:?}");
+    assert_ne!(ids.first(), ids.last());
+}

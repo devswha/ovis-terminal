@@ -1,7 +1,8 @@
 //! The documented surface is the served surface: every command line and params example the
-//! manual and the producer onboarding guide show is executed against a running `serve`,
-//! and hello advertises the method of every typed verb `schema cli` lists. A documented
-//! command this build does not serve, or one that does not parse, fails here.
+//! manual and the producer onboarding guide show is executed, in document order, against a
+//! running `serve`, and must succeed unless the example declares the failure it shows
+//! (`# exits <code> <kind>`). Hello advertises the method of every typed verb `schema cli`
+//! lists.
 
 use std::path::Path;
 use std::process::{Command, Output, Stdio};
@@ -9,24 +10,65 @@ use std::process::{Command, Output, Stdio};
 use serde_json::Value;
 
 use super::prompts::spawned_token;
-use super::support::{BIN, Served, TestResult};
+use super::support::{BIN, Served, TestResult, op_id};
 
 const MANUAL: &str = include_str!("../../../../docs/skill/ovis-terminal.md");
 const ONBOARDING: &str = include_str!("../../../../docs/producer-onboarding.md");
+/// Placeholders a params example writes for the values a producer fills in.
+const OP_PLACEHOLDER: &str = "<op id from ovis-terminal op new>";
+const TOKEN_PLACEHOLDER: &str = "<OVIS_TERMINAL_PROCESS_TOKEN>";
 
-/// The body lines of every fenced block whose info string is `info`.
-fn fenced<'a>(document: &'a str, info: &str) -> Vec<Vec<&'a str>> {
-    let mut blocks = Vec::new();
-    let mut open: Option<Vec<&str>> = None;
+/// One documented example, in document order.
+enum Example {
+    /// An `ovis-terminal ...` line of an `sh` block, run by `/bin/sh`.
+    Line(String),
+    /// A `// params of <method>` JSON block, sent with `call`.
+    Params { method: String, body: String },
+}
+
+/// Every example of `document`, in the order a reader meets them.
+fn examples(document: &str) -> Vec<Example> {
+    let mut found = Vec::new();
+    let mut open: Option<(&str, Vec<&str>)> = None;
     for line in document.lines() {
         match (&mut open, line.trim_start().strip_prefix("```")) {
-            (None, Some(tag)) if tag.trim() == info => open = Some(Vec::new()),
-            (Some(_), Some("")) => blocks.extend(open.take()),
-            (Some(lines), _) => lines.push(line),
-            (None, _) => {}
+            (None, Some(tag)) => open = Some((tag.trim(), Vec::new())),
+            (Some((info, lines)), Some("")) => {
+                found.extend(block(info, lines));
+                open = None;
+            }
+            (Some((_, lines)), _) => lines.push(line),
+            (None, None) => {}
         }
     }
-    blocks
+    found
+}
+
+fn block(info: &str, lines: &[&str]) -> Vec<Example> {
+    match (info, lines.split_first()) {
+        ("sh", _) => lines
+            .iter()
+            .filter(|line| line.trim_start().starts_with("ovis-terminal "))
+            .map(|line| Example::Line((*line).to_owned()))
+            .collect(),
+        ("json", Some((header, body))) => header
+            .trim()
+            .strip_prefix("// params of ")
+            .map(|method| Example::Params {
+                method: method.to_owned(),
+                body: body.join("\n"),
+            })
+            .into_iter()
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// The exit code and kind a line declares with `# exits <code> <kind>`; none means 0.
+fn declared(line: &str) -> Option<(i32, String)> {
+    let marker = line.split_once("# exits ")?.1;
+    let (code, kind) = marker.trim().split_once(' ')?;
+    Some((code.parse().ok()?, kind.trim().to_owned()))
 }
 
 /// Runs one documented line through `/bin/sh` as the program owning `t1` would: the binary
@@ -49,72 +91,92 @@ fn as_documented(served: &Served, token: &str, line: &str) -> TestResult<Output>
         .output()?)
 }
 
-/// The error kind a failed run reported, or `None` on success.
-fn refused(output: &Output) -> Option<String> {
-    if output.status.success() {
-        return None;
-    }
+/// Requires the documented outcome: exit 0, or exactly the declared code and kind.
+fn documented_outcome(what: &str, expected: Option<(i32, String)>, output: &Output) -> Value {
     let record: Value = serde_json::from_slice(&output.stderr).unwrap_or(Value::Null);
-    Some(
-        record
-            .pointer("/error/kind")
-            .and_then(Value::as_str)
-            .unwrap_or("unparsed")
-            .to_owned(),
-    )
-}
-
-/// Kinds that mean the documented example is not this build's surface: unserved,
-/// unparsed or malformed. Any other outcome (success, `not_owner`, `not_found`, a
-/// timeout) shows the method was reached with well-formed params.
-const NOT_SERVED: [&str; 5] = [
-    "method_not_found",
-    "unknown_method",
-    "usage",
-    "invalid_params",
-    "unparsed",
-];
-
-fn served_or_panic(what: &str, output: &Output) {
-    let kind = refused(output);
+    let kind = record.pointer("/error/kind").and_then(Value::as_str);
+    let (code, want) = expected.map_or((0, None), |(code, kind)| (code, Some(kind)));
     assert!(
-        !kind
-            .as_deref()
-            .is_some_and(|kind| NOT_SERVED.contains(&kind)),
-        "{what}: {kind:?}\nstdout: {}\nstderr: {}",
+        output.status.code() == Some(code) && kind == want.as_deref(),
+        "{what}: expected exit {code} {want:?}, got {:?} {kind:?}\nstdout: {}\nstderr: {}",
+        output.status.code(),
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+    serde_json::from_slice(&output.stdout).unwrap_or(Value::Null)
 }
 
-#[test]
-fn every_documented_command_and_params_example_is_served_by_this_build() -> TestResult {
+/// Executes every example of `document` against a fresh `serve` whose `t1` runs the owning
+/// shell; returns each example with its parsed stdout.
+fn execute(document: &str) -> TestResult<Vec<(String, Value)>> {
     let served = Served::start()?;
     served.run_shell("shell")?;
     let token = spawned_token(&served)?;
-    let mut executed = 0_usize;
-    for document in [MANUAL, ONBOARDING] {
-        for line in fenced(document, "sh").into_iter().flatten() {
-            if line.trim_start().starts_with("ovis-terminal ") {
-                served_or_panic(line, &as_documented(&served, &token, line)?);
-                executed += 1;
+    let mut results = Vec::new();
+    for example in examples(document) {
+        let (what, expected, output) = match example {
+            Example::Line(line) => {
+                let output = as_documented(&served, &token, &line)?;
+                (line.clone(), declared(&line), output)
             }
-        }
-        for block in fenced(document, "json") {
-            let Some(method) = block
-                .first()
-                .and_then(|line| line.trim().strip_prefix("// params of "))
-            else {
-                continue;
-            };
-            let params = block.get(1..).unwrap_or_default().join("\n");
-            let output = served.cli(&["call", method, "--params", &params])?;
-            served_or_panic(method, &output);
-            executed += 1;
-        }
+            Example::Params { method, body } => {
+                let params = body
+                    .replace(OP_PLACEHOLDER, &op_id()?)
+                    .replace(TOKEN_PLACEHOLDER, &token);
+                let output = served.cli(&["call", &method, "--params", &params])?;
+                (method, None, output)
+            }
+        };
+        let stdout = documented_outcome(&what, expected, &output);
+        results.push((what, stdout));
     }
-    assert!(executed >= 20, "{executed} documented examples executed");
     served.stop()?;
+    Ok(results)
+}
+
+/// The parsed stdout of every executed example whose text contains `needle`, in order.
+fn outputs<'a>(results: &'a [(String, Value)], needle: &str) -> Vec<&'a Value> {
+    results
+        .iter()
+        .filter(|(what, _)| what.contains(needle))
+        .map(|(_, stdout)| stdout)
+        .collect()
+}
+
+#[test]
+fn every_manual_example_succeeds_against_serve() -> TestResult {
+    let results = execute(MANUAL)?;
+    assert!(results.len() >= 5, "{} manual examples", results.len());
+    Ok(())
+}
+
+#[test]
+fn the_onboarding_flow_registers_reports_and_clears_with_the_owning_token() -> TestResult {
+    let results = execute(ONBOARDING)?;
+    assert!(results.len() >= 15, "{} onboarding examples", results.len());
+    let agent = outputs(&results, "agent get --address t1");
+    assert_eq!(
+        agent
+            .first()
+            .and_then(|record| record.pointer("/agent/label")),
+        Some(&Value::from("synthetic-producer")),
+        "{agent:?}"
+    );
+    let status = outputs(&results, "status get --address t1");
+    assert_eq!(
+        status
+            .first()
+            .and_then(|record| record.pointer("/status/root/report/state")),
+        Some(&Value::from("working")),
+        "{status:?}"
+    );
+    assert_eq!(
+        status
+            .last()
+            .and_then(|record| record.pointer("/status/root")),
+        Some(&Value::Null),
+        "the revocation step leaves no reported status: {status:?}"
+    );
     Ok(())
 }
 

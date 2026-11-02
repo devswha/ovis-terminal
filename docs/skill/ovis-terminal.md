@@ -64,6 +64,10 @@ the explicit `serve` and `hold` verbs below run one, in the foreground.
 - `ovis-terminal terminal get --terminal-id ID | --address ADDR | --name NAME` reads one
   record. Without a target it exits 7 with `needs_target` and `candidates`; it never
   picks a terminal for you. `candidates_listed` is false when no server answered.
+- `ovis-terminal op new` prints a fresh operation identity (a UUIDv7 minted now) for a
+  mutation's `--op-id`; it is offline and starts nothing. An id older than the server's
+  operation retention window is refused as `op_expired`, so never hard-code one: write
+  `--op-id "$(ovis-terminal op new)"`, and keep the id to resend the same mutation.
 - `ovis-terminal op get --op-id ID` and `ovis-terminal op cancel --op-id ID` inspect or
   cancel an operation.
 - `ovis-terminal call METHOD --params JSON` sends any published method except `hello`.
@@ -97,12 +101,13 @@ methods `agent.list`, `agent.note`, `agent.release` and `agent.wait_children` ar
 served by this build: they have no verb, and `ovis-terminal call` with them answers
 `method_not_found` (exit 4).
 
-Examples (the CLI crate's tests execute every line against `serve` of this build):
+Examples (the CLI crate's tests execute every line against `serve` of this build and
+require exit 0, unless a line ends with `# exits <code> <kind>`):
 
 ```sh
 ovis-terminal --json agent get --address t1
-ovis-terminal --json agent register --address t1 --op-id 01900000-0000-7000-8000-000000000001 --params '{"label":"my-agent","session":null}'
-ovis-terminal --json status report --address t1 --op-id 01900000-0000-7000-8000-000000000002 --params '{"seq":"1","record":{"state":"working"}}'
+ovis-terminal --json agent register --address t1 --op-id "$(ovis-terminal op new)" --params '{"label":"my-agent","session":null}'
+ovis-terminal --json status report --address t1 --op-id "$(ovis-terminal op new)" --params '{"seq":"1","record":{"state":"working"}}'
 ovis-terminal --json prompt list --address t1
 ovis-terminal --json turn wait --address t1 --params '{"turn":"1","timeout_ms":"1000"}'
 ```

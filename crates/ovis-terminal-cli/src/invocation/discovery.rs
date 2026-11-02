@@ -139,6 +139,16 @@ pub(super) fn endpoint(context: &Context) -> Result<Value, CliError> {
     serde_json::to_value(descriptor).map_err(CliError::Encode)
 }
 
+/// A fresh operation identity: a `UUIDv7` minted now, so the server's retention window
+/// admits it. Text prints the bare id for `--op-id "$(ovis-terminal op new)"`.
+pub(super) fn new_op(mode: OutputMode) -> Report {
+    let op_id = uuid::Uuid::now_v7().to_string();
+    match mode {
+        OutputMode::Json => Report::success(mode, &json!({ "op_id": op_id })),
+        OutputMode::Text => Report::raw(format!("{op_id}\n")),
+    }
+}
+
 /// `--version` in the requested form.
 pub(super) fn version(mode: OutputMode) -> Report {
     match mode {

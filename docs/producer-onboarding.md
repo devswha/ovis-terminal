@@ -7,9 +7,15 @@ history, ownership and revocation, and what a trusted extension may and may not 
 ends with a synthetic producer that the `cli/manual` conformance scenario executes
 against the real binary.
 
-Every command below is executed against a running `serve` of the build this file ships
-with, and every JSON block marked `// params of <method>` is sent to it; the CLI crate's
-tests require each one to be served and well-formed. `ovis-terminal schema contract` is the full
+Every command below is executed, in order, against a running `serve` of the build this file
+ships with, and every JSON block marked `// params of <method>` is sent to it with its
+placeholders filled in. The CLI crate's tests require each one to succeed (exit 0) unless the
+line ends with `# exits <code> <kind>`.
+
+Every mutation takes a client-minted `op_id`. Mint a current one with `ovis-terminal op new`
+(the examples write `--op-id "$(ovis-terminal op new)"`): the server refuses an id older than
+its operation retention window as `op_expired`, so a hard-coded id stops working. Keep the id
+if you may need to resend the same mutation; resending it never repeats the effect. `ovis-terminal schema contract` is the full
 reference.
 
 ## 1. What the runtime gives a spawned program
@@ -35,15 +41,18 @@ Registration declares that the program owning the terminal is an agent. Any labe
 accepted; there is no brand list and no detection.
 
 ```sh
-ovis-terminal --json agent register --address t1 --op-id 01900000-0000-7000-8000-000000000101 --params '{"label":"synthetic-producer","session":null}'
+ovis-terminal --json agent register --address t1 --op-id "$(ovis-terminal op new)" --params '{"label":"synthetic-producer","session":null}'
 ```
 
-The CLI fills `process_token` from `OVIS_TERMINAL_PROCESS_TOKEN`. Over the socket the
-params are:
+The CLI fills `process_token` from `OVIS_TERMINAL_PROCESS_TOKEN`. An incarnation keeps its
+first registration: registering again answers `agent_conflict` (exit 1). To bind or replace
+the provider session reference later, use `agent update-session`; over the socket its params
+are as below, with `<op id from ovis-terminal op new>` replaced by a fresh id and
+`<OVIS_TERMINAL_PROCESS_TOKEN>` by the program's token:
 
 ```json
-// params of agent.register
-{"op_id": "01900000-0000-7000-8000-000000000101", "target": {"address": "t1"}, "process_token": "token-from-the-environment", "label": "synthetic-producer", "session": {"source": "synthetic-store", "kind": "session_id", "value": "s-42"}}
+// params of agent.update_session
+{"op_id": "<op id from ovis-terminal op new>", "target": {"address": "t1"}, "process_token": "<OVIS_TERMINAL_PROCESS_TOKEN>", "session": {"source": "synthetic-store", "kind": "id", "value": "s-42"}}
 ```
 
 `agent get` then returns the record; on a terminal whose program never registered it
@@ -61,13 +70,13 @@ decimal string) that must increase; a report at or below the current sequence is
 refused with the current one, so a producer always learns whether its report applied.
 
 ```sh
-ovis-terminal --json status report --address t1 --op-id 01900000-0000-7000-8000-000000000102 --params '{"seq":"1","record":{"state":"working","msg":"reading the repository"}}'
+ovis-terminal --json status report --address t1 --op-id "$(ovis-terminal op new)" --params '{"seq":"1","record":{"state":"working","msg":"reading the repository"}}'
 ovis-terminal --json status get --address t1
 ```
 
 ```json
 // params of status.report
-{"op_id": "01900000-0000-7000-8000-000000000102", "target": {"address": "t1"}, "process_token": "token-from-the-environment", "seq": "2", "record": {"state": "idle", "msg": "waiting for input"}}
+{"op_id": "<op id from ovis-terminal op new>", "target": {"address": "t1"}, "process_token": "<OVIS_TERMINAL_PROCESS_TOKEN>", "seq": "2", "record": {"state": "idle", "msg": "waiting for input"}}
 ```
 
 A report stands until the producer replaces or clears it, or the process exits. The
@@ -82,7 +91,7 @@ program declares one of the ready states. Output silence is never readiness. Dec
 with an ordinary report:
 
 ```sh
-ovis-terminal --json status report --address t1 --op-id 01900000-0000-7000-8000-000000000103 --params '{"seq":"3","record":{"state":"idle"}}'
+ovis-terminal --json status report --address t1 --op-id "$(ovis-terminal op new)" --params '{"seq":"3","record":{"state":"idle"}}'
 ```
 
 If the program never declares readiness, the message expires at its deadline and the
@@ -95,7 +104,7 @@ and hoping a client parses the screen.
 
 ```json
 // params of prompt.open
-{"op_id": "01900000-0000-7000-8000-000000000104", "target": {"address": "t1"}, "process_token": "token-from-the-environment", "prompt_id": "apply-patch", "prompt": {"kind": "permission", "text": "Apply the patch to 3 files?", "choices": [{"id": "yes", "label": "Apply"}, {"id": "no", "label": "Skip"}], "mechanism": "rpc"}}
+{"op_id": "<op id from ovis-terminal op new>", "target": {"address": "t1"}, "process_token": "<OVIS_TERMINAL_PROCESS_TOKEN>", "prompt_id": "apply-patch", "prompt": {"kind": "permission", "text": "Apply the patch to 3 files?", "choices": [{"id": "yes", "label": "Apply"}, {"id": "no", "label": "Skip"}], "mechanism": "rpc"}}
 ```
 
 A client with the prompt-answer grant answers at the version it saw; a second answer to
@@ -103,7 +112,7 @@ the same version is a conflict, never a double delivery:
 
 ```json
 // params of prompt.answer
-{"op_id": "01900000-0000-7000-8000-000000000105", "prompt_id": "apply-patch", "version": "1", "answer": {"choice": "yes"}, "lease_id": null}
+{"op_id": "<op id from ovis-terminal op new>", "prompt_id": "apply-patch", "version": "1", "answer": {"choice": "yes"}, "lease_id": null}
 ```
 
 ```sh
@@ -116,8 +125,13 @@ output escapes its control characters.
 
 ## 6. History and records
 
-Conversation records a producer appends are read back by cursor; provider sessions in
-the authorized store are listed as inert data.
+A producer that keeps structured conversation records appends them with its token; they
+are read back by cursor. Provider sessions in the authorized store are listed as inert data.
+
+```json
+// params of agent.append_records
+{"op_id": "<op id from ovis-terminal op new>", "target": {"address": "t1"}, "process_token": "<OVIS_TERMINAL_PROCESS_TOKEN>", "records": [{"record_id": "u1", "role": "user", "blocks": [{"type": "text", "text": "fix the build"}]}, {"record_id": "a1", "role": "assistant", "blocks": [{"type": "text", "text": "on it"}]}]}
+```
 
 ```json
 // params of agent.records
@@ -149,13 +163,14 @@ status.
   even with a valid process token.
 
 ```sh
-ovis-terminal --json status clear --address t1 --op-id 01900000-0000-7000-8000-000000000106
+ovis-terminal --json status clear --address t1 --op-id "$(ovis-terminal op new)"
+ovis-terminal --json status get --address t1
 ovis-terminal --json call attach.leases --params '{"target":{"address":"t1"}}'
 ```
 
 ```json
 // params of status.clear
-{"op_id": "01900000-0000-7000-8000-000000000107", "target": {"address": "t1"}, "process_token": "token-from-the-environment"}
+{"op_id": "<op id from ovis-terminal op new>", "target": {"address": "t1"}, "process_token": "<OVIS_TERMINAL_PROCESS_TOKEN>"}
 ```
 
 ## 8. Trusted-extension boundaries

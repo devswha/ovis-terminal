@@ -52,6 +52,7 @@ fn parse(args: Vec<OsString>, mode: OutputMode) -> Result<Cli, Report> {
 async fn execute(plan: Plan, mode: OutputMode, context: &Context) -> Result<Report, Failure> {
     let value = match plan {
         Plan::Skill => return Ok(discovery::skill(mode)),
+        Plan::NewOp => return Ok(discovery::new_op(mode)),
         Plan::Schema(SchemaPart::Openrpc) => return Ok(discovery::openrpc()?),
         Plan::Schema(SchemaPart::Cli) => discovery::cli_contract(),
         Plan::Schema(SchemaPart::Contract) => return Ok(discovery::contract(mode)?),

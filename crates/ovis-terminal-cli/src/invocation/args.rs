@@ -179,6 +179,8 @@ pub(super) struct TargetArgs {
 /// `ovis-terminal op ...`.
 #[derive(Debug, Subcommand)]
 pub(super) enum OpCommand {
+    /// Mint a fresh operation identity (`UUIDv7`) for a mutation's `--op-id`; offline.
+    New,
     /// Inspect an operation.
     Get(OpArgs),
     /// Cancel an operation before it commits.
