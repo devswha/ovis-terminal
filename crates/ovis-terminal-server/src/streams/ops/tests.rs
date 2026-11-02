@@ -89,6 +89,88 @@ fn hub() -> TestResult<(
     ))
 }
 
+/// The owner's session, authenticated once per test.
+fn owner_session(
+    authority: &Authority<RegistryIdentities>,
+    bearer: &str,
+) -> TestResult<ovis_terminal_authz::Session> {
+    let uid = UnixUid::new(1000);
+    let evidence = UnixSocketEvidence::new(
+        FileEvidence::new(uid, 0o600),
+        FileEvidence::new(uid, 0o700),
+        uid,
+    );
+    let admission =
+        EndpointPolicy::new(LocalAccount::Unix(uid)).admit(&PeerEvidence::UnixSocket(evidence))?;
+    Ok(authority.authenticate(
+        &admission,
+        Presentation::new(bearer, TimestampMs::new(1_000)),
+    )?)
+}
+
+fn lease(n: u64) -> TestResult<LeaseId> {
+    Ok(LeaseId::new(
+        NonZeroU64::new(n).ok_or("lease ids start at 1")?,
+    ))
+}
+
+#[test]
+fn an_owner_closing_its_last_two_streams_loses_the_lease_at_the_second_close() -> TestResult {
+    let (hub, authority, bearer) = hub()?;
+    let session = owner_session(&authority, &bearer)?;
+    let client = ClientId::new("desk".to_owned());
+    let owner = Owner::new(
+        session.principal().clone(),
+        client.clone(),
+        session.connection(),
+    );
+    let at = TimestampMs::new(1_000);
+    let (interact, observe) = (
+        StreamId::new("stream:a".to_owned()),
+        StreamId::new("stream:b".to_owned()),
+    );
+    for (stream, role, fresh) in [
+        (&interact, LeaseRole::Interact, lease(1)?),
+        (&observe, LeaseRole::Observe, lease(2)?),
+    ] {
+        let request = OpenRequest {
+            caller: Caller::new(&session, &client, at),
+            owner: &owner,
+            role,
+            takeover: None,
+            fresh,
+            stream,
+        };
+        hub.open(request, OpId::new(format!("op-{}", stream.as_str())))?;
+    }
+    hub.close(&interact)?;
+    let kept = hub
+        .lock()?
+        .leases
+        .view()
+        .interact
+        .map(|lease| lease.lease_id);
+    assert_eq!(
+        kept,
+        Some(lease(1)?),
+        "the owner's open observe stream keeps its leases"
+    );
+
+    hub.close(&observe)?;
+
+    let after = hub
+        .lock()?
+        .leases
+        .view()
+        .interact
+        .map(|lease| lease.lease_id);
+    assert_eq!(
+        after, None,
+        "a closed but undetached stream must not keep the lease"
+    );
+    Ok(())
+}
+
 #[test]
 fn close_revokes_the_interact_lease_before_it_returns() -> TestResult {
     let (hub, authority, bearer) = hub()?;

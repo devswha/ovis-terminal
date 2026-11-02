@@ -119,7 +119,8 @@ impl TerminalStreams {
         Ok(())
     }
 
-    /// Revokes the leases of `stream`'s owner unless another stream of that owner remains;
+    /// Revokes the leases of `stream`'s owner unless another open stream of that owner
+    /// remains (a closed one awaiting detach does not count);
     /// the stream itself stays so its CLOSE can still be delivered.
     pub(super) fn release(&self, stream: &StreamId, op: OpId) -> Result<(), StreamError> {
         let mut state = self.lock()?;
@@ -129,7 +130,7 @@ impl TerminalStreams {
         let shared = state
             .viewers
             .iter()
-            .any(|(id, other)| id != stream && other.owner == owner);
+            .any(|(id, other)| id != stream && other.owner == owner && !other.is_closed());
         let transition = if shared {
             None
         } else {
