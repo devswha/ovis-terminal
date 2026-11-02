@@ -91,7 +91,10 @@ jobs:
           set -- release-out/sdk/ovis-terminal-client-*.tgz
           test -f "$1"
           test ! -e packages/client-ts/release-out
-          tar -tzf release-out/stage/*.tar.gz | grep -q '/ovis-terminal-client-.*\.tgz$'
+          # List to a file first: `grep -q` on a pipe exits at the first match, and tar then
+          # dies of SIGPIPE, which pipefail turns into a failed step.
+          tar -tzf release-out/stage/*.tar.gz > stage.lst
+          grep -q '/ovis-terminal-client-.*\.tgz$' stage.lst
           # promote sees only what the build jobs upload: entries, archives, sidecars, QA.
           mkdir uploaded
           cp release-out/stage/*.entry.json release-out/stage/*.tar.gz release-out/stage/*.tar.gz.sha256 release-out/stage/*.qa.json uploaded/
