@@ -1,6 +1,7 @@
 //! Executing planned cases against the binary and the fixture.
 
 pub mod announce;
+pub mod commands;
 pub mod conn;
 pub mod exchange;
 pub mod gates;

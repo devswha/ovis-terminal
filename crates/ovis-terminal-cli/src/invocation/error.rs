@@ -40,6 +40,9 @@ pub(super) enum CliError {
     /// `--params` is not a JSON object.
     #[error("--params is not a JSON object")]
     ParamsJson(#[source] serde_json::Error),
+    /// A typed verb's flags and `--params` could not be merged.
+    #[error(transparent)]
+    Command(crate::commands::CommandError),
     /// The method is not in the published catalog, or is `hello`.
     #[error("{method} is not a published method this command can send")]
     UnknownMethod {
@@ -135,6 +138,7 @@ impl CliError {
             Self::Usage { .. } | Self::MissingCommand | Self::SkillWithCommand => "usage",
             Self::JsonSwitch { .. } => "invalid_json_switch",
             Self::Params(_) | Self::ParamsJson(_) => "invalid_params",
+            Self::Command(error) => error.kind(),
             Self::UnknownMethod { .. } => "unknown_method",
             Self::NeedsTarget { .. } => "needs_target",
             Self::Endpoint(error) => error.kind(),
@@ -168,6 +172,7 @@ impl CliError {
             Self::Params(_) | Self::ParamsJson(_) => {
                 "correct the field at field_path; unknown fields are never ignored"
             }
+            Self::Command(error) => error.hint(),
             Self::UnknownMethod { .. } => "run `ovis-terminal schema` for the method catalog",
             Self::NeedsTarget { .. } => {
                 "repeat with --terminal-id, --address or --name naming one candidate"

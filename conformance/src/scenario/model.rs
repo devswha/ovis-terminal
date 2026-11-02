@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use serde::Deserialize;
 use serde_json::Value;
 
+pub(crate) use super::commands::Commands;
 use super::matcher::Expect;
 pub(crate) use super::serve::{Announced, FixtureKind, Serve, Stop};
 use crate::ids::{CaseName, ConnName, ScenarioId};
@@ -101,6 +102,8 @@ pub(crate) enum Step {
     Rejections(Rejections),
     /// Run the binary once in the isolated root.
     Run(Run),
+    /// Run planned command lines: all of them, or only the one `--inject` names.
+    Commands(Commands),
     /// Compare the fixture's effect directory with the expected files.
     Effects(Effects),
     /// Read a logical result page by page and check every byte.

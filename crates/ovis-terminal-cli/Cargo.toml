@@ -24,6 +24,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
+uuid = { workspace = true }
+ovis-terminal-authz = { workspace = true }
 ovis-terminal-holder = { workspace = true }
 ovis-terminal-protocol = { workspace = true }
 ovis-terminal-remote = { workspace = true }
@@ -33,14 +35,12 @@ ovis-terminal-server = { workspace = true }
 [target.'cfg(unix)'.dependencies]
 base64 = { workspace = true }
 ovis-terminal-agent = { workspace = true }
-ovis-terminal-authz = { workspace = true }
 ovis-terminal-core = { workspace = true }
 ovis-terminal-services = { workspace = true }
 ovis-terminal-store = { workspace = true }
 ovis-terminal-vt = { workspace = true }
 # Raw mode, window size and TTY checks of the outer terminal; the version the holder resolves.
 rustix = { version = "1.1.6", features = ["process", "stdio", "termios"] }
-uuid = { workspace = true }
 
 # The named-pipe client waits out a busy instance with WaitNamedPipeW, as the Windows
 # pipe contract requires; the version Cargo.lock already resolves.
@@ -58,7 +58,6 @@ rustix = { version = "1.1.6", features = ["event", "fs", "process", "pty", "stdi
 
 [dev-dependencies]
 proptest = { workspace = true }
-ovis-terminal-authz = { workspace = true }
 ovis-terminal-core = { workspace = true }
 
 [lints]

@@ -21,6 +21,7 @@ pub(super) const REQUEST_ID: &str = "cli";
 #[derive(Debug)]
 pub(super) enum Plan {
     Skill,
+    NewOp,
     Schema(SchemaPart),
     Endpoint,
     Bridge,
@@ -76,8 +77,38 @@ fn call(args: CallArgs) -> Result<RpcRequest, CliError> {
     envelope(&args.method, &Value::Object(params))
 }
 
-/// Plans `cli`, or refuses it with nothing sent.
-pub(super) fn plan(cli: Cli) -> Result<Plan, CliError> {
+/// Plans one typed verb: its flags merged into params that decode as its closed type.
+fn verb(
+    method: &'static str,
+    supplied: crate::commands::Supplied,
+    token: Option<&str>,
+) -> Result<Plan, CliError> {
+    let spec = crate::agent::VERBS
+        .into_iter()
+        .chain(crate::commands::SERVER)
+        .find(|spec| spec.method == method)
+        .ok_or_else(|| CliError::UnknownMethod {
+            method: method.to_owned(),
+        })?;
+    match crate::commands::plan(spec, supplied, token).map_err(CliError::Command)? {
+        crate::commands::Planned::NeedsTarget { spec, probe } => {
+            checked(spec, &probe)?;
+            Ok(Plan::NeedsTarget)
+        }
+        crate::commands::Planned::Send { spec, params } => Ok(Plan::Call(checked(spec, &params)?)),
+    }
+}
+
+/// The verb's request for `params`, proven to decode as its closed params type.
+fn checked(spec: crate::commands::VerbSpec, params: &Value) -> Result<RpcRequest, CliError> {
+    let request = envelope(spec.method, params)?;
+    (spec.check)(&request).map_err(CliError::Params)?;
+    Ok(request)
+}
+
+/// Plans `cli`, or refuses it with nothing sent; `token` is the process token this
+/// invocation inherited, which only a reporting verb sends.
+pub(super) fn plan(cli: Cli, token: Option<&str>) -> Result<Plan, CliError> {
     let command = match (cli.skill, cli.command) {
         (true, None) => return Ok(Plan::Skill),
         (true, Some(_)) => return Err(CliError::SkillWithCommand),
@@ -89,6 +120,17 @@ pub(super) fn plan(cli: Cli) -> Result<Plan, CliError> {
         Command::Schema { part } => Plan::Schema(part),
         Command::Endpoint => Plan::Endpoint,
         Command::Server(ServerCommand::Status) => Plan::Status,
+        Command::Server(ServerCommand::Metrics(args)) => {
+            verb("server.metrics", args.into(), token)?
+        }
+        Command::Server(ServerCommand::Stop(args)) => verb("server.stop", args.into(), token)?,
+        Command::Server(ServerCommand::Restart(args)) => {
+            verb("server.restart", args.into(), token)?
+        }
+        Command::Domain(command) => {
+            let (method, supplied) = command.resolve();
+            verb(method, supplied, token)?
+        }
         Command::Terminal(TerminalCommand::List) => {
             Plan::Call(typed::<TerminalListParams>("terminal.list", &json!({}))?)
         }
@@ -96,6 +138,7 @@ pub(super) fn plan(cli: Cli) -> Result<Plan, CliError> {
             Some(params) => Plan::Call(typed::<TerminalGetParams>("terminal.get", &params)?),
             None => Plan::NeedsTarget,
         },
+        Command::Op(OpCommand::New) => Plan::NewOp,
         Command::Op(OpCommand::Get(args)) => Plan::Call(typed::<OpRefParams>(
             "op.get",
             &json!({ "op_id": args.op_id }),
@@ -184,7 +227,7 @@ mod tests {
                 detail: String::new(),
                 source,
             })?;
-        plan(cli)
+        plan(cli, Some("inherited-token"))
     }
 
     #[test]

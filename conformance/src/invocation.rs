@@ -50,12 +50,9 @@ impl Invocation {
         }
         let inject = match cli.inject {
             None => None,
-            Some(text) => Some(
-                serde_json::from_str::<serde_json::Value>(&text)
-                    .ok()
-                    .filter(serde_json::Value::is_object)
-                    .ok_or_else(|| missing("--inject takes one JSON object"))?,
-            ),
+            Some(text) => Some(injected(text).ok_or_else(|| {
+                missing("--inject takes one JSON object or one ovis-terminal command line")
+            })?),
         };
         Ok(Self {
             binary,
@@ -73,6 +70,16 @@ impl Invocation {
             inject,
             append: cli.output.append,
         })
+    }
+}
+
+/// A JSON object injects a request; text that is not JSON and does not start like JSON
+/// injects the planned command line it equals. Malformed JSON stays a usage error.
+fn injected(text: String) -> Option<serde_json::Value> {
+    match serde_json::from_str::<serde_json::Value>(&text) {
+        Ok(value) => value.is_object().then_some(value),
+        Err(_) if text.trim_start().starts_with(['{', '[']) => None,
+        Err(_) => Some(serde_json::Value::String(text)),
     }
 }
 

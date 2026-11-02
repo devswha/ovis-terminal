@@ -12,8 +12,12 @@ mod lanes;
 mod layout;
 #[path = "assembly/leases.rs"]
 mod leases;
+#[path = "assembly/manual_examples.rs"]
+mod manual_examples;
 #[path = "assembly/pending.rs"]
 pub mod pending;
+#[path = "assembly/producer.rs"]
+mod producer;
 #[path = "assembly/prompts.rs"]
 pub mod prompts;
 #[path = "assembly/records.rs"]
