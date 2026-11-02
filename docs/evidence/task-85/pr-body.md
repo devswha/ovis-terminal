@@ -61,7 +61,7 @@ Mutants were each applied alone, run, then restored; the logs are committed. All
 
 Adversarial classes and the test guarding each are listed in `adversarial.log` (executor-run).
 
-macOS stress: lane `graphics-read` (`probes/platform-qa/stress/graphics-read.{json,sh}`). It runs 25 iterations of the placeholder tests plus `graphics/read --case all`. Run on `37c854f` (pre-merge code head): https://github.com/devswha/ovis-terminal/actions/runs/41374308872. The merge touched `crates/` (T66 CLI), so it was dispatched once more on the final head: STRESS2_URL
+macOS stress: lane `graphics-read` (`probes/platform-qa/stress/graphics-read.{json,sh}`). It runs 25 iterations of the placeholder tests plus `graphics/read --case all`. Run on `37c854f` (pre-merge code head): https://github.com/devswha/ovis-terminal/actions/runs/41374308872 (conclusion: success). The merge touched `crates/` (T66 CLI), so it was dispatched once more on the final head: https://github.com/devswha/ovis-terminal/actions/runs/41375557488 (dispatched on `225cebc`, a docs-only commit below the final head; the code tree is identical)
 
 ### GAP-152 (cursor model): recorded as still open
 
@@ -120,4 +120,4 @@ DEFERRED VERIFICATION: none. The runner executes `graphics/read` today (happy, f
 
 ## DoneClaim
 
-DONECLAIM
+The DoneClaim JSON is appended to the PR description once CI completes. It is bound to the final head and is never committed under docs/evidence.
