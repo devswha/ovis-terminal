@@ -19,8 +19,8 @@ Todo 84. Closes GAP-152 (reattach loses images), delivers IDEAL-119. OS/arch: Li
 How it works:
 - **VT** (`crates/ovis-terminal-vt/src/engine/images/`):
   - The tracker reads each raw byte with the attach filter's boundary rules (`images/scan.rs`). It reads headers only: Kitty keys `a d i I r c m` up to the gate's 256-byte limit, iTerm2 `inline/width/height`, and sixel when `q` follows fewer than 64 parameter bytes. A graphics sequence is keyed by the raw offset of its ESC. For a Kitty series this is the offset of its first chunk, even when other output interrupts the series. That is the same key the gate uses for the unit it releases.
-  - When the sequence completes, the engine places it on the cursor cell at receipt. It marks that cell with flag bit 15 and follows the row by the address of its cell buffer, which moves with the row through scrolling and region swaps. The row and column covered come from the header (Kitty `r=`/`c=`, iTerm2 `width/height` in cells); without them the image covers one placeholder cell.
-  - A placement is released `scrolled_out` when its row leaves the visible screen, and `erased` when its anchor cell is printed over, erased or recycled (alacritty resets the cell and its mark), or when its alternate screen is left.
+  - When the sequence completes, the engine places it at the cursor cell at receipt, covering the rows and columns its header declares (Kitty `r=`/`c=`, iTerm2 `width/height` in cells; one placeholder cell otherwise), clipped to the grid. Every covered cell is marked with flag bit 15. Every covered row is followed by the address of its cell buffer, which moves with the row through scrolling and region swaps.
+  - A placement is released `scrolled_out` when every covered row has left the visible screen. While any covered row is visible it is kept and re-sent at its first visible covered row. It is released `erased` when any covered cell is printed over, erased or recycled (alacritty resets the cell and its mark), or when an insert-line or region scroll-down opens a row inside it so its visible rows are no longer adjacent (rounds 3 and 4). It is also released `erased` when its alternate screen is left.
   - A placement is also released `deleted` by Kitty `a=d` (id, number, or all; lower case keeps `a=t` data, upper case removes it), `replaced` when a transmission reuses its id, `reset` on RIS, and `limit` past 1024 images.
   - `FirstPaint.images` names where each image still shown is re-sent: after its screen's rows and before the cursor and modes are restored, with a CUP to its anchor. Primary images under an active alternate screen are re-sent inside the primary part of the paint. Payloads are never read.
 - **Core** (`crates/ovis-terminal-core/src/terminals/images/`):
@@ -138,6 +138,35 @@ Mutants (each applied alone and restored; logs committed). All three fail shippe
 | `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` | 0 | 1533 run, 1533 passed, 2 skipped; hygiene 0 violations in 1528 files (`r3-check.log`) |
 | `RUSTFLAGS=-Dwarnings cargo check ... x86_64-pc-windows-gnu` / `cargo clippy ... -- -D warnings` | 0 / 0 | `r3-windows-check.log` |
 
+## Round 4: a split image expires, the replay column is tested, and the cursor gap is named
+
+Gate round 3 (`.omo/evidence/ovis-terminal-v1-task-84-gate-review.md`) raised one blocker (B1), one note (N1) and one ruling (R1).
+
+**B1.** An insert-line (IL) or a region scroll-down (SD) inside a multi-row image opened a blank row between its covered rows. Each row kept its marks, so the image stayed live, and a reattach painted it over the text later written into the opened row (gate P9/P10). **Fix** (`crates/ovis-terminal-vt/src/engine/images/anchor.rs`): a placement whose visible covered rows are no longer on consecutive screen rows counts as `erased` (`Anchor::whole`, used by `follow` and `still`). DL already expired it (gate P8). **Tests** in `images/tests/footprint.rs`:
+- `an_inserted_line_inside_the_image_splits_and_expires_it`: gate P9, `CSI 2;1H CSI L hello`.
+- `a_region_scroll_down_inside_the_image_splits_and_expires_it`: gate P10, `CSI 2;4r CSI 1T` then `hello`.
+- `a_whole_image_moved_by_a_region_scroll_stays`: an IL above the image moves both rows together and keeps it.
+
+**N1.** New test `images/tests/paint.rs::an_image_off_the_first_column_is_replayed_at_its_column`: an image at row 2, column 5 is spliced with `ESC[2;5H`, and a fresh engine fed the replay rebuilds the same placement.
+
+**R1 (named gap).** `docs/design/traceability.json` GAP-152 now carries a `note`, following the GAP-050 precedent. It records that the VT cursor does not advance past an image while clients' cursors do, so text printed after a multi-row image expires it in the VT. Owner: todo 85. GAP-152 is only partly closed for multi-row images until then.
+
+The After bullets on placement and release now describe the footprint, adjacency and any-row-visible rules instead of the anchor cell.
+
+Mutants (each applied alone and restored; logs committed):
+- `mutant-r4-adjacency-not-checked.log`: 2 fail (the IL and SD tests).
+- `mutant-r4-replay-ignores-column.log`: 1 fails (the column test).
+
+| Command | Exit | Result |
+|---|---|---|
+| `cargo nextest run -p ovis-terminal-vt -p ovis-terminal-core -p ovis-terminal-server -p ovis-terminal-conformance --locked --no-fail-fast images replay traceability` | 0 | 62 run, 62 passed (`r4-tests.log`) |
+| `conformance ... --scenario graphics/replay --isolated --case happy` / `failure --inject '{"graphics":{"scroll_rows":"200"}}'` / `all` | 0 / 0 / 0 | regenerated `qa-*.json`, `conformance.json`: 2 cases, 80 assertions, failed 0 |
+| `openrpc check schema/ovis-terminal.openrpc.json`; `quality-matrix --mode verify` | 0 | fresh (no schema change this round); `"verdict": "pass"` |
+| `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` | 0 | 1537 run, 1537 passed, 2 skipped; hygiene 0 violations in 1528 files (`r4-check.log`) |
+| `RUSTFLAGS=-Dwarnings cargo check ... x86_64-pc-windows-gnu` / `cargo clippy ... -- -D warnings` | 0 / 0 | `r4-windows-check.log` |
+
+Integration `60076f7` was already merged (`ba5e396`), and integration has not moved since, so there is no merge this round.
+
 ## Seams
 
 Files outside the write scope, and why:
@@ -150,6 +179,7 @@ Files outside the write scope, and why:
   - Viewer paints go out as pieces, with `replay_pending`/`charged_backlog`.
   - The replay record is queued after the paint on attach and resync.
   - The `trim` call site in `ops.rs` changed.
+- `docs/design/traceability.json`: a GAP-152 `note` naming the cursor-model gap with owner todo 85 (gate R1). The owners and scenarios are unchanged.
 - `crates/ovis-terminal-server/tests/streams.rs`: registers the 5 socket replay tests in `graphics/replay/qa.rs`.
 - `conformance/src/fixture/graphics.rs`: the `graphics_transcript` step gains `in_order` and `replayed`. `conformance/src/runner_tests/suite.rs`: `ASSEMBLED += graphics/replay.json` (sorted; it was never in `declared.json`). `docs/design/traceability.json` already mapped GAP-152 and IDEAL-119 to `graphics/replay` and todo 84, so it is unchanged.
 - `probes/platform-qa/stress/graphics-replay.{json,sh}`: the macOS stress lane. The workflow resolves lanes by file, so it is not edited.

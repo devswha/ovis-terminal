@@ -94,6 +94,21 @@ fn primary_images_are_spliced_into_the_primary_paint_while_the_alternate_is_acti
 }
 
 #[test]
+fn an_image_off_the_first_column_is_replayed_at_its_column() {
+    let image = kitty("a=T,i=1");
+    let live = fed(&[b"ab\r\ncdef", &image]);
+    let paint = live.first_paint();
+    let cursors: Vec<&[u8]> = paint
+        .images
+        .iter()
+        .map(|splice| splice.cursor.as_slice())
+        .collect();
+    assert_eq!(cursors, [b"\x1b[2;5H".as_slice()]);
+    let fresh = fed(&[&replayed(&live, |_| image.clone())]);
+    assert_eq!(places(&fresh), places(&live));
+}
+
+#[test]
 fn an_erased_image_is_not_spliced() {
     let live = fed(&[&kitty("a=T,i=1"), b"x"]);
     assert_eq!(live.first_paint().images, Vec::new());

@@ -7,8 +7,9 @@
 //! so a mark disappears exactly when its cell's content is replaced. Paint and reads mask
 //! style flags, so the mark is never visible. Each covered row is followed by the address
 //! of its cell buffer, which moves with the row through scrolling and region swaps; the
-//! placement stays shown while any covered row is visible and no covered cell lost its
-//! mark.
+//! placement stays shown while any covered row is visible, no covered cell lost its mark
+//! and the visible covered rows are still adjacent (an insert-line or a region
+//! scroll-down that opens a row inside it splits it, which counts as erased).
 
 use alacritty_terminal::grid::{Dimensions, Grid};
 use alacritty_terminal::index::{Column, Line};
@@ -116,16 +117,24 @@ impl Anchor {
         self.rows = found;
         if self.rows.is_empty() {
             Presence::ScrolledOut
-        } else if self.rows.iter().all(|row| self.intact(grid, row.line)) {
+        } else if self.whole(grid) {
             Presence::Shown
         } else {
             Presence::Erased
         }
     }
 
+    /// Every visible covered row is intact and they sit on consecutive screen rows.
+    fn whole(&self, grid: &Grid<Cell>) -> bool {
+        let adjacent = self.rows.windows(2).all(
+            |pair| matches!(pair, [above, below] if below.line == above.line.saturating_add(1)),
+        );
+        adjacent && self.rows.iter().all(|row| self.intact(grid, row.line))
+    }
+
     /// Whether every covered row is still intact where it was last found; for a screen
     /// that is not active, whose rows output cannot move.
     pub(super) fn still(&self, grid: &Grid<Cell>) -> bool {
-        !self.rows.is_empty() && self.rows.iter().all(|row| self.intact(grid, row.line))
+        !self.rows.is_empty() && self.whole(grid)
     }
 }

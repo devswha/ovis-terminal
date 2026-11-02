@@ -48,6 +48,41 @@ fn an_image_survives_while_any_of_its_rows_is_on_screen_and_replays_there() {
 }
 
 #[test]
+fn an_inserted_line_inside_the_image_splits_and_expires_it() {
+    let vt = fed(&[&kitty("a=T,i=1,r=2,c=5"), b"\x1b[2;1H\x1b[Lhello"]);
+    assert_eq!(keys(&vt), Vec::<u64>::new());
+    assert_eq!(released(&vt, 0), Some(ImageRelease::Erased));
+    assert_eq!(
+        vt.first_paint().images,
+        Vec::new(),
+        "never painted over hello"
+    );
+}
+
+#[test]
+fn a_region_scroll_down_inside_the_image_splits_and_expires_it() {
+    let vt = fed(&[&kitty("a=T,i=1,r=2,c=5"), b"\x1b[2;4r\x1b[1T\x1b[2;1Hhello"]);
+    assert_eq!(keys(&vt), Vec::<u64>::new());
+    assert_eq!(released(&vt, 0), Some(ImageRelease::Erased));
+    assert_eq!(vt.first_paint().images, Vec::new());
+}
+
+#[test]
+fn a_whole_image_moved_by_a_region_scroll_stays() {
+    let vt = fed(&[
+        b"\x1b[2;1H",
+        &kitty("a=T,i=1,r=2,c=5"),
+        b"\x1b[1;4r\x1b[1;1H\x1b[L",
+    ]);
+    let place = vt.images().retained.first().and_then(|image| image.place);
+    assert_eq!(
+        place.map(|place| place.row),
+        Some(2),
+        "both rows moved down together"
+    );
+}
+
+#[test]
 fn a_footprint_is_clipped_to_the_grid() {
     let image = kitty("a=T,i=1,r=9,c=9");
     let vt = fed(&[b"\x1b[4;18H", &image]);
