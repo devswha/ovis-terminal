@@ -18,7 +18,7 @@ use clap::error::ErrorKind;
 
 use self::args::{Cli, SchemaPart};
 use self::context::OutputMode;
-pub use self::context::{CREDENTIAL_ENV, Context, Credential, JSON_ENV};
+pub use self::context::{CREDENTIAL_ENV, Context, Credential, JSON_ENV, PROCESS_TOKEN_ENV};
 use self::error::CliError;
 pub use self::exit::ExitStatus;
 use self::plan::Plan;
@@ -52,8 +52,10 @@ fn parse(args: Vec<OsString>, mode: OutputMode) -> Result<Cli, Report> {
 async fn execute(plan: Plan, mode: OutputMode, context: &Context) -> Result<Report, Failure> {
     let value = match plan {
         Plan::Skill => return Ok(discovery::skill(mode)),
+        Plan::NewOp => return Ok(discovery::new_op(mode)),
         Plan::Schema(SchemaPart::Openrpc) => return Ok(discovery::openrpc()?),
         Plan::Schema(SchemaPart::Cli) => discovery::cli_contract(),
+        Plan::Schema(SchemaPart::Contract) => return Ok(discovery::contract(mode)?),
         Plan::Endpoint => discovery::endpoint(context)?,
         Plan::Status => execute::status(context).await?,
         Plan::Call(request) => execute::call(context, &request).await?,
@@ -95,7 +97,7 @@ pub async fn run(args: Vec<OsString>, context: &Context) -> Report {
         }
     };
     let planned = match parse(args, mode) {
-        Ok(cli) => plan::plan(cli),
+        Ok(cli) => plan::plan(cli, context.process_token()),
         Err(report) => return report,
     };
     let outcome = match planned {
@@ -104,3 +106,6 @@ pub async fn run(args: Vec<OsString>, context: &Context) -> Report {
     };
     outcome.unwrap_or_else(|failure| Report::failure(mode, &failure))
 }
+
+#[cfg(test)]
+mod manual_tests;

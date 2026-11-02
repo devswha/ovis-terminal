@@ -1,0 +1,155 @@
+## M1 targetless verb sends instead of needs_target
+$ (mutated crates/ovis-terminal-cli/src/commands.rs) cargo test --locked -p ovis-terminal-cli --lib commands::
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test commands::tests::a_field_named_twice_or_non_object_params_are_refused ... ok
+test commands::tests::a_missing_required_target_plans_needs_target_and_never_a_guess ... FAILED
+test commands::tests::an_explicit_token_in_params_wins_over_the_inherited_one ... ok
+test commands::tests::flags_and_the_process_token_fill_the_params_object ... ok
+thread 'commands::tests::a_missing_required_target_plans_needs_target_and_never_a_guess' (4063007) panicked at crates/ovis-terminal-cli/src/commands/tests.rs:56:5:
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.00s
+error: test failed, to rerun pass `-p ovis-terminal-cli --lib`
+EXIT=101
+
+
+
+## M2 text mode prints control characters raw
+$ (mutated crates/ovis-terminal-cli/src/invocation/text.rs) cargo test --locked -p ovis-terminal-cli --lib text::
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test invocation::context::tests::a_credential_never_prints_its_bearer_text ... ok
+test invocation::context::tests::an_unrecognized_switch_value_is_refused_in_the_requested_form ... ok
+test invocation::context::tests::json_comes_from_the_flag_or_the_switch_and_never_from_the_terminal ... ok
+test invocation::text::tests::a_string_cannot_start_a_line_or_reach_the_terminal ... FAILED
+test invocation::text::tests::nested_records_become_indented_lines ... ok
+thread 'invocation::text::tests::a_string_cannot_start_a_line_or_reach_the_terminal' (4069906) panicked at crates/ovis-terminal-cli/src/invocation/text.rs:86:9:
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 42 filtered out; finished in 0.00s
+error: test failed, to rerun pass `-p ovis-terminal-cli --lib`
+EXIT=101
+
+
+
+## M3 not_owner no longer maps to exit 12
+$ (mutated crates/ovis-terminal-cli/src/invocation/exit.rs) cargo test --locked -p ovis-terminal-cli --test assembly producer
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test producer::a_producer_reports_with_its_inherited_token_and_a_foreign_token_is_refused ... FAILED
+thread 'producer::a_producer_reports_with_its_inherited_token_and_a_foreign_token_is_refused' (4076094) panicked at crates/ovis-terminal-cli/tests/assembly/producer.rs:121:5:
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 42 filtered out; finished in 0.38s
+error: test failed, to rerun pass `-p ovis-terminal-cli --test assembly`
+EXIT=101
+
+
+
+## M4 inherited token overrides an explicit params token
+$ (mutated crates/ovis-terminal-cli/src/commands.rs) cargo test --locked -p ovis-terminal-cli --lib commands::
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test commands::tests::a_field_named_twice_or_non_object_params_are_refused ... ok
+test commands::tests::a_missing_required_target_plans_needs_target_and_never_a_guess ... ok
+test commands::tests::an_explicit_token_in_params_wins_over_the_inherited_one ... FAILED
+test commands::tests::flags_and_the_process_token_fill_the_params_object ... ok
+thread 'commands::tests::an_explicit_token_in_params_wins_over_the_inherited_one' (4089333) panicked at crates/ovis-terminal-cli/src/commands/tests.rs:50:5:
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.00s
+error: test failed, to rerun pass `-p ovis-terminal-cli --lib`
+EXIT=101
+
+
+
+## M5 targetless verb skips the supplied-field check (Planned::NeedsTarget answered without checked(probe)) [round 3, review finding]
+$ (mutated crates/ovis-terminal-cli/src/invocation/plan.rs) cargo test --locked -p ovis-terminal-cli --lib a_targetless_verb; cargo test --locked -p ovis-terminal-cli --test cli failure; conformance --scenario cli/manual --isolated --case failure
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test invocation::manual_tests::a_targetless_verb_needs_a_target_only_when_every_supplied_field_is_valid ... FAILED
+thread 'invocation::manual_tests::a_targetless_verb_needs_a_target_only_when_every_supplied_field_is_valid' (3111746) panicked at crates/ovis-terminal-cli/src/invocation/manual_tests.rs:99:5:
+assertion `left == right` failed
+  left: Ok(true)
+ right: Err("invalid_params")
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 48 filtered out; finished in 0.01s
+UNIT_EXIT=101
+test failure ... FAILED
+Error: "ovis-terminal [\"--json\", \"agent\", \"get\", \"--params\", \"{\\\"bogus\\\":1}\"] exited Some(13), expected 2\nstdout: \nstderr: {\"error\":{\"exit_code\":13,\"hint\":\"inspect the operation; it may still be running\",\"kind\":\"deadline_exceeded\",\"message\":\"the server did not answer within 15000 ms\",\"origin\":\"cli\"}}\n"
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 15.11s
+PROCESS_EXIT=101
+{"case":"failure","error":null,"evidence":"/home/devswha/.ovis-run/scratch/lane-t66/m5-failure.json","evidence_error":null,"evidence_written":true,"result":"failed","scenario":"cli/manual","totals":{"assertions":"11","cases":"1","declared_only":"0","failed":"1","passed":"0","skipped":"0"}}
+CONFORMANCE_EXIT=1
+
+warning: fields `spec` and `probe` are never read
+   --> crates/ovis-terminal-cli/src/commands.rs:204:9
+    |
+202 |     NeedsTarget {
+    |     ----------- fields in this variant
+203 |         /// The verb's method and params type.
+204 |         spec: VerbSpec,
+    |         ^^^^
+205 |         /// The merged params with the stand-in address as the target.
+206 |         probe: Value,
+    |         ^^^^^
+    |
+    = note: `Planned` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+
+first failed conformance assertions: [{"actual": 7, "check": "binary/exit", "expected": 2, "passed": false}, {"actual": 7, "check": "binary/stderr/error/exit_code", "expected": 2, "passed": false}]
+
+## M6 re-add an unserved `agent list` verb [round 2 of the gate review]
+$ (mutated) cargo test --locked -p ovis-terminal-cli --lib every_typed_verb; cargo test --locked -p ovis-terminal-cli --test assembly manual_examples
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test invocation::manual_tests::every_typed_verb_command_names_the_method_it_sends ... ok
+test invocation::manual_tests::every_typed_verb_the_docs_name_is_a_command_of_this_build ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 46 filtered out; finished in 0.00s
+LIB_EXIT=0
+test manual_examples::hello_advertises_the_method_of_every_typed_verb ... FAILED
+test manual_examples::every_documented_command_and_params_example_is_served_by_this_build ... ok
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 43 filtered out; finished in 1.70s
+PROCESS_EXIT=101
+
+
+
+## M7 document `agent list` again in the onboarding guide [round 2 of the gate review]
+$ (mutated) cargo test --locked -p ovis-terminal-cli --lib every_typed_verb; cargo test --locked -p ovis-terminal-cli --test assembly manual_examples
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test invocation::manual_tests::every_typed_verb_command_names_the_method_it_sends ... ok
+test invocation::manual_tests::every_typed_verb_the_docs_name_is_a_command_of_this_build ... FAILED
+thread 'invocation::manual_tests::every_typed_verb_the_docs_name_is_a_command_of_this_build' (569291) panicked at crates/ovis-terminal-cli/src/invocation/manual_tests.rs:86:9:
+the docs name `agent list`, which this build has no command for
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 46 filtered out; finished in 0.00s
+LIB_EXIT=101
+test manual_examples::hello_advertises_the_method_of_every_typed_verb ... ok
+test manual_examples::every_documented_command_and_params_example_is_served_by_this_build ... FAILED
+ovis-terminal --json agent list: Some("usage")
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 43 filtered out; finished in 1.51s
+PROCESS_EXIT=101
+
+
+
+## M8 `schema cli` names no method, so the hello check would pass vacuously [round 2 of the gate review]
+$ (mutated) cargo test --locked -p ovis-terminal-cli --lib every_typed_verb; cargo test --locked -p ovis-terminal-cli --test assembly manual_examples
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test invocation::manual_tests::every_typed_verb_command_names_the_method_it_sends ... FAILED
+test invocation::manual_tests::every_typed_verb_the_docs_name_is_a_command_of_this_build ... ok
+thread 'invocation::manual_tests::every_typed_verb_command_names_the_method_it_sends' (622156) panicked at crates/ovis-terminal-cli/src/invocation/manual_tests.rs:108:5:
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 46 filtered out; finished in 0.00s
+LIB_EXIT=101
+test manual_examples::hello_advertises_the_method_of_every_typed_verb ... FAILED
+test manual_examples::every_documented_command_and_params_example_is_served_by_this_build ... ok
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 43 filtered out; finished in 1.79s
+PROCESS_EXIT=101
+
+
+
+## M9 a stale 01900000 op id back in the onboarding revocation example [gate round 2]
+$ (mutated docs/producer-onboarding.md: status clear --op-id 01900000-0000-7000-8000-000000000106) cargo test --locked -p ovis-terminal-cli --test assembly manual_examples
+exit=0
+TARGET=/dev/shm/ovt-target-lane-t66
+test manual_examples::hello_advertises_the_method_of_every_typed_verb ... ok
+test manual_examples::the_onboarding_flow_registers_reports_and_clears_with_the_owning_token ... FAILED
+test manual_examples::every_manual_example_succeeds_against_serve ... ok
+ovis-terminal --json status clear --address t1 --op-id 01900000-0000-7000-8000-000000000106: expected exit 0 None, got Some(1) Some("op_expired")
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 43 filtered out; finished in 1.48s
+EXIT=101
+
+
