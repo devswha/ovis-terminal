@@ -1,0 +1,460 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "client/migration",
+  "title": "The Ovis adapter migration guide maps every architect section-6 path to served runtime methods, events, capabilities, identities and fixtures, keeps the Ovis policies, and every example it cites replays against the binary",
+  "todo": 65,
+  "closes": [
+    "GAP-004",
+    "GAP-021",
+    "GAP-039",
+    "GAP-060",
+    "GAP-080",
+    "GAP-098",
+    "GAP-106",
+    "GAP-112",
+    "GAP-139"
+  ],
+  "delivers": [
+    "IDEAL-004",
+    "IDEAL-019",
+    "IDEAL-028",
+    "IDEAL-033",
+    "IDEAL-040",
+    "IDEAL-057",
+    "IDEAL-058",
+    "IDEAL-067",
+    "IDEAL-073",
+    "IDEAL-075",
+    "IDEAL-078",
+    "IDEAL-080",
+    "IDEAL-082",
+    "IDEAL-084",
+    "IDEAL-085",
+    "IDEAL-086",
+    "IDEAL-100",
+    "IDEAL-112",
+    "IDEAL-113"
+  ],
+  "excludes": [
+    "EXCL-001",
+    "EXCL-003",
+    "EXCL-004",
+    "EXCL-008",
+    "EXCL-011",
+    "EXCL-012",
+    "EXCL-013",
+    "EXCL-016"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "The guide covers all 39 section-6 rows (missing_paths: []) with their fates, names only published schema entries that the packed client ships, lists served methods as served and unserved ones as gaps, keeps the no-guessed-keys, no-auto-resend and content-is-data policies, shows unknown delivery with op.get, and every cited example replays against a fresh server through the binary's connect bridge.",
+      "steps": [
+        {
+          "migration": {
+            "kind": "happy",
+            "paths": [
+              {
+                "path": "server/herdr/client.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/herdr/methods.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/collector.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/core/terminal-process.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/attach-output.ts",
+                "fate": "delete"
+              },
+              {
+                "path": "server/output-window.ts",
+                "fate": "delete"
+              },
+              {
+                "path": "server/core/terminals.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "server/mirror.ts",
+                "fate": "delete"
+              },
+              {
+                "path": "server/core/input.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/core/pending.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/dialogs/live.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/prompt.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/claude-input.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/omo-status.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/gjc-status.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/completion.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/outcome.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/core/status.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/agent-process.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/conversation.ts",
+                "fate": "move"
+              },
+              {
+                "path": "server/codex.ts",
+                "fate": "move"
+              },
+              {
+                "path": "server/session-history.ts",
+                "fate": "move"
+              },
+              {
+                "path": "server/pty/session.ts",
+                "fate": "delete"
+              },
+              {
+                "path": "server/pty/pty-host.mjs",
+                "fate": "delete"
+              },
+              {
+                "path": "crates/pty-sidecar/",
+                "fate": "delete"
+              },
+              {
+                "path": "server/machines.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "server/machine-api.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "server/remote-host.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "server/workspace-routes.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "server/pane-routes.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "shared/herdr-api.generated.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "scripts/generate-protocol-types.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "shared/protocol.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "shared/machines.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "shared/plugins.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "shared/pane-layout.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "shared/terminal-insert.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "shared/workspace-lifecycle.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "ovis:policies",
+                "fate": "keep"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "Each planned injection, or with --inject only the one it names, replays a guide example with one call rewritten: a stale prompt version is refused with version_conflict and the card stays open and unanswered; a stale layout revision is refused with revision_mismatch and the layout and selections are unchanged.",
+      "steps": [
+        {
+          "migration": {
+            "kind": "failure",
+            "paths": [
+              {
+                "path": "server/herdr/client.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/herdr/methods.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/collector.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/core/terminal-process.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/attach-output.ts",
+                "fate": "delete"
+              },
+              {
+                "path": "server/output-window.ts",
+                "fate": "delete"
+              },
+              {
+                "path": "server/core/terminals.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "server/mirror.ts",
+                "fate": "delete"
+              },
+              {
+                "path": "server/core/input.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/core/pending.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/dialogs/live.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/prompt.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/claude-input.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/omo-status.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/gjc-status.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/completion.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/outcome.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/core/status.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/agent-process.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "server/conversation.ts",
+                "fate": "move"
+              },
+              {
+                "path": "server/codex.ts",
+                "fate": "move"
+              },
+              {
+                "path": "server/session-history.ts",
+                "fate": "move"
+              },
+              {
+                "path": "server/pty/session.ts",
+                "fate": "delete"
+              },
+              {
+                "path": "server/pty/pty-host.mjs",
+                "fate": "delete"
+              },
+              {
+                "path": "crates/pty-sidecar/",
+                "fate": "delete"
+              },
+              {
+                "path": "server/machines.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "server/machine-api.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "server/remote-host.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "server/workspace-routes.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "server/pane-routes.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "shared/herdr-api.generated.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "scripts/generate-protocol-types.ts",
+                "fate": "replace"
+              },
+              {
+                "path": "shared/protocol.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "shared/machines.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "shared/plugins.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "shared/pane-layout.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "shared/terminal-insert.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "shared/workspace-lifecycle.ts",
+                "fate": "adapt"
+              },
+              {
+                "path": "ovis:policies",
+                "fate": "keep"
+              }
+            ],
+            "injections": [
+              {
+                "request": {
+                  "example": "prompt.answer",
+                  "version": "stale"
+                },
+                "example": "prompt.answer",
+                "step": "answer",
+                "params": {
+                  "version": "0"
+                },
+                "expect": {
+                  "/error/data/kind": "version_conflict",
+                  "/error/data/retryable": false,
+                  "/result": {
+                    "$present": false
+                  }
+                },
+                "then": [
+                  {
+                    "call": {
+                      "conn": "ovis",
+                      "id": "still-open",
+                      "method": "prompt.get",
+                      "params": {
+                        "prompt_id": "p1"
+                      },
+                      "expect": {
+                        "/result/state": "open",
+                        "/result/version": "$value:version",
+                        "/result/answer": null
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "request": {
+                  "example": "layout-receipts",
+                  "expect_revision": "stale"
+                },
+                "example": "layout-receipts",
+                "step": "split",
+                "params": {
+                  "expect_revision": "0"
+                },
+                "expect": {
+                  "/error/data/kind": "revision_mismatch",
+                  "/result": {
+                    "$present": false
+                  }
+                },
+                "then": [
+                  {
+                    "call": {
+                      "conn": "desk",
+                      "id": "unchanged",
+                      "method": "layout.get",
+                      "params": {},
+                      "expect": {
+                        "/result/revision": "$value:rev",
+                        "/result/selections": "$value:selections"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

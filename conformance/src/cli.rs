@@ -48,6 +48,9 @@ pub(crate) struct Cli {
     /// `conformance/fixtures/ovis`.
     #[arg(long)]
     pub(crate) fixtures: Option<PathBuf>,
+    /// Check this Ovis adapter migration guide instead of `docs/ovis-adapter.md`.
+    #[arg(long)]
+    pub(crate) guide: Option<PathBuf>,
 }
 
 /// The evidence file and whether this run adds to it.
