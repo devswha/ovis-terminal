@@ -1,3 +1,20 @@
+# after merging origin/integration cc1ca2c (evidence re-recorded on the merged binary)
+$ bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh
+     Summary [ 111.753s] 1557 tests run: 1557 passed (4 slow), 2 skipped
+check.sh: all steps passed
+exit=0
+
+$ RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 25.03s
+exit=0
+
+$ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 30.02s
+exit=0
+
+$ cargo run --locked --manifest-path probes/Cargo.toml --bin evidence-audit -- --tree docs/evidence --exemptions probes/quality/evidence-exemptions.json
+verdict pass, 0 findings, exit=0
+
 # gate round 2 fix (documented mutations succeed; strict executed examples)
 $ bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh
      Summary [ 116.792s] 1510 tests run: 1510 passed (3 slow), 2 skipped

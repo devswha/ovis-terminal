@@ -26,7 +26,7 @@ Piped `hc ls` prints JSON without `--json` while `run`/`read` print text: the ou
 
 ## After
 
-Linux x86_64, binary sha256 `c955ba1920cd2418c346229a9fb358fdc6f6d92e615845fdeaca59fa144c9296` (`$CARGO_TARGET_DIR/debug/ovis-terminal`; the lane target lives on RAM, never `<worktree>/target`).
+Linux x86_64, binary sha256 `0e67c343c2ec74cfdda9a01ccda1582572b245dc232b0c25c97e18c18ad145c7` (`$CARGO_TARGET_DIR/debug/ovis-terminal`; the lane target lives on RAM, never `<worktree>/target`).
 
 ```
 $ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal                      # exit 0
@@ -91,6 +91,8 @@ $ RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-
 $ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings          # exit 0
 ```
 
+**Merge of origin/integration cc1ca2c (exception granted by the orchestrator):** CI on 9182405 was red only because the quality job audits the PR merge ref. T84 regenerated field descriptions in `schema/ovis-terminal.openrpc.json`, so this lane's recorded `cli/manual` `$equals_file` steps no longer matched the merged schema. I merged cc1ca2c (no conflicts; `Cargo.lock` unchanged, `cargo metadata --locked` ok) and re-recorded all three `cli/manual` runs on the merged binary (122 / 71 / 29, exit 0). Local `evidence-audit` exits 0 with 0 findings, `docs/runtime-contract.md` is unchanged, `check.sh` exits 0 (1557 passed, 2 skipped) and the Windows check and clippy exit 0.
+
 **Round 5 (gate r2 REJECT on 83d8528):** every documented mutation example (`agent register`, `status report`, the readiness report, the revocation `status clear`, and the `// params of` blocks) exited 1 with `op_expired`. Their fixed `01900000-...` ids are 2024 UUIDv7s, below the server's retention floor (`ops/admission.rs:89-91`). The executed-examples test still passed because its deny-list omitted `op_expired`. Fix:
 - **`ovis-terminal op new`** (offline) prints a fresh `UUIDv7` (`{"op_id": ...}` with `--json`). Every documented mutation now writes `--op-id "$(ovis-terminal op new)"`, the manual explains why a hard-coded id is refused, and params blocks use the placeholders `<op id from ovis-terminal op new>` and `<OVIS_TERMINAL_PROCESS_TOKEN>`.
 - **The test is strict.** `tests/assembly/manual_examples.rs` runs each document in order against its own `serve` with the owning shell `t1`. Every example must exit 0 unless it ends with `# exits <code> <kind>`, which must then match exactly. No kind is waved through.
@@ -144,7 +146,7 @@ Seams owed by todo 66 according to landed PRs: #57 already routes `machine.add` 
 
 - **Unserved agent catalog methods (gate r1), for F4 / P5:** `agent.list`, `agent.note`, `agent.release` and `agent.wait_children` are in the OpenRPC catalog, but this build's `serve` routes none of them; they answer `method_not_found` (exit 4). No handler, lane or domain function exists in `crates/ovis-terminal-server`, `crates/ovis-terminal-agent` or `crates/ovis-terminal-cli/src/assembly`. This build ships no verb for them, and the manual names them as not served. Once they are served, add the verbs back to `src/agent/table.rs`. `hello_advertises_the_method_of_every_typed_verb` then proves they are routed.
 
-- **Event publication (from T64's DoneClaim), for F4:** the assembled daemon never publishes `lease.revoked`, `layout.changed` or `selection.changed` to event subscribers. These events are in the catalog (`## Events` of `docs/runtime-contract.md`), but the wiring lives in `crates/ovis-terminal-cli/src/assembly/` (events lane, lease table, layout service), which is outside todo 66's write scope. This PR does not change it and makes no claim that subscribers receive these three events.
+- **Event publication (from T64's DoneClaim), for F4:** the assembled daemon at this branch never publishes `lease.revoked`, `layout.changed` or `selection.changed` to event subscribers (T64, landed on integration at 1869b9e after this branch's merge base, publishes `lease.*`; `layout.changed` and `selection.changed` remain). These events are in the catalog (`## Events` of `docs/runtime-contract.md`), but the wiring lives in `crates/ovis-terminal-cli/src/assembly/` (events lane, lease table, layout service), which is outside todo 66's write scope. This PR does not change it and makes no claim that subscribers receive these three events.
 
 ## Risks
 
