@@ -5,6 +5,7 @@
 //! or one sixel `DCS q`) by its raw bytes, keeps or drops it whole, and lets viewers
 //! render. The contract and its layer budget are in `docs/design/graphics.md`.
 
+mod placeholder;
 mod replay;
 #[cfg(test)]
 mod tests;
@@ -12,6 +13,10 @@ mod tests;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+pub use self::placeholder::{
+    GraphicsBuffer, GraphicsImageId, GraphicsIndexEntry, GraphicsIndexPlacement,
+    GraphicsPlaceholder, PlaceholderCells,
+};
 pub use self::replay::{GraphicsReleaseReason, GraphicsReleased, GraphicsReplayedData};
 use crate::schema::limits::Limits;
 use crate::schema::scalar::{ByteCount, ByteOffset, Count, OpenEnum};

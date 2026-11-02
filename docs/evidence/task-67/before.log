@@ -1,0 +1,17 @@
+$ git ls-tree -r --name-only 1c1527d -- scripts/release .github/workflows/release.yml conformance/scenarios/release
+exit=0 (no output: no release staging, workflow or scenario at the base)
+
+$ git show 1c1527d:crates/ovis-terminal-cli/src/invocation/args.rs | grep -n -A8 "enum SchemaPart"
+95:pub(super) enum SchemaPart {
+96-    /// The protocol's OpenRPC document.
+97-    Openrpc,
+98-    /// Commands, flags, environment and exit codes of this binary.
+99-    Cli,
+100-    /// The runtime contract reference, generated from this build's types.
+101-    Contract,
+102-}
+103-
+
+$ git show 1c1527d:THIRD_PARTY_NOTICES.md | grep -c crate-inventory
+0
+(0: no crate license inventory)

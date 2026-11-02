@@ -14,13 +14,16 @@ mod tests;
 use std::sync::Arc;
 
 use ovis_terminal_core::terminals::images::ImageStore;
-use ovis_terminal_protocol::domain::graphics::GraphicsReplayedData;
+use ovis_terminal_protocol::domain::graphics::{
+    GraphicsIndexEntry, GraphicsPlaceholder, GraphicsReplayedData,
+};
 use ovis_terminal_protocol::schema::ids::StreamId;
 use ovis_terminal_protocol::schema::records::{AttachControl, ControlKind};
 use ovis_terminal_protocol::schema::scalar::ByteOffset;
-use ovis_terminal_vt::{FirstPaint, ImageSet, OutputOffset};
+use ovis_terminal_vt::{FirstPaint, ImageSet, OutputOffset, ScreenImage};
 
-use super::super::hub::HubState;
+use super::super::error::StreamError;
+use super::super::hub::{HubState, TerminalStreams};
 use super::super::log::{NoticeData, Shared};
 use super::super::viewer::Viewer;
 use super::Gated;
@@ -130,5 +133,29 @@ pub(in crate::streams) fn painted(paint: FirstPaint, store: &ImageStore) -> Pain
         paint,
         pieces,
         replay,
+    }
+}
+
+impl TerminalStreams {
+    /// The placeholder of every image in `shown` (a screen read's images) whose bytes this
+    /// terminal's image store holds now; an evicted image has none (plan todo 85).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StreamError::Poisoned`] when the hub lock is poisoned.
+    pub fn image_placeholders(
+        &self,
+        shown: &[ScreenImage],
+    ) -> Result<Vec<GraphicsPlaceholder>, StreamError> {
+        Ok(self.lock()?.images.placeholders(shown))
+    }
+
+    /// The placement index of every image in `retained` this terminal's image store holds.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StreamError::Poisoned`] when the hub lock is poisoned.
+    pub fn image_index(&self, retained: &ImageSet) -> Result<Vec<GraphicsIndexEntry>, StreamError> {
+        Ok(self.lock()?.images.index(retained))
     }
 }

@@ -23,6 +23,7 @@ impl Session<'_> {
                 fixture: FixtureKind::Assembled,
                 qa_graphics_sequence_max_bytes: None,
                 qa_output_ring_bytes: None,
+                qa_output_commit_gap_ms: None,
             })
             .await?;
             self.connect(&Connect {

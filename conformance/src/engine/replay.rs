@@ -167,6 +167,7 @@ impl Session<'_> {
                 fixture: kind,
                 qa_graphics_sequence_max_bytes: None,
                 qa_output_ring_bytes: None,
+                qa_output_commit_gap_ms: None,
             };
             self.serve(&serve).await?;
             let mut wire = Wire::new(self, case.id.as_str());

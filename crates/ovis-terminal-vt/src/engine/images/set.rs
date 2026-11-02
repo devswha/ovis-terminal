@@ -3,11 +3,14 @@
 
 use std::collections::BTreeMap;
 
+use alacritty_terminal::grid::Grid;
+use alacritty_terminal::term::cell::Cell;
 use ovis_terminal_protocol::domain::graphics::GraphicsProtocol;
 use serde::{Deserialize, Serialize};
 
 use super::{ImageRelease, Images};
 use crate::engine::modes::ScreenBuffer;
+use crate::engine::read::ScreenImage;
 use crate::engine::units::OutputOffset;
 
 /// Where a retained image is placed now.
@@ -61,6 +64,34 @@ impl ImageSet {
 }
 
 impl Images {
+    /// The images shown on `grid`, the active screen (`alternate` when it is the
+    /// alternate one), by the cells each still covers, top row first. Every retained
+    /// placement on the active screen is intact: each feed and resize ends in
+    /// [`Images::follow`], which releases a footprint that is no longer whole.
+    pub(in crate::engine) fn on_screen(
+        &self,
+        grid: &Grid<Cell>,
+        alternate: bool,
+    ) -> Vec<ScreenImage> {
+        let mut shown: Vec<ScreenImage> = self
+            .entries
+            .iter()
+            .filter_map(|entry| {
+                let anchor = entry.anchor.as_ref()?;
+                (anchor.alternate == alternate).then(|| ScreenImage {
+                    key: entry.key,
+                    protocol: entry.protocol,
+                    row: u16::try_from(anchor.line()).unwrap_or(u16::MAX),
+                    column: u16::try_from(anchor.column).unwrap_or(u16::MAX),
+                    rows: u16::try_from(anchor.shown_rows()).unwrap_or(u16::MAX),
+                    columns: u16::try_from(anchor.shown_columns(grid)).unwrap_or(u16::MAX),
+                })
+            })
+            .collect();
+        shown.sort_by_key(|image| (image.row, image.column, image.key));
+        shown
+    }
+
     pub(super) fn set(&self) -> ImageSet {
         let retained = self
             .entries

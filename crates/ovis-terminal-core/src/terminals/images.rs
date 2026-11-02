@@ -8,6 +8,7 @@
 //! the engine releases (scrolled out, erased, deleted) leaves the store at the next sync,
 //! and the most recent releases are remembered for the replay record.
 
+mod placeholders;
 #[cfg(test)]
 mod tests;
 

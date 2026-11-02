@@ -1,0 +1,62 @@
+# conformance --scenario all/all --isolated --case all, 5x; binaries of this branch (5a6bb61 product code); load model: cpus 0-3 pinned with 4 busy loops, conformance at nice 10 (all-loop.sh below), via with-slot.sh
+run 1 exit=1 secs=318 totals {"assertions": "8926", "cases": "98", "declared_only": "37", "failed": "1", "passed": "97", "skipped": "0"} failures [('part-a/task-30', '145', 'correlated replies did not happen within 100 ms')]
+run 2 exit=0 secs=314 totals {"assertions": "9110", "cases": "98", "declared_only": "37", "failed": "0", "passed": "98", "skipped": "0"} failures []
+run 3 exit=0 secs=317 totals {"assertions": "9110", "cases": "98", "declared_only": "37", "failed": "0", "passed": "98", "skipped": "0"} failures []
+run 4 exit=1 secs=324 totals {"assertions": "8926", "cases": "98", "declared_only": "37", "failed": "1", "passed": "97", "skipped": "0"} failures [('part-a/task-30', '145', 'correlated replies did not happen within 100 ms')]
+run 5 exit=0 secs=297 totals {"assertions": "9110", "cases": "98", "declared_only": "37", "failed": "0", "passed": "98", "skipped": "0"} failures []
+DONE
+run 1 attach-input: [["attach-input/adversarial", "passed"], ["attach-input/all", "passed"], ["attach-input/repaint-after-wait", "passed"]]
+run 2 attach-input: [["attach-input/adversarial", "passed"], ["attach-input/all", "passed"], ["attach-input/repaint-after-wait", "passed"]]
+run 3 attach-input: [["attach-input/adversarial", "passed"], ["attach-input/all", "passed"], ["attach-input/repaint-after-wait", "passed"]]
+run 4 attach-input: [["attach-input/adversarial", "passed"], ["attach-input/all", "passed"], ["attach-input/repaint-after-wait", "passed"]]
+run 5 attach-input: [["attach-input/adversarial", "passed"], ["attach-input/all", "passed"], ["attach-input/repaint-after-wait", "passed"]]
+
+# both failures: part-a/task-30 step 145 = included capacity/sixteen admit1..admit16 input.send replies with within_ms 100 (wall-clock bound), not an attach/repaint/wait step.
+# comparison, same load model, part-a/task-30 --case happy alone, 5x each:
+# 6de1d0e binaries:
+run 1 exit=0 failures []
+run 2 exit=0 failures []
+run 3 exit=0 failures []
+run 4 exit=0 failures []
+run 5 exit=0 failures []
+DONE
+# this branch:
+run 1 exit=0 failures []
+run 2 exit=0 failures []
+run 3 exit=0 failures []
+run 4 exit=0 failures []
+run 5 exit=0 failures []
+DONE
+
+--- all-loop.sh
+#!/bin/bash
+# all/all 5x on 4 pinned cores (cpus 0-3) shared with 4 busy loops, nice 10 - a 4-vCPU runner model.
+set -u
+BIN=/dev/shm/ovt-fixtures/p6-scratch/bin-after; OUT=/dev/shm/ovt-fixtures/p6-scratch/all-loaded; mkdir -p $OUT; : > $OUT/summary.log
+cd /home/devswha/workspace/ovis-terminal-wt/lane-tP6
+pids=()
+for i in 1 2 3 4; do taskset -c 0-3 bash -c 'while :; do :; done' & p=$!; [ "$p" -gt 1 ] && pids+=($p); done
+for i in 1 2 3 4 5; do
+  s=$(date +%s)
+  taskset -c 0-3 nice -n 10 $BIN/conformance --binary $BIN/ovis-terminal --scenario all/all --isolated --case all --evidence $OUT/run-$i.evidence.json > $OUT/run-$i.stdout 2>&1
+  rc=$?
+  echo "run $i exit=$rc secs=$(( $(date +%s) - s )) $(python3 -c "import json;e=json.load(open('$OUT/run-$i.evidence.json'));t=e['totals'];f=[(c['scenario'],c['failure']['step'],c['failure']['detail']) for c in e.get('cases',[]) if c.get('failure')];print('totals',json.dumps(t),'failures',f)" 2>&1)" | tee -a $OUT/summary.log
+done
+for p in "${pids[@]}"; do [ "$p" -gt 1 ] && kill $p; done
+echo DONE | tee -a $OUT/summary.log
+
+--- t30-loop.sh
+#!/bin/bash
+# part-a/task-30 5x with 6de1d0e binaries, same load model as all-loop.sh (cpus 0-3 + 4 busy loops, nice 10).
+set -u
+BIN=/dev/shm/ovt-fixtures/p6-scratch/bin-before; OUT=/dev/shm/ovt-fixtures/p6-scratch/t30-before-loaded; mkdir -p $OUT; : > $OUT/summary.log
+cd /home/devswha/workspace/ovis-terminal-wt/lane-tP6
+pids=()
+for i in 1 2 3 4; do taskset -c 0-3 bash -c 'while :; do :; done' & p=$!; [ "$p" -gt 1 ] && pids+=($p); done
+for i in 1 2 3 4 5; do
+  taskset -c 0-3 nice -n 10 $BIN/conformance --binary $BIN/ovis-terminal --scenario part-a/task-30 --isolated --case happy --evidence $OUT/run-$i.evidence.json > $OUT/run-$i.stdout 2>&1
+  rc=$?
+  echo "run $i exit=$rc $(python3 -c "import json;e=json.load(open('$OUT/run-$i.evidence.json'));f=[(c['scenario'],c['failure']['step'],c['failure']['detail']) for c in e.get('cases',[]) if c.get('failure')];print('failures',f)" 2>&1)" | tee -a $OUT/summary.log
+done
+for p in "${pids[@]}"; do [ "$p" -gt 1 ] && kill $p; done
+echo DONE | tee -a $OUT/summary.log

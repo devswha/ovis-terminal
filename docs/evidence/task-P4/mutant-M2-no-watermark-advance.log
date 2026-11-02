@@ -1,0 +1,12 @@
+# mutant M2-no-watermark-advance (re-run on the shipped test file)
+# patch: 'let mut commit = Commit::new(op, ServedEvent::Layout(first), affected).write(\n            CasWrite::new(watermark_key(), version, Some(Payload::from(mark))),\n        );' -> 'let _unused = (version, mark);\n        let mut commit = Commit::new(op, ServedEvent::Layout(first), affected);'
+$ cargo test -p ovis-terminal-cli --lib --locked -- layout::feed
+exit=0
+test assembly::layout::feed::tests::a_record_is_published_once_and_a_later_boot_forwards_what_no_boot_served ... FAILED
+test assembly::layout::feed::tests::a_layout_edit_and_a_selection_reach_a_subscriber_with_their_op_ids ... FAILED
+Error: Log(Store(DuplicateOperation { op: OpId("layout-feed:4") }))
+Error: Log(Store(DuplicateOperation { op: OpId("layout-feed:4") }))
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 51 filtered out; finished in 0.06s
+error: test failed, to rerun pass `-p ovis-terminal-cli --lib`
+
+# wall 10.7s

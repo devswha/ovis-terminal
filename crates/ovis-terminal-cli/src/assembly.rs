@@ -145,6 +145,8 @@ pub(crate) struct QaSeams {
     pub(crate) graphics_sequence_max_bytes: Option<u64>,
     /// Raw output bytes each terminal retains, instead of the 8 MiB default.
     pub(crate) output_ring_bytes: Option<u64>,
+    /// The runtime's pause between committing output to attach streams and to waits.
+    pub(crate) output_commit_gap_ms: Option<u64>,
 }
 
 /// A QA output ring this platform cannot size.

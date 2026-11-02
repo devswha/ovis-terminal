@@ -3899,6 +3899,21 @@
         "$ref": "#/components/schemas/DecimalCounter",
         "description": "Holder GrantEpoch as a canonical decimal string."
       },
+      "GraphicsBuffer": {
+        "description": "Screen a stored image is placed on.",
+        "oneOf": [
+          {
+            "const": "primary",
+            "description": "The primary screen.",
+            "type": "string"
+          },
+          {
+            "const": "alternate",
+            "description": "The alternate screen.",
+            "type": "string"
+          }
+        ]
+      },
       "GraphicsDropReason": {
         "description": "Why a whole graphics sequence was dropped.",
         "oneOf": [
@@ -3987,6 +4002,150 @@
           "evicted_bytes",
           "retained_bytes",
           "limit_bytes"
+        ],
+        "type": "object"
+      },
+      "GraphicsImageId": {
+        "$ref": "#/components/schemas/ByteOffset",
+        "description": "Identity of one stored graphics sequence.\n\nIt is the raw output offset where the sequence (or its first Kitty chunk) began: the key of the sequence's entry in the terminal's image store\nand the offset `graphics_replayed` names, so a read and a reattach agree on it."
+      },
+      "GraphicsIndexEntry": {
+        "additionalProperties": false,
+        "description": "One entry of a read's placement index: an image the store holds, wherever it is placed.",
+        "properties": {
+          "bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Raw bytes the image store holds for it."
+          },
+          "format": {
+            "$ref": "#/components/schemas/GraphicsProtocol",
+            "description": "Protocol of its sequence.",
+            "x-ovis-open-enum": true
+          },
+          "image_id": {
+            "$ref": "#/components/schemas/GraphicsImageId",
+            "description": "The image store entry."
+          },
+          "placement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphicsIndexPlacement"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where it is placed; null for a Kitty transmission that displays nothing itself."
+          }
+        },
+        "required": [
+          "image_id",
+          "format",
+          "bytes"
+        ],
+        "type": "object"
+      },
+      "GraphicsIndexPlacement": {
+        "additionalProperties": false,
+        "description": "Where an indexed image was placed, by the extent its header declares.",
+        "properties": {
+          "buffer": {
+            "$ref": "#/components/schemas/GraphicsBuffer",
+            "description": "Screen it is placed on; it is shown only while that screen is active.",
+            "x-ovis-open-enum": true
+          },
+          "col": {
+            "description": "Zero-based column of its first covered cell.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "cols": {
+            "description": "Columns its header declares; one when it declares none.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "row": {
+            "description": "Zero-based row of its first covered row still visible.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "rows": {
+            "description": "Rows its header declares; one when it declares none.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "buffer",
+          "row",
+          "col",
+          "rows",
+          "cols"
+        ],
+        "type": "object"
+      },
+      "GraphicsPlaceholder": {
+        "additionalProperties": false,
+        "description": "One stored image shown on a read screen, in place of the cells it covers.\n\nPlan todo 85. It never carries the payload: the bytes stay in the image\nstore, and `bytes` is the size of the store entry.",
+        "properties": {
+          "bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Raw bytes the image store holds for the sequence."
+          },
+          "col": {
+            "description": "Zero-based screen column of the first covered cell.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "cols": {
+            "description": "Covered columns, from `col` right, clipped to the grid.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "format": {
+            "$ref": "#/components/schemas/GraphicsProtocol",
+            "description": "Protocol of that sequence.",
+            "x-ovis-open-enum": true
+          },
+          "image_id": {
+            "$ref": "#/components/schemas/GraphicsImageId",
+            "description": "The image store entry of the sequence that displays it."
+          },
+          "row": {
+            "description": "Zero-based screen row of the first covered cell still visible.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "rows": {
+            "description": "Covered rows still visible, from `row` down.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "image_id",
+          "format",
+          "row",
+          "col",
+          "rows",
+          "cols",
+          "bytes"
         ],
         "type": "object"
       },
@@ -4898,6 +5057,64 @@
           "created",
           "removed",
           "seq"
+        ],
+        "type": "object"
+      },
+      "LayoutChangedData": {
+        "description": "Data of `layout.changed`: the layout after one operation and what that operation changed.",
+        "properties": {
+          "changed": {
+            "description": "Surviving resources whose placement or shape changed.",
+            "items": {
+              "$ref": "#/components/schemas/LayoutResource"
+            },
+            "type": "array"
+          },
+          "created": {
+            "description": "Workspaces, tabs, panes and nodes the operation created.",
+            "items": {
+              "$ref": "#/components/schemas/LayoutResource"
+            },
+            "type": "array"
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that committed the change."
+          },
+          "removed": {
+            "description": "Resources the operation removed.",
+            "items": {
+              "$ref": "#/components/schemas/LayoutResource"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/Revision",
+            "description": "Layout revision the published layout is at."
+          },
+          "selections": {
+            "description": "Per-client selections, after the change.",
+            "items": {
+              "$ref": "#/components/schemas/Selection"
+            },
+            "type": "array"
+          },
+          "workspaces": {
+            "description": "Workspaces in order, after the change.",
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceRecord"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "revision",
+          "workspaces",
+          "selections",
+          "op_id",
+          "created",
+          "removed",
+          "changed"
         ],
         "type": "object"
       },
@@ -8805,6 +9022,94 @@
         ],
         "type": "object"
       },
+      "SelectionChangeCause": {
+        "description": "Why a client's selection changed.",
+        "oneOf": [
+          {
+            "const": "requested",
+            "description": "The client asked for this selection.",
+            "type": "string"
+          },
+          {
+            "const": "target_removed",
+            "description": "A selected resource was removed; the reference was cleared, not retargeted.",
+            "type": "string"
+          }
+        ]
+      },
+      "SelectionChangedData": {
+        "description": "Data of `selection.changed`: one client's new selection and the operation behind it.",
+        "properties": {
+          "cause": {
+            "$ref": "#/components/schemas/SelectionChangeCause",
+            "description": "Why it changed.",
+            "x-ovis-open-enum": true
+          },
+          "client_id": {
+            "$ref": "#/components/schemas/ClientId",
+            "description": "Client the selection belongs to."
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that changed the selection."
+          },
+          "pane_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaneId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Selected pane."
+          },
+          "revision": {
+            "$ref": "#/components/schemas/Revision",
+            "description": "Layout revision after the change."
+          },
+          "tab_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TabId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Selected tab."
+          },
+          "terminal_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TerminalId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Terminal the selected pane shows, if any."
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkspaceId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Selected workspace."
+          }
+        },
+        "required": [
+          "client_id",
+          "op_id",
+          "revision",
+          "cause"
+        ],
+        "type": "object"
+      },
       "SelectionSetParams": {
         "additionalProperties": false,
         "description": "Parameters of `selection.set`; only the named client's selection changes.",
@@ -11320,6 +11625,11 @@
             "$ref": "#/components/schemas/TextFormat",
             "description": "Text shape."
           },
+          "include_images": {
+            "default": false,
+            "description": "Also return `image_index`, the fuller placement index: every stored image with\nits placement on either screen, never its payload. Absent means false; a present\nvalue must be a JSON boolean.",
+            "type": "boolean"
+          },
           "target": {
             "$ref": "#/components/schemas/Target",
             "description": "Terminal to read."
@@ -11337,6 +11647,26 @@
           "cursor": {
             "$ref": "#/components/schemas/ScreenCursor",
             "description": "Cursor state."
+          },
+          "image_index": {
+            "description": "Every stored image in receipt order with its placement; present only when\n`include_images` was requested.",
+            "items": {
+              "$ref": "#/components/schemas/GraphicsIndexEntry"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "images": {
+            "description": "One placeholder per stored image shown on the screen, top row first, carried by\nevery read (empty when none); the cells each covers read as blank text in `lines`.",
+            "items": {
+              "$ref": "#/components/schemas/GraphicsPlaceholder"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "lines": {
             "description": "Visible lines.",
@@ -14687,6 +15017,15 @@
           "schema": {
             "$ref": "#/components/schemas/TextFormat",
             "description": "Text shape."
+          }
+        },
+        {
+          "name": "include_images",
+          "required": false,
+          "schema": {
+            "default": false,
+            "description": "Also return `image_index`, the fuller placement index: every stored image with\nits placement on either screen, never its payload. Absent means false; a present\nvalue must be a JSON boolean.",
+            "type": "boolean"
           }
         },
         {
@@ -24323,14 +24662,14 @@
     {
       "name": "layout.changed",
       "schema": {
-        "$ref": "#/components/schemas/LayoutTree"
+        "$ref": "#/components/schemas/LayoutChangedData"
       },
       "summary": "The layout changed."
     },
     {
       "name": "selection.changed",
       "schema": {
-        "$ref": "#/components/schemas/Selection"
+        "$ref": "#/components/schemas/SelectionChangedData"
       },
       "summary": "One client's selection changed."
     },

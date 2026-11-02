@@ -1,0 +1,16 @@
+# mutant M4-no-replay-start-at-head (re-run on the shipped test file)
+# patch: 'let mut after = feed.read_view(watermark)?.1;' -> 'let mut after = feed.read_view(watermark)?.1.max(layout.read_view(|view| Ok::<_, EventError>(view.revision().get()))?);'
+$ cargo test -p ovis-terminal-cli --lib --locked -- layout::feed
+exit=0
+test assembly::layout::feed::tests::a_record_is_published_once_and_a_later_boot_forwards_what_no_boot_served ... FAILED
+test assembly::layout::feed::tests::a_layout_edit_and_a_selection_reach_a_subscriber_with_their_op_ids ... FAILED
+thread 'assembly::layout::feed::tests::a_record_is_published_once_and_a_later_boot_forwards_what_no_boot_served' (2920096) panicked at crates/ovis-terminal-cli/src/assembly/layout/feed/tests.rs:203:5:
+  left: 0
+ right: 1
+thread 'assembly::layout::feed::tests::a_layout_edit_and_a_selection_reach_a_subscriber_with_their_op_ids' (2920095) panicked at crates/ovis-terminal-cli/src/assembly/layout/feed/tests.rs:164:5:
+  left: 0
+ right: 1
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 51 filtered out; finished in 0.04s
+error: test failed, to rerun pass `-p ovis-terminal-cli --lib`
+
+# wall 10.9s

@@ -23,6 +23,7 @@ pub(super) enum Plan {
     Skill,
     NewOp,
     Schema(SchemaPart),
+    Compat(std::path::PathBuf),
     Endpoint,
     Bridge,
     Status,
@@ -117,7 +118,7 @@ pub(super) fn plan(cli: Cli, token: Option<&str>) -> Result<Plan, CliError> {
     };
     Ok(match command {
         Command::Connect => Plan::Bridge,
-        Command::Schema { part } => Plan::Schema(part),
+        Command::Schema { part, released } => super::compat::plan(part, released)?,
         Command::Endpoint => Plan::Endpoint,
         Command::Server(ServerCommand::Status) => Plan::Status,
         Command::Server(ServerCommand::Metrics(args)) => {
@@ -152,15 +153,10 @@ pub(super) fn plan(cli: Cli, token: Option<&str>) -> Result<Plan, CliError> {
         Command::Service(command) => Plan::Service(command),
         #[cfg(unix)]
         Command::Serve(args) => Plan::Serve(crate::assembly::ServePlan {
+            qa: args.qa_seams(),
             root: args.root,
             stdin_lifetime: args.stdin_lifetime,
             websocket_port: args.websocket_port,
-            qa: crate::assembly::QaSeams {
-                holder_poll_ms: args.qa_holder_poll_ms,
-                actor_hold: args.qa_actor_hold,
-                graphics_sequence_max_bytes: args.qa_graphics_sequence_max_bytes,
-                output_ring_bytes: args.qa_output_ring_bytes,
-            },
         }),
         #[cfg(unix)]
         Command::Hold(session) => Plan::Service(crate::service::ServiceCommand::Run(
@@ -215,65 +211,4 @@ fn attach(args: super::args::AttachArgs) -> Result<crate::attach::AttachPlan, Cl
 }
 
 #[cfg(test)]
-mod tests {
-    use clap::Parser as _;
-
-    use super::{Plan, plan};
-    use crate::invocation::args::Cli;
-    use crate::invocation::error::CliError;
-
-    fn planned(args: &[&str]) -> Result<Plan, CliError> {
-        let cli = Cli::try_parse_from(std::iter::once("ovis-terminal").chain(args.iter().copied()))
-            .map_err(|source| CliError::Usage {
-                detail: String::new(),
-                source,
-            })?;
-        plan(cli, Some("inherited-token"))
-    }
-
-    #[test]
-    fn an_explicit_target_becomes_the_typed_get_request() {
-        let Ok(Plan::Call(request)) = planned(&["terminal", "get", "--name", "build"]) else {
-            panic!("expected a call plan");
-        };
-        assert_eq!(request.method(), "terminal.get");
-        assert_eq!(
-            request.params(),
-            &serde_json::json!({"target": {"name": "build"}})
-        );
-    }
-
-    #[test]
-    fn a_missing_target_plans_needs_target_and_two_targets_do_not_parse() {
-        assert!(matches!(
-            planned(&["terminal", "get"]),
-            Ok(Plan::NeedsTarget)
-        ));
-        let both = planned(&["terminal", "get", "--name", "a", "--address", "t1"]);
-        assert_eq!(both.map(drop).map_err(|error| error.kind()), Err("usage"));
-    }
-
-    #[test]
-    fn call_refuses_hello_unknown_methods_and_non_object_params() {
-        let kind = |args: &[&str]| planned(args).map(drop).map_err(|error| error.kind());
-        assert_eq!(kind(&["call", "hello"]), Err("unknown_method"));
-        assert_eq!(kind(&["call", "terminal.lst"]), Err("unknown_method"));
-        assert_eq!(
-            kind(&["call", "terminal.list", "--params", "[1]"]),
-            Err("invalid_params")
-        );
-        assert!(kind(&["call", "terminal.list", "--params", "{\"page\":null}"]).is_ok());
-    }
-
-    #[test]
-    fn a_numeric_op_id_is_refused_with_its_field_path() {
-        let typed = super::typed::<ovis_terminal_protocol::schema::methods::server::OpRefParams>(
-            "op.get",
-            &serde_json::json!({"op_id": 7}),
-        );
-        let Err(CliError::Params(error)) = typed else {
-            panic!("expected a params refusal");
-        };
-        assert_eq!(error.field_path(), "params.op_id");
-    }
-}
+mod tests;

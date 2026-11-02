@@ -22,6 +22,7 @@ const EXECUTABLE: &[&str] = &[
     "client/fixtures.json",
     "client/migration.json",
     "client/package.json",
+    "events/layout-selection.json",
     "observability/health.json",
     "part-a/task-21.json",
     "part-a/task-29.json",
@@ -40,6 +41,7 @@ const EXECUTABLE: &[&str] = &[
     "protocol/strict-target.json",
     "quality/gates.json",
     "recovery/e2e.json",
+    "release/artifacts.json",
     "remote/e2e.json",
     "remote/isolation.json",
     "security/rotation.json",
@@ -48,8 +50,9 @@ const EXECUTABLE: &[&str] = &[
 ];
 
 /// Executable scenarios whose server is the assembled binary itself (plan todo 31).
-const ASSEMBLED: [&str; 8] = [
+const ASSEMBLED: [&str; 9] = [
     "graphics/passthrough.json",
+    "graphics/read.json",
     "graphics/replay.json",
     "part-a/task-22.json",
     "part-a/task-26.json",
@@ -60,9 +63,10 @@ const ASSEMBLED: [&str; 8] = [
 ];
 
 /// Plan todo 30's attach, input and capacity scenarios over the assembled binary.
-const ATTACH_INPUT: [&str; 6] = [
+const ATTACH_INPUT: [&str; 7] = [
     "attach-input/adversarial.json",
     "attach-input/all.json",
+    "attach-input/repaint-after-wait.json",
     "attach/resize.json",
     "capacity/fifty.json",
     "capacity/sixteen.json",

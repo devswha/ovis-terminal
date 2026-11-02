@@ -1,0 +1,60 @@
+# mutant-follow-keeps-erased: crates/ovis-terminal-vt/src/engine/images.rs
+# - Presence::Erased => gone.push((entry.key, ImageRelease::Erased)),
+# + Presence::Erased => {}
+# cargo nextest run --locked -p ovis-terminal-vt --no-fail-fast --test image_reads
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.18s
+────────────
+ Nextest run ID e70345cf-969f-4b81-8207-cf0839fc4011 with nextest profile: default
+    Starting 7 tests across 1 binary
+        PASS [   0.007s] (1/7) ovis-terminal-vt::image_reads sixel_iterm2_and_kitty_puts_are_reported_but_a_bare_transmission_is_not
+        PASS [   0.008s] (2/7) ovis-terminal-vt::image_reads a_kitty_image_is_reported_at_its_cells_and_the_text_stays_what_text_alone_shows
+        PASS [   0.008s] (3/7) ovis-terminal-vt::image_reads a_primary_screen_image_is_not_reported_on_the_alternate_screen_even_under_an_alternate_image
+        FAIL [   0.009s] (4/7) ovis-terminal-vt::image_reads printing_over_an_image_removes_its_placeholder
+  stdout ───
+
+    running 1 test
+    test printing_over_an_image_removes_its_placeholder ... FAILED
+
+    failures:
+
+    failures:
+        printing_over_an_image_removes_its_placeholder
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'printing_over_an_image_removes_its_placeholder' (745404) panicked at crates/ovis-terminal-vt/tests/image_reads.rs:77:5:
+    assertion `left == right` failed
+      left: [(0, Kitty, 0, 0, 1, 2)]
+     right: []
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.009s] (5/7) ovis-terminal-vt::image_reads a_footprint_is_clipped_at_the_right_edge_and_the_bottom
+        FAIL [   0.010s] (6/7) ovis-terminal-vt::image_reads an_image_whose_footprint_is_no_longer_intact_is_not_reported
+  stdout ───
+
+    running 1 test
+    test an_image_whose_footprint_is_no_longer_intact_is_not_reported ... FAILED
+
+    failures:
+
+    failures:
+        an_image_whose_footprint_is_no_longer_intact_is_not_reported
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'an_image_whose_footprint_is_no_longer_intact_is_not_reported' (745407) panicked at crates/ovis-terminal-vt/tests/image_reads.rs:149:9:
+    assertion `left == right` failed: one covered cell printed over
+      left: [(4, Kitty, 1, 2, 2, 4)]
+     right: []
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.010s] (7/7) ovis-terminal-vt::image_reads rows_scrolled_off_the_top_leave_the_rest_reported_until_none_is_visible
+────────────
+     Summary [   0.011s] 7 tests run: 5 passed, 2 failed, 0 skipped
+        FAIL [   0.009s] (4/7) ovis-terminal-vt::image_reads printing_over_an_image_removes_its_placeholder
+        FAIL [   0.010s] (6/7) ovis-terminal-vt::image_reads an_image_whose_footprint_is_no_longer_intact_is_not_reported
+error: test run failed

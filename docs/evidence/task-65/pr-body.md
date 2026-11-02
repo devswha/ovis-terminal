@@ -23,26 +23,26 @@ Gap baseline: GAP-004, GAP-021, GAP-039, GAP-060, GAP-080, GAP-098, GAP-106, GAP
 
 ## After
 
-Host: Linux x86_64 (native). Binary `/dev/shm/ovt-target-lane-t65/debug/ovis-terminal`, sha256 `bed02a402e0584b4c2e1350e5c5a3ceae468b8c1ca6d1fe3cd0320e9bcb24990` (lane CARGO_TARGET_DIR on RAM; `target/debug/ovis-terminal` in the plan's command is this path). Raw log `docs/evidence/task-65/after.log`, evidence `docs/evidence/task-65/task-65-ovis-terminal-v1.json`.
+Host: Linux x86_64 (native). Binary `/dev/shm/ovt-target-lane-t65/debug/ovis-terminal`, sha256 `fd1f80b113cf79a3a4b5c8fac206a9aa99c7facdfa78a8b369a59c5c276bba7a` (lane CARGO_TARGET_DIR on RAM; `target/debug/ovis-terminal` in the plan's command is this path). Raw log `docs/evidence/task-65/after.log`, evidence `docs/evidence/task-65/task-65-ovis-terminal-v1.json`.
 
 ```
 $ cargo build --locked -p ovis-terminal-cli --bin ovis-terminal                       exit=0
 $ cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary $B --scenario client/migration --isolated --case all --evidence "$ATTEMPT_DIR/task-65-ovis-terminal-v1.json"
-{"result":"passed","totals":{"assertions":"201","cases":"2","failed":"0","passed":"2","skipped":"0"}}   exit=0
-$ ... --case all --guide docs/ovis-adapter.md --evidence ...                             -> 201 assertions, failed 0, skipped 0, exit=0
-$ ... --case happy --evidence "$ATTEMPT_DIR/task-65-ovis-terminal-v1.json"               -> 162 assertions, failed 0, exit=0
+{"result":"passed","totals":{"assertions":"207","cases":"2","failed":"0","passed":"2","skipped":"0"}}   exit=0
+$ ... --case all --guide docs/ovis-adapter.md --evidence ...                             -> 207 assertions, failed 0, skipped 0, exit=0
+$ ... --case happy --evidence "$ATTEMPT_DIR/task-65-ovis-terminal-v1.json"               -> 167 assertions, failed 0, exit=0
 $ ... --case failure --inject '{"example":"prompt.answer","version":"stale"}' --evidence "$ATTEMPT_DIR/task-65-ovis-terminal-v1.json" --append   -> 24 assertions, failed 0, exit=0
 ```
 Happy observable (`docs/evidence/task-65/qa.log`):
 ```
-run: case=happy result=passed binary_sha256=bed02a402e0584b4c2e1350e5c5a3ceae468b8c1ca6d1fe3cd0320e9bcb24990 host={'arch': 'x86_64', 'family': 'unix', 'os': 'linux'} totals={'assertions': '162', 'cases': '1', 'declared_only': '0', 'failed': '0', 'passed': '1', 'skipped': '0'}
+run: case=happy result=passed binary_sha256=fd1f80b113cf79a3a4b5c8fac206a9aa99c7facdfa78a8b369a59c5c276bba7a host={'arch': 'x86_64', 'family': 'unix', 'os': 'linux'} totals={'assertions': '167', 'cases': '1', 'declared_only': '0', 'failed': '0', 'passed': '1', 'skipped': '0'}
   [happy] descriptor scenarios/client/migration.json#source: {"lines": "161-183", "path": ".omo/ulw-loop/01a18d5f-ed46-704a-b988-38720320ebb6/waves/plan-advice/architect.md", "section": "6. Blast radius for the Ovis client", "sha256": "449750b7a3291c752b743823772a61b50a8640d75b91a75e47a4fe7fbd14326e"}
   [happy] migration/coverage passed=True actual={"duplicate_paths": [], "extra_paths": [], "missing_paths": [], "uncited_examples": [], "undefined_examples": [], "wrong_fate": []}
   [happy] migration/coverage/paths passed=True actual="39"
   [happy] migration/policy passed=True actual={"auto_resend": [], "content_as_command": [], "guessed_keys": [], "unknown_delivery_shown": true}
   [happy] migration/packed-client/schema passed=True actual=true
   [happy] migration/contract passed=True actual={"example_unknown_methods": [], "methods_not_served": [], "unknown_capabilities": [], "unknown_events": [], "unknown_fixtures": [], "unknown_identity": [], "unserved_now_served": []}
-run: case=failure result=passed binary_sha256=bed02a402e0584b4c2e1350e5c5a3ceae468b8c1ca6d1fe3cd0320e9bcb24990 host={'arch': 'x86_64', 'family': 'unix', 'os': 'linux'} totals={'assertions': '24', 'cases': '1', 'declared_only': '0', 'failed': '0', 'passed': '1', 'skipped': '0'}
+run: case=failure result=passed binary_sha256=fd1f80b113cf79a3a4b5c8fac206a9aa99c7facdfa78a8b369a59c5c276bba7a host={'arch': 'x86_64', 'family': 'unix', 'os': 'linux'} totals={'assertions': '24', 'cases': '1', 'declared_only': '0', 'failed': '0', 'passed': '1', 'skipped': '0'}
   [failure] descriptor scenarios/client/migration.json#source: {"lines": "161-183", "path": ".omo/ulw-loop/01a18d5f-ed46-704a-b988-38720320ebb6/waves/plan-advice/architect.md", "section": "6. Blast radius for the Ovis client", "sha256": "449750b7a3291c752b743823772a61b50a8640d75b91a75e47a4fe7fbd14326e"}
   [failure] migration/coverage passed=True actual={"duplicate_paths": [], "extra_paths": [], "missing_paths": [], "uncited_examples": [], "undefined_examples": [], "wrong_fate": []}
   [failure] migration/coverage/paths passed=True actual="39"
@@ -75,11 +75,14 @@ Adversarial (each through the real runner with `--guide <mutated copy>`; exit 1 
 
 Mutants (each fails a shipped test; summary `docs/evidence/task-65/mutants.log`, logs `mutant-*.log`): M1 coverage `missing` filter inverted (2 failed), M2 resend detection requires equal op ids (1 failed), M3 content never tainted (1 failed), M4 injection keeps the original tail (1 failed), M5 served check compares against the schema instead of `hello` (1 failed), M6 one guide expectation changed, replayed through the packed client (bun test 1 fail).
 
-Gates on the round-2 commit (51eb28c; check.sh does not run bun, so the client-ts gate above was run separately):
+Gates on the round-3 merge commit ( check.sh does not run bun, so the client-ts gate above was run separately):
 - `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` (foreground gate, memory-scoped) -> `check.sh: all steps passed`, exit 0; nextest `1587 tests run: 1587 passed (3 slow), 2 skipped`; `workspace-hygiene: 0 violation(s)`; source-check and evidence-audit passed (`docs/evidence/task-65/check.log`).
 - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` -> exit 0; `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` -> exit 0 (`docs/evidence/task-65/windows.log`).
 
 ## Seams
+
+Round 3 merged origin/integration 4d0511d (P6, P4, t67, t85). Pins: integration's taken, then `ovis-replay refresh`. `suite.rs` merged clean (union). `served.rs` sets the new `Serve.qa_output_commit_gap_ms: None`. Because P4 now publishes `layout.changed`/`selection.changed`, the guide drops that gap, lists the events on the layout rows, and the layout-receipts example subscribes and awaits the split's `layout.changed` (matched by `data.op_id` and `data.revision`). No task-65 evidence pins the schema with `$equals_file`.
+
 
 Files outside the write scope (`docs/ovis-adapter.md`, `conformance/scenarios/client/migration/`, `conformance/src/scenarios/client_migration.rs`) and why:
 - `conformance/scenarios/client/migration.json`: the scenario file for id `client/migration`. The scenario id grammar is `<family>/<name>.json`, and the inventory classifies every file under the scenario root, so data files under a `client/migration/` directory would be invalid. The section-6 path list lives in this file's `migration` step and the examples live in the guide.
@@ -96,7 +99,7 @@ Files outside the write scope (`docs/ovis-adapter.md`, `conformance/scenarios/cl
 
 ## Risks
 
-- Named product gaps recorded in the guide, not fixed here: `layout.changed`/`selection.changed` not published; `agent.list`, `agent.note`, `agent.release`, `agent.wait_children`, `doc.list`, `events.ack`, `machine.rm/login/exec/file`, `server.start`, `service.install/remove` and `terminal.history` unserved; `op.get` answers `not_found` for `input.*` operations (the unknown-delivery example asserts that answer); `events.wait` replies carry no terminal id; `schema.capabilities` reports `stream_modes: []` while plain attach works; attach across a control-server restart is uncovered; image placeholders (t85) landed after this base.
+- Named product gaps recorded in the guide, not fixed here: a `layout.edit` receipt `seq` differs from its `layout.changed` envelope `seq` (correlate by `data.op_id`/`data.revision`); `agent.list`, `agent.note`, `agent.release`, `agent.wait_children`, `doc.list`, `events.ack`, `machine.rm/login/exec/file`, `server.start`, `service.install/remove` and `terminal.history` unserved; `op.get` answers `not_found` for `input.*` operations (the unknown-delivery example asserts that answer); `events.wait` replies carry no terminal id; `schema.capabilities` reports `stream_modes: []` while plain attach works; attach across a control-server restart is uncovered; image placeholders (t85) landed after this base.
 - `migration/contract` fails as soon as a listed-unserved method becomes served. That is intended, so the guide is updated with the product.
 - The section-6 path list is copied into the scenario from the advisory in `.omo/` (not in the repo); a later advisory change needs the scenario updated.
 

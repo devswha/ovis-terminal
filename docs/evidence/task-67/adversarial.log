@@ -1,0 +1,48 @@
+exit=0
+Linux x86_64
+$ sh scripts/release/build.sh --target x86_64-unknown-linux-gnu
+build.sh: x86_64-unknown-linux-gnu is not a release target; stage it with --dry-run
+exit=2
+
+$ sh scripts/release/build.sh --bogus
+build.sh: unknown argument --bogus
+exit=2
+
+$ cargo run --locked -q -p release-stage -- verify --dir /dev/shm/ovt-fixtures/t67-scratch/adv/does-not-exist
+  "kind": "io",
+  "message": "cannot list /dev/shm/ovt-fixtures/t67-scratch/adv/does-not-exist",
+  "verdict": "fail"
+exit=3
+
+$ cargo run --locked -q -p release-stage -- verify --dir /dev/shm/ovt-fixtures/t67-scratch/adv
+  "kind": "manifest_malformed",
+  "message": "/dev/shm/ovt-fixtures/t67-scratch/adv/x.entry.json is not a well-formed release entry",
+  "verdict": "fail"
+exit=1
+
+$ cargo run --locked -q -p release-stage -- stage --target aarch64-apple-darwin --binary /dev/shm/ovt-target-lane-t67/debug/ovis-terminal --sdk /dev/shm/ovt-fixtures/t67-scratch/adv/none.tgz --receipt /dev/shm/ovt-fixtures/t67-scratch/adv/receipt.json --repo . --out /dev/shm/ovt-fixtures/t67-scratch/adv/out
+  "kind": "cross_build_refused",
+  "message": "aarch64-apple-darwin was built on linux/x86_64; release builds run on their native host",
+  "verdict": "fail"
+exit=1
+
+$ cargo run --locked -q -p release-stage -- stage --target riscv64gc-unknown-linux-gnu --binary /dev/shm/ovt-target-lane-t67/debug/ovis-terminal --sdk /dev/shm/ovt-fixtures/t67-scratch/adv/none.tgz --receipt /dev/shm/ovt-fixtures/t67-scratch/adv/receipt.json --repo . --out /dev/shm/ovt-fixtures/t67-scratch/adv/out
+  "kind": "target_receipt_invalid",
+  "message": "the receipt of riscv64gc-unknown-linux-gnu has target = \"aarch64-apple-darwin\", pinned \"riscv64gc-unknown-linux-gnu\"",
+  "verdict": "fail"
+exit=1
+
+$ /dev/shm/ovt-target-lane-t67/debug/ovis-terminal --json schema compat --released /dev/shm/ovt-fixtures/t67-scratch/adv/gen2.json
+{"error":{"current_generation":"1","exit_code":1,"hint":"compare with the released baseline of this build's generation","kind":"generation_mismatch","message":"the released baseline is generation 2; this build speaks generation 1","origin":"cli","released_generation":"2"}}
+exit=1
+
+$ /dev/shm/ovt-target-lane-t67/debug/ovis-terminal --json schema compat --released /dev/shm/ovt-fixtures/t67-scratch/adv/array.json
+{"error":{"exit_code":1,"hint":"pass the released OpenRPC document (schema/released.openrpc.json), not another file","kind":"baseline_malformed","message":"the released baseline /dev/shm/ovt-fixtures/t67-scratch/adv/array.json is not a comparable OpenRPC document","origin":"cli"}}
+exit=1
+
+$ /dev/shm/ovt-target-lane-t67/debug/ovis-terminal --json schema openrpc --released schema/released.openrpc.json
+{"error":{"exit_code":2,"hint":"run `ovis-terminal schema compat --released <path>`","kind":"usage","message":"--released goes with `schema compat`, and `schema compat` needs it","origin":"cli"}}
+exit=2
+
+ls: cannot access '/dev/shm/ovt-fixtures/t67-scratch/adv/out': No such file or directory
+

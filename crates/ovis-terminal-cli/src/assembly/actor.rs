@@ -51,6 +51,9 @@ pub(super) struct Runtime {
     pub(super) poll: Duration,
     /// QA seam: a FIFO opened, holding the control, before the next `terminal.run`.
     pub(super) qa_hold: Option<std::path::PathBuf>,
+    /// QA seam: the pause between committing a holder chunk to the attach hub and to the
+    /// output waits (zero without it).
+    pub(super) commit_gap: Duration,
     /// Output retention and checkpoint bounds of every terminal's screen.
     pub(super) screen_bounds: ovis_terminal_core::screen::ScreenBounds,
     pub(super) journal: Arc<super::journal::BootJournal>,

@@ -1,0 +1,34 @@
+# 6de1d0e binaries; taskset -c 0-1 + 8 busy loops; nice 10 conformance --scenario attach-input/adversarial --isolated --case all (stopped after 5 runs)
+# loop script: loop.sh (copied below); per-run failing step from each evidence file
+run-1.evidence.json step=54 expectation reply[overtaken]/result/matched_at did not hold
+run-2.evidence.json step=54 expectation reply[overtaken]/result/matched_at did not hold
+run-3.evidence.json step=54 expectation reply[overtaken]/result/matched_at did not hold
+run-4.evidence.json step=54 expectation reply[overtaken]/result/matched_at did not hold
+run-5.evidence.json step=54 expectation reply[overtaken]/result/matched_at did not hold
+# every run timed out at step 54 (overtaken wait for 300000 flood bytes, actual outcome=timeout): under this load the debug binary cannot reach step 130, so the race was widened with --qa-output-commit-gap-ms instead (regression.log)
+run 1 exit=1 secs=45.8  
+run 2 exit=1 secs=39.2  
+run 3 exit=1 secs=39.4  
+run 4 exit=1 secs=44.2  
+run 5 exit=1 secs=47.8  
+
+--- loop.sh
+#!/bin/bash
+# usage: loop.sh <bindir> <label> <count> [case]
+set -u
+BIN=$1; LABEL=$2; N=$3; CASE=${4:-all}
+OUT=/dev/shm/ovt-fixtures/p6-scratch/$LABEL; mkdir -p $OUT
+pids=()
+for i in $(seq 8); do taskset -c 0-1 bash -c 'while :; do :; done' & p=$!; [ "$p" -gt 1 ] && pids+=($p); done
+pass=0; fail=0
+for i in $(seq $N); do
+  start=$(date +%s.%N)
+  taskset -c 0-1 nice -n 10 $BIN/conformance --binary $BIN/ovis-terminal --scenario attach-input/adversarial --isolated --case $CASE --evidence $OUT/run-$i.evidence.json > $OUT/run-$i.stdout 2>&1
+  rc=$?; end=$(date +%s.%N)
+  step=$(grep -o '"step":"[0-9]*"' $OUT/run-$i.stdout | head -1)
+  det=$(grep -o '"detail":"[^"]*"' $OUT/run-$i.stdout | head -1)
+  printf 'run %d exit=%d secs=%.1f %s %s\n' $i $rc $(echo "$end - $start" | bc) "$step" "$det" | tee -a $OUT/summary.log
+  [ $rc -eq 0 ] && pass=$((pass+1)) || fail=$((fail+1))
+done
+for p in "${pids[@]}"; do [ "$p" -gt 1 ] && kill $p; done
+echo "TOTAL pass=$pass fail=$fail" | tee -a $OUT/summary.log

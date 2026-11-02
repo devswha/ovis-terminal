@@ -45,6 +45,8 @@ pub(super) enum ServedEvent {
     Lost(LossRecord),
     /// An attach lease was granted, moved or revoked (published from the lease journal).
     Lease(LeaseEvent),
+    /// The layout or a selection changed (published from the layout log).
+    Layout(super::layout::feed::Published),
 }
 
 impl ServedEvent {
@@ -56,6 +58,7 @@ impl ServedEvent {
             Self::Worktree(event) => serde_json::to_value(event),
             Self::Lost(loss) => serde_json::to_value(loss),
             Self::Lease(event) => super::lease_feed::payload(event),
+            Self::Layout(event) => event.payload(),
         }
     }
 }
@@ -68,6 +71,7 @@ impl EventData for ServedEvent {
             Self::Worktree(event) => event.event_type(),
             Self::Lost(_) => "subscription.lost",
             Self::Lease(event) => event.event_type(),
+            Self::Layout(event) => event.event_type(),
         }
     }
 
@@ -77,7 +81,7 @@ impl EventData for ServedEvent {
             Self::Doc(event) => event.at_sequence(seq),
             Self::Worktree(event) => event.at_sequence(seq),
             Self::Lease(event) => event.at_sequence(seq),
-            Self::Lost(_) => {}
+            Self::Lost(_) | Self::Layout(_) => {}
         }
     }
 }

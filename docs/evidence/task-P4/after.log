@@ -1,0 +1,36 @@
+$ CARGO_TARGET_DIR=/dev/shm/ovt-target-lane-P4 cargo run --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary $CARGO_TARGET_DIR/debug/ovis-terminal --scenario events/layout-selection --isolated --case all --evidence <path>
+exit=0
+{"case":"all","error":null,"evidence":"/dev/shm/ovt-fixtures/p4-scratch/after.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"events/layout-selection","totals":{"assertions":"55","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
+
+# received event assertions (actual values) from events-layout-selection-all.json:
+## case happy result=None
+notification[event]/params/data/created/0/workspace_id = "workspace:1" passed=True
+notification[event]/params/data/op_id = "01a19a52-8b6c-759a-aa80-00e307098109" passed=True
+notification[event]/params/data/removed = [] passed=True
+notification[event]/params/data/revision = "4" passed=True
+notification[event]/params/data/workspaces/0/workspace_id = "workspace:1" passed=True
+notification[event]/params/type = "layout.changed" passed=True
+notification[event]/params/data/created/0/tab_id = "tab:2" passed=True
+notification[event]/params/data/op_id = "01a19a52-8b85-725b-96de-98a74e74394d" passed=True
+notification[event]/params/data/revision = "8" passed=True
+notification[event]/params/type = "layout.changed" passed=True
+notification[event]/params/data/cause = "requested" passed=True
+notification[event]/params/data/client_id = "client:desk" passed=True
+notification[event]/params/data/op_id = "01a19a52-8b9e-7374-9967-59ce14cafc66" passed=True
+notification[event]/params/data/revision = "12" passed=True
+notification[event]/params/data/tab_id = "tab:2" passed=True
+notification[event]/params/data/workspace_id = "workspace:1" passed=True
+notification[event]/params/type = "selection.changed" passed=True
+notification[event]/params/data/cause = "target_removed" passed=True
+notification[event]/params/data/client_id = "client:desk" passed=True
+notification[event]/params/data/op_id = "01a19a52-8bb9-7594-92d6-0cc12513d13c" passed=True
+notification[event]/params/data/workspace_id = null passed=True
+notification[event]/params/type = "selection.changed" passed=True
+notification[event]/params/data/op_id = "01a19a52-8bb9-7594-92d6-0cc12513d13c" passed=True
+notification[event]/params/data/removed/0/workspace_id = "workspace:1" passed=True
+notification[event]/params/data/revision = "17" passed=True
+notification[event]/params/data/workspaces = [] passed=True
+notification[event]/params/type = "layout.changed" passed=True
+## case failure result=None
+inject[0]/error/data/field_path = "params.filter.types" passed=True
+inject[0]/error/data/kind = "invalid_params" passed=True

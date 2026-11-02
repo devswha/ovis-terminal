@@ -2050,8 +2050,10 @@
         "part-a/task-23",
         "part-a/task-30",
         "cli/interactive-attach",
-        "client/fixtures"
-      ]
+        "client/fixtures",
+        "events/layout-selection"
+      ],
+      "note": "Todo 64 published lease.* to events.subscribe and named layout.changed / selection.changed as a gap (todo 66 recorded the same gap); product-fix lane P4 closes it under todo 64: the assembled daemon forwards every committed layout.changed and selection.changed, with the causing op_id, from the layout log to subscribers (events/layout-selection), so every event the held-owner retry guidance names now arrives."
     },
     "GAP-044": {
       "todos": [
@@ -3272,7 +3274,7 @@
       "scenarios": [
         "graphics/replay"
       ],
-      "note": "Todo 84 closes reattach replay of images whose placement is still on screen. Named gap, owner todo 85: the VT cursor does not advance past an image while client cursors do, so text a program prints after a multi-row image (imgcat, then a prompt) lands inside the image's footprint in the VT and expires it, and a reattach does not re-send that image although the live client still shows it. GAP-152 is only partly closed for multi-row images until todo 85 aligns the cursor model."
+      "note": "Todo 84 closes reattach replay of images whose placement is still on screen. Named gap, owner todo 85: the VT cursor does not advance past an image while client cursors do, so text a program prints after a multi-row image (imgcat, then a prompt) lands inside the image's footprint in the VT and expires it, and a reattach does not re-send that image although the live client still shows it. GAP-152 is only partly closed for multi-row images. Todo 85 (graphics/read) kept it open: advancing the VT cursor past a placement moves where later text lands, which todo 85 must not change for non-image cells, and for a Kitty image without c/r, an iTerm2 image with auto size or a sixel the advance depends on pixel and cell-pixel sizes the headless runtime never learns, so a partial advance would trade one cursor mismatch for another; it needs its own owner."
     },
     "GAP-153": {
       "todos": [

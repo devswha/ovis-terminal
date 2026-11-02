@@ -113,6 +113,52 @@ pub(super) enum CliError {
     /// The embedded OpenRPC document could not be rendered.
     #[error("the OpenRPC document could not be rendered")]
     Schema(#[source] ovis_terminal_protocol::schema::SchemaError),
+    /// `--released` without `schema compat`, or `schema compat` without `--released`.
+    #[error("--released goes with `schema compat`, and `schema compat` needs it")]
+    ReleasedFlag,
+    /// The released baseline could not be read whole.
+    #[error("cannot read the released baseline {path}")]
+    BaselineUnreadable {
+        /// The `--released` path.
+        path: PathBuf,
+        /// The read failure, or the size bound it crossed.
+        #[source]
+        source: io::Error,
+    },
+    /// The released baseline is not JSON.
+    #[error("the released baseline {path} is not JSON")]
+    BaselineJson {
+        /// The `--released` path.
+        path: PathBuf,
+        /// The parse failure.
+        #[source]
+        source: serde_json::Error,
+    },
+    /// The released baseline is JSON but not an OpenRPC document the gate can compare.
+    #[error("the released baseline {path} is not a comparable OpenRPC document")]
+    BaselineSchema {
+        /// The `--released` path.
+        path: PathBuf,
+        /// What the comparison found missing or misplaced.
+        #[source]
+        source: ovis_terminal_protocol::schema::SchemaError,
+    },
+    /// Same-generation rules apply only within one protocol generation.
+    #[error(
+        "the released baseline is generation {released}; this build speaks generation {current}"
+    )]
+    GenerationMismatch {
+        /// `info.x-generation` of the baseline.
+        released: String,
+        /// The generation of this build.
+        current: String,
+    },
+    /// This build would break a client of the released baseline.
+    #[error("this build breaks {} released contract rule(s)", .breaks.len())]
+    CompatibilityBreak {
+        /// Every break, with its location and rule.
+        breaks: Vec<ovis_terminal_protocol::schema::Break>,
+    },
     /// A holder service verb failed.
     #[cfg(any(unix, windows))]
     #[error(transparent)]
@@ -152,6 +198,11 @@ impl CliError {
             Self::Timeout { .. } => "deadline_exceeded",
             Self::UnsupportedTransport => "unsupported_transport",
             Self::Schema(_) | Self::Encode(_) => "internal",
+            Self::ReleasedFlag => "usage",
+            Self::BaselineUnreadable { .. } => "baseline_unreadable",
+            Self::BaselineJson { .. } | Self::BaselineSchema { .. } => "baseline_malformed",
+            Self::GenerationMismatch { .. } => "generation_mismatch",
+            Self::CompatibilityBreak { .. } => "compatibility_break",
             #[cfg(any(unix, windows))]
             Self::Service(error) => error.kind(),
             #[cfg(unix)]
@@ -194,6 +245,19 @@ impl CliError {
             Self::Timeout { .. } => "inspect the operation; it may still be running",
             Self::UnsupportedTransport => "use a Unix build or the protocol directly",
             Self::Schema(_) | Self::Encode(_) => "report the build; a value could not be encoded",
+            Self::ReleasedFlag => "run `ovis-terminal schema compat --released <path>`",
+            Self::BaselineUnreadable { .. } => {
+                "pass the path of a readable released OpenRPC document of at most 64 MiB"
+            }
+            Self::BaselineJson { .. } | Self::BaselineSchema { .. } => {
+                "pass the released OpenRPC document (schema/released.openrpc.json), not another file"
+            }
+            Self::GenerationMismatch { .. } => {
+                "compare with the released baseline of this build's generation"
+            }
+            Self::CompatibilityBreak { .. } => {
+                "keep released methods and required outputs; add inputs only as optional"
+            }
             #[cfg(any(unix, windows))]
             Self::Service(error) => error.hint(),
             #[cfg(unix)]

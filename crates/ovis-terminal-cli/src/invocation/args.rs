@@ -31,6 +31,9 @@ pub(super) enum Command {
         /// Which contract to print.
         #[arg(value_enum, default_value_t = SchemaPart::Openrpc)]
         part: SchemaPart,
+        /// The released OpenRPC baseline `schema compat` compares this build with.
+        #[arg(long, value_name = "PATH")]
+        released: Option<std::path::PathBuf>,
     },
     /// Describe the endpoint this invocation resolves to, without touching it.
     Endpoint,
@@ -94,6 +97,26 @@ pub(super) struct ServeArgs {
     /// that holds a `qa-fixture` file.
     #[arg(long, value_parser = clap::value_parser!(u64).range(4096..))]
     pub(super) qa_output_ring_bytes: Option<u64>,
+    /// QA seam: milliseconds the runtime pauses between committing a holder output chunk
+    /// to attach streams and screen reads and feeding it to output waits (no pause
+    /// without it), so a test can widen the window a wait reply races a repaint in.
+    /// Accepted only with a `--root` that holds a `qa-fixture` file.
+    #[arg(long)]
+    pub(super) qa_output_commit_gap_ms: Option<u64>,
+}
+
+#[cfg(unix)]
+impl ServeArgs {
+    /// The QA seams these flags name; `serve` refuses them off a QA fixture root.
+    pub(super) fn qa_seams(&self) -> crate::assembly::QaSeams {
+        crate::assembly::QaSeams {
+            holder_poll_ms: self.qa_holder_poll_ms,
+            actor_hold: self.qa_actor_hold.clone(),
+            graphics_sequence_max_bytes: self.qa_graphics_sequence_max_bytes,
+            output_ring_bytes: self.qa_output_ring_bytes,
+            output_commit_gap_ms: self.qa_output_commit_gap_ms,
+        }
+    }
 }
 
 /// The three published contracts.
@@ -105,6 +128,8 @@ pub(super) enum SchemaPart {
     Cli,
     /// The runtime contract reference, generated from this build's types.
     Contract,
+    /// Whether this build keeps every client of the `--released` baseline working.
+    Compat,
 }
 
 /// `ovis-terminal server ...`.

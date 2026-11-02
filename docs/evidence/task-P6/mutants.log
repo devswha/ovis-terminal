@@ -1,0 +1,37 @@
+=== mutant m1
+--- diff
+--- cargo nextest run -p ovis-terminal-cli --lib -E 'test(commit::)'
+error: test run failed
+        FAIL [   0.011s] (2/2) ovis-terminal-cli assembly::live::commit::tests::a_chunk_the_hub_refuses_resolves_no_wait
+        PASS [   0.011s] (1/2) ovis-terminal-cli assembly::live::commit::tests::a_matched_wait_finds_its_bytes_already_in_the_hub_paint
+     Summary [   0.012s] 2 tests run: 1 passed, 1 failed, 51 skipped
+
+[exit 0]
+--- conformance --scenario attach-input/repaint-after-wait (mutant binary)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 19.63s
+
+[exit 0]{"case":"all","error":null,"evidence":"/dev/shm/ovt-fixtures/p6-scratch/m1-regression.evidence.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"attach-input/repaint-after-wait","totals":{"assertions":"31","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+
+None []
+
+[exit 0]
+=== mutant m2
+--- diff
+--- cargo nextest run -p ovis-terminal-cli --lib -E 'test(commit::)'
+error: test run failed
+        FAIL [   0.009s] (2/2) ovis-terminal-cli assembly::live::commit::tests::a_matched_wait_finds_its_bytes_already_in_the_hub_paint
+        PASS [   0.009s] (1/2) ovis-terminal-cli assembly::live::commit::tests::a_chunk_the_hub_refuses_resolves_no_wait
+     Summary [   0.010s] 2 tests run: 1 passed, 1 failed, 51 skipped
+
+[exit 0]
+=== mutant m3
+--- diff
+--- cargo nextest run -p ovis-terminal-cli --lib -E 'test(commit::)'
+error: test run failed
+        FAIL [   0.009s] (1/2) ovis-terminal-cli assembly::live::commit::tests::a_chunk_the_hub_refuses_resolves_no_wait
+        PASS [   0.010s] (2/2) ovis-terminal-cli assembly::live::commit::tests::a_matched_wait_finds_its_bytes_already_in_the_hub_paint
+     Summary [   0.010s] 2 tests run: 1 passed, 1 failed, 51 skipped
+
+[exit 0]
+# note: the first m1 scenario run above used the pre-revision scenario (wait armed after the input, echo on); it passed, which led to arming the wait first and stty -echo. Revised-scenario runs are in regression.log.
+# mutant sources: m1 = waits.ingest; gap; hub.publish (the 6de1d0e order); m2 = waits never fed; m3 = hub refusal deferred until after waits.ingest

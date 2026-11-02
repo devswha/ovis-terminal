@@ -1,0 +1,132 @@
+### M1 promote ignores a missing target
+file: scripts/release/src/promote.rs
+- '    if !missing.is_empty() {\n        return Err(ReleaseError::TargetMissing'
++ '    if missing.is_empty() && !missing.is_empty() {\n        return Err(ReleaseError::TargetMissing'
+$ cargo nextest run --locked -p release-stage --no-fail-fast
+exit=0
+        FAIL [   0.032s] (10/12) release-stage tests::each_missing_or_foreign_part_refuses_promotion_with_its_kind
+     Summary [   0.035s] 12 tests run: 11 passed, 1 failed, 0 skipped
+test_exit=100
+
+
+
+### M2 republish over a different published manifest
+file: scripts/release/src/promote.rs
+- '.is_some_and(|published| *published != manifest)'
++ '.is_some_and(|published| *published != manifest && published.version.is_empty())'
+$ cargo nextest run --locked -p release-stage --no-fail-fast
+exit=0
+        FAIL [   0.178s] (12/12) release-stage tests::each_missing_or_foreign_part_refuses_promotion_with_its_kind
+     Summary [   0.180s] 12 tests run: 11 passed, 1 failed, 0 skipped
+test_exit=100
+
+
+
+### M3 cross-built receipt accepted
+file: scripts/release/src/promote.rs
+- '    if receipt.host != Platform::of_triple(target)? {\n        return Err(ReleaseError::CrossBuildRefused'
++ '    if receipt.host != Platform::of_triple(target)? && target.is_empty() {\n        return Err(ReleaseError::CrossBuildRefused'
+$ cargo nextest run --locked -p release-stage --no-fail-fast
+exit=0
+        FAIL [   0.072s] (12/12) release-stage tests::each_missing_or_foreign_part_refuses_promotion_with_its_kind
+     Summary [   0.073s] 12 tests run: 11 passed, 1 failed, 0 skipped
+test_exit=100
+
+
+
+### M4 CLI treats a compatibility break as compatible
+file: crates/ovis-terminal-cli/src/invocation/compat.rs
+- '    if !breaks.is_empty() {\n        return Err(CliError::CompatibilityBreak { breaks });'
++ '    if breaks.is_empty() && !breaks.is_empty() {\n        return Err(CliError::CompatibilityBreak { breaks });'
+$ cargo nextest run --locked -p ovis-terminal-cli -E 'test(compat)' --no-fail-fast
+exit=0
+        FAIL [   0.492s] (4/4) ovis-terminal-cli invocation::compat::tests::a_baseline_requiring_an_output_this_build_lacks_is_a_compatibility_break
+     Summary [   0.493s] 4 tests run: 3 passed, 1 failed, 113 skipped
+test_exit=100
+
+
+
+## Round 2 (review findings: sidecar, failed QA checks, uploaded-archive promotion, skipped build)
+
+### M5 seal writes a wrong .sha256 sidecar
+file: scripts/release/src/seal.rs
+- '        sidecar_line(&sha256, &file),'
++ '        sidecar_line(&"0".repeat(64), &file),'
+$ cargo nextest run --locked -p release-stage --no-fail-fast
+exit=0
+        FAIL [   0.034s] (10/14) release-stage tests::a_qa_receipt_claiming_a_pass_over_failed_checks_is_refused_by_check_name
+        FAIL [   0.035s] (11/14) release-stage tests::every_digest_names_what_it_failed_on
+        FAIL [   0.035s] (12/14) release-stage tests::a_rerun_after_publication_never_publishes_again
+        FAIL [   0.036s] (13/14) release-stage tests::a_complete_native_matrix_promotes_only_as_a_dry_run_that_publishes_nothing
+        FAIL [   0.057s] (14/14) release-stage tests::each_missing_or_foreign_part_refuses_promotion_with_its_kind
+     Summary [   0.057s] 14 tests run: 9 passed, 5 failed, 0 skipped
+test_exit=100
+
+
+
+### M6 promote ignores failed QA checks
+file: scripts/release/src/promote.rs
+- 'let mut failed: Vec<String> = qa\n        .checks\n        .iter()\n        .filter(|c| !c.passed)\n        .map(|c| c.check.clone())\n        .collect();'
++ 'let mut failed: Vec<String> = Vec::new();'
+$ cargo nextest run --locked -p release-stage --no-fail-fast
+exit=0
+        FAIL [   0.050s] (10/14) release-stage tests::a_qa_receipt_claiming_a_pass_over_failed_checks_is_refused_by_check_name
+        FAIL [   0.342s] (14/14) release-stage tests::each_missing_or_foreign_part_refuses_promotion_with_its_kind
+     Summary [   0.343s] 14 tests run: 12 passed, 2 failed, 0 skipped
+test_exit=100
+
+
+
+### M7 promote re-hashes the staged directory instead of the uploaded archive
+file: scripts/release/src/promote.rs
+- '    verify_unpacked(&input.dir, entry)?;\n'
++ '    crate::seal::verify_files(&input.dir, entry)?;\n'
+$ cargo nextest run --locked -p release-stage --no-fail-fast
+exit=0
+        FAIL [   0.034s] (10/14) release-stage tests::a_complete_native_matrix_promotes_only_as_a_dry_run_that_publishes_nothing
+        FAIL [   0.034s] (11/14) release-stage tests::a_rerun_after_publication_never_publishes_again
+        FAIL [   0.035s] (12/14) release-stage tests::a_qa_receipt_claiming_a_pass_over_failed_checks_is_refused_by_check_name
+        FAIL [   0.055s] (13/14) release-stage tests::each_missing_or_foreign_part_refuses_promotion_with_its_kind
+        FAIL [   0.095s] (14/14) release-stage tests::every_digest_names_what_it_failed_on
+     Summary [   0.095s] 14 tests run: 9 passed, 5 failed, 0 skipped
+test_exit=100
+
+
+
+### M8 build.sh skips the cargo build (stale binary would be staged)
+file: scripts/release/build.sh
+- 'cargo build --locked --release -p ovis-terminal-cli --bin ovis-terminal --target "$target"\n'
++ ''
+$ sh scripts/release/build.sh --target native --dry-run --out release-out-mutant   (the PR CI dry-run job runs this script)
+exit=0
+==> build ovis-terminal for x86_64-unknown-linux-gnu (release profile)
+build.sh: cargo produced no /dev/shm/ovt-target-lane-t67/x86_64-unknown-linux-gnu/release/ovis-terminal
+build_exit=1
+
+
+
+## Round 2, conformance level on the build.sh-built binary
+
+### C1 seal writes a wrong .sha256 sidecar (built binary, conformance happy)
+file: scripts/release/src/seal.rs
+- '        sidecar_line(&sha256, &file),'
++ '        sidecar_line(&"0".repeat(64), &file),'
+$ cargo run --locked -q --manifest-path conformance/Cargo.toml --bin conformance -- --binary /dev/shm/ovt-fixtures/t67-scratch/release-out/install/ovis-terminal-0.1.0-x86_64-unknown-linux-gnu/ovis-terminal --scenario release/artifacts --isolated --case happy --evidence /dev/shm/ovt-fixtures/t67-scratch/mut.json
+exit=0
+{"case":"happy","error":null,"evidence":"/dev/shm/ovt-fixtures/t67-scratch/mut.json","evidence_error":null,"evidence_written":true,"result":"failed","scenario":"release/artifacts","totals":{"assertions":"39","cases":"1","declared_only":"0","failed":"1","passed":"0","skipped":"0"}}
+conformance_exit=1
+happy {'detail': 'expectation release[1]/exit did not hold', 'hint': 'compare expected and actual values in the evidence', 'kind': 'assertion_failed', 'step': '0'}
+
+
+
+### C2 promote ignores failed QA checks (built binary, conformance failure)
+file: scripts/release/src/promote.rs
+- 'let mut failed: Vec<String> = qa\n        .checks\n        .iter()\n        .filter(|c| !c.passed)\n        .map(|c| c.check.clone())\n        .collect();'
++ 'let mut failed: Vec<String> = Vec::new();'
+$ cargo run --locked -q --manifest-path conformance/Cargo.toml --bin conformance -- --binary /dev/shm/ovt-fixtures/t67-scratch/release-out/install/ovis-terminal-0.1.0-x86_64-unknown-linux-gnu/ovis-terminal --scenario release/artifacts --isolated --case failure --evidence /dev/shm/ovt-fixtures/t67-scratch/mut.json
+exit=0
+{"case":"failure","error":null,"evidence":"/dev/shm/ovt-fixtures/t67-scratch/mut.json","evidence_error":null,"evidence_written":true,"result":"failed","scenario":"release/artifacts","totals":{"assertions":"45","cases":"1","declared_only":"0","failed":"1","passed":"0","skipped":"0"}}
+conformance_exit=1
+failure {'detail': 'expectation release[12]/details/failed did not hold', 'hint': 'compare expected and actual values in the evidence', 'kind': 'assertion_failed', 'step': '0'}
+
+

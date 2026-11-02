@@ -1,7 +1,9 @@
 //! `layout.get`, `layout.edit` and `selection.set` over core's layout service, on the
 //! runtime's layout log. A creating edit launches through the runtime's terminal
-//! lifecycle, so the spawned program is served like one `terminal.run` started.
+//! lifecycle, so the spawned program is served like one `terminal.run` started. Every
+//! committed change is then published to `events.subscribe` subscribers (see `feed`).
 
+pub(super) mod feed;
 mod wire;
 
 use ovis_terminal_authz::Session;
@@ -101,6 +103,7 @@ impl Runtime {
                 .layouts()
                 .edit(Call::new(session, op), &request)
                 .map_err(|e| layout_refusal(&e))?;
+            self.publish_layout();
             return self.answer(session, &change);
         };
         let run = run_params(&program)?;
@@ -120,6 +123,7 @@ impl Runtime {
         if let LaunchOutcome::Launched { terminal, .. } = &change.launch {
             self.launches.insert(*terminal, (grid, None));
         }
+        self.publish_layout();
         self.answer(session, &change)
     }
 
@@ -144,6 +148,7 @@ impl Runtime {
             .layouts()
             .select(Call::new(session, op), &request)
             .map_err(|e| layout_refusal(&e))?;
+        self.publish_layout();
         self.answer(session, &change)
     }
 
@@ -178,10 +183,13 @@ impl Runtime {
     ) -> Result<ovis_terminal_core::layout::Change, BoundaryError> {
         let layouts = self.layouts();
         let op = OpId::new(uuid::Uuid::now_v7().to_string());
-        self.control
+        let change = self
+            .control
             .with_terminals(|_, session| Ok(layouts.edit(Call::new(session, op), request)))
             .map_err(|error| refusal(error.kind(), error.hint()))?
-            .map_err(|e| layout_refusal(&e))
+            .map_err(|e| layout_refusal(&e))?;
+        self.publish_layout();
+        Ok(change)
     }
 }
 

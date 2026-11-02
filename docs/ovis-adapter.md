@@ -1246,6 +1246,9 @@ revision and the event `seq` (IDEAL-085, IDEAL-086). A stale revision is `revisi
 and changes nothing; the failure case proves it with the layout and every selection unchanged.
 Selection is per client (`selection.set` with the browser's own `client_id`) and no edit moves
 another client's selection (IDEAL-084). There is no focus to steal (EXCL-004).
+Subscribers receive each committed edit as a `layout.changed` event and each selection change
+as `selection.changed`; the example awaits the split's event and matches it by `data.op_id` and
+`data.revision`.
 
 ```json ovis-example
 {
@@ -1346,6 +1349,27 @@ another client's selection (IDEAL-084). There is no focus to steal (EXCL-004).
     {
       "call": {
         "conn": "phone",
+        "id": "watch",
+        "method": "events.subscribe",
+        "params": {
+          "filter": {
+            "types": [
+              "layout.changed"
+            ]
+          },
+          "snapshot": false,
+          "cursor": null
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "phone",
         "id": "split",
         "method": "layout.edit",
         "params": {
@@ -1368,7 +1392,21 @@ another client's selection (IDEAL-084). There is no focus to steal (EXCL-004).
           "/result/layout/selections": "$value:selections",
           "/result/seq": {
             "$present": true
+          },
+          "/result/layout/revision": {
+            "$capture": "split_rev"
           }
+        }
+      }
+    },
+    {
+      "event": {
+        "conn": "phone",
+        "method": "event",
+        "expect": {
+          "/params/type": "layout.changed",
+          "/params/data/op_id": "$op:split",
+          "/params/data/revision": "$value:split_rev"
         }
       }
     },
@@ -2648,7 +2686,8 @@ The scenario checks the examples against these policies; they also bind any late
   ],
   "unserved": [],
   "events": [
-    "terminal.created"
+    "terminal.created",
+    "layout.changed"
   ],
   "capabilities": [],
   "identity": [
@@ -2683,7 +2722,10 @@ The scenario checks the examples against these policies; they also bind any late
     "terminal.rename"
   ],
   "unserved": [],
-  "events": [],
+  "events": [
+    "layout.changed",
+    "selection.changed"
+  ],
   "capabilities": [],
   "identity": [
     "PaneId",
@@ -2780,7 +2822,8 @@ The scenario checks the examples against these policies; they also bind any late
   ],
   "unserved": [],
   "events": [
-    "terminal.updated"
+    "terminal.updated",
+    "selection.changed"
   ],
   "capabilities": [],
   "identity": [
@@ -2882,7 +2925,9 @@ The scenario checks the examples against these policies; they also bind any late
     "layout.get"
   ],
   "unserved": [],
-  "events": [],
+  "events": [
+    "layout.changed"
+  ],
   "capabilities": [],
   "identity": [
     "PaneId",
@@ -3013,14 +3058,15 @@ The scenario checks the examples against these policies; they also bind any late
 Measured against this build; the scenario keeps the unserved list honest by failing if any of
 these becomes served while the guide still lists it as unserved.
 
-- `layout.changed` and `selection.changed` are published event types but are not delivered to
-  subscribers; read the layout receipt or `layout.get` after an edit.
 - Unserved by `ovis-terminal serve`: `agent.list`, `agent.note`, `agent.release`,
   `agent.wait_children`, `doc.list`, `events.ack`, `machine.rm`, `machine.login`,
   `machine.exec`, `machine.file`, `server.start`, `service.install`, `service.remove`,
   `terminal.history`.
 - `op.get` answers `not_found` for `input.*` operations, so delivery of a send whose reply was
   lost cannot be inspected yet; reuse the same `op_id` only on an explicit human decision.
+- A `layout.edit` receipt's `seq` is not the `seq` of the `layout.changed` envelope it
+  publishes (receipt `16`, envelope `4` in the layout-receipts replay); correlate an edit with
+  its event by `data.op_id` and `data.revision`.
 - `events.wait` replies carry `outcome` and `seq` but no terminal id; correlate by the target
   you asked about.
 - `schema.capabilities` reports `stream_modes: []` although plain attach streams work.

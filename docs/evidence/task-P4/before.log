@@ -1,0 +1,9 @@
+# Before: T64 gate probe (layout.changed / selection.changed never reach events.subscribe)
+# source: /home/devswha/workspace/ovis-terminal/.omo/evidence/ovis-terminal-v1-task-64-gate-review.md (orchestrator evidence, read-only)
+
+/home/devswha/workspace/ovis-terminal/.omo/evidence/ovis-terminal-v1-task-64-gate-review.md:48:   - My wire probe (`probe.ts event`, fixed binary) subscribed with `filter.types: [lease.revoked, lease.granted, layout.changed, selection.changed]`. Then: desk ready, phone `held` (with retry `{on: lease_released, event: lease.revoked, lease: lease:1}`), desk `attach.close` OK, and a `layout.edit` OK. Result: `events_seen: []` after a 5 s window.
+/home/devswha/workspace/ovis-terminal/.omo/evidence/ovis-terminal-v1-task-64-gate-review.md:155: | B1 wire probe, `layout.edit` plus `selection.set` with `layout.changed`/`selection.changed` subscribed | no events. Matches the named gap in the PR body (line 127) and the DoneClaim r3 `unmet`. |
+/home/devswha/workspace/ovis-terminal/.omo/evidence/ovis-terminal-v1-task-64-gate-review.md:187: 1. `layout.changed` and `selection.changed` are still not published to `events.subscribe` (probed). The gap is named in the PR body and in the DoneClaim r3 `unmet`. GAP-036 per-client selection is proven by the result records. No todo-64 criterion requires those events.
+
+# Also: docs/evidence/task-64/pr-body.md:127 and docs/evidence/task-66/pr-body.md:156 name the same gap.
+# Base: origin/integration 6de1d0e (crates/ovis-terminal-cli/src/assembly/lanes.rs ServedEvent has no layout variant).
