@@ -17,7 +17,7 @@ pub use labels::LabelRequest;
 pub use receipts::{
     ControlReceipt, ControlState, KillReceipt, KillRequest, KillStage, RemovalReceipt,
 };
-pub use records::{Launch, LaunchState, Program, Record, image_placeholders};
+pub use records::{Launch, LaunchState, Program, Record};
 #[cfg(unix)]
 pub use runtime::{Call, Host, Terminals};
 pub use snapshot::{LifecycleEvent, Producer, TerminalSnapshot};

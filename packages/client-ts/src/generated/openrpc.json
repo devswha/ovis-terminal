@@ -3865,6 +3865,21 @@
         "$ref": "#/components/schemas/DecimalCounter",
         "description": "Holder GrantEpoch as a canonical decimal string."
       },
+      "GraphicsBuffer": {
+        "description": "Screen a stored image is placed on.",
+        "oneOf": [
+          {
+            "const": "primary",
+            "description": "The primary screen.",
+            "type": "string"
+          },
+          {
+            "const": "alternate",
+            "description": "The alternate screen.",
+            "type": "string"
+          }
+        ]
+      },
       "GraphicsDropReason": {
         "description": "Why a whole graphics sequence was dropped.",
         "oneOf": [
@@ -3959,6 +3974,89 @@
       "GraphicsImageId": {
         "$ref": "#/components/schemas/ByteOffset",
         "description": "Identity of one stored graphics sequence.\n\nIt is the raw output offset where the sequence (or its first Kitty chunk) began: the key of the sequence's entry in the terminal's image store\nand the offset `graphics_replayed` names, so a read and a reattach agree on it."
+      },
+      "GraphicsIndexEntry": {
+        "additionalProperties": false,
+        "description": "One entry of a read's placement index: an image the store holds, wherever it is placed.",
+        "properties": {
+          "bytes": {
+            "$ref": "#/components/schemas/ByteCount",
+            "description": "Raw bytes the image store holds for it."
+          },
+          "format": {
+            "$ref": "#/components/schemas/GraphicsProtocol",
+            "description": "Protocol of its sequence.",
+            "x-ovis-open-enum": true
+          },
+          "image_id": {
+            "$ref": "#/components/schemas/GraphicsImageId",
+            "description": "The image store entry."
+          },
+          "placement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphicsIndexPlacement"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where it is placed; null for a Kitty transmission that displays nothing itself."
+          }
+        },
+        "required": [
+          "image_id",
+          "format",
+          "bytes"
+        ],
+        "type": "object"
+      },
+      "GraphicsIndexPlacement": {
+        "additionalProperties": false,
+        "description": "Where an indexed image was placed, by the extent its header declares.",
+        "properties": {
+          "buffer": {
+            "$ref": "#/components/schemas/GraphicsBuffer",
+            "description": "Screen it is placed on; it is shown only while that screen is active.",
+            "x-ovis-open-enum": true
+          },
+          "col": {
+            "description": "Zero-based column of its first covered cell.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "cols": {
+            "description": "Columns its header declares; one when it declares none.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "row": {
+            "description": "Zero-based row of its first covered row still visible.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "rows": {
+            "description": "Rows its header declares; one when it declares none.",
+            "format": "uint16",
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "buffer",
+          "row",
+          "col",
+          "rows",
+          "cols"
+        ],
+        "type": "object"
       },
       "GraphicsPlaceholder": {
         "additionalProperties": false,
@@ -11349,7 +11447,7 @@
           },
           "include_images": {
             "default": false,
-            "description": "Also return the placement index: one placeholder per stored image shown, never\nits payload. Absent means false; a present value must be a JSON boolean.",
+            "description": "Also return `image_index`, the fuller placement index: every stored image with\nits placement on either screen, never its payload. Absent means false; a present\nvalue must be a JSON boolean.",
             "type": "boolean"
           },
           "target": {
@@ -11370,8 +11468,18 @@
             "$ref": "#/components/schemas/ScreenCursor",
             "description": "Cursor state."
           },
+          "image_index": {
+            "description": "Every stored image in receipt order with its placement; present only when\n`include_images` was requested.",
+            "items": {
+              "$ref": "#/components/schemas/GraphicsIndexEntry"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "images": {
-            "description": "Stored images shown on the screen, top row first; present only when\n`include_images` was requested. Their covered cells read as blank text in `lines`.",
+            "description": "One placeholder per stored image shown on the screen, top row first, carried by\nevery read (empty when none); the cells each covers read as blank text in `lines`.",
             "items": {
               "$ref": "#/components/schemas/GraphicsPlaceholder"
             },
@@ -14736,7 +14844,7 @@
           "required": false,
           "schema": {
             "default": false,
-            "description": "Also return the placement index: one placeholder per stored image shown, never\nits payload. Absent means false; a present value must be a JSON boolean.",
+            "description": "Also return `image_index`, the fuller placement index: every stored image with\nits placement on either screen, never its payload. Absent means false; a present\nvalue must be a JSON boolean.",
             "type": "boolean"
           }
         },

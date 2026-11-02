@@ -131,3 +131,25 @@ fn a_primary_screen_image_is_not_reported_on_the_alternate_screen_even_under_an_
     drop(vt.feed(b"\x1b[?1049l"));
     assert_eq!(cells(&vt), primary);
 }
+
+#[test]
+fn an_image_whose_footprint_is_no_longer_intact_is_not_reported() {
+    let damage: [(&str, &[u8]); 4] = [
+        ("one covered cell printed over", b"\x1b[3;5HZ"),
+        ("one covered cell erased (ECH)", b"\x1b[2;4H\x1b[1X"),
+        ("a line inserted between its rows (IL)", b"\x1b[3;1H\x1b[L"),
+        ("one covered row erased to its end (EL)", b"\x1b[3;3H\x1b[K"),
+    ];
+    for (what, bytes) in damage {
+        let mut vt = engine(20, 6);
+        drop(vt.feed(b"\r\nab"));
+        drop(vt.feed(&kitty("a=T,i=7,c=4,r=2")));
+        assert_eq!(
+            cells(&vt),
+            vec![(4, GraphicsProtocol::Kitty, 1, 2, 2, 4)],
+            "{what}"
+        );
+        drop(vt.feed(bytes));
+        assert_eq!(cells(&vt), Vec::<Cells>::new(), "{what}");
+    }
+}

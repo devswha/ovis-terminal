@@ -2,7 +2,10 @@
 
 use serde_json::{Value, json};
 
-use super::super::{GraphicsImageId, GraphicsPlaceholder, GraphicsProtocol, PlaceholderCells};
+use super::super::{
+    GraphicsBuffer, GraphicsImageId, GraphicsIndexEntry, GraphicsIndexPlacement,
+    GraphicsPlaceholder, GraphicsProtocol, PlaceholderCells,
+};
 use crate::rpc::parse_request;
 use crate::schema::decode_params;
 use crate::schema::methods::terminal_read::{TerminalScreenParams, TerminalScreenResult};
@@ -123,5 +126,51 @@ fn a_screen_result_without_images_omits_the_field_and_one_with_them_round_trips(
         Some(1)
     );
     assert_eq!(serde_json::to_value(&carried)?, result);
+    let indexed = with(
+        result,
+        "image_index",
+        json!([{"image_id": "4", "format": "kitty", "bytes": "145", "placement": {"buffer": "primary", "row": 1, "col": 2, "rows": 2, "cols": 4}}]),
+    );
+    let full: TerminalScreenResult = serde_json::from_value(indexed.clone())?;
+    assert_eq!(
+        full.image_index.as_deref().map(<[GraphicsIndexEntry]>::len),
+        Some(1)
+    );
+    assert_eq!(serde_json::to_value(&full)?, indexed);
+    Ok(())
+}
+
+#[test]
+fn an_index_entry_names_its_screen_or_null_and_never_a_payload() -> TestResult {
+    let entries = vec![
+        GraphicsIndexEntry::new(
+            (GraphicsImageId::new(0), GraphicsProtocol::Kitty),
+            ByteCount::new(17),
+            None,
+        ),
+        GraphicsIndexEntry::new(
+            (GraphicsImageId::new(u64::MAX), GraphicsProtocol::Iterm2),
+            ByteCount::new(9),
+            Some(GraphicsIndexPlacement::new(
+                GraphicsBuffer::Alternate,
+                PlaceholderCells::new((4, 3), (2, 5)),
+            )),
+        ),
+    ];
+    let encoded = serde_json::to_value(&entries)?;
+    assert_eq!(
+        encoded,
+        json!([
+            {"image_id": "0", "format": "kitty", "bytes": "17", "placement": null},
+            {"image_id": "18446744073709551615", "format": "iterm2", "bytes": "9",
+             "placement": {"buffer": "alternate", "row": 4, "col": 3, "rows": 2, "cols": 5}}
+        ])
+    );
+    assert_eq!(
+        serde_json::from_value::<Vec<GraphicsIndexEntry>>(encoded)?,
+        entries
+    );
+    let payload = json!({"image_id": "0", "format": "kitty", "bytes": "17", "placement": null, "data_b64": "AA=="});
+    assert!(serde_json::from_value::<GraphicsIndexEntry>(payload).is_err());
     Ok(())
 }

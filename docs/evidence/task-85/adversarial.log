@@ -12,6 +12,14 @@ race: the screen snapshot and the store are read under separate locks; the join 
 
 Mutants (each applied alone, run, restored; logs committed):
 mutant-evicted-image-keeps-placeholder.log  -> 2 failed (core)
-mutant-alternate-screen-not-filtered.log    -> survived round 1 (6/6), test strengthened, then 1 failed
+mutant-alternate-screen-not-filtered.log    -> survived round 1 (6/6), test strengthened; round 2 expression: 1 failed
 mutant-declared-rows-not-visible-rows.log   -> 2 failed (vt)
 mutant-include-images-required.log          -> 1 failed (protocol)
+
+Round 2 (gate r1 REJECT):
+default read: every terminal.screen read carries images (conformance happy 'plain' read asserts the placeholder without include_images; image_index absent); include_images adds image_index only.
+placement index: bare Kitty transmission (placement null), inactive-screen image (buffer primary, no placeholder), evicted entry omitted, no payload (core the_index_* tests; protocol an_index_entry_names_its_screen_or_null_and_never_a_payload).
+non-intact footprint (N4): print-over, ECH, IL split, EL -> not reported (vt an_image_whose_footprint_is_no_longer_intact_is_not_reported).
+mutant-read-ignores-still.log -> survived 84/84: equivalent (follow() after every feed/resize releases non-whole footprints; restore starts with no images); redundant guard removed.
+mutant-follow-keeps-erased.log -> 2 failed (vt), the guard that decides.
+mutant-evicted-image-keeps-placeholder.log -> re-run at images/placeholders.rs: 2 failed (core).

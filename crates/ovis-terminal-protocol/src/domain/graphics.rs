@@ -5,6 +5,7 @@
 //! or one sixel `DCS q`) by its raw bytes, keeps or drops it whole, and lets viewers
 //! render. The contract and its layer budget are in `docs/design/graphics.md`.
 
+mod placeholder;
 mod replay;
 #[cfg(test)]
 mod tests;
@@ -12,6 +13,10 @@ mod tests;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+pub use self::placeholder::{
+    GraphicsBuffer, GraphicsImageId, GraphicsIndexEntry, GraphicsIndexPlacement,
+    GraphicsPlaceholder, PlaceholderCells,
+};
 pub use self::replay::{GraphicsReleaseReason, GraphicsReleased, GraphicsReplayedData};
 use crate::schema::limits::Limits;
 use crate::schema::scalar::{ByteCount, ByteOffset, Count, OpenEnum};
@@ -27,102 +32,6 @@ pub enum GraphicsProtocol {
     Iterm2,
     /// Sixel: `DCS ... q ... ST`.
     Sixel,
-}
-
-/// Identity of one stored graphics sequence.
-///
-/// It is the raw output offset where the sequence (or its first Kitty chunk) began: the key of the sequence's entry in the terminal's image store
-/// and the offset `graphics_replayed` names, so a read and a reattach agree on it.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(transparent)]
-pub struct GraphicsImageId(ByteOffset);
-
-impl GraphicsImageId {
-    /// The image whose sequence began at raw output offset `offset`.
-    #[must_use]
-    pub const fn new(offset: u64) -> Self {
-        Self(ByteOffset::new(offset))
-    }
-
-    /// The raw output offset the sequence began at.
-    #[must_use]
-    pub const fn get(self) -> u64 {
-        self.0.get()
-    }
-}
-
-/// One stored image shown on a read screen, in place of the cells it covers.
-///
-/// Plan todo 85. It never carries the payload: the bytes stay in the image
-/// store, and `bytes` is the size of the store entry.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[non_exhaustive]
-pub struct GraphicsPlaceholder {
-    /// The image store entry of the sequence that displays it.
-    pub image_id: GraphicsImageId,
-    /// Protocol of that sequence.
-    pub format: OpenEnum<GraphicsProtocol>,
-    /// Zero-based screen row of the first covered cell still visible.
-    pub row: u16,
-    /// Zero-based screen column of the first covered cell.
-    pub col: u16,
-    /// Covered rows still visible, from `row` down.
-    pub rows: u16,
-    /// Covered columns, from `col` right, clipped to the grid.
-    pub cols: u16,
-    /// Raw bytes the image store holds for the sequence.
-    pub bytes: ByteCount,
-}
-
-/// Where one image is shown, as a read reports it; `rows` and `cols` are already
-/// clipped to the visible grid.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[non_exhaustive]
-pub struct PlaceholderCells {
-    /// First covered row.
-    pub row: u16,
-    /// First covered column.
-    pub col: u16,
-    /// Covered rows.
-    pub rows: u16,
-    /// Covered columns.
-    pub cols: u16,
-}
-
-impl PlaceholderCells {
-    /// `rows` by `cols` cells from (`row`, `col`).
-    #[must_use]
-    pub const fn new(at: (u16, u16), extent: (u16, u16)) -> Self {
-        Self {
-            row: at.0,
-            col: at.1,
-            rows: extent.0,
-            cols: extent.1,
-        }
-    }
-}
-
-impl GraphicsPlaceholder {
-    /// The `protocol` image stored as `image_id` with `bytes` raw bytes, shown on `cells`.
-    #[must_use]
-    pub const fn new(
-        (image_id, protocol): (GraphicsImageId, GraphicsProtocol),
-        cells: PlaceholderCells,
-        bytes: ByteCount,
-    ) -> Self {
-        Self {
-            image_id,
-            format: OpenEnum::Known(protocol),
-            row: cells.row,
-            col: cells.col,
-            rows: cells.rows,
-            cols: cells.cols,
-            bytes,
-        }
-    }
 }
 
 /// Why a whole graphics sequence was dropped.

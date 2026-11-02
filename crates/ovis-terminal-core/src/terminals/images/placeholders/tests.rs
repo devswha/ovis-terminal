@@ -1,15 +1,14 @@
-//! Placeholders name exactly the images the store holds and the screen shows (plan todo 85).
+//! Placeholders and the placement index name exactly the images the store holds (plan todo 85).
 
 use std::sync::Arc;
 
 use ovis_terminal_protocol::domain::graphics::{
-    GraphicsCaps, GraphicsPlaceholder, GraphicsProtocol,
+    GraphicsCaps, GraphicsIndexEntry, GraphicsPlaceholder, GraphicsProtocol,
 };
 use ovis_terminal_protocol::schema::limits::Limits;
 use ovis_terminal_protocol::schema::scalar::ByteCount;
 use ovis_terminal_vt::{Geometry, HistoryLimit, OutputOffset, Vt, VtConfig};
 
-use super::image_placeholders;
 use crate::terminals::images::{ImageStore, ReleasedUnit};
 
 const PAYLOAD: &str = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB";
@@ -62,7 +61,7 @@ fn summary(placeholders: &[GraphicsPlaceholder]) -> Vec<(u64, u16, u64)> {
 fn placeholder_ids_are_the_store_keys_with_the_store_entry_sizes() {
     let (vt, keys) = drawn(2, 6);
     let store = admitted(&vt, &keys, 1024);
-    let placeholders = image_placeholders(&vt.screen().images, &store);
+    let placeholders = store.placeholders(&vt.screen().images);
     let stored: Vec<(u64, u64)> = keys
         .iter()
         .filter_map(|key| {
@@ -101,7 +100,7 @@ fn an_image_the_store_evicted_has_no_placeholder_while_the_screen_still_shows_it
     let (first, second) = (keys.first().copied(), keys.get(1).copied());
     assert_eq!(first.and_then(|key| store.pieces(key)), None);
     assert_eq!(
-        summary(&image_placeholders(&vt.screen().images, &store)),
+        summary(&store.placeholders(&vt.screen().images)),
         second
             .map(|key| (key.get(), 1, size()))
             .into_iter()
@@ -113,11 +112,11 @@ fn an_image_the_store_evicted_has_no_placeholder_while_the_screen_still_shows_it
 fn an_image_scrolled_off_and_synced_out_of_the_store_has_no_placeholder() {
     let (mut vt, keys) = drawn(1, 3);
     let mut store = admitted(&vt, &keys, 1024);
-    assert_eq!(image_placeholders(&vt.screen().images, &store).len(), 1);
+    assert_eq!(store.placeholders(&vt.screen().images).len(), 1);
     drop(vt.feed(b"\r\n\r\n\r\n"));
     store.sync(&vt.images());
     assert!(keys.iter().all(|key| store.pieces(*key).is_none()));
-    assert_eq!(image_placeholders(&vt.screen().images, &store), Vec::new());
+    assert_eq!(store.placeholders(&vt.screen().images), Vec::new());
 }
 
 #[test]
@@ -128,15 +127,65 @@ fn an_image_whose_bytes_never_reached_the_store_has_no_placeholder() {
         store.forget(*key);
     }
     assert_eq!(vt.screen().images.len(), 1);
-    assert_eq!(image_placeholders(&vt.screen().images, &store), Vec::new());
+    assert_eq!(store.placeholders(&vt.screen().images), Vec::new());
 }
 
 #[test]
 fn a_placeholder_never_carries_the_payload() {
     let (vt, keys) = drawn(1, 4);
     let store = admitted(&vt, &keys, 1024);
-    let encoded = serde_json::to_string(&image_placeholders(&vt.screen().images, &store))
+    let encoded = serde_json::to_string(&store.placeholders(&vt.screen().images))
         .expect("placeholders encode");
     assert!(!encoded.contains(PAYLOAD), "{encoded}");
     assert!(encoded.len() < 200, "{encoded}");
+}
+
+/// (image id, buffer, row, col, rows, cols, bytes) of each index entry, as encoded.
+fn indexed(entries: &[GraphicsIndexEntry]) -> serde_json::Value {
+    serde_json::to_value(entries).expect("index encodes")
+}
+
+#[test]
+fn the_index_lists_a_bare_transmission_and_an_image_on_the_inactive_screen() {
+    let geometry = Geometry::new(20, 4).expect("valid geometry");
+    let mut vt = Vt::new(VtConfig::new(geometry, HistoryLimit::new(10)));
+    let transmission = b"\x1b_Ga=t,i=5;AAAA\x1b\\".to_vec();
+    drop(vt.feed(&transmission));
+    let shown_at = vt.offset();
+    drop(vt.feed(&image(1)));
+    drop(vt.feed(b"\x1b[?1049h"));
+    let mut store = store(1024);
+    for (key, bytes) in [(OutputOffset::new(0), transmission), (shown_at, image(1))] {
+        let unit = ReleasedUnit::new(key, GraphicsProtocol::Kitty, Arc::from(bytes));
+        drop(store.admit(unit, &vt.images()));
+    }
+    assert_eq!(store.placeholders(&vt.screen().images), Vec::new());
+    assert_eq!(
+        indexed(&store.index(&vt.images())),
+        serde_json::json!([
+            {"image_id": "0", "format": "kitty", "bytes": "17", "placement": null},
+            {"image_id": shown_at.get().to_string(), "format": "kitty", "bytes": size().to_string(),
+             "placement": {"buffer": "primary", "row": 0, "col": 0, "rows": 1, "cols": 3}}
+        ])
+    );
+}
+
+#[test]
+fn the_index_omits_what_the_store_evicted() {
+    let (vt, keys) = drawn(2, 6);
+    let store = admitted(&vt, &keys, size());
+    let ids: Vec<u64> = store
+        .index(&vt.images())
+        .iter()
+        .map(|entry| entry.image_id.get())
+        .collect();
+    assert_eq!(
+        ids,
+        keys.iter().skip(1).map(|key| key.get()).collect::<Vec<_>>()
+    );
+    assert!(
+        !indexed(&store.index(&vt.images()))
+            .to_string()
+            .contains(PAYLOAD)
+    );
 }

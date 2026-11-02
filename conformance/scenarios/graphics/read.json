@@ -16,7 +16,7 @@
   "cases": [
     {
       "case": "happy",
-      "summary": "Real ovis-terminal serve runs a shell as t1; an interact viewer types go and the program prints ab then a 3-chunk Kitty f=100 PNG declaring c=4,r=2 (raw offset 4, 145 bytes) and three line feeds before images-done; the viewer receives the sequence byte-identical. terminal.screen with include_images true returns lines unchanged (row 1 is ab, the covered cells stay blank text) plus exactly one placeholder {image_id 4, format kitty, row 1, col 2, rows 2, cols 4, bytes 145} whose id is the image store key; the same read without include_images carries no images field.",
+      "summary": "Real ovis-terminal serve runs a shell as t1; an interact viewer types go and the program prints ab then a 3-chunk Kitty f=100 PNG declaring c=4,r=2 (raw offset 4, 145 bytes) and three line feeds before images-done; the viewer receives the sequence byte-identical. A default terminal.screen read (no include_images) returns lines unchanged (row 1 is ab, the covered cells stay blank text) plus exactly one placeholder {image_id 4, format kitty, row 1, col 2, rows 2, cols 4, bytes 145} whose id is the image store key, and no image_index; with include_images true the same read also carries image_index [{image_id 4, format kitty, bytes 145, placement {buffer primary, row 1, col 2, rows 2, cols 4}}].",
       "steps": [
         {
           "serve": {
@@ -254,16 +254,42 @@
                 "/result/lines/0": "",
                 "/result/lines/1": "ab",
                 "/result/lines/2": "",
-                "/result/lines/4": "images-done"
+                "/result/lines/4": "images-done",
+                "/result/image_index": [
+                  {
+                    "image_id": "4",
+                    "format": "kitty",
+                    "bytes": "145",
+                    "placement": {
+                      "buffer": "primary",
+                      "row": 1,
+                      "col": 2,
+                      "rows": 2,
+                      "cols": 4
+                    }
+                  }
+                ]
               },
               "plain": {
                 "/error": {
                   "$present": false
                 },
-                "/result/images": {
+                "/result/images": [
+                  {
+                    "image_id": "4",
+                    "format": "kitty",
+                    "row": 1,
+                    "col": 2,
+                    "rows": 2,
+                    "cols": 4,
+                    "bytes": "145"
+                  }
+                ],
+                "/result/image_index": {
                   "$present": false
                 },
-                "/result/lines/1": "ab"
+                "/result/lines/1": "ab",
+                "/result/lines/2": ""
               }
             }
           }
@@ -289,7 +315,7 @@
     },
     {
       "case": "failure",
-      "summary": "--inject {\"read\":{\"include_images\":\"yes\"}}: after the same image is drawn, terminal.screen with include_images \"yes\", 1 or null is invalid_params at params.include_images (a JSON boolean is required), no result is returned, and the connection keeps serving: the next read with include_images true returns the one placeholder.",
+      "summary": "--inject {\"read\":{\"include_images\":\"yes\"}}: after the same image is drawn, terminal.screen with include_images \"yes\", 1 or null is invalid_params at params.include_images (a JSON boolean is required), no result is returned, and the connection keeps serving: the next read with include_images true returns the one placeholder and its index entry.",
       "steps": [
         {
           "serve": {
@@ -574,7 +600,8 @@
                     "cols": 4,
                     "bytes": "145"
                   }
-                ]
+                ],
+                "/result/image_index/0/image_id": "4"
               }
             }
           }

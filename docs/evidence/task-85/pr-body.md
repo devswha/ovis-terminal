@@ -2,66 +2,85 @@ feat(vt): report image placeholders in screen reads and records (plan todo 85, w
 
 Closes GAP-153 (screen reads lose images). Delivers IDEAL-120.
 
-`terminal.screen` takes a new optional `include_images` flag. Absent means false. When it is true, the read adds a placement index to its result. That index lists one `GraphicsPlaceholder` `{image_id, format: kitty|iterm2|sixel, row, col, rows, cols, bytes}` for every stored image shown on the active screen. `image_id` is the image store key, which is the raw offset `graphics_replayed` also names. `bytes` is the size of that store entry. Payload bytes are never copied into a read or a record. Text `lines` are unchanged: covered cells still read as blank text, and non-image cells read exactly as a text-only stream would show them.
+**Every** `terminal.screen` read now carries `images`: one `GraphicsPlaceholder` per stored image shown on the read screen, top row first, in this shape: `{image_id, format: kitty|iterm2|sixel, row, col, rows, cols, bytes}`. The list is empty when no image is shown.
+- `image_id` is the image store key, which is the raw offset `graphics_replayed` names too.
+- `rows`/`cols` are the covered cells still visible, clipped to the grid.
+- `bytes` is the size of the store entry.
+
+The option `include_images` (default false, a strict JSON boolean) adds `image_index`, the fuller placement index. It lists every image the store holds, in receipt order, with its placement `{buffer: primary|alternate, row, col, rows, cols}` (declared extent). The placement is `null` for a Kitty transmission that displays nothing itself.
+
+Payload bytes are never copied into a read or a record. `lines` are unchanged: the cells an image covers read as blank text, exactly as before, and every other cell reads as a text-only stream shows it. The change is additive (`openrpc compat` exit 0).
 
 ## Before
 
-`docs/evidence/task-85/before.log` and `before-happy.json` come from the base `origin/integration` 1869b9e binary, on Linux 7.0.0-38-generic x86_64. A shell prints `ab`, then a 3-chunk Kitty f=100 PNG declaring `c=4,r=2` at raw offset 4 (145 bytes), then `images-done`. The viewer receives the image byte-identical (`graphics/contains[kitty_png_3_chunks]` passed). The screen read reports the 2x4 image region only as blank cells:
+Evidence: `docs/evidence/task-85/before.log` and `before-happy.json`, from the base `origin/integration` 1869b9e binary on Linux 7.0.0-38-generic x86_64. A shell prints `ab`, then a 3-chunk Kitty f=100 PNG declaring `c=4,r=2` at raw offset 4 (145 bytes), then `images-done`. The viewer receives the image byte-identical. The default screen read reports the 2x4 image region only as blank cells, and the read has no image fact:
 
 ```
-{"jsonrpc":"2.0","id":"plain","result":{"cursor":{"col":11,"row":4,"visible":true},"lines":["","ab","","","images-done",...],"output_offset":"169","revision":"27","title":null,"truncated":false}}
-{"jsonrpc":"2.0","id":"with-images","error":{"code":-32602,...,"data":{"kind":"invalid_params",...,"field_path":"params.include_images"}}}
+{"jsonrpc":"2.0","id":"plain","result":{"cursor":{"col":11,"row":4,"visible":true},"lines":["","ab","","","images-done",...],"modes":{...},"output_offset":"169","revision":"27","title":null,"truncated":false}}
 ```
 
-The base read has no image fact, and the base schema cannot ask for one. In code, before this PR, `crates/ovis-terminal-vt/src/engine/read.rs` `ScreenRead` (lines 83-108 at 1869b9e) had no image field. `crates/ovis-terminal-protocol/src/schema/methods/terminal_read.rs:15-20` `TerminalScreenParams` was `{target, format}` only. The conformance run against the base binary exited 1 at step 13 (`reply[with-images]/error`).
+The base schema cannot ask for one either: `include_images` is an unknown field there (`invalid_params` at `params.include_images`). In code at 1869b9e, `crates/ovis-terminal-vt/src/engine/read.rs` `ScreenRead` (lines 83-108) has no image field, and `crates/ovis-terminal-protocol/src/schema/methods/terminal_read.rs:22-40` `TerminalScreenResult` is `{revision, output_offset, lines, cursor, modes, title, truncated}`.
 
 ## After
 
-Every command ran on Linux x86_64 (`uname -srm`: Linux 7.0.0-38-generic x86_64), with `CARGO_TARGET_DIR=/dev/shm/ovt-target-lane-t85`.
+The same default read on the PR binary (`qa-happy.json`, `"id":"plain"`, no `include_images`):
+
+```
+{"jsonrpc":"2.0","id":"plain","result":{...,"images":[{"bytes":"145","col":2,"cols":4,"format":"kitty","image_id":"4","row":1,"rows":2}],"lines":["","ab","","","images-done",...],...}}
+```
+
+With `include_images: true`, the read also carries `"image_index":[{"bytes":"145","format":"kitty","image_id":"4","placement":{"buffer":"primary","col":2,"cols":4,"row":1,"rows":2}}]`. The schema diff is in `schema.diff`: new `GraphicsImageId`, `GraphicsPlaceholder`, `GraphicsIndexEntry`, `GraphicsIndexPlacement` and `GraphicsBuffer`; the optional param `include_images` (default false); the result fields `images` and `image_index`.
+
+Every command ran on Linux x86_64 with `CARGO_TARGET_DIR=/dev/shm/ovt-target-lane-t85`, on the tree merged with integration 1c1527d.
 
 | Command | Exit | Result |
 |---|---|---|
-| `cargo nextest run -p ovis-terminal-vt -p ovis-terminal-protocol -p ovis-terminal-core --locked` (heavy slot) | 0 | 729 tests run, 729 passed (`after.log`) |
-| `conformance --binary $CARGO_TARGET_DIR/debug/ovis-terminal --scenario graphics/read --isolated --case happy --evidence docs/evidence/task-85/qa-happy.json` | 0 | 1 case, 31 assertions. `terminal.screen` with `include_images: true` returns `"images":[{"bytes":"145","col":2,"cols":4,"format":"kitty","image_id":"4","row":1,"rows":2}]` at the drawn position. `lines[1]=="ab"`. The same read without the flag has no `images` field. |
-| `… --case failure --inject '{"read":{"include_images":"yes"}}' --evidence docs/evidence/task-85/qa-failure.json` | 0 | 1 case, 34 assertions. `include_images` given as `"yes"`, `1` or `null` is `invalid_params` with `field_path: params.include_images` and no result. The next read with `true` still returns the one placeholder. |
-| `… --case all --evidence docs/evidence/task-85/conformance.json` | 0 | 2 cases, 64 assertions, failed 0 |
-| `cargo run -p ovis-terminal-protocol --bin openrpc -- check schema/ovis-terminal.openrpc.json` / `… compat schema/released.openrpc.json` | 0 / 0 | fresh; `{"compatible_with":"schema/released.openrpc.json"}`, additive (`openrpc.log`, schema diff `schema.diff`: new `GraphicsImageId`, `GraphicsPlaceholder`, optional param `include_images` (default false), optional result field `images`) |
-| `cd packages/client-ts && bun install --frozen-lockfile && bun run generate && bun run generate:check && bun run typecheck && bun test` | 0 | 51 pass, 0 fail (`sdk.log`). SDK regenerated; every generated file's header carries the new schema sha256. |
-| `cargo run --locked --manifest-path probes/Cargo.toml --bin quality-matrix -- --mode contract` then `--mode verify` | 0 / 0 | `"findings": []`, `"verdict": "pass"`, methods 104 (`quality-contract.log`) |
-| `cargo run --locked -p ovis-terminal-replay --bin ovis-replay -- refresh` | 0 | `{"refreshed":12}` fixture pins (schema and ideal-map digests) |
-| `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` | 0 | 1571 tests run, 1571 passed, 2 skipped; workspace-hygiene 0 violations in 1550 files; json.sh 296 files; source-check and evidence-audit pass (`check.log`). Attempt 1 (`check-attempt1-contract-stale.log`) failed because the quality contract was stale (`quality-matrix --mode contract` had not been run after the schema change). Attempt 2 (`check-attempt2-pins-stale.log`) failed because the fixture pins of `conformance/ideal-map.json` were stale (`ovis-replay refresh` after the contract). Both were regenerated, not hand-edited. |
+| `cargo nextest run -p ovis-terminal-vt -p ovis-terminal-protocol -p ovis-terminal-core --locked` (heavy slot) | 0 | 733 tests run, 733 passed (`after.log`) |
+| `conformance --binary $CARGO_TARGET_DIR/debug/ovis-terminal --scenario graphics/read --isolated --case happy --evidence docs/evidence/task-85/qa-happy.json` | 0 | 1 case, 34 assertions. The default read has exactly the one placeholder `{image_id "4", kitty, row 1, col 2, rows 2, cols 4, bytes "145"}` and no `image_index`. `lines[1]=="ab"`, `lines[2]==""`. With `include_images: true` the read also has `image_index` with the same id and its primary placement. |
+| `… --case failure --inject '{"read":{"include_images":"yes"}}' --evidence docs/evidence/task-85/qa-failure.json` | 0 | 1 case, 35 assertions. `include_images` given as `"yes"`, `1` or `null` is `invalid_params` with `field_path: params.include_images` and no result. The next read with `true` returns the placeholder and `image_index[0].image_id == "4"`. |
+| `… --case all --evidence docs/evidence/task-85/conformance.json` | 0 | 2 cases, 68 assertions, failed 0 |
+| `openrpc check` / `openrpc compat schema/released.openrpc.json`; `quality-matrix --mode contract` / `--mode verify` | 0 / 0 / 0 / 0 | fresh; compatible; `"verdict": "pass"`, `"finding_count": "0"` (`openrpc.log`) |
+| `bun run generate` → `cargo run --locked -p ovis-terminal-replay --bin ovis-replay -- refresh` | 0 / 0 | 31 SDK files regenerated; `{"refreshed":12}` pins |
+| client-ts gate (`bun install --frozen-lockfile && bun run generate && bun run generate:check && bun run typecheck && bun test`) | 0 | 51 pass, 0 fail (`sdk.log`) |
+| `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` | 0 | 1595 tests run, 1595 passed, 2 skipped; workspace-hygiene 0 violations in 1566 files; json.sh 300 files; source-check and evidence-audit pass (`check.log`) |
 | `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` / `cargo clippy … -- -D warnings` | 0 / 0 | `windows-check.log` |
+| `evidence-audit --tree docs/evidence --exemptions probes/quality/evidence-exemptions.json` | 0 | `finding_count 0` (`evidence-audit.log`) |
 
 New tests and what they assert:
-- `crates/ovis-terminal-vt/tests/image_reads.rs` (6 tests):
-  - A Kitty `c=4,r=2` image is reported at (1,2) as 2x4. Its lines equal a text-only engine's.
+- `crates/ovis-terminal-vt/tests/image_reads.rs` (7 tests):
+  - A Kitty `c=4,r=2` image is reported at (1,2) as 2x4, and its lines equal a text-only engine's.
   - Partial scroll-off reports only the visible rows; full scroll-off reports none.
   - Printing over an image removes its placeholder.
   - A footprint is clipped at the right edge and the bottom.
   - Sixel (1x1), iTerm2 inline `width/height` and a Kitty put are reported; a bare `a=t` transmission is not.
-  - A primary image is never reported on the alternate screen, even under an alternate image on the same cells, and is reported again after leaving.
-- `crates/ovis-terminal-core/src/terminals/records/tests.rs` (5 tests):
+  - A primary image is never reported on the alternate screen, even under an alternate image on the same cells.
+  - A footprint that is no longer intact is not reported. Four damage cases are checked: one covered cell printed over, one cell erased (ECH), a line inserted between its rows (IL), and one covered row erased to its end (EL).
+- `crates/ovis-terminal-core/src/terminals/images/placeholders/tests.rs` (7 tests):
   - Placeholder ids equal the store keys, and `bytes` equals the store entry's size.
   - An image the store evicted has no placeholder while the VT still shows it.
   - An image scrolled off and synced out of the store has no placeholder.
   - An image whose bytes never reached the store has no placeholder.
-  - The encoded placeholders never contain the payload.
-- `crates/ovis-terminal-protocol/src/domain/graphics/tests/placeholders.rs` (5 tests):
+  - Encoded placeholders never contain the payload.
+  - The index lists a bare transmission (`placement: null`) and an image on the inactive screen (`buffer: primary`, while no placeholder is shown).
+  - The index omits what the store evicted, and it never contains the payload.
+- `crates/ovis-terminal-protocol/src/domain/graphics/tests/placeholders.rs` (6 tests):
   - Decimal-string `image_id`/`bytes` round-trip at u64::MAX.
-  - A numeric id or an extra payload field is refused.
+  - A numeric id or an extra payload field is refused, for both the placeholder and the index entry.
   - `include_images` defaults to false.
   - `"yes"`, `"true"`, `1`, `null` and `[true]` are each `invalid_params` at `params.include_images`.
-  - A result without images omits the field, and one with images round-trips.
+  - `images` and `image_index` round-trip, and are omitted when absent.
 
-Mutants were each applied alone, run, then restored; the logs are committed. All 4 fail a shipped test:
+Mutants were each applied alone, run, then restored; the logs are committed:
 - `mutant-evicted-image-keeps-placeholder.log`: 2 core tests fail.
 - `mutant-declared-rows-not-visible-rows.log`: 2 vt tests fail.
 - `mutant-include-images-required.log`: 1 protocol test fails.
-- `mutant-alternate-screen-not-filtered.log`: this one survived round 1 (`still()` already rejected unmarked alternate cells). The test now draws an alternate image on the same cells, and 1 test fails.
+- `mutant-alternate-screen-not-filtered.log`: the buffer check, re-run on the round 2 expression; 1 vt test fails.
+- `mutant-follow-keeps-erased.log`: follow never releases an erased footprint; 2 vt tests fail, including the new non-intact test.
+- `mutant-read-ignores-still.log` (gate N4): it **survives 84/84, because it is equivalent**. Every grid mutation (`Vt::feed`, `Vt::resize`) ends in `follow_images()`. That releases any placement whose footprint is no longer whole on the active screen, and restore starts with no images. So the read-time `anchor.still(grid)` could never decide an outcome. I removed that redundant guard. Reads now state the invariant they rely on, and the guard that decides (`follow`) is the one mutated in `mutant-follow-keeps-erased.log`.
 
-Adversarial classes and the test guarding each are listed in `adversarial.log` (executor-run).
+Adversarial classes and the test guarding each are in `adversarial.log`.
 
-macOS stress: lane `graphics-read` (`probes/platform-qa/stress/graphics-read.{json,sh}`). It runs 25 iterations of the placeholder tests plus `graphics/read --case all`. Run on `37c854f` (pre-merge code head): https://github.com/devswha/ovis-terminal/actions/runs/41374308872 (conclusion: success). The merge touched `crates/` (T66 CLI), so it was dispatched once more on the final head: https://github.com/devswha/ovis-terminal/actions/runs/41375557488 (dispatched on `225cebc`, a docs-only commit below the final head; the code tree is identical)
+macOS stress: lane `graphics-read` (`probes/platform-qa/stress/graphics-read.{json,sh}`), 25 iterations of the placeholder/index tests plus `graphics/read --case all`. The round 1 code head `37c854f` passed: https://github.com/devswha/ovis-terminal/actions/runs/41374308872 (success). The final head: STRESS_FINAL.
 
 ### GAP-152 (cursor model): recorded as still open
 
@@ -69,55 +88,47 @@ Todo 85 does not move the authoritative VT cursor past a placement. The reasons 
 
 First, moving the cursor changes where every later character lands. This block forbids changing cell semantics for non-image cells.
 
-Second, the advance is computable only for extents declared in cells. For a Kitty image without `c`/`r`, an iTerm2 image with `auto` size, or a sixel, it depends on pixel and cell-pixel sizes that the headless runtime never learns. A partial advance would trade one cursor mismatch for another.
+Second, the advance is computable only for extents declared in cells. For a Kitty image without `c`/`r`, an iTerm2 image with `auto` size, or a sixel, it depends on pixel and cell-pixel sizes that the headless runtime never learns.
 
-What a read reports in that case is consistent: text printed over an image releases it, and the read shows no placeholder.
+### Records (gate N2)
 
-### Records
+The join lives where its data does: `ImageStore::placeholders` and `ImageStore::index` in `crates/ovis-terminal-core/src/terminals/images/placeholders.rs`. `crates/ovis-terminal-core/src/terminals/records.rs` is unchanged from integration. No current terminal or agent record snapshots the screen: `Record`/`TerminalSnapshot` carry no screen content, and todo 37 forbids synthesizing conversation records from terminal bytes. A future screen-snapshot record would carry `ImageStore::placeholders` output.
 
-`crates/ovis-terminal-core/src/terminals/records.rs` gains the placeholder record form `image_placeholders(shown, store)`. It joins the VT placements with the image store and is used by `terminal.screen`. No current terminal or agent record snapshots the screen: `Record`/`TerminalSnapshot` carry no screen content, and todo 37 forbids synthesizing conversation records from terminal bytes. So no other record changes shape. Any future snapshot record must call the same function.
+## Round history
+
+- **Round 1 (gate REJECT, B1):** placeholders appeared only with `include_images: true`, so the default read still dropped the image. **Fixed:** the default read carries them, and `include_images` controls only the fuller `image_index`. N4 and N2 are covered above. The DoneClaim is in the PR description.
+- **Merge with integration 1c1527d (T66):** the only conflict was the generated pins in `conformance/fixtures/ovis/manifest.json`. I took integration's side and regenerated them.
+  - T66's committed `cli/manual` evidence pins `{"$equals_file":"schema/ovis-terminal.openrpc.json"}`. This PR's additive schema made that pin stale on the merged tree: evidence-audit reported `assertion-forged` at `docs/evidence/task-66/task-66-all.json#0` and `task-66-ovis-terminal-v1.json#0` (`check-merged-attempt1-t66-evidence-stale.log`).
+  - I re-recorded both files on this PR's binary with T66's own invocations, and all three runs exited 0 (`t66-rerecord-*.log`).
+- **Earlier check.sh attempts:** `check-attempt1-contract-stale.log` and `check-attempt2-pins-stale.log` failed on a stale quality contract and stale fixture pins. Both were regenerated, not hand-edited.
 
 ## Seams
 
 Files outside the write scope, and why:
-- `crates/ovis-terminal-vt/src/engine/images/{anchor,set}.rs`: the placement entries are private to the images module. `Images::on_screen` plus two anchor accessors (visible rows, clipped columns) expose the visible footprint to `read.rs`.
+- `crates/ovis-terminal-vt/src/engine/images/{anchor,set}.rs`: the placement entries are private to the images module. `Images::on_screen` and two anchor accessors (visible rows, clipped columns) feed `read.rs`.
 - `crates/ovis-terminal-vt/src/{engine.rs,lib.rs}`: export `ScreenImage`.
 - `crates/ovis-terminal-vt/tests/image_reads.rs`: new vt behaviour tests.
 - `crates/ovis-terminal-core/src/screen/{views,reads}.rs`: `ScreenView` carries the frozen read's `images`.
-- `crates/ovis-terminal-core/src/terminals.rs`: re-export `image_placeholders`.
-- `crates/ovis-terminal-core/src/terminals/records/tests.rs`: tests of the placeholder form.
-- `crates/ovis-terminal-protocol/src/schema/methods/terminal_read.rs`: the wire option `include_images` and the result field `images`.
-- `crates/ovis-terminal-protocol/src/domain/graphics/tests{.rs,/placeholders.rs}`: test registration and the tests themselves.
-- `crates/ovis-terminal-server/src/streams/graphics/replay.rs`: `TerminalStreams::image_placeholders` reads the hub's image store under its lock.
-- `crates/ovis-terminal-cli/src/assembly/reads.rs`: `terminal.screen` adds `images` when requested. It stays an unrecorded Query read.
-- `schema/ovis-terminal.openrpc.json`, `packages/client-ts/src/generated/**`, `conformance/ideal-map.json`, `conformance/fixtures/ovis/{manifest,predicates}.json`: regenerated (`openrpc write`, `bun run generate`, `quality-matrix --mode contract`, `ovis-replay refresh`).
-- `conformance/src/runner_tests/suite.rs`: `graphics/read.json` registered in `ASSEMBLED` in sorted position. `declared.json` never listed it.
-- `docs/design/traceability.json`: GAP-152 note records the todo 85 decision.
+- `crates/ovis-terminal-core/src/terminals/images.rs` and the new `images/placeholders.rs` + `placeholders/tests.rs`: the store-side join (gate N2).
+- `crates/ovis-terminal-protocol/src/domain/graphics/placeholder.rs`: the placeholder and index types, a child of `graphics.rs` to stay under 250 LOC.
+- `crates/ovis-terminal-protocol/src/schema/methods/terminal_read.rs`: `include_images`, `images` and `image_index`.
+- `crates/ovis-terminal-protocol/src/domain/graphics/tests{.rs,/placeholders.rs}`: protocol tests.
+- `crates/ovis-terminal-server/src/streams/graphics/replay.rs`: `TerminalStreams::image_placeholders` / `image_index` under the hub lock.
+- `crates/ovis-terminal-cli/src/assembly/reads.rs`: `terminal.screen` adds `images` always and `image_index` on request. It stays an unrecorded Query read.
+- `schema/ovis-terminal.openrpc.json`, `packages/client-ts/src/generated/**`, `conformance/ideal-map.json`, `conformance/fixtures/ovis/{manifest,predicates}.json`: regenerated (`openrpc write`, `quality-matrix --mode contract`, `bun run generate`, `ovis-replay refresh`).
+- `conformance/src/runner_tests/suite.rs`: `graphics/read.json` registered in `ASSEMBLED` in sorted position.
+- `docs/design/traceability.json`: the GAP-152 note.
+- `docs/evidence/task-66/task-66-all.json` and `task-66-ovis-terminal-v1.json`: re-recorded, because their schema pin follows this PR's schema.
 - `probes/platform-qa/stress/graphics-read.{json,sh}`: macOS stress lane.
 
 ## Risks
 
 - The screen snapshot and the image store are read under separate locks. A release landing between the two drops that placeholder, which is conservative: a placeholder is never reported without its store entry, but a just-released image can be missing from a read whose lines are one feed older.
-- `rows`/`cols` are the declared footprint clipped to the grid (one cell when undeclared), not decoded pixel geometry.
-- After this lands, other open lanes whose committed evidence pins `schema/ovis-terminal.openrpc.json` via `$equals_file` will need re-recording on the merged ref (schema-landing lesson).
+- `rows`/`cols` are cell footprints (declared extent clipped to the grid, one cell when undeclared), not decoded pixel geometry.
+- After this lands, other open lanes whose committed evidence pins `schema/ovis-terminal.openrpc.json` via `$equals_file` need re-recording on the merged ref.
 
-## Round 2: merged origin/integration 1c1527d (T66) at the orchestrator's request
-
-The PR conflicted only in `conformance/fixtures/ovis/manifest.json`, which holds generated fixture pins. I took integration's side and regenerated. The schema did not change in the merge (`openrpc write` reproduced 656804 bytes; `bun run generate` changed 0 files). The steps were `openrpc write` + `compat` (exit 0), `quality-matrix --mode contract` (verdict pass), `bun run generate`, then `ovis-replay refresh` (`{"refreshed":12}`). The merge commit is `0f663a5`.
-
-On the merged tree, check.sh attempt 1 failed in `quality_evidence` (`check-merged-attempt1-t66-evidence-stale.log`). The evidence-audit reported `assertion-forged` at `docs/evidence/task-66/task-66-all.json#0` and `task-66-ovis-terminal-v1.json#0`. T66's committed `cli/manual` happy step pins `{"$equals_file":"schema/ovis-terminal.openrpc.json"}`, and this PR's additive schema change makes that pin stale on the merged tree. This is the schema-landing case. I re-recorded those two files on the merged binary with T66's own invocations (all; happy, then failure `--inject 'ovis-terminal agent get --unknown-flag --json' --append`). All three runs exited 0 (`t66-rerecord-*.log`), and evidence-audit then reported `finding_count 0` (`evidence-audit.log`).
-
-| Command (merged tree) | Exit | Result |
-|---|---|---|
-| `conformance … --scenario graphics/read --case happy` / `failure --inject '{"read":{"include_images":"yes"}}'` / `all` | 0 / 0 / 0 | re-recorded `qa-happy.json`, `qa-failure.json`, `conformance.json` (all: 2 cases, 64 assertions) |
-| `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` | 0 | 1591 tests run, 1591 passed, 2 skipped; hygiene 0 violations in 1564 files; json.sh 300 files (`check.log`); the pre-merge pass is kept as `check-pre-merge.log` |
-| Windows `cargo check` / `cargo clippy` (`x86_64-pc-windows-gnu`, `-D warnings`) | 0 / 0 | `windows-check.log` |
-| client-ts gate | 0 | 51 pass, 0 fail (`sdk.log`) |
-
-Added seam: `docs/evidence/task-66/task-66-all.json` and `task-66-ovis-terminal-v1.json` were re-recorded, not edited by hand, because their schema pin follows this PR's schema.
-
-DEFERRED VERIFICATION: none. The runner executes `graphics/read` today (happy, failure and all exit 0, as above).
+DEFERRED VERIFICATION: none. The runner executes `graphics/read` today.
 
 ## DoneClaim
 
-The DoneClaim JSON is appended to the PR description once CI completes. It is bound to the final head and is never committed under docs/evidence.
+DONECLAIM_JSON

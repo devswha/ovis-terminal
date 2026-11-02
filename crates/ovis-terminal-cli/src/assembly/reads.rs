@@ -77,15 +77,16 @@ impl Runtime {
             .screen()
             .map_err(|error| refusal(error.kind(), error.hint()))?;
         let lines: Vec<&str> = view.lines.iter().map(|line| line.text.as_str()).collect();
-        let images = if params.include_images {
-            let placeholders = live
+        let shown =
+            |error: ovis_terminal_server::streams::StreamError| refusal(error.kind(), error.hint());
+        let images = live.hub.image_placeholders(&view.images).map_err(shown)?;
+        let index = if params.include_images {
+            let retained = live
                 .hub
-                .image_placeholders(&view.images)
+                .screen()
+                .images()
                 .map_err(|error| refusal(error.kind(), error.hint()))?;
-            Some(
-                serde_json::to_value(placeholders)
-                    .map_err(internal("encode image placeholders"))?,
-            )
+            Some(live.hub.image_index(&retained).map_err(shown)?)
         } else {
             None
         };
@@ -98,8 +99,14 @@ impl Runtime {
             "title": view.title,
             "truncated": false,
         });
-        if let (Some(images), Some(fields)) = (images, result.as_object_mut()) {
+        if let Some(fields) = result.as_object_mut() {
+            let images = serde_json::to_value(images).map_err(internal("encode placeholders"))?;
             fields.insert("images".to_owned(), images);
+            if let Some(index) = index {
+                let index =
+                    serde_json::to_value(index).map_err(internal("encode the image index"))?;
+                fields.insert("image_index".to_owned(), index);
+            }
         }
         checked::<TerminalScreenResult>(result)
     }

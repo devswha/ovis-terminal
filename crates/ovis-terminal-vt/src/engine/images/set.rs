@@ -65,7 +65,9 @@ impl ImageSet {
 
 impl Images {
     /// The images shown on `grid`, the active screen (`alternate` when it is the
-    /// alternate one), by the cells each still covers, top row first.
+    /// alternate one), by the cells each still covers, top row first. Every retained
+    /// placement on the active screen is intact: each feed and resize ends in
+    /// [`Images::follow`], which releases a footprint that is no longer whole.
     pub(in crate::engine) fn on_screen(
         &self,
         grid: &Grid<Cell>,
@@ -76,7 +78,7 @@ impl Images {
             .iter()
             .filter_map(|entry| {
                 let anchor = entry.anchor.as_ref()?;
-                (anchor.alternate == alternate && anchor.still(grid)).then(|| ScreenImage {
+                (anchor.alternate == alternate).then(|| ScreenImage {
                     key: entry.key,
                     protocol: entry.protocol,
                     row: u16::try_from(anchor.line()).unwrap_or(u16::MAX),

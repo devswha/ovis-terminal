@@ -13,9 +13,10 @@ mod tests;
 
 use std::sync::Arc;
 
-use ovis_terminal_core::terminals::image_placeholders;
 use ovis_terminal_core::terminals::images::ImageStore;
-use ovis_terminal_protocol::domain::graphics::{GraphicsPlaceholder, GraphicsReplayedData};
+use ovis_terminal_protocol::domain::graphics::{
+    GraphicsIndexEntry, GraphicsPlaceholder, GraphicsReplayedData,
+};
 use ovis_terminal_protocol::schema::ids::StreamId;
 use ovis_terminal_protocol::schema::records::{AttachControl, ControlKind};
 use ovis_terminal_protocol::schema::scalar::ByteOffset;
@@ -146,6 +147,15 @@ impl TerminalStreams {
         &self,
         shown: &[ScreenImage],
     ) -> Result<Vec<GraphicsPlaceholder>, StreamError> {
-        Ok(image_placeholders(shown, &self.lock()?.images))
+        Ok(self.lock()?.images.placeholders(shown))
+    }
+
+    /// The placement index of every image in `retained` this terminal's image store holds.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StreamError::Poisoned`] when the hub lock is poisoned.
+    pub fn image_index(&self, retained: &ImageSet) -> Result<Vec<GraphicsIndexEntry>, StreamError> {
+        Ok(self.lock()?.images.index(retained))
     }
 }
