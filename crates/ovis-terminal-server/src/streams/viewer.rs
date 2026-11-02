@@ -17,13 +17,18 @@ use tokio::sync::Notify;
 use tokio::time::Instant;
 
 use super::credit::{Credit, CreditRefusal};
+use super::graphics::{Piece, notice_record};
 use super::log::{Notice, OutputLog, Shared};
 use super::offset::{LogOffset, StreamOffset};
 
 #[derive(Debug)]
 enum Pending {
     Control(Box<AttachControl>),
-    Paint(Shared),
+    /// Paint bytes; `replay` marks retained graphics the paint re-sends.
+    Paint {
+        bytes: Shared,
+        replay: bool,
+    },
 }
 
 /// The next thing a viewer's connection must carry.
@@ -106,7 +111,7 @@ impl Viewer {
         self.queue
             .iter()
             .fold(self.credit.sent(), |at, pending| match pending {
-                Pending::Paint(bytes) => at.advanced(bytes.len()),
+                Pending::Paint { bytes, .. } => at.advanced(bytes.len()),
                 Pending::Control(_) => at,
             })
     }
@@ -115,13 +120,31 @@ impl Viewer {
         self.queue.push_back(Pending::Control(Box::new(record)));
     }
 
-    /// Queues a checkpoint paint and resumes live bytes at `live`.
-    pub(super) fn paint(&mut self, record: AttachControl, (bytes, live): (Arc<[u8]>, LogOffset)) {
-        let len = bytes.len();
+    /// Queues a checkpoint paint, in pieces, and resumes live bytes at `live`.
+    pub(super) fn paint(&mut self, record: AttachControl, (pieces, live): (&[Piece], LogOffset)) {
         self.control(record);
-        self.queue
-            .push_back(Pending::Paint(Shared::new(bytes, 0..len)));
+        for piece in pieces {
+            self.queue.push_back(Pending::Paint {
+                bytes: piece.bytes.clone(),
+                replay: piece.replay,
+            });
+        }
         self.cursor = live;
+    }
+
+    /// Re-sent graphics bytes still queued; the store bounds them, not the backlog.
+    pub(super) fn replay_pending(&self) -> u64 {
+        let replayed = |pending: &Pending| match pending {
+            Pending::Paint { bytes, replay } if *replay => Some(bytes.len()),
+            _ => None,
+        };
+        let bytes: usize = self.queue.iter().filter_map(replayed).sum();
+        u64::try_from(bytes).unwrap_or(u64::MAX)
+    }
+
+    /// The backlog charged against the stream and session bounds.
+    pub(super) fn charged_backlog(&self, log: &OutputLog) -> u64 {
+        self.backlog(log).saturating_sub(self.replay_pending())
     }
 
     /// Drops undelivered bytes but keeps undelivered control records in order.
@@ -206,7 +229,7 @@ impl Viewer {
                 }),
                 _ => None,
             },
-            Some(Pending::Paint(bytes)) => {
+            Some(Pending::Paint { bytes, .. }) => {
                 let len = bytes.len().min(chunk).min(allowance);
                 let sent = take(bytes, len);
                 if bytes.len() == 0 {
@@ -245,7 +268,7 @@ impl Viewer {
         {
             if notice.at <= self.cursor {
                 self.notices_seen = notice.seq;
-                return Some(self.dropped(notice));
+                return Some(self.notice(notice));
             }
             until = notice.at;
         }
@@ -260,13 +283,11 @@ impl Viewer {
         Some(self.data(bytes))
     }
 
-    /// The `graphics_dropped` record that stands where the dropped sequence was.
-    fn dropped(&self, notice: &Notice) -> Delivery {
+    /// The graphics notice record that stands where the log stood at its offset.
+    fn notice(&self, notice: &Notice) -> Delivery {
         let at = self.credit.sent().wire();
-        let mut record = AttachControl::new(self.id.clone(), ControlKind::GraphicsDropped, at);
-        record.graphics_dropped = Some(notice.data.clone());
         Delivery::Control {
-            record: Box::new(record),
+            record: Box::new(notice_record(&self.id, at, &notice.data)),
             last: false,
         }
     }

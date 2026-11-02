@@ -13,6 +13,7 @@ use alacritty_terminal::vte::Parser;
 use serde::{Deserialize, Serialize};
 
 use crate::engine::fidelity::InexactReason;
+use crate::engine::images::{Scanner, Seen};
 use crate::engine::mirror::VteState;
 use crate::engine::observer::{Completion, Observer};
 use crate::engine::osc::{OscRecord, OscTerminator, RawOsc, truncated};
@@ -40,6 +41,8 @@ pub(super) enum StringKind {
 pub(super) struct Cut {
     pub(super) forward_end: usize,
     pub(super) input_end: usize,
+    /// A graphics sequence or RIS completed here; it applies once the segment has.
+    pub(super) image: Option<Seen>,
 }
 
 /// What one fed chunk contained.
@@ -61,6 +64,8 @@ pub(super) struct Tracker {
     state: VteState,
     raw: RawOsc,
     draining: Option<StringKind>,
+    /// Graphics sequences, read with the attach gate's boundary rules.
+    images: Scanner,
 }
 
 impl Tracker {
@@ -72,6 +77,7 @@ impl Tracker {
             state: VteState::Ground,
             raw: RawOsc::default(),
             draining: None,
+            images: Scanner::default(),
         }
     }
 
@@ -103,38 +109,52 @@ impl Tracker {
     pub(super) fn scan(&mut self, start: OutputOffset, bytes: &[u8]) -> Scan {
         let mut scan = Scan::default();
         for (index, &byte) in bytes.iter().enumerate() {
-            if self.discards(byte) {
-                continue;
-            }
-            if self.pending.len() >= SEQUENCE_LIMIT && !self.ends_sequence(byte) {
-                self.abort(&mut scan, start.advanced_by(index));
-                if self.draining.is_some() {
-                    continue;
-                }
-            }
-            scan.forward.push(byte);
-            let observer = self.step(byte);
-            scan.completions = scan.completions.saturating_add(observer.completions);
-            let input_end = index.saturating_add(1);
-            if let Some((terminator, content)) = observer.osc {
-                let offset = start.advanced_by(input_end);
-                scan.osc.push(OscRecord {
-                    offset,
-                    terminator,
-                    content,
-                });
-            }
-            if matches!(
-                observer.last,
-                Some(Completion::Ground | Completion::StringEnd { .. })
-            ) {
+            let image = self.images.step(byte, start.advanced_by(index));
+            self.consume(&mut scan, (byte, start, index));
+            if let Some(seen) = image {
                 scan.cuts.push(Cut {
                     forward_end: scan.forward.len(),
-                    input_end,
+                    input_end: index.saturating_add(1),
+                    image: Some(seen),
                 });
             }
         }
         scan
+    }
+
+    /// Forwards input byte `index` of a chunk starting at `start`, unless an aborted
+    /// string discards it.
+    fn consume(&mut self, scan: &mut Scan, (byte, start, index): (u8, OutputOffset, usize)) {
+        if self.discards(byte) {
+            return;
+        }
+        if self.pending.len() >= SEQUENCE_LIMIT && !self.ends_sequence(byte) {
+            self.abort(scan, start.advanced_by(index));
+            if self.draining.is_some() {
+                return;
+            }
+        }
+        scan.forward.push(byte);
+        let observer = self.step(byte);
+        scan.completions = scan.completions.saturating_add(observer.completions);
+        let input_end = index.saturating_add(1);
+        if let Some((terminator, content)) = observer.osc {
+            scan.osc.push(OscRecord {
+                offset: start.advanced_by(input_end),
+                terminator,
+                content,
+            });
+        }
+        if matches!(
+            observer.last,
+            Some(Completion::Ground | Completion::StringEnd { .. })
+        ) {
+            scan.cuts.push(Cut {
+                forward_end: scan.forward.len(),
+                input_end,
+                image: None,
+            });
+        }
     }
 
     /// Whether `byte` belongs to an aborted string and is dropped. A string

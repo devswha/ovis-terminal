@@ -152,7 +152,8 @@ impl TerminalStreams {
             .map(Viewer::cursor)
             .min()
             .unwrap_or_else(|| state.log.end());
-        state.log.trim(keep);
+        let unwatched = state.viewers.is_empty();
+        state.log.trim(keep, unwatched);
         drop(state);
         Ok(())
     }

@@ -6,12 +6,28 @@ use ovis_terminal_protocol::schema::scalar::{ByteCount, ByteOffset};
 use super::held::{Gated, Held, width};
 use super::introducer::KittyHeader;
 
+/// A Kitty transmission other output interrupted between two chunks: its later chunks
+/// continue it, measured against the cap together with what it already released.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct Series {
+    start: u64,
+    size: u64,
+    dropped: bool,
+}
+
+/// What a new unit begins: its protocol and the interrupted series it continues.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct Start {
+    pub protocol: GraphicsProtocol,
+    pub series: Option<Series>,
+}
+
 #[derive(Debug)]
 pub(super) struct Unit {
     protocol: GraphicsProtocol,
     /// Held bytes; empty once the unit is dropped.
     held: Held,
-    /// Raw offset of the unit's first byte.
+    /// Raw offset of the first byte of the unit, or of the series it continues.
     output_offset: u64,
     /// Sequence bytes seen, counted against the cap.
     size: u64,
@@ -24,17 +40,17 @@ pub(super) struct Unit {
 impl Unit {
     /// A unit whose introducer is `prefix`.
     pub(super) fn begin(
-        protocol: GraphicsProtocol,
+        start: Start,
         prefix: Held,
         (caps, out): (GraphicsCaps, &mut Gated),
     ) -> Self {
-        let output_offset = prefix.raw_start;
+        let Start { protocol, series } = start;
         let mut unit = Self {
             protocol,
-            held: Held::at(output_offset),
-            output_offset,
-            size: 0,
-            dropped: false,
+            held: Held::at(prefix.raw_start),
+            output_offset: series.map_or(prefix.raw_start, |series| series.start),
+            size: series.map_or(0, |series| series.size),
+            dropped: series.is_some_and(|series| series.dropped),
             open: true,
             header: KittyHeader::default(),
         };
@@ -118,11 +134,19 @@ impl Unit {
         }
     }
 
+    /// The series this unit leaves open: a Kitty chunk announced another.
+    pub(super) fn carried(&self) -> Option<Series> {
+        self.awaits_chunk().then_some(Series {
+            start: self.output_offset,
+            size: self.size,
+            dropped: self.dropped,
+        })
+    }
+
     /// Releases a unit that was not dropped, whole.
     pub(super) fn finish(self, out: &mut Gated) {
         if !self.dropped {
-            out.graphics = out.graphics.saturating_add(width(self.held.bytes.len()));
-            out.release(self.held);
+            out.release_unit(self.held, (self.output_offset, self.protocol));
         }
     }
 }

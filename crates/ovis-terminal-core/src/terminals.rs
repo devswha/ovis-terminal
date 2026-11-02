@@ -1,6 +1,7 @@
 //! Terminal lifecycle and process incarnation evidence (plan todo 16).
 
 mod error;
+pub mod images;
 mod inspection;
 mod labels;
 pub mod process_info;

@@ -1,0 +1,121 @@
+   Compiling ovis-terminal-vt v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-vt)
+   Compiling ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-core)
+   Compiling ovis-terminal-agent v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-agent)
+   Compiling ovis-terminal-remote v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-remote)
+   Compiling ovis-terminal-services v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-services)
+   Compiling ovis-terminal-agent-adapters v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-agent-adapters)
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 25.18s
+────────────
+ Nextest run ID 4fb05705-18cb-4934-a491-1bfb29941184 with nextest profile: default
+    Starting 31 tests across 20 binaries (288 tests skipped)
+        PASS [   0.008s] ( 1/31) ovis-terminal-vt engine::images::tests::a_transmission_reusing_an_id_replaces_the_old_image
+        PASS [   0.009s] ( 2/31) ovis-terminal-vt engine::images::tests::a_region_scroll_moves_a_surviving_anchor_and_releases_a_recycled_one
+        PASS [   0.010s] ( 3/31) ovis-terminal-vt engine::images::tests::a_kitty_series_is_one_image_keyed_by_its_first_chunk_even_when_interrupted
+        PASS [   0.014s] ( 4/31) ovis-terminal-vt engine::images::tests::an_image_is_placed_on_the_cursor_cell_it_arrived_at_with_its_header_extent
+        PASS [   0.017s] ( 5/31) ovis-terminal-server streams::graphics::replay::tests::an_interrupted_kitty_series_is_one_key_measured_against_the_cap_together
+        PASS [   0.018s] ( 6/31) ovis-terminal-server streams::graphics::replay::tests::kitty_keys_are_read_up_to_256_bytes_for_the_continuation_flag
+        PASS [   0.019s] ( 7/31) ovis-terminal-server streams::graphics::replay::tests::an_osc_1337_that_is_not_an_inline_file_is_not_graphics
+        PASS [   0.019s] ( 8/31) ovis-terminal-server streams::graphics::replay::tests::a_paint_shares_the_store_bytes_where_its_images_go
+        PASS [   0.012s] ( 9/31) ovis-terminal-vt engine::images::tests::chunking_never_changes_which_images_are_retained_or_where
+        PASS [   0.012s] (10/31) ovis-terminal-vt engine::images::tests::erasing_or_printing_over_the_anchor_cell_releases_it_and_neighbours_do_not
+        PASS [   0.022s] (11/31) ovis-terminal-server streams::graphics::replay::tests::sixel_parameters_are_read_up_to_63_bytes
+        PASS [   0.009s] (12/31) ovis-terminal-vt engine::images::tests::leaving_the_alternate_screen_releases_its_images_and_keeps_the_primary_ones
+        FAIL [   0.010s] (13/31) ovis-terminal-vt engine::images::tests::kitty_deletes_name_ids_numbers_and_placements_or_data_by_case
+  stdout ───
+
+    running 1 test
+    test engine::images::tests::kitty_deletes_name_ids_numbers_and_placements_or_data_by_case ... FAILED
+
+    failures:
+
+    failures:
+        engine::images::tests::kitty_deletes_name_ids_numbers_and_placements_or_data_by_case
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'engine::images::tests::kitty_deletes_name_ids_numbers_and_placements_or_data_by_case' (3091397) panicked at crates/ovis-terminal-vt/src/engine/images/tests.rs:177:5:
+    assertion `left == right` failed
+      left: [0, 17, 36]
+     right: [0, 36]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.009s] (14/31) ovis-terminal-vt engine::images::tests::only_displayed_graphics_are_retained_never_their_lookalikes
+        PASS [   0.009s] (15/31) ovis-terminal-vt engine::images::tests::paint::a_put_follows_its_transmission_and_a_put_without_one_is_skipped
+        PASS [   0.008s] (16/31) ovis-terminal-vt engine::images::tests::paint::a_shown_image_is_spliced_after_the_rows_and_the_replay_rebuilds_it_in_place
+        PASS [   0.009s] (17/31) ovis-terminal-vt engine::images::tests::paint::an_erased_image_is_not_spliced
+        PASS [   0.030s] (18/31) ovis-terminal-server::streams replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach
+        PASS [   0.010s] (19/31) ovis-terminal-vt engine::images::tests::paint::primary_images_are_spliced_into_the_primary_paint_while_the_alternate_is_active
+        PASS [   0.030s] (20/31) ovis-terminal-server::streams replay_a_cleared_screen_replays_no_image
+        PASS [   0.009s] (21/31) ovis-terminal-vt engine::images::tests::ris_releases_every_image
+        PASS [   0.009s] (22/31) ovis-terminal-vt engine::images::tests::the_anchor_follows_scrolling_and_leaves_with_the_visible_screen
+        FAIL [   0.031s] (23/31) ovis-terminal-server::streams replay_a_kitty_delete_removes_only_the_named_image
+  stdout ───
+
+    running 1 test
+    <- {"jsonrpc":"2.0","id":"hello","result":{"boot_proof":null,"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":"10000","graphics_sequence_max_bytes":"8388608","graphics_terminal_store_max_bytes":"33554432","heartbeat_ms":"15000","history_lines":"100000","input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":"64","op_retention_ms":"86400000","output_ring_bytes":"67108864","queued_operations":"32","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["attach.open","attach.repaint","attach.credit","attach.close","attach.takeover"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793570886085","version":"0.1.0"}}
+
+    -> {"id":"open","jsonrpc":"2.0","method":"attach.open","params":{"client_id":"replay-4","geometry":null,"op_id":"replay-4","role":"observe","stream_mode":"plain","takeover":null,"target":{"terminal_id":"terminal:7"}}}
+    <- {"jsonrpc":"2.0","id":"open","result":{"channel":null,"credit_initial":"262144","displaced":null,"final_output_offset":null,"first_paint":{"cursor":{"col":0,"row":2,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"0","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"276","revision":"9","stream_offset":"0"},"holder":null,"lease":{"epoch":"1","holder":"replay-4","lease_id":"lease:1","role":"observe"},"outcome":"ready","reason":null,"retry":null,"stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572","terminal":{"process_incarnation":"1","terminal_id":"terminal:7","terminal_incarnation":"1"}}}
+
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":{"cursor":{"col":0,"row":2,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"0","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"276","revision":"9","stream_offset":"0"},"close":null,"kind":"checkpoint","skipped":null,"stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572","stream_offset":"0"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G2MbWzE7MUgbWzI7MUgbWzM7MUgbWzQ7MUgbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUg=","offset":"0","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+
+    -> {"id":"credit-1","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"50","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G1sxOzFI","offset":"50","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+
+    -> {"id":"credit-2","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"56","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G19HYT1ULGY9MTAwLGk9MSxtPTE7aVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUFFQUFBQUIbXBtfR209MDtDQVlBQUFBZkZjU0pBQUFBRFVsRVFWUjQybU5rK005UUR3QURoZ0dBV2pSOWF3QUFBQUJKUlU1RXJrSmdnZz09G1w=","offset":"56","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+
+    -> {"id":"credit-3","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"184","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G1syOzFI","offset":"184","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+
+    -> {"id":"credit-4","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"190","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G19HYT1ULGY9MTAwLGk9MixtPTE7aVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUFFQUFBQUIbXBtfR209MDtDQVlBQUFBZkZjU0pBQUFBRFVsRVFWUjQybU5rK005UUR3QURoZ0dBV2pSOWF3QUFBQUJKUlU1RXJrSmdnZz09G1w=","offset":"190","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+
+    -> {"id":"credit-5","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"318","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G1sxOzFIG1swOzM5OzQ5bRs3G1s/MjVoG1s/MWwbWz8xMDAwbBtbPzEwMDJsG1s/MTAwM2wbWz8xMDA0bBtbPzEwMDVsG1s/MTAwNmwbWz8xMDA3aBtbPzEwNDJoG1s/MjAwNGwbWz82bBtbPTA7MXUbWz40OzBtG1s/OTAwMWwbPhtbMiBxG1szOzFIG1s/N2gbWzRsG1syMGwbWzA7Mzk7NDlt","offset":"318","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+
+    -> {"id":"credit-6","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"483","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":null,"close":null,"graphics_replayed":{"released":[],"replayed":["0","130"]},"kind":"graphics_replayed","skipped":null,"stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572","stream_offset":"483"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"IGFmdGVy","offset":"483","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+
+    -> {"id":"credit-7","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"489","stream_id":"stream:01a19927-d1c6-70e6-8c54-81ed4a90c572"}}
+    test replay_a_kitty_delete_removes_only_the_named_image ... FAILED
+
+    failures:
+
+    failures:
+        replay_a_kitty_delete_removes_only_the_named_image
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.01s
+
+  stderr ───
+
+    thread 'replay_a_kitty_delete_removes_only_the_named_image' (3091367) panicked at crates/ovis-terminal-server/tests/../src/streams/graphics/replay/qa.rs:174:5:
+    assertion `left == right` failed
+      left: Some(56)
+     right: None
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.007s] (24/31) ovis-terminal-vt engine::images::tests::the_mark_is_a_flag_bit_alacritty_never_defines
+        PASS [   0.034s] (25/31) ovis-terminal-server::streams replay_a_full_store_evicts_the_oldest_with_typed_counts
+        PASS [   0.008s] (26/31) ovis-terminal-vt::queries replayed_queries_are_not_answered_twice
+        PASS [   0.008s] (27/31) ovis-terminal-vt::properties control_inside_an_open_sequence_is_reported_not_replayed
+        PASS [   0.036s] (28/31) ovis-terminal-server::streams replay_a_scrolled_off_image_is_not_replayed
+        PASS [   0.033s] (29/31) ovis-terminal-vt engine::images::tests::the_engine_retains_at_most_its_image_limit
+        PASS [   0.124s] (30/31) ovis-terminal-server::dispatch conversation_records::a_replayed_append_commits_once_and_publishes_its_receipt_as_the_event
+        PASS [   0.187s] (31/31) ovis-terminal-server::dispatch session_binding::a_replaced_programs_token_is_refused_and_a_replayed_branch_applies_once
+────────────
+     Summary [   0.188s] 31 tests run: 29 passed, 2 failed, 288 skipped
+        FAIL [   0.010s] (13/31) ovis-terminal-vt engine::images::tests::kitty_deletes_name_ids_numbers_and_placements_or_data_by_case
+        FAIL [   0.031s] (23/31) ovis-terminal-server::streams replay_a_kitty_delete_removes_only_the_named_image
+error: test run failed
+
+# mutant mutant-kitty-delete-ignores-id: crates/ovis-terminal-vt/src/engine/images.rs
+# - b'i' => target.id.is_some() && entry.kitty.id == target.id,
+# + b'i' => false,

@@ -1,0 +1,74 @@
+   Compiling ovis-terminal-vt v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-vt)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.67s
+────────────
+ Nextest run ID 49f9d52b-f389-4d07-8ef8-adcfdb8edf23 with nextest profile: default
+    Starting 20 tests across 11 binaries (53 tests skipped)
+        PASS [   0.011s] ( 1/20) ovis-terminal-vt engine::images::tests::a_transmission_reusing_an_id_replaces_the_old_image
+        PASS [   0.011s] ( 2/20) ovis-terminal-vt engine::images::tests::kitty_deletes_name_ids_numbers_and_placements_or_data_by_case
+        PASS [   0.011s] ( 3/20) ovis-terminal-vt engine::images::tests::a_kitty_series_is_one_image_keyed_by_its_first_chunk_even_when_interrupted
+        PASS [   0.011s] ( 4/20) ovis-terminal-vt engine::images::tests::paint::primary_images_are_spliced_into_the_primary_paint_while_the_alternate_is_active
+        PASS [   0.011s] ( 5/20) ovis-terminal-vt engine::images::tests::paint::an_erased_image_is_not_spliced
+        PASS [   0.011s] ( 6/20) ovis-terminal-vt engine::images::tests::paint::a_put_follows_its_transmission_and_a_put_without_one_is_skipped
+        PASS [   0.011s] ( 7/20) ovis-terminal-vt engine::images::tests::leaving_the_alternate_screen_releases_its_images_and_keeps_the_primary_ones
+        FAIL [   0.011s] ( 8/20) ovis-terminal-vt engine::images::tests::footprint::a_write_inside_the_footprint_but_off_the_anchor_expires_the_image
+  stdout ───
+
+    running 1 test
+    test engine::images::tests::footprint::a_write_inside_the_footprint_but_off_the_anchor_expires_the_image ... FAILED
+
+    failures:
+
+    failures:
+        engine::images::tests::footprint::a_write_inside_the_footprint_but_off_the_anchor_expires_the_image
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 28 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'engine::images::tests::footprint::a_write_inside_the_footprint_but_off_the_anchor_expires_the_image' (3504916) panicked at crates/ovis-terminal-vt/src/engine/images/tests/footprint.rs:19:5:
+    assertion `left == right` failed
+      left: [0]
+     right: []
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.012s] ( 9/20) ovis-terminal-vt engine::images::tests::only_displayed_graphics_are_retained_never_their_lookalikes
+        PASS [   0.012s] (10/20) ovis-terminal-vt engine::images::tests::an_image_is_placed_on_the_cursor_cell_it_arrived_at_with_its_header_extent
+        PASS [   0.012s] (11/20) ovis-terminal-vt engine::images::tests::a_region_scroll_moves_a_surviving_anchor_and_releases_a_recycled_one
+        PASS [   0.012s] (12/20) ovis-terminal-vt engine::images::tests::paint::a_shown_image_is_spliced_after_the_rows_and_the_replay_rebuilds_it_in_place
+        FAIL [   0.012s] (13/20) ovis-terminal-vt engine::images::tests::footprint::an_image_survives_while_any_of_its_rows_is_on_screen_and_replays_there
+  stdout ───
+
+    running 1 test
+    test engine::images::tests::footprint::an_image_survives_while_any_of_its_rows_is_on_screen_and_replays_there ... FAILED
+
+    failures:
+
+    failures:
+        engine::images::tests::footprint::an_image_survives_while_any_of_its_rows_is_on_screen_and_replays_there
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 28 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'engine::images::tests::footprint::an_image_survives_while_any_of_its_rows_is_on_screen_and_replays_there' (3504915) panicked at crates/ovis-terminal-vt/src/engine/images/tests/footprint.rs:31:5:
+    assertion `left == right` failed: its second row is still the top row
+      left: []
+     right: [0]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.013s] (14/20) ovis-terminal-vt engine::images::tests::footprint::a_footprint_is_clipped_to_the_grid
+        PASS [   0.013s] (15/20) ovis-terminal-vt engine::images::tests::erasing_or_printing_over_the_anchor_cell_releases_it_and_neighbours_do_not
+        PASS [   0.013s] (16/20) ovis-terminal-vt engine::images::tests::chunking_never_changes_which_images_are_retained_or_where
+        PASS [   0.007s] (17/20) ovis-terminal-vt engine::images::tests::the_mark_is_a_flag_bit_alacritty_never_defines
+        PASS [   0.007s] (18/20) ovis-terminal-vt engine::images::tests::ris_releases_every_image
+        PASS [   0.008s] (19/20) ovis-terminal-vt engine::images::tests::the_anchor_follows_scrolling_and_leaves_with_the_visible_screen
+        PASS [   0.037s] (20/20) ovis-terminal-vt engine::images::tests::the_engine_retains_at_most_its_image_limit
+────────────
+     Summary [   0.048s] 20 tests run: 18 passed, 2 failed, 53 skipped
+        FAIL [   0.011s] ( 8/20) ovis-terminal-vt engine::images::tests::footprint::a_write_inside_the_footprint_but_off_the_anchor_expires_the_image
+        FAIL [   0.012s] (13/20) ovis-terminal-vt engine::images::tests::footprint::an_image_survives_while_any_of_its_rows_is_on_screen_and_replays_there
+error: test run failed
+
+# mutant mutant-r3-anchor-row-only: crates/ovis-terminal-vt/src/engine/images/anchor.rs
+# - if let Some(id) = row_id(grid, index) {
+# + if let Some(id) = row_id(grid, index).filter(|_| index == top) {

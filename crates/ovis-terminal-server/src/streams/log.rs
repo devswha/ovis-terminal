@@ -9,7 +9,7 @@ use std::collections::VecDeque;
 use std::ops::Range;
 use std::sync::Arc;
 
-use ovis_terminal_protocol::domain::graphics::GraphicsDroppedData;
+use ovis_terminal_protocol::domain::graphics::{GraphicsDroppedData, GraphicsEvictedData};
 use ovis_terminal_vt::OutputOffset;
 
 use super::graphics::Gated;
@@ -25,13 +25,22 @@ struct Chunk {
     graphics: u64,
 }
 
-/// A graphics sequence dropped whole where the log stood at `at`.
+/// What a graphics notice reports.
+#[derive(Debug)]
+pub(super) enum NoticeData {
+    /// A sequence over its cap was dropped whole here.
+    Dropped(GraphicsDroppedData),
+    /// Retaining the sequence before it evicted the oldest retained ones.
+    Evicted(GraphicsEvictedData),
+}
+
+/// A graphics notice that stands where the log stood at `at`.
 #[derive(Debug)]
 pub(super) struct Notice {
     pub at: LogOffset,
     /// Increases by one per notice; a viewer remembers the last it was sent.
     pub seq: u64,
-    pub data: GraphicsDroppedData,
+    pub data: NoticeData,
 }
 
 impl Chunk {
@@ -95,8 +104,20 @@ impl OutputLog {
             filtered,
             graphics,
             dropped,
+            evicted,
+            ..
         } = gated;
-        for (index, data) in dropped {
+        let mut notices: Vec<(usize, NoticeData)> = dropped
+            .into_iter()
+            .map(|(index, data)| (index, NoticeData::Dropped(data)))
+            .chain(
+                evicted
+                    .into_iter()
+                    .map(|(index, data)| (index, NoticeData::Evicted(data))),
+            )
+            .collect();
+        notices.sort_by_key(|(index, _)| *index);
+        for (index, data) in notices {
             self.notice_seq = self.notice_seq.saturating_add(1);
             self.notices.push_back(Notice {
                 at: self.end.advanced(index),
@@ -143,14 +164,25 @@ impl OutputLog {
         })
     }
 
-    /// Drops chunks and notices every live viewer has read past.
-    pub(super) fn trim(&mut self, keep: LogOffset) {
+    /// Drops chunks and notices every live viewer has read past. With no viewer
+    /// attached, a notice at `keep` itself goes too: a viewer attaching later skips it.
+    pub(super) fn trim(&mut self, keep: LogOffset, unwatched: bool) {
         while self.chunks.front().is_some_and(|chunk| chunk.end() <= keep) {
             self.chunks.pop_front();
         }
-        while self.notices.front().is_some_and(|notice| notice.at < keep) {
+        while self
+            .notices
+            .front()
+            .is_some_and(|notice| notice.at < keep || (unwatched && notice.at <= keep))
+        {
             self.notices.pop_front();
         }
+    }
+
+    /// Graphics notices still retained.
+    #[cfg(test)]
+    pub(super) fn notices(&self) -> usize {
+        self.notices.len()
     }
 
     /// Graphics bytes in the chunks from `from` on.
@@ -174,9 +206,13 @@ impl OutputLog {
 
 #[cfg(test)]
 mod tests {
+    use ovis_terminal_protocol::domain::graphics::{GraphicsCaps, GraphicsEvictedData};
+    use ovis_terminal_protocol::schema::limits::Limits;
+    use ovis_terminal_protocol::schema::scalar::{ByteCount, Count};
     use ovis_terminal_vt::OutputOffset;
 
     use super::super::filter::Filtered;
+    use super::super::graphics::Gated;
     use super::OutputLog;
     use crate::streams::offset::LogOffset;
 
@@ -199,10 +235,37 @@ mod tests {
             .read(LogOffset::new(1), 2)
             .map(|shared| shared.as_slice().to_vec());
         assert_eq!(read.as_deref(), Some(b"bc".as_slice()));
-        log.trim(LogOffset::new(4));
+        log.trim(LogOffset::new(4), false);
         assert!(
             log.read(LogOffset::new(1), 2).is_none(),
             "trimmed chunks are released"
         );
+    }
+
+    #[test]
+    fn a_notice_at_the_end_is_trimmed_only_when_no_viewer_is_attached() {
+        let mut log = OutputLog::default();
+        let mut gated = Gated::from(Filtered {
+            bytes: b"ab".to_vec(),
+            raw_start: OutputOffset::new(0),
+            raw_end: OutputOffset::new(2),
+            removed: Vec::new(),
+        });
+        let caps = GraphicsCaps::advertised(&Limits::v1());
+        let evicted = GraphicsEvictedData::store_full(
+            caps,
+            (Count::new(1), ByteCount::new(1)),
+            ByteCount::new(0),
+        );
+        gated.evicted.push((2, evicted));
+        log.append(gated);
+        log.trim(log.end(), false);
+        assert_eq!(
+            log.notices(),
+            1,
+            "a viewer at the end has not been sent it yet"
+        );
+        log.trim(log.end(), true);
+        assert_eq!(log.notices(), 0);
     }
 }

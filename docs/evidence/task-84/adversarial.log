@@ -1,0 +1,58 @@
+Task 84 adversarial pass (executor-run). Each class names the shipped test that guards it.
+
+1. Fragmentation: a graphics header or terminator split across reads.
+   vt engine::images::tests::chunking_never_changes_which_images_are_retained_or_where
+   (the same stream fed whole and one byte at a time gives an identical ImageSet).
+2. Key agreement between VT and gate: both must key a Kitty series by its first chunk,
+   including a series that other output interrupts.
+   vt ...::a_kitty_series_is_one_image_keyed_by_its_first_chunk_even_when_interrupted
+   server streams::graphics::replay::tests::an_interrupted_kitty_series_is_one_key_measured_against_the_cap_together
+3. Aggregate cap evasion (T83 seam a): runs of an interrupted series are measured together;
+   one notice is placed at the series start, and the dropped series leaves the store.
+   Same server test; killed mutant mutant-series-not-carried.log.
+4. Scrolled-out images must not be re-sent: the anchor row is followed by the address of its
+   cell buffer, so rows that rotate into scrollback are found missing.
+   vt ...::the_anchor_follows_scrolling_and_leaves_with_the_visible_screen;
+   server replay_a_scrolled_off_image_is_not_replayed; conformance graphics/replay failure.
+   Killed mutant mutant-scrolled-out-never-released.log.
+5. Recycled rows: a region scroll below the top resets and reuses a row buffer at another
+   line. The anchor-cell mark (flag bit 15, which alacritty never defines) is reset with it.
+   vt ...::a_region_scroll_moves_a_surviving_anchor_and_releases_a_recycled_one.
+   Address reuse after a free is also covered: a new row is blank, so it carries no mark.
+6. Erase/overwrite (ED, EL, ECH, a printed char): mark lost -> released; neighbours keep it.
+   vt ...::erasing_or_printing_over_the_anchor_cell_releases_it_and_neighbours_do_not;
+   server replay_a_cleared_screen_replays_no_image.
+   Finding: alacritty's ED 2 moves the top row into scrollback (Grid::clear_viewport), so
+   the first image reports scrolled_out and the rest report erased. The tests pin this.
+7. Kitty a=d targets and case: id, number, all; lower case keeps a=t data, upper case
+   removes it. Unknown targets are treated as "all", so nothing deleted is ever re-sent.
+   vt ...::kitty_deletes_name_ids_numbers_and_placements_or_data_by_case;
+   server replay_a_kitty_delete_removes_only_the_named_image.
+   Killed mutant mutant-kitty-delete-ignores-id.log.
+8. Id reuse: a transmission with an existing id releases the old image.
+   vt ...::a_transmission_reusing_an_id_replaces_the_old_image
+9. RIS and alternate screen: RIS releases all. Leaving 1049 releases the alternate images
+   and keeps the primary ones. While the alternate screen is active, primary images are
+   spliced into the primary part of the paint (before ?1049h).
+   vt ...::ris_releases_every_image, ...leaving_the_alternate_screen..., tests::paint::primary_images_are_spliced...
+10. Lookalikes are never retained or replayed: iTerm2 inline=0, OSC 1337 SetUserVar,
+    DECRQSS DCS $ q, Kitty a=q, sixel with 64+ parameter bytes.
+    vt ...::only_displayed_graphics_are_retained_never_their_lookalikes;
+    server ...::an_osc_1337_that_is_not_an_inline_file_is_not_graphics,
+    kitty_keys_are_read_up_to_256_bytes..., sixel_parameters_are_read_up_to_63_bytes.
+    These kill the three surviving T83 mutants (mutant-t83-*.log).
+11. Unbounded growth: the store is bounded by graphics_terminal_store_max_bytes with
+    oldest-first eviction and a typed in-stream graphics_evicted record. The VT retains at
+    most IMAGE_LIMIT=1024 images. The released lists are bounded (VT 4096, store 64).
+    core terminals::images::tests::* (7); server replay_a_full_store_evicts_the_oldest_with_typed_counts;
+    vt ...::the_engine_retains_at_most_its_image_limit. Killed mutant mutant-store-evicts-newest-first.log.
+12. Replay storms: replayed bytes are shared Arc pieces of the store. They are not charged
+    to the 4 MiB stream backlog or the session budget (Viewer::charged_backlog), so a 32 MiB
+    replay cannot trigger an immediate gap+checkpoint loop.
+    server ...::a_paint_shares_the_store_bytes_where_its_images_go (piece flags);
+    killed mutant mutant-replay-not-spliced.log.
+13. The replay draws no cell: the late viewer's grid equals that of a VT fed every raw byte.
+    server replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach;
+    vt tests::paint::a_shown_image_is_spliced_after_the_rows_and_the_replay_rebuilds_it_in_place.
+14. Stale notices (T83 seam b): with no viewer attached, a notice at the log end is trimmed
+    at <=. server streams::log::tests::a_notice_at_the_end_is_trimmed_only_when_no_viewer_is_attached.
