@@ -1,0 +1,81 @@
+bun install v1.4.3 (c6da4a4d3)
+
+Done! Checked 8 packages (no changes) [2.00ms]
+$ bun scripts/generate.ts
+{"generated":"written","files":31,"changed":0}
+$ bun scripts/generate.ts --check
+{"generated":"fresh","files":31}
+$ tsc --noEmit -p tsconfig.json
+bun test v1.4.3 (c6da4a4d3)
+
+test/client.test.ts:
+(pass) happy > happy: shared wire fixtures decode as declared at every split and re-encode byte-exactly [5.70ms]
+(pass) happy > happy: the Rust runner replayed the same fixture bytes through the real binary (sha256 match) [779.02ms]
+(pass) happy > happy: one persistent real-socket connection carries pipelined calls with exact u64 values [501.33ms]
+(pass) happy > happy: aborting a held mutation cancels it before commit on the same connection [458.22ms]
+(pass) happy > happy: framed stream offsets above 2^53, channel-bound credit and unknown output enums survive [1.77ms]
+(pass) happy > happy: input admission is separate from its later delivery update; plain credit stays exact [1.45ms]
+(pass) happy > happy: reconnect resumes after the exact retained cursor and drops a replayed duplicate [1.14ms]
+(pass) failure > failure: shared strict rejections are typed identically by the local check and the real server [431.61ms]
+(pass) failure > failure: a reply lost after durable accept leaves a draft that is never resent [458.04ms]
+(pass) failure > failure: a client deadline reports deadline_exceeded with an inspectable draft [571.85ms]
+(pass) failure > failure: lost reply after input admission is outcome_unknown, revokes input-ready, never resent [3.02ms]
+(pass) failure > failure: an old stream's ack cannot grant credit to the new stream [1.33ms]
+(pass) failure > failure: an unreplayable cursor is reported missed [1.43ms]
+(pass) failure > failure: a u64 counter sent as a JSON number is invalid_response [0.73ms]
+
+test/generate.test.ts:
+(pass) every published method lands in exactly one namespace module and in the runtime catalog [13.56ms]
+(pass) generation is deterministic and the committed output is that generation [22.58ms]
+(pass) open-enum sites, decimals and identities render as distinct nominal types [7.99ms]
+(pass) generated modules do not depend on the insertion order of components or methods [26.43ms]
+(pass) schemars component names map to deterministic PascalCase identifiers at declarations and references [0.92ms]
+(pass) a name collision after mapping fails generation with the typed name_collision error naming both components [0.21ms]
+(pass) a component name with no valid TypeScript identifier mapping is refused, never emitted [0.14ms]
+(pass) an unsupported schema or a colliding name fails generation with a typed kind [5.88ms]
+
+test/schema.test.ts:
+(pass) outputs keep added fields and added values at open-enum sites [0.13ms]
+(pass) outputs still refuse a missing required field, a numeric counter and an unknown closed value [0.07ms]
+(pass) inputs are closed: an added field or an open-enum value outside the catalog is refused [0.10ms]
+
+test/decimal.test.ts:
+(pass) u64::MAX and 2^53 + 1 round-trip exactly through decimal strings [0.19ms]
+(pass) numbers, non-canonical text and out-of-range values are refused with invalid_decimal [0.21ms]
+
+test/frames.test.ts:
+(pass) coalesced valid fixtures decode identically under 2000 seeded segmentations [125.04ms]
+(pass) every invalid fixture appended after valid frames fails with its typed kind under any split [61.45ms]
+(pass) random frames round-trip, and a CREDIT payload carries u64::MAX exactly [5.79ms]
+
+tests/fixtures.test.ts:
+(pass) every pin the Bun client computes equals the manifest, the same hashes the Rust runner checks [0.13ms]
+(pass) every case replays through the packed client with no failed expectation [0.02ms]
+(pass) the Bun receipts equal receipts.json, which the Rust runner reproduces too [0.13ms]
+(pass) the replay sources typecheck against the packed declarations [678.50ms]
+
+tests/consumer.test.ts:
+(pass) happy > every entry point resolves to the installed tarball's dist, outside the repository [52.67ms]
+(pass) happy > the consumer typechecks against the packed declarations and every misuse is rejected [1025.79ms]
+(pass) happy > one framed connection to the real server carries pipelined calls; future_status and u64 stay exact [543.51ms]
+(pass) happy > an additive output enum value is kept as received and the known fields are unchanged [39.82ms]
+(pass) happy > typed attach outcomes, isolated stream bytes and per-stream credit [40.66ms]
+(pass) happy > frames decode identically at every split, bytewise, and a truncated tail is typed [42.87ms]
+(pass) failure > an expired op_id is the server's typed op_expired, sent once and never resent [398.86ms]
+(pass) failure > a lost mutation reply is an inspectable draft; reconnect resends nothing [493.26ms]
+(pass) failure > stale state: a closed stream's ack grants nothing and the next credit belongs to the live stream [43.33ms]
+(pass) failure > stale state: reconnect resumes after the retained cursor and drops the replayed duplicate [43.96ms]
+(pass) failure > a malformed server frame fails the decoder once; the mutation becomes a draft and is not resent [38.90ms]
+(pass) failure > Windows named pipes are refused with a typed error; Unix platforms use sockets [41.82ms]
+
+tests/package.test.ts:
+(pass) the tarball carries only built output, the license, the readme and the manifest [6.40ms]
+(pass) the packed manifest's exports, types, files, engines and license resolve inside the tarball [13.17ms]
+(pass) the exported OpenRPC document is the Rust-emitted schema byte for byte [13.63ms]
+(pass) building and packing again reproduces the tarball byte for byte [1279.74ms]
+(pass) build refuses a schema the committed generated modules do not match, writing nothing [43.66ms]
+
+ 51 pass
+ 0 fail
+ 3423 expect() calls
+Ran 51 tests across 8 files. [26.27s]

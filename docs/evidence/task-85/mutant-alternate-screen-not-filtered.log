@@ -1,0 +1,51 @@
+# round 2 (redundant still() removed): - (anchor.alternate == alternate).then( + true.then(
+# mutant-alternate-screen-not-filtered: crates/ovis-terminal-vt/src/engine/images/set.rs
+# - (anchor.alternate == alternate && anchor.still(grid))
+# + anchor.still(grid)
+# round 1 survived (6/6 passed): still() already rejected the unmarked alternate cells; the test now draws an alternate image on the same cells, so only the buffer check keeps the primary image out.
+# cargo nextest run --locked -p ovis-terminal-vt --no-fail-fast -E 'binary(image_reads)'
+# cargo nextest run --locked -p ovis-terminal-vt --no-fail-fast --test image_reads
+warning: unused variable: `alternate`
+  --> crates/ovis-terminal-vt/src/engine/images/set.rs:74:9
+   |
+74 |         alternate: bool,
+   |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_alternate`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: `ovis-terminal-vt` (lib) generated 1 warning (run `cargo fix --lib -p ovis-terminal-vt` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.10s
+────────────
+ Nextest run ID bb861900-3073-48b2-8039-b22f327d8e7d with nextest profile: default
+    Starting 7 tests across 1 binary
+        FAIL [   0.006s] (1/7) ovis-terminal-vt::image_reads a_primary_screen_image_is_not_reported_on_the_alternate_screen_even_under_an_alternate_image
+  stdout ───
+
+    running 1 test
+    test a_primary_screen_image_is_not_reported_on_the_alternate_screen_even_under_an_alternate_image ... FAILED
+
+    failures:
+
+    failures:
+        a_primary_screen_image_is_not_reported_on_the_alternate_screen_even_under_an_alternate_image
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'a_primary_screen_image_is_not_reported_on_the_alternate_screen_even_under_an_alternate_image' (751973) panicked at crates/ovis-terminal-vt/tests/image_reads.rs:124:5:
+    assertion `left == right` failed
+      left: [(2, Kitty, 1, 0, 1, 2)]
+     right: []
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.008s] (2/7) ovis-terminal-vt::image_reads sixel_iterm2_and_kitty_puts_are_reported_but_a_bare_transmission_is_not
+        PASS [   0.008s] (3/7) ovis-terminal-vt::image_reads a_kitty_image_is_reported_at_its_cells_and_the_text_stays_what_text_alone_shows
+        PASS [   0.008s] (4/7) ovis-terminal-vt::image_reads printing_over_an_image_removes_its_placeholder
+        PASS [   0.008s] (5/7) ovis-terminal-vt::image_reads a_footprint_is_clipped_at_the_right_edge_and_the_bottom
+        PASS [   0.009s] (6/7) ovis-terminal-vt::image_reads an_image_whose_footprint_is_no_longer_intact_is_not_reported
+        PASS [   0.009s] (7/7) ovis-terminal-vt::image_reads rows_scrolled_off_the_top_leave_the_rest_reported_until_none_is_visible
+────────────
+     Summary [   0.010s] 7 tests run: 6 passed, 1 failed, 0 skipped
+        FAIL [   0.006s] (1/7) ovis-terminal-vt::image_reads a_primary_screen_image_is_not_reported_on_the_alternate_screen_even_under_an_alternate_image
+error: test run failed

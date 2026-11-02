@@ -84,6 +84,7 @@ impl Screen {
             cursor: screen.cursor,
             modes: screen.modes,
             title: screen.title.clone(),
+            images: screen.images.clone(),
         })
     }
 

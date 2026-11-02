@@ -1,0 +1,72 @@
+# mutant-declared-rows-not-visible-rows: crates/ovis-terminal-vt/src/engine/images/set.rs
+# - u16::try_from(anchor.shown_rows())
+# + u16::try_from(usize::from(entry.extent.0.max(1)))
+# cargo nextest run --locked -p ovis-terminal-vt --no-fail-fast -E 'binary(image_reads)'
+warning: method `shown_rows` is never used
+  --> crates/ovis-terminal-vt/src/engine/images/anchor.rs:96:25
+   |
+61 | impl Anchor {
+   | ----------- method in this implementation
+...
+96 |     pub(super) const fn shown_rows(&self) -> usize {
+   |                         ^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `ovis-terminal-vt` (lib) generated 1 warning
+warning: `ovis-terminal-vt` (lib test) generated 1 warning (1 duplicate)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.79s
+────────────
+ Nextest run ID e69cf7e0-e85d-436f-bb84-55c4a9d13429 with nextest profile: default
+    Starting 6 tests across 1 binary (11 binaries skipped)
+        FAIL [   0.009s] (1/6) ovis-terminal-vt::image_reads a_footprint_is_clipped_at_the_right_edge_and_the_bottom
+  stdout ───
+
+    running 1 test
+    test a_footprint_is_clipped_at_the_right_edge_and_the_bottom ... FAILED
+
+    failures:
+
+    failures:
+        a_footprint_is_clipped_at_the_right_edge_and_the_bottom
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'a_footprint_is_clipped_at_the_right_edge_and_the_bottom' (3812599) panicked at crates/ovis-terminal-vt/tests/image_reads.rs:89:5:
+    assertion `left == right` failed
+      left: [(7, Kitty, 1, 16, 5, 4)]
+     right: [(7, Kitty, 1, 16, 2, 4)]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.009s] (2/6) ovis-terminal-vt::image_reads a_kitty_image_is_reported_at_its_cells_and_the_text_stays_what_text_alone_shows
+        PASS [   0.009s] (3/6) ovis-terminal-vt::image_reads printing_over_an_image_removes_its_placeholder
+        PASS [   0.010s] (4/6) ovis-terminal-vt::image_reads sixel_iterm2_and_kitty_puts_are_reported_but_a_bare_transmission_is_not
+        FAIL [   0.010s] (5/6) ovis-terminal-vt::image_reads rows_scrolled_off_the_top_leave_the_rest_reported_until_none_is_visible
+  stdout ───
+
+    running 1 test
+    test rows_scrolled_off_the_top_leave_the_rest_reported_until_none_is_visible ... FAILED
+
+    failures:
+
+    failures:
+        rows_scrolled_off_the_top_leave_the_rest_reported_until_none_is_visible
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'rows_scrolled_off_the_top_leave_the_rest_reported_until_none_is_visible' (3812598) panicked at crates/ovis-terminal-vt/tests/image_reads.rs:65:5:
+    assertion `left == right` failed
+      left: [(2, Kitty, 0, 0, 3, 3)]
+     right: [(2, Kitty, 0, 0, 2, 3)]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.010s] (6/6) ovis-terminal-vt::image_reads a_primary_screen_image_is_not_reported_on_the_alternate_screen
+────────────
+     Summary [   0.011s] 6 tests run: 4 passed, 2 failed, 0 skipped
+        FAIL [   0.009s] (1/6) ovis-terminal-vt::image_reads a_footprint_is_clipped_at_the_right_edge_and_the_bottom
+        FAIL [   0.010s] (5/6) ovis-terminal-vt::image_reads rows_scrolled_off_the_top_leave_the_rest_reported_until_none_is_visible
+error: test run failed

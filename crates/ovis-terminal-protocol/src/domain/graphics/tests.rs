@@ -7,6 +7,7 @@ use crate::schema::limits::Limits;
 use crate::schema::scalar::{ByteCount, ByteOffset, Count};
 
 mod notices;
+mod placeholders;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 
