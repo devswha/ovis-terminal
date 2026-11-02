@@ -1,0 +1,42 @@
+# P6 adversarial pass
+
+Root cause (6de1d0e, crates/ovis-terminal-cli/src/assembly/live.rs:186-187):
+    live.waits.ingest(output)?;          // the waits' own Screen; resolves tickets
+    let replies = live.hub.publish(output)?;   // the attach hub's Screen
+terminal.wait_output awaits its ticket on spawn_blocking (assembly/waited.rs settled/routes.rs:86)
+and replies as soon as waits.ingest resolves it, while the actor thread has not yet run
+hub.publish. attach.repaint is served by AttachHandler::stream_call -> TerminalStreams::repaint
+(server/src/streams/handler.rs:197, ops.rs:70) under the hub lock only, not on the actor, so it
+can paint the hub's screen before the matched chunk lands. The hub's tracker then still holds
+the CSI opened by "OPEN\e[3\r" (tainted by the \r) -> inexact [control_inside_open_sequence],
+exactly the CI actual at step 130. terminal.screen / terminal.output read the same hub screen
+(assembly/reads.rs), so they had the same window. Nothing in fcfd5e5..6de1d0e touched this
+order; the hypothesis that the repaint snapshot point moved in replay.rs/read.rs was checked
+and rejected (those hunks add placeholders/index reads only).
+
+Fix: assembly/live/commit.rs commits each chunk to the hub first, then to the waits; the exit
+is recorded on the hub, then on the waits. Ordering, not serialization: no lock is added and
+repaint is still served off the actor.
+
+Classes probed:
+1. Reversed order (m1 = 6de1d0e order): unit test a_chunk_the_hub_refuses_resolves_no_wait FAILS;
+   scenario attach-input/repaint-after-wait (500 ms QA gap) FAILS 3/3 with the CI symptom
+   (inexact [control_inside_open_sequence], checkpoint output_offset 8 < 14). See mutants.log,
+   regression.log.
+2. Waits never fed (m2): a_matched_wait_finds_its_bytes_already_in_the_hub_paint FAILS.
+3. Refused chunk leaks to waits (m3, hub error deferred past waits.ingest): a_chunk_the_hub_refuses_resolves_no_wait FAILS.
+4. Masking by tty echo: the echo of "go" puts 'g' (a CSI final byte) on the wire and closes the
+   sequence in an earlier chunk, so a reversed order can still paint exact. The first
+   regression-scenario draft (echo on, wait armed after the input) PASSED on m1; the shipped
+   scenario runs `stty -echo` and asserts checkpoint output_offset >= 14 as well as inexact [].
+5. Masking by wait arming order: a wait armed after the closing bytes matches from retained
+   output on the actor (both screens already fed) and cannot race. The shipped scenario sends
+   terminal.wait_output before input.send.
+6. QA seam abuse: --qa-output-commit-gap-ms is refused off a QA fixture root (serve.rs
+   qa_seams_allowed); the protocol fixture refuses the scenario key (ScenarioInconsistent).
+7. Exit ordering (hub.finish before waits.finish) is not covered by a failing test: both screens
+   refuse an exit identically, so no single-threaded test separates the orders. Listed as a risk.
+8. Load: 6de1d0e under taskset -c 0-1 + 8 busy loops never reaches step 130 (step 54 flood wait
+   times out every run, before-loaded-loop.log); all/all 5x on 4 loaded cores: attach-input/* 5/5,
+   two runs miss capacity/sixteen's 100 ms admission bound, which the 6de1d0e and this branch's
+   binaries both pass 5/5 when task-30 runs alone under the same load (after-loaded-all.log).

@@ -153,15 +153,10 @@ pub(super) fn plan(cli: Cli, token: Option<&str>) -> Result<Plan, CliError> {
         Command::Service(command) => Plan::Service(command),
         #[cfg(unix)]
         Command::Serve(args) => Plan::Serve(crate::assembly::ServePlan {
+            qa: args.qa_seams(),
             root: args.root,
             stdin_lifetime: args.stdin_lifetime,
             websocket_port: args.websocket_port,
-            qa: crate::assembly::QaSeams {
-                holder_poll_ms: args.qa_holder_poll_ms,
-                actor_hold: args.qa_actor_hold,
-                graphics_sequence_max_bytes: args.qa_graphics_sequence_max_bytes,
-                output_ring_bytes: args.qa_output_ring_bytes,
-            },
         }),
         #[cfg(unix)]
         Command::Hold(session) => Plan::Service(crate::service::ServiceCommand::Run(
