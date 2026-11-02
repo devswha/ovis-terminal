@@ -74,6 +74,7 @@ Files outside the write scope (`docs/ovis-adapter.md`, `conformance/scenarios/cl
 - `conformance/src/cli.rs`, `conformance/src/invocation.rs`, `conformance/src/engine/session.rs`: the `--guide` flag and `Context.guide`.
 - `conformance/src/runner_tests/suite.rs`: `client/migration.json` added to `EXECUTABLE` in sorted position (it was never in `declared.json`).
 - `conformance/fixtures/ovis/{manifest,predicates}.json`: `ovis-replay refresh` after `client/migration` became executable (one predicate's scenario state changed).
+- `probes/platform-qa/stress/client-migration.{json,sh}`: the macOS stress lane (10 iterations of `--case all --guide docs/ovis-adapter.md` plus the `--inject` failure run); adding a lane edits nothing else.
 - `docs/evidence/task-65/`.
 
 ## Risks
@@ -82,5 +83,7 @@ Files outside the write scope (`docs/ovis-adapter.md`, `conformance/scenarios/cl
 - Named product gaps recorded in the guide, not fixed here: `layout.changed`/`selection.changed` not published; `agent.list`, `agent.note`, `agent.release`, `agent.wait_children`, `doc.list`, `events.ack`, `machine.rm/login/exec/file`, `server.start`, `service.install/remove` and `terminal.history` unserved; `op.get` answers `not_found` for `input.*` operations (the unknown-delivery example asserts that answer); `events.wait` replies carry no terminal id; `schema.capabilities` reports `stream_modes: []` while plain attach works; attach across a control-server restart is uncovered; image placeholders (t85) landed after this base.
 - `migration/contract` fails as soon as a listed-unserved method becomes served. That is intended, so the guide is updated with the product.
 - The section-6 path list is copied into the scenario from the advisory in `.omo/` (not in the repo); a later advisory change needs the scenario updated.
+
+macOS stress: `gh workflow run probe-stress-macos.yml -f probe=client-migration --ref lane/t65-document-every-ovis-adapter` -> https://github.com/devswha/ovis-terminal/actions/runs/41383839656
 
 DEFERRED VERIFICATION: none; the runner executes `client/migration` (exit 0 above).
