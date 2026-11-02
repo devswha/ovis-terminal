@@ -1,0 +1,370 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "attach-input/repaint-after-wait",
+  "title": "A repaint after a completed output wait never describes a state older than the wait reported, even with a QA gap between committing output to attach streams and to waits",
+  "todo": 30,
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "failure",
+      "summary": "The assembled binary pauses 500 ms (QA seam --qa-output-commit-gap-ms) between committing each holder chunk to attach streams and to output waits. A program with echo off blocks inside an open CSI that a carriage return already acted in; an observer attaching then gets first_paint.inexact [control_inside_open_sequence]. terminal.wait_output for the closing bytes is armed before the input that releases them; once it matches, attach.repaint on the observer's stream must report an exact checkpoint at or past the closing bytes: a completed wait is never followed by a repaint from an older screen.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled",
+            "qa_output_commit_gap_ms": "500"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.credit",
+                  "attach.takeover",
+                  "input.keys",
+                  "input.paste",
+                  "input.barrier",
+                  "events.wait"
+                ]
+              },
+              "/result/limits/input_queue_bytes": "16777216"
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "observer",
+            "via": "socket",
+            "principal": "observe"
+          }
+        },
+        {
+          "hello": {
+            "conn": "observer",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:open",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "printf 'OPEN\\033[3\\r'; stty -echo; read -r _; printf '1mDONE\\r\\n'; exec sleep 600"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "open",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "opened",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "OPEN\u001b[3\r"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "opened": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "opener-conn",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "opener-conn",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "opener-conn",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "opener",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:opener",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "opener",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "opener-conn",
+            "expect": {
+              "opener": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/lease_id": {
+                  "$capture": "opener"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "mid",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:mid",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "observe",
+                  "client_id": "mid",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "mid": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/first_paint/inexact": [
+                  "control_inside_open_sequence"
+                ],
+                "/result/stream_id": {
+                  "$capture": "mid"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "done",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "1mDONE"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "opener-conn",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "go",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:go",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "go",
+                  "submit": "enter",
+                  "lease_id": "$value:opener"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "opener-conn",
+            "expect": {
+              "go": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "done": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "mid-repaint",
+                "method": "attach.repaint",
+                "params": {
+                  "stream_id": "$value:mid"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "mid-repaint": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/checkpoint/inexact": [],
+                "/result/checkpoint/output_offset": {
+                  "$at_least": "14"
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -24,6 +24,8 @@ use ovis_terminal_vt::{Geometry, HistoryLimit, VtConfig};
 use super::StageSource;
 use super::actor::{Runtime, now};
 
+mod commit;
+
 /// Scrollback lines every screen keeps.
 const HISTORY_LINES: u32 = 10_000;
 
@@ -178,21 +180,20 @@ impl Runtime {
             Message::Exit(exit) => exit.target.terminal_id.as_str().parse()?,
             _ => return Ok(()),
         };
+        let gap = self.commit_gap;
         let Some(live) = self.live.get_mut(&terminal) else {
             return Ok(());
         };
         match message {
             Message::Output(output) => {
-                live.waits.ingest(output)?;
-                let replies = live.hub.publish(output)?;
+                let replies = commit::output((&live.hub, &live.waits), output, gap)?;
                 live.replies(replies)?;
             }
             Message::InputWritten(written) => {
                 live.sequencer.acknowledge(written)?;
             }
             Message::Exit(exit) => {
-                live.waits.finish(exit)?;
-                live.hub.finish(exit)?;
+                commit::exit((&live.hub, &live.waits), exit)?;
                 live.sequencer.exited();
                 live.ended = true;
                 self.directory.exited(terminal);
