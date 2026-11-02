@@ -85,7 +85,7 @@ fn commands(command: &clap::Command, prefix: &str, out: &mut Vec<Value>) {
 }
 
 /// Kinds this binary reports itself that no exit code names, so they exit 1 (`failure`).
-pub(super) const FAILURE_KINDS: [&str; 13] = [
+pub(super) const FAILURE_KINDS: [&str; 17] = [
     "transport_failed",
     "connection_closed",
     "invalid_response",
@@ -99,6 +99,10 @@ pub(super) const FAILURE_KINDS: [&str; 13] = [
     "endpoint_insecure",
     "endpoint_io",
     "not_a_socket",
+    "baseline_unreadable",
+    "baseline_malformed",
+    "generation_mismatch",
+    "compatibility_break",
 ];
 
 /// Commands, flags, environment and exit codes of this binary.

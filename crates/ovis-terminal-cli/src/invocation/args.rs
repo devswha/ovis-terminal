@@ -31,6 +31,9 @@ pub(super) enum Command {
         /// Which contract to print.
         #[arg(value_enum, default_value_t = SchemaPart::Openrpc)]
         part: SchemaPart,
+        /// The released OpenRPC baseline `schema compat` compares this build with.
+        #[arg(long, value_name = "PATH")]
+        released: Option<std::path::PathBuf>,
     },
     /// Describe the endpoint this invocation resolves to, without touching it.
     Endpoint,
@@ -105,6 +108,8 @@ pub(super) enum SchemaPart {
     Cli,
     /// The runtime contract reference, generated from this build's types.
     Contract,
+    /// Whether this build keeps every client of the `--released` baseline working.
+    Compat,
 }
 
 /// `ovis-terminal server ...`.

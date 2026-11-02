@@ -32,6 +32,12 @@ version.
   code of this binary as JSON.
 - `ovis-terminal schema contract` prints the runtime contract reference: every method,
   event, error kind, limit, role and exit code, generated from this build's types.
+- `ovis-terminal schema compat --released <path>` checks that this build keeps every
+  client of a released OpenRPC baseline working: released methods, events and required
+  outputs stay, inputs only widen. A break exits 1 with `compatibility_break` and lists
+  each `{path, rule}` in `breaks`; a baseline of another generation is
+  `generation_mismatch`; an unreadable or non-OpenRPC file is `baseline_unreadable` or
+  `baseline_malformed`. The release stage runs it on every built artifact.
 - `ovis-terminal endpoint` prints the endpoint this invocation resolves to
   (`OVIS_TERMINAL_SOCKET`, `OVIS_TERMINAL_SESSION`, `XDG_RUNTIME_DIR`, `XDG_STATE_HOME`,
   `HOME`, `USERNAME`) without touching it.

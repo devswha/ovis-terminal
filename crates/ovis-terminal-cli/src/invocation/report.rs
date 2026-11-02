@@ -3,7 +3,6 @@
 use std::io::{self, Write as _};
 use std::process::ExitCode;
 
-use ovis_terminal_protocol::errors::TargetCandidate;
 use ovis_terminal_protocol::rpc::RpcErrorObject;
 use serde_json::{Map, Value, json};
 
@@ -11,6 +10,10 @@ use super::context::OutputMode;
 use super::error::CliError;
 use super::exit::ExitStatus;
 use super::text::render;
+
+mod record;
+
+use record::cli_record;
 
 /// A failure of this binary, or a typed error a server returned.
 #[derive(Debug)]
@@ -78,108 +81,22 @@ impl Failure {
                 .collect();
             text.push_str(&listed);
         }
-        text
-    }
-}
-
-fn candidate(candidate: &TargetCandidate) -> Value {
-    json!({
-        "machine_id": candidate.machine_id.as_str(),
-        "runtime_lifetime": candidate.runtime_lifetime.as_str(),
-        "terminal_id": candidate.terminal_id.as_str(),
-    })
-}
-
-fn cli_record(error: &CliError) -> Map<String, Value> {
-    let mut record = Map::new();
-    record.insert("origin".to_owned(), json!("cli"));
-    record.insert("kind".to_owned(), json!(error.kind()));
-    record.insert("hint".to_owned(), json!(error.hint()));
-    record.insert("message".to_owned(), json!(error.to_string()));
-    match error {
-        CliError::NeedsTarget { candidates, listed } => {
-            let listing: Vec<Value> = candidates.iter().map(candidate).collect();
-            record.insert("candidates".to_owned(), Value::Array(listing));
-            record.insert("candidates_listed".to_owned(), json!(listed));
-        }
-        CliError::Params(error) => {
-            record.insert("field_path".to_owned(), json!(error.field_path()));
-        }
-        CliError::NotRunning { state, .. } => {
-            record.insert("state".to_owned(), json!(state));
-        }
-        #[cfg(unix)]
-        CliError::Attach(error) => {
-            for (field, value) in error.details() {
-                record.insert(field.to_owned(), value);
+        if let Self::Cli(CliError::CompatibilityBreak { breaks }) = self {
+            for change in breaks {
+                text.push_str(
+                    &[
+                        "break: ",
+                        change.rule.token(),
+                        " at ",
+                        &change.path,
+                        "
+",
+                    ]
+                    .concat(),
+                );
             }
         }
-        #[cfg(unix)]
-        CliError::Assembly(_) => {}
-        CliError::Usage { .. }
-        | CliError::MissingCommand
-        | CliError::SkillWithCommand
-        | CliError::JsonSwitch { .. }
-        | CliError::ParamsJson(_)
-        | CliError::Command(_)
-        | CliError::UnknownMethod { .. }
-        | CliError::Endpoint(_)
-        | CliError::Io { .. }
-        | CliError::Closed
-        | CliError::Restarted
-        | CliError::Reply(_)
-        | CliError::Result(_)
-        | CliError::Timeout { .. }
-        | CliError::UnsupportedTransport
-        | CliError::Schema(_)
-        | CliError::Encode(_) => {}
-        #[cfg(windows)]
-        CliError::PipeBusy { .. } => {}
-        #[cfg(any(unix, windows))]
-        CliError::Service(error) => service_detail(error, &mut record),
-    }
-    record
-}
-
-/// The typed facts a Windows service failure carries beyond its kind.
-#[cfg(windows)]
-fn service_detail(error: &crate::service::ServiceError, record: &mut Map<String, Value>) {
-    use crate::service::ServiceError;
-    match error {
-        ServiceError::Stale { reason } => {
-            record.insert("state".to_owned(), json!("stale_endpoint"));
-            record.insert("reason".to_owned(), json!(reason));
-        }
-        ServiceError::AlreadyRunning {
-            holder: Some(holder),
-        } => {
-            record.insert("holder".to_owned(), json!(holder));
-        }
-        _ => {}
-    }
-}
-
-/// The typed facts a service failure carries beyond its kind.
-#[cfg(unix)]
-fn service_detail(
-    error: &ovis_terminal_holder::service::unix::ServiceError,
-    record: &mut Map<String, Value>,
-) {
-    use ovis_terminal_holder::service::unix::ServiceError;
-    match error {
-        ServiceError::Stale { reason } => {
-            record.insert("state".to_owned(), json!("stale_endpoint"));
-            record.insert("reason".to_owned(), json!(reason));
-        }
-        ServiceError::AlreadyRunning {
-            holder: Some(holder),
-        } => {
-            record.insert("holder".to_owned(), json!(holder));
-        }
-        ServiceError::ManagerUnavailable { missing } => {
-            record.insert("missing_prerequisite".to_owned(), json!(missing));
-        }
-        _ => {}
+        text
     }
 }
 
