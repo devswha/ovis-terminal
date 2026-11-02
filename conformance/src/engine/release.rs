@@ -1,4 +1,4 @@
-//! The release step: planned release-stage runs, in-process.
+//! The release step: planned release-stage and install-probe runs, in-process.
 //!
 //! Each runs exactly as its binary would, against the binary under test and a private directory of the isolated
 //! root; its exit status and JSON report become assertions and a process record.
@@ -9,7 +9,7 @@ use super::session::Session;
 use crate::error::RunnerError;
 use crate::evidence::{CapturedText, ProcessReport};
 use crate::scenario::matcher::{Assertion, Subject};
-use crate::scenario::release::{Release, ReleaseCheck};
+use crate::scenario::release::{Release, ReleaseCheck, ReleaseTool};
 
 impl Session<'_> {
     fn selected_release<'r>(
@@ -48,18 +48,31 @@ impl Session<'_> {
                         .fold(arg.clone(), |arg, (from, to)| arg.replace(from, to))
                 })
                 .collect();
-            let run = tokio::task::spawn_blocking(move || release_stage::execute(&args))
-                .await
-                .map_err(|source| RunnerError::Io {
-                    operation: "run a release stage",
-                    source: std::io::Error::other(source),
-                })?;
-            let stdout = serde_json::to_vec_pretty(&run.report)?;
+            let tool = check.tool;
+            let (exit, report, ran_argv) = tokio::task::spawn_blocking(move || match tool {
+                ReleaseTool::ReleaseStage => {
+                    let run = release_stage::execute(&args);
+                    (run.exit, run.report, run.argv)
+                }
+                ReleaseTool::InstallProbe => {
+                    let run = ovis_terminal_probes::install::execute(&args);
+                    (run.exit, run.report, run.argv)
+                }
+            })
+            .await
+            .map_err(|source| RunnerError::Io {
+                operation: "run a release stage",
+                source: std::io::Error::other(source),
+            })?;
+            let stdout = serde_json::to_vec_pretty(&report)?;
             self.processes.push(ProcessReport {
-                role: "release-stage",
-                argv: run.argv.clone(),
+                role: match tool {
+                    ReleaseTool::ReleaseStage => "release-stage",
+                    ReleaseTool::InstallProbe => "install-probe",
+                },
+                argv: ran_argv,
                 pid: None,
-                exit_code: Some(i32::from(run.exit)),
+                exit_code: Some(i32::from(exit)),
                 stdout: CapturedText::of(&stdout),
                 stderr: CapturedText::of(&[]),
             });
@@ -67,12 +80,12 @@ impl Session<'_> {
             let mut checked = vec![Assertion::equal(
                 format!("{scope}/exit"),
                 json!(check.exit),
-                json!(run.exit),
+                json!(exit),
             )];
             checked.extend(check.report.check(
                 Subject {
                     scope: &scope,
-                    value: &run.report,
+                    value: &report,
                 },
                 self.ctx.repo.root(),
             ));

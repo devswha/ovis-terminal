@@ -63,6 +63,11 @@ path = "platform-qa/tests/platform_qa.rs"
 name = "pipe_smoke"
 path = "platform-qa/tests/pipe_smoke.rs"
 
+# Installer journeys (plan todo 68): `install.sh` against local fixture releases.
+[[bin]]
+name = "install-probe"
+path = "install/bin/install_probe.rs"
+
 [dependencies]
 clap = { workspace = true }
 ovis-terminal-holder = { workspace = true }
@@ -70,6 +75,8 @@ ovis-terminal-vt = { workspace = true }
 portable-pty = { workspace = true }
 proc-macro2 = { workspace = true }
 quote = { workspace = true }
+# Stages and seals the fixture release the install probe serves (todo 67's format).
+release-stage = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
@@ -91,7 +98,7 @@ ovis-terminal-core = { workspace = true }
 ovis-terminal-protocol = { workspace = true }
 ovis-terminal-server = { workspace = true }
 
-# Used by probes/platform/, probes/platform-qa/ and probes/quality/, which src/lib.rs and
+# Used by probes/platform/, probes/platform-qa/, probes/quality/ and probes/install/, which src/lib.rs and
 # the [[bin]] and [[test]] targets load through paths outside src/; machete scans only src/.
 [package.metadata.cargo-machete]
 ignored = [
@@ -103,6 +110,7 @@ ignored = [
     "portable-pty",
     "proc-macro2",
     "quote",
+    "release-stage",
     "serde",
     "serde_json",
     "sha2",

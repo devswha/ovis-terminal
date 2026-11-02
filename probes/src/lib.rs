@@ -4,6 +4,9 @@
 //! through the pinned portable-pty backend and report measured behavior or a
 //! typed [`platform::ProbeError`].
 
+#[path = "../install/install.rs"]
+pub mod install;
+
 #[path = "../platform/platform.rs"]
 pub mod platform;
 
