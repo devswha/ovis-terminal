@@ -1,0 +1,23 @@
+==> tmp_space
+==> cargo +nightly fmt --all -- --check
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+        PASS [   0.011s] ( 162/1490) ovis-terminal-bench terminal50::tests::shape::fewer_terminals_viewers_clients_or_lanes_than_requested_fail_the_verdict
+        PASS [   0.253s] ( 204/1490) ovis-terminal-bench terminal50::tests::bound::the_verdict_reads_the_fleet_that_actually_ran
+        PASS [   0.070s] ( 351/1490) ovis-terminal-core recovery::qa::crash::a_damaged_checkpoint_is_quarantined_and_a_repeated_recovery_reaches_the_same_verdict
+        PASS [   0.027s] ( 359/1490) ovis-terminal-core recovery::qa::verdicts::a_reused_pid_with_another_start_token_is_replaced_never_survived
+        PASS [   0.033s] ( 362/1490) ovis-terminal-core recovery::qa::verdicts::survival_requires_same_boot_same_holder_identity_and_the_os_token
+        PASS [   0.013s] ( 771/1490) ovis-terminal-probes platform_qa::smoke::tests::a_pass_verdict_over_a_failed_test_is_inconsistent
+        PASS [   0.012s] ( 892/1490) ovis-terminal-protocol domain::recovery::tests::an_unknown_verdict_or_field_is_refused_never_read_as_survival
+     Summary [ 122.346s] 1490 tests run: 1490 passed (3 slow), 2 skipped
+==> cargo test --doc --workspace --all-features --locked
+==> cargo test --locked -p ovis-terminal-core --test subscriptions
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+==> bash scripts/hygiene/manifests.sh
+==> bash scripts/hygiene/json.sh
+==> cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin source-check -- --roots crates packages/client-ts conformance bench probes --max-pure-loc 250 --max-params 3 --violations docs/research/violations.md --checklist docs/quality-checklist.md
+  "verdict": "pass"
+==> cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin evidence-audit -- --tree docs/evidence --exemptions probes/quality/evidence-exemptions.json
+  "verdict": "pass"
+check.sh: all steps passed
+CHECK_EXIT=0
