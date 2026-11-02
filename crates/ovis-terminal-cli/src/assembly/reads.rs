@@ -77,7 +77,19 @@ impl Runtime {
             .screen()
             .map_err(|error| refusal(error.kind(), error.hint()))?;
         let lines: Vec<&str> = view.lines.iter().map(|line| line.text.as_str()).collect();
-        checked::<TerminalScreenResult>(json!({
+        let images = if params.include_images {
+            let placeholders = live
+                .hub
+                .image_placeholders(&view.images)
+                .map_err(|error| refusal(error.kind(), error.hint()))?;
+            Some(
+                serde_json::to_value(placeholders)
+                    .map_err(internal("encode image placeholders"))?,
+            )
+        } else {
+            None
+        };
+        let mut result = json!({
             "revision": view.meta.revision.get().to_string(),
             "output_offset": view.meta.offset.get().to_string(),
             "lines": lines,
@@ -85,7 +97,11 @@ impl Runtime {
             "modes": wire_modes(&view.modes, view.mode_revision),
             "title": view.title,
             "truncated": false,
-        }))
+        });
+        if let (Some(images), Some(fields)) = (images, result.as_object_mut()) {
+            fields.insert("images".to_owned(), images);
+        }
+        checked::<TerminalScreenResult>(result)
     }
 
     pub(super) fn search(&mut self, params: &TerminalSearchParams) -> Result<Value, BoundaryError> {

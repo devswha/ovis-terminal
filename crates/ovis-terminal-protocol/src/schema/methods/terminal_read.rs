@@ -3,6 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::graphics::GraphicsPlaceholder;
 use crate::schema::common::{OutputCursor, Pattern, Target, TextFormat};
 use crate::schema::method::{MethodSpec, method};
 use crate::schema::records::{Modes, ScreenCursor, StatusSnapshot};
@@ -17,6 +18,10 @@ pub struct TerminalScreenParams {
     pub target: Target,
     /// Text shape.
     pub format: TextFormat,
+    /// Also return the placement index: one placeholder per stored image shown, never
+    /// its payload. Absent means false; a present value must be a JSON boolean.
+    #[serde(default)]
+    pub include_images: bool,
 }
 
 /// Result of `terminal.screen`.
@@ -37,6 +42,10 @@ pub struct TerminalScreenResult {
     pub title: Option<String>,
     /// Whether the reply was cut short by the frame bound.
     pub truncated: bool,
+    /// Stored images shown on the screen, top row first; present only when
+    /// `include_images` was requested. Their covered cells read as blank text in `lines`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub images: Option<Vec<GraphicsPlaceholder>>,
 }
 
 /// Parameters of `terminal.history`.

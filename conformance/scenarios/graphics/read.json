@@ -1,0 +1,602 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "graphics/read",
+  "title": "Screen reads report each stored image as a placeholder at its cells, never its payload",
+  "todo": 85,
+  "closes": [
+    "GAP-153"
+  ],
+  "delivers": [
+    "IDEAL-120"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Real ovis-terminal serve runs a shell as t1; an interact viewer types go and the program prints ab then a 3-chunk Kitty f=100 PNG declaring c=4,r=2 (raw offset 4, 145 bytes) and three line feeds before images-done; the viewer receives the sequence byte-identical. terminal.screen with include_images true returns lines unchanged (row 1 is ab, the covered cells stay blank text) plus exactly one placeholder {image_id 4, format kitty, row 1, col 2, rows 2, cols 4, bytes 145} whose id is the image store key; the same read without include_images carries no images field.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "input.raw",
+                  "terminal.run",
+                  "terminal.screen"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "read go; printf 'ab\\033_Ga=T,f=100,i=7,c=4,r=2,m=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB\\033\\\\\\033_Gm=1;CAYAAAAfFcSJAAAADUlEQVR42mNk+M9Q\\033\\\\\\033_Gm=0;DwADhgGAWjR9awAAAABJRU5ErkJggg==\\033\\\\'; printf '\\r\\n\\r\\n\\r\\nimages-done'; read done"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "read",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "viewer",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "viewer",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "read-viewer",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/role": "interact",
+                "/result/lease/lease_id": {
+                  "$capture": "lease_viewer"
+                },
+                "/result/stream_id": {
+                  "$capture": "stream_viewer"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "go",
+                "method": "input.raw",
+                "params": {
+                  "op_id": "$op:go",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "data_b64": "DQ==",
+                  "lease_id": "$value:lease_viewer"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "go": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "graphics_transcript": {
+            "conn": "viewer",
+            "until": "images-done",
+            "contains_b64": {
+              "kitty_png_3_chunks": "G19HYT1ULGY9MTAwLGk9NyxjPTQscj0yLG09MTtpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBQUVBQUFBQhtcG19HbT0xO0NBWUFBQUFmRmNTSkFBQUFEVWxFUVZSNDJtTmsrTTlRG1wbX0dtPTA7RHdBRGhnR0FXalI5YXdBQUFBQkpSVTVFcmtKZ2dnPT0bXA=="
+            },
+            "controls": [
+              "checkpoint",
+              "input_ready"
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "with-images",
+                "method": "terminal.screen",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "format": "text",
+                  "include_images": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "plain",
+                "method": "terminal.screen",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "format": "text"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "with-images": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/images": [
+                  {
+                    "image_id": "4",
+                    "format": "kitty",
+                    "row": 1,
+                    "col": 2,
+                    "rows": 2,
+                    "cols": 4,
+                    "bytes": "145"
+                  }
+                ],
+                "/result/lines/0": "",
+                "/result/lines/1": "ab",
+                "/result/lines/2": "",
+                "/result/lines/4": "images-done"
+              },
+              "plain": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/images": {
+                  "$present": false
+                },
+                "/result/lines/1": "ab"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "--inject {\"read\":{\"include_images\":\"yes\"}}: after the same image is drawn, terminal.screen with include_images \"yes\", 1 or null is invalid_params at params.include_images (a JSON boolean is required), no result is returned, and the connection keeps serving: the next read with include_images true returns the one placeholder.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "input.raw",
+                  "terminal.run",
+                  "terminal.screen"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "read go; printf 'ab\\033_Ga=T,f=100,i=7,c=4,r=2,m=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB\\033\\\\\\033_Gm=1;CAYAAAAfFcSJAAAADUlEQVR42mNk+M9Q\\033\\\\\\033_Gm=0;DwADhgGAWjR9awAAAABJRU5ErkJggg==\\033\\\\'; printf '\\r\\n\\r\\n\\r\\nimages-done'; read done"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "read",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "viewer",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "viewer",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "read-viewer",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/role": "interact",
+                "/result/lease/lease_id": {
+                  "$capture": "lease_viewer"
+                },
+                "/result/stream_id": {
+                  "$capture": "stream_viewer"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "go",
+                "method": "input.raw",
+                "params": {
+                  "op_id": "$op:go",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "data_b64": "DQ==",
+                  "lease_id": "$value:lease_viewer"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "go": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "graphics_transcript": {
+            "conn": "viewer",
+            "until": "images-done",
+            "contains_b64": {
+              "kitty_png_3_chunks": "G19HYT1ULGY9MTAwLGk9NyxjPTQscj0yLG09MTtpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBQUVBQUFBQhtcG19HbT0xO0NBWUFBQUFmRmNTSkFBQUFEVWxFUVZSNDJtTmsrTTlRG1wbX0dtPTA7RHdBRGhnR0FXalI5YXdBQUFBQkpSVTVFcmtKZ2dnPT0bXA=="
+            },
+            "controls": [
+              "checkpoint",
+              "input_ready"
+            ],
+            "inject": {
+              "read": {
+                "include_images": "yes"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "string-flag",
+                "method": "terminal.screen",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "format": "text",
+                  "include_images": "yes"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "numeric-flag",
+                "method": "terminal.screen",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "format": "text",
+                  "include_images": 1
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "null-flag",
+                "method": "terminal.screen",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "format": "text",
+                  "include_images": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "after",
+                "method": "terminal.screen",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "format": "text",
+                  "include_images": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "string-flag": {
+                "/error/data/kind": "invalid_params",
+                "/error/data/field_path": "params.include_images",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "numeric-flag": {
+                "/error/data/kind": "invalid_params",
+                "/error/data/field_path": "params.include_images",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "null-flag": {
+                "/error/data/kind": "invalid_params",
+                "/error/data/field_path": "params.include_images",
+                "/result": {
+                  "$present": false
+                }
+              },
+              "after": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/images": [
+                  {
+                    "image_id": "4",
+                    "format": "kitty",
+                    "row": 1,
+                    "col": 2,
+                    "rows": 2,
+                    "cols": 4,
+                    "bytes": "145"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,14 +1,22 @@
 //! Durable terminal facts; admission, process evidence and metadata are separate.
 
+#[cfg(test)]
+mod tests;
+
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use ovis_terminal_holder::protocol::{Exit, Hangup, SpawnFailed, TerminalTarget};
+use ovis_terminal_protocol::domain::graphics::{
+    GraphicsImageId, GraphicsPlaceholder, PlaceholderCells,
+};
 use ovis_terminal_protocol::schema::common::Geometry;
-use ovis_terminal_protocol::schema::scalar::{ByteOffset, Revision};
+use ovis_terminal_protocol::schema::scalar::{ByteCount, ByteOffset, Revision};
+use ovis_terminal_vt::ScreenImage;
 use serde::{Deserialize, Serialize};
 
 use super::TerminalError;
+use super::images::ImageStore;
 use crate::registry::{ResourceName, TerminalId, TerminalLifecycle};
 
 /// Explicit process inputs, with no implicit shell or inherited environment.
@@ -205,4 +213,27 @@ impl Record {
         self.exit = None;
         Ok(self)
     }
+}
+
+/// The placeholder of every image `shown` on a screen whose bytes `store` still holds.
+///
+/// In `shown`'s order, this is the record form a screen read or snapshot carries in place of the
+/// image's cells (plan todo 85). An image the store evicted, or whose bytes never reached
+/// it, has no placeholder; its cells stay blank. Payload bytes are never copied: a
+/// placeholder names the store entry and its size only.
+#[must_use]
+pub fn image_placeholders(shown: &[ScreenImage], store: &ImageStore) -> Vec<GraphicsPlaceholder> {
+    shown
+        .iter()
+        .filter_map(|image| {
+            let bytes = store.pieces(image.key)?.iter().fold(0_u64, |sum, piece| {
+                sum.saturating_add(u64::try_from(piece.len()).unwrap_or(u64::MAX))
+            });
+            Some(GraphicsPlaceholder::new(
+                (GraphicsImageId::new(image.key.get()), image.protocol),
+                PlaceholderCells::new((image.row, image.column), (image.rows, image.columns)),
+                ByteCount::new(bytes),
+            ))
+        })
+        .collect()
 }

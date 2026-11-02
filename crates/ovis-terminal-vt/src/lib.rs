@@ -16,8 +16,8 @@ pub use engine::{
     KeyboardModes, LineSpan, MIN_COLUMNS, ModeRevision, ModifyOtherKeys, MouseEncoding, MouseModes,
     MouseTracking, OSC_FIELD_LIMIT, OSC_RECORD_LIMIT, OscContent, OscFault, OscRecord,
     OscTerminator, OutputOffset, PasteMode, QueryOutcome, ReadFormat, ReadSource, RetainedImage,
-    ScreenBuffer, ScreenLine, ScreenModes, ScreenRead, SearchMatch, TerminalModes, TerminalQuery,
-    Vt, VtConfig, VtError,
+    ScreenBuffer, ScreenImage, ScreenLine, ScreenModes, ScreenRead, SearchMatch, TerminalModes,
+    TerminalQuery, Vt, VtConfig, VtError,
 };
 pub use shard::{ParseBudget, PendingCap, Shard, ShardError, Turn};
 
