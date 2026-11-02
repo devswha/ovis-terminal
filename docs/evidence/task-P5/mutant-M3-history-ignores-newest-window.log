@@ -1,0 +1,15 @@
+# mutant M3-history-ignores-newest-window: crates/ovis-terminal-cli/src/assembly/history.rs
+# - || total.saturating_sub(limit.get()),
+# + || 0,
+# cargo nextest run -p ovis-terminal-cli -E 'test(assembly::history::) | test(terminal_history_reads)' -> exit=100
+        FAIL [   0.016s] (3/4) ovis-terminal-cli assembly::history::tests::without_from_line_the_read_ends_at_the_newest_line
+        FAIL [   0.523s] (4/4) ovis-terminal-cli::assembly served::terminal_history_reads_retained_scrollback_newest_first_page_and_from_a_line
+      left: ["$ i=0; while [ $i -lt 60 ]; do echo h-$i; i=$((i+1)); done; echo end-$((1+1))", "h-0", "h-1"]
+      left: 0
+        PASS [   0.013s] (1/4) ovis-terminal-cli assembly::history::tests::an_explicit_from_line_is_honoured_and_an_impossible_one_clamps
+        PASS [   0.015s] (2/4) ovis-terminal-cli assembly::history::tests::a_short_history_starts_at_the_oldest_line
+     right: 70
+     right: ["h-35", "h-36", "h-37"]
+     Summary [   0.524s] 4 tests run: 2 passed, 2 failed, 134 skipped
+    thread 'assembly::history::tests::without_from_line_the_read_ends_at_the_newest_line' (982885) panicked at crates/ovis-terminal-cli/src/assembly/history.rs:86:9:
+    thread 'served::terminal_history_reads_retained_scrollback_newest_first_page_and_from_a_line' (982880) panicked at crates/ovis-terminal-cli/tests/assembly/served.rs:69:5:

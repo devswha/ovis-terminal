@@ -1,0 +1,17 @@
+$ cargo run --locked -q -p ovis-terminal-protocol --bin openrpc -- write schema/ovis-terminal.openrpc.json
+{"bytes":667393,"written":"schema/ovis-terminal.openrpc.json"}
+exit=0
+$ cargo run --locked -q -p ovis-terminal-protocol --bin openrpc -- check schema/ovis-terminal.openrpc.json
+{"bytes":667393,"fresh":"schema/ovis-terminal.openrpc.json"}
+exit=0
+$ cargo run --locked -q -p ovis-terminal-protocol --bin openrpc -- compat schema/released.openrpc.json
+{"compatible_with":"schema/released.openrpc.json"}
+exit=0
+$ cargo run --locked -q --manifest-path probes/Cargo.toml --bin quality-matrix -- --mode contract
+  "finding_count": "0",
+  "verdict": "pass"
+exit=0
+$ cargo run --locked -q --manifest-path probes/Cargo.toml --bin quality-matrix -- --mode verify
+  "finding_count": "0",
+  "verdict": "pass"
+exit=0

@@ -82,9 +82,9 @@ pub struct ServiceDescribeResult {
 /// Methods of this namespace.
 pub(crate) const METHODS: &[MethodSpec] = &[
     method! {"service.install", Mutation, Untargeted, ServiceInstallParams => ServiceRecord,
-    "Register the runtime with the OS service manager.", [ServiceUnsupported, ServiceExists]},
+    "Register the runtime with the OS service manager.", [ServiceUnsupported, ServiceExists, NotImplemented]},
     method! {"service.remove", Mutation, Lookup, ServiceRemoveParams => ServiceRecord,
-    "Remove a registration this runtime created.", [ServiceUnsupported]},
+    "Remove a registration this runtime created.", [ServiceUnsupported, NotImplemented]},
     method! {"service.describe", Query, Untargeted, NoParams => ServiceDescribeResult,
     "Describe registrations and endpoint descriptors without side effects.", []},
 ];

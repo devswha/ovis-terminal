@@ -1,0 +1,20 @@
+# mutant M1-ack-ahead-off-by-one: crates/ovis-terminal-cli/src/assembly/events/ack.rs
+# - if seq > self.delivered {
+# + if seq >= self.delivered {
+# cargo nextest run -p ovis-terminal-cli -E 'test(assembly::events::ack::) | test(events_ack_records)' -> exit=100
+        FAIL [   0.015s] (2/5) ovis-terminal-cli assembly::events::ack::tests::marks_start_at_the_starting_state_and_never_move_backwards
+        FAIL [   0.016s] (3/5) ovis-terminal-cli assembly::events::ack::tests::an_acknowledgement_past_the_delivered_mark_is_seq_ahead_and_changes_nothing
+        FAIL [   0.016s] (4/5) ovis-terminal-cli assembly::events::ack::tests::an_acknowledgement_up_to_the_delivered_mark_is_recorded_with_the_scan_mark
+        FAIL [   0.425s] (5/5) ovis-terminal-cli::assembly served::events_ack_records_up_to_the_delivered_sequence_for_its_owner_only
+      left: Err(SeqAhead { acknowledged: 30, delivered: 30 })
+      left: Err(SeqAhead { acknowledged: 9, delivered: 9 })
+      left: None
+        PASS [   0.014s] (1/5) ovis-terminal-cli assembly::events::ack::tests::the_acknowledged_mark_never_moves_backwards
+     right: Ok((30, 30))
+     right: Ok((9, 12))
+     right: Some(String("4"))
+     Summary [   0.427s] 5 tests run: 1 passed, 4 failed, 133 skipped
+    thread 'assembly::events::ack::tests::an_acknowledgement_past_the_delivered_mark_is_seq_ahead_and_changes_nothing' (962761) panicked at crates/ovis-terminal-cli/src/assembly/events/ack.rs:183:9:
+    thread 'assembly::events::ack::tests::an_acknowledgement_up_to_the_delivered_mark_is_recorded_with_the_scan_mark' (962762) panicked at crates/ovis-terminal-cli/src/assembly/events/ack.rs:167:9:
+    thread 'assembly::events::ack::tests::marks_start_at_the_starting_state_and_never_move_backwards' (962760) panicked at crates/ovis-terminal-cli/src/assembly/events/ack.rs:197:9:
+    thread 'served::events_ack_records_up_to_the_delivered_sequence_for_its_owner_only' (962755) panicked at crates/ovis-terminal-cli/tests/assembly/served.rs:139:5:

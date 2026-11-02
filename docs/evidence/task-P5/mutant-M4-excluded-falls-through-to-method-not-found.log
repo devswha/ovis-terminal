@@ -1,0 +1,9 @@
+# mutant M4-excluded-falls-through-to-method-not-found (re-run after the check moved from Served::route to RequestHandler::call): crates/ovis-terminal-cli/src/assembly/handler.rs
+# - if let Some(excluded) = super::excluded::Excluded::of(call.request.method()) { return Err(excluded.refusal()); }
+# + (removed)
+# cargo nextest run -p ovis-terminal-cli -E 'test(hello_advertises_every_published_method)' -> exit=100
+        FAIL [   0.240s] (1/1) ovis-terminal-cli::assembly hello_advertises_every_published_method_but_the_excluded_which_are_not_implemented
+      left: Some(4)
+     right: Some(1)
+     Summary [   0.242s] 1 test run: 0 passed, 1 failed, 137 skipped
+    thread 'hello_advertises_every_published_method_but_the_excluded_which_are_not_implemented' (1188514) panicked at crates/ovis-terminal-cli/tests/assembly/support.rs:262:9:

@@ -98,5 +98,5 @@ pub(crate) const METHODS: &[MethodSpec] = &[
     method! {"doc.set", Mutation, Untargeted, DocSetParams => DocSetResult,
     "Compare-and-swap a document in one transaction with its event.", [InvalidName, Conflict, TooLarge, MachineUnreachable]},
     method! {"doc.list", Query, Untargeted, DocListParams => DocListResult,
-    "List document names and versions.", []},
+    "List document names and versions.", [NotImplemented]},
 ];

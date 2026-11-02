@@ -1,0 +1,20 @@
+# bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh (systemd-run scope MemoryHigh=20G MemoryMax=28G) at 1d5b96f-tree -> exit=0
+==> tmp_space
+==> cargo +nightly fmt --all -- --check
+==> cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+==> cargo nextest run --workspace --all-targets --all-features --locked --no-tests=fail
+        PASS [   0.026s] (1618/1637) workspace-hygiene::fixtures exactly_250_pure_loc_and_three_parameters_pass
+        PASS [   0.007s] (1619/1637) workspace-hygiene::fixtures malformed_source_is_a_syntax_violation
+        PASS [   0.028s] (1621/1637) workspace-hygiene::fixtures one_line_and_one_parameter_over_the_limit_both_fail
+        PASS [   0.010s] (1622/1637) workspace-hygiene::fixtures receivers_count_as_parameters
+        PASS [   0.029s] (1624/1637) workspace-hygiene::fixtures violations_report_file_line_rule_and_count
+     Summary [ 182.390s] 1637 tests run: 1637 passed (4 slow), 2 skipped
+==> cargo test --doc --workspace --all-features --locked
+==> cargo test --locked -p ovis-terminal-core --test subscriptions
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 1604 file(s) checked
+==> bash scripts/hygiene/manifests.sh
+==> bash scripts/hygiene/json.sh
+==> cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin source-check -- --roots crates packages/client-ts conformance bench probes --max-pure-loc 250 --max-params 3 --violations docs/research/violations.md --checklist docs/quality-checklist.md
+==> cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin evidence-audit -- --tree docs/evidence --exemptions probes/quality/evidence-exemptions.json
+check.sh: all steps passed

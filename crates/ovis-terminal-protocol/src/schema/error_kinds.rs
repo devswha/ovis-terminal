@@ -262,4 +262,6 @@ pub enum DomainErrorKind {
     PeerRejected,
     /// A reported conversation record breaks the typed record contract.
     InvalidRecords,
+    /// The method is published but this runtime does not serve it; the hint names the follow-up.
+    NotImplemented,
 }

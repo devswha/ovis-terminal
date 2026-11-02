@@ -1,0 +1,1378 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "cli/advertised-methods",
+  "title": "hello advertises every published method except an explicit excluded set, and each excluded method is a typed not_implemented",
+  "todo": 66,
+  "closes": [],
+  "delivers": [
+    "IDEAL-002",
+    "IDEAL-113"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "On the assembled binary hello advertises agent.list, events.ack, server.start and terminal.history; every one of the 93 advertised methods, called with a params field no params type declares, is routed and answers invalid_params rather than method_not_found; agent.list answers an empty one-page list, server.start answers already_running, and events.ack and terminal.history on an unknown subscription and terminal answer not_found.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "agent.list",
+                  "events.ack",
+                  "server.start",
+                  "terminal.history",
+                  "rpc.discover",
+                  "terminal.list"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "m:agent.append_records",
+                "method": "agent.append_records",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:agent.children",
+                "method": "agent.children",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:agent.conversation",
+                "method": "agent.conversation",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:agent.get",
+                "method": "agent.get",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:agent.history",
+                "method": "agent.history",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:agent.list",
+                "method": "agent.list",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:agent.records",
+                "method": "agent.records",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:agent.register",
+                "method": "agent.register",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:agent.update_session",
+                "method": "agent.update_session",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:attach.close",
+                "method": "attach.close",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:attach.credit",
+                "method": "attach.credit",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:attach.focus",
+                "method": "attach.focus",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:attach.leases",
+                "method": "attach.leases",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:attach.open",
+                "method": "attach.open",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:attach.release_geometry",
+                "method": "attach.release_geometry",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:attach.repaint",
+                "method": "attach.repaint",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:attach.resize",
+                "method": "attach.resize",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:attach.takeover",
+                "method": "attach.takeover",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:credential.revoke",
+                "method": "credential.revoke",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:credential.rotate",
+                "method": "credential.rotate",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:doc.get",
+                "method": "doc.get",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:doc.set",
+                "method": "doc.set",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:events.ack",
+                "method": "events.ack",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:events.subscribe",
+                "method": "events.subscribe",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:events.unsubscribe",
+                "method": "events.unsubscribe",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:events.update",
+                "method": "events.update",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:events.wait",
+                "method": "events.wait",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:input.barrier",
+                "method": "input.barrier",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:input.interrupt",
+                "method": "input.interrupt",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:input.keys",
+                "method": "input.keys",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "m:agent.append_records": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:agent.children": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:agent.conversation": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:agent.get": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:agent.history": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:agent.list": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:agent.records": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:agent.register": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:agent.update_session": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:attach.close": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:attach.credit": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:attach.focus": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:attach.leases": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:attach.open": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:attach.release_geometry": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:attach.repaint": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:attach.resize": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:attach.takeover": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:credential.revoke": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:credential.rotate": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:doc.get": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:doc.set": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:events.ack": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:events.subscribe": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:events.unsubscribe": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:events.update": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:events.wait": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:input.barrier": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:input.interrupt": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:input.keys": {
+                "/error/data/kind": "invalid_params"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "m:input.paste",
+                "method": "input.paste",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:input.raw",
+                "method": "input.raw",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:input.send",
+                "method": "input.send",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:layout.edit",
+                "method": "layout.edit",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:layout.get",
+                "method": "layout.get",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:machine.add",
+                "method": "machine.add",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:machine.get",
+                "method": "machine.get",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:machine.list",
+                "method": "machine.list",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:machine.rename",
+                "method": "machine.rename",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:op.cancel",
+                "method": "op.cancel",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:op.get",
+                "method": "op.get",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:plugin.invoke",
+                "method": "plugin.invoke",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:plugin.list",
+                "method": "plugin.list",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:plugin.run_get",
+                "method": "plugin.run_get",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:prompt.answer",
+                "method": "prompt.answer",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:prompt.close",
+                "method": "prompt.close",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:prompt.get",
+                "method": "prompt.get",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:prompt.list",
+                "method": "prompt.list",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:prompt.open",
+                "method": "prompt.open",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:rpc.discover",
+                "method": "rpc.discover",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:schema.capabilities",
+                "method": "schema.capabilities",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:schema.errors",
+                "method": "schema.errors",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:schema.events",
+                "method": "schema.events",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:selection.set",
+                "method": "selection.set",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:server.metrics",
+                "method": "server.metrics",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:server.restart",
+                "method": "server.restart",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:server.start",
+                "method": "server.start",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:server.status",
+                "method": "server.status",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:server.stop",
+                "method": "server.stop",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:service.describe",
+                "method": "service.describe",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "m:input.paste": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:input.raw": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:input.send": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:layout.edit": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:layout.get": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:machine.add": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:machine.get": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:machine.list": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:machine.rename": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:op.cancel": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:op.get": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:plugin.invoke": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:plugin.list": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:plugin.run_get": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:prompt.answer": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:prompt.close": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:prompt.get": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:prompt.list": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:prompt.open": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:rpc.discover": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:schema.capabilities": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:schema.errors": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:schema.events": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:selection.set": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:server.metrics": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:server.restart": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:server.start": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:server.status": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:server.stop": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:service.describe": {
+                "/error/data/kind": "invalid_params"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "m:session.snapshot",
+                "method": "session.snapshot",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:status.clear",
+                "method": "status.clear",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:status.get",
+                "method": "status.get",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:status.report",
+                "method": "status.report",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:template.get",
+                "method": "template.get",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:template.list",
+                "method": "template.list",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.first_message",
+                "method": "terminal.first_message",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.get",
+                "method": "terminal.get",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.history",
+                "method": "terminal.history",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.keep",
+                "method": "terminal.keep",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.kill",
+                "method": "terminal.kill",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.label",
+                "method": "terminal.label",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.list",
+                "method": "terminal.list",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.output",
+                "method": "terminal.output",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.process_info",
+                "method": "terminal.process_info",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.recover",
+                "method": "terminal.recover",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.rename",
+                "method": "terminal.rename",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.rm",
+                "method": "terminal.rm",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.run",
+                "method": "terminal.run",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.screen",
+                "method": "terminal.screen",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.search",
+                "method": "terminal.search",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:terminal.wait_output",
+                "method": "terminal.wait_output",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:turn.get",
+                "method": "turn.get",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:turn.wait",
+                "method": "turn.wait",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:update.activate",
+                "method": "update.activate",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:update.query",
+                "method": "update.query",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:update.rollback",
+                "method": "update.rollback",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:update.stage",
+                "method": "update.stage",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:update.verify",
+                "method": "update.verify",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:worktree.create",
+                "method": "worktree.create",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "m:session.snapshot": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:status.clear": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:status.get": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:status.report": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:template.get": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:template.list": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.first_message": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.get": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.history": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.keep": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.kill": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.label": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.list": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.output": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.process_info": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.recover": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.rename": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.rm": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.run": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.screen": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.search": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:terminal.wait_output": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:turn.get": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:turn.wait": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:update.activate": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:update.query": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:update.rollback": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:update.stage": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:update.verify": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:worktree.create": {
+                "/error/data/kind": "invalid_params"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "m:worktree.list",
+                "method": "worktree.list",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:worktree.open",
+                "method": "worktree.open",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:worktree.remove",
+                "method": "worktree.remove",
+                "params": {
+                  "p5_unknown_field": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "m:worktree.list": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:worktree.open": {
+                "/error/data/kind": "invalid_params"
+              },
+              "m:worktree.remove": {
+                "/error/data/kind": "invalid_params"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "list",
+                "method": "agent.list",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "start",
+                "method": "server.start",
+                "params": {
+                  "op_id": "$op:start"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "ack",
+                "method": "events.ack",
+                "params": {
+                  "subscription_id": "sub-none",
+                  "seq": "0"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "history",
+                "method": "terminal.history",
+                "params": {
+                  "target": {
+                    "address": "t404"
+                  },
+                  "limit": 1,
+                  "format": "text"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "list": {
+                "/result/agents": [],
+                "/result/page/total": 0
+              },
+              "start": {
+                "/error/data/kind": "already_running"
+              },
+              "ack": {
+                "/error/data/kind": "not_found"
+              },
+              "history": {
+                "/error/data/kind": "not_found"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "hello does not advertise the ten explicitly excluded published methods (agent.note, agent.release, agent.wait_children, doc.list, machine.exec, machine.file, machine.login, machine.rm, service.install, service.remove), and calling each answers the typed not_implemented kind with a follow-up hint and retryable false, never method_not_found.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$excludes": [
+                  "agent.note",
+                  "agent.release",
+                  "agent.wait_children",
+                  "doc.list",
+                  "machine.exec",
+                  "machine.file",
+                  "machine.login",
+                  "machine.rm",
+                  "service.install",
+                  "service.remove"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "m:agent.note",
+                "method": "agent.note",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:agent.release",
+                "method": "agent.release",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:agent.wait_children",
+                "method": "agent.wait_children",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:doc.list",
+                "method": "doc.list",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:machine.exec",
+                "method": "machine.exec",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:machine.file",
+                "method": "machine.file",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:machine.login",
+                "method": "machine.login",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:machine.rm",
+                "method": "machine.rm",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:service.install",
+                "method": "service.install",
+                "params": {}
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "m:service.remove",
+                "method": "service.remove",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "m:agent.note": {
+                "/error/data/kind": "not_implemented",
+                "/error/data/hint": {
+                  "$present": true
+                },
+                "/error/data/retryable": false
+              },
+              "m:agent.release": {
+                "/error/data/kind": "not_implemented",
+                "/error/data/hint": {
+                  "$present": true
+                },
+                "/error/data/retryable": false
+              },
+              "m:agent.wait_children": {
+                "/error/data/kind": "not_implemented",
+                "/error/data/hint": {
+                  "$present": true
+                },
+                "/error/data/retryable": false
+              },
+              "m:doc.list": {
+                "/error/data/kind": "not_implemented",
+                "/error/data/hint": {
+                  "$present": true
+                },
+                "/error/data/retryable": false
+              },
+              "m:machine.exec": {
+                "/error/data/kind": "not_implemented",
+                "/error/data/hint": {
+                  "$present": true
+                },
+                "/error/data/retryable": false
+              },
+              "m:machine.file": {
+                "/error/data/kind": "not_implemented",
+                "/error/data/hint": {
+                  "$present": true
+                },
+                "/error/data/retryable": false
+              },
+              "m:machine.login": {
+                "/error/data/kind": "not_implemented",
+                "/error/data/hint": {
+                  "$present": true
+                },
+                "/error/data/retryable": false
+              },
+              "m:machine.rm": {
+                "/error/data/kind": "not_implemented",
+                "/error/data/hint": {
+                  "$present": true
+                },
+                "/error/data/retryable": false
+              },
+              "m:service.install": {
+                "/error/data/kind": "not_implemented",
+                "/error/data/hint": {
+                  "$present": true
+                },
+                "/error/data/retryable": false
+              },
+              "m:service.remove": {
+                "/error/data/kind": "not_implemented",
+                "/error/data/hint": {
+                  "$present": true
+                },
+                "/error/data/retryable": false
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

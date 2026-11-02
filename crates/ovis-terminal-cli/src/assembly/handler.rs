@@ -1,5 +1,6 @@
 //! The served method table. Every name here is routed to a landed implementation and hello
-//! advertises exactly these plus the attach stream methods; anything else is
+//! advertises exactly these plus the attach stream methods. A published method this
+//! runtime explicitly excludes answers the typed `not_implemented`. Anything else is
 //! `method_not_found`, never a stub result.
 
 use std::sync::Arc;
@@ -32,7 +33,7 @@ mod deadline;
 mod lanes;
 
 /// Methods served by the runtime actor and the lease table, besides the attach streams.
-pub(super) const ROUTED: [&str; 33] = [
+pub(super) const ROUTED: [&str; 36] = [
     "terminal.run",
     "terminal.list",
     "terminal.get",
@@ -47,6 +48,7 @@ pub(super) const ROUTED: [&str; 33] = [
     "terminal.search",
     "terminal.output",
     "terminal.wait_output",
+    "terminal.history",
     "op.get",
     "input.raw",
     "input.send",
@@ -66,6 +68,8 @@ pub(super) const ROUTED: [&str; 33] = [
     "events.subscribe",
     "events.update",
     "events.unsubscribe",
+    "events.ack",
+    "server.start",
 ];
 
 type Lane = AttachLane<Arc<Directory>>;
@@ -99,6 +103,9 @@ impl RequestHandler for Served {
     }
 
     async fn call(&self, call: Call) -> Result<Value, BoundaryError> {
+        if let Some(excluded) = super::excluded::Excluded::of(call.request.method()) {
+            return Err(excluded.refusal());
+        }
         match deadline::lifecycle_op(&call) {
             Some(op) => deadline::within(self.route(call), op).await,
             None => self.route(call).await,
@@ -143,9 +150,11 @@ impl Served {
             | "terminal.label"
             | "terminal.recover"
             | "terminal.process_info" => self.mutate(call).await,
-            "terminal.screen" | "terminal.search" | "terminal.output" | "terminal.wait_output" => {
-                self.read(call).await
-            }
+            "terminal.screen"
+            | "terminal.search"
+            | "terminal.output"
+            | "terminal.wait_output"
+            | "terminal.history" => self.read(call).await,
             "op.get" => {
                 // The lifecycle ledger first; an operation it does not know is one the
                 // dispatcher ran (such as server.restart), answered from its own ledger.
@@ -172,7 +181,10 @@ impl Served {
             | "attach.release_geometry"
             | "attach.focus" => self.layout_or_lease(call).await,
             "turn.wait" | "events.wait" | "input.interrupt" => self.waited(call).await,
-            "events.subscribe" | "events.update" | "events.unsubscribe" => self.events(call).await,
+            "events.subscribe" | "events.update" | "events.unsubscribe" | "events.ack" => {
+                self.events(call).await
+            }
+            "server.start" => super::restart::start(&call),
             "attach.leases" => {
                 let params: AttachLeasesParams = decode(&call)?;
                 let leases = self
