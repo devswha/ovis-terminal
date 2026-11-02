@@ -27,6 +27,33 @@ use super::actor::{Runtime, now};
 /// Scrollback lines every screen keeps.
 const HISTORY_LINES: u32 = 10_000;
 
+/// Largest parse slice of a screen, as in [`ScreenBounds::DEFAULT`].
+const WORK_BUDGET: u64 = 64 * 1024;
+
+/// Screen bounds retaining `ring` raw output bytes (the QA output ring seam), or the
+/// defaults: a checkpoint every half ring and slices of at most a quarter keep every
+/// checkpoint plus the bytes after it inside retention.
+pub(super) fn screen_bounds(ring: Option<u64>) -> Result<ScreenBounds, super::AssemblyError> {
+    let Some(ring) = ring else {
+        return Ok(ScreenBounds::DEFAULT);
+    };
+    let bytes = |count: u64| {
+        usize::try_from(count)
+            .ok()
+            .and_then(std::num::NonZeroUsize::new)
+            .ok_or(super::QaRingInvalid { ring })
+    };
+    let sized = || {
+        Ok::<_, super::QaRingInvalid>(
+            ScreenBounds::DEFAULT
+                .with_retained_output(bytes(ring)?)
+                .with_checkpoint_interval(bytes(ring / 2)?)
+                .with_work_budget(bytes((ring / 4).min(WORK_BUDGET))?),
+        )
+    };
+    sized().map_err(super::AssemblyError::start("size the QA output ring"))
+}
+
 /// One program incarnation the server is serving.
 #[derive(Debug)]
 pub(super) struct Live {
@@ -99,10 +126,10 @@ impl Runtime {
             Geometry::new(grid.cols, grid.rows)?,
             HistoryLimit::new(HISTORY_LINES),
         );
-        let screen = Screen::new(target.clone(), ScreenConfig::new(vt, ScreenBounds::DEFAULT))?;
+        let screen = Screen::new(target.clone(), ScreenConfig::new(vt, self.screen_bounds))?;
         let waits = Arc::new(Waits::new(Screen::new(
             target,
-            ScreenConfig::new(vt, ScreenBounds::DEFAULT),
+            ScreenConfig::new(vt, self.screen_bounds),
         )?));
         let resolved = ResolvedTarget::new(
             self.identity.machine_id(),
@@ -174,5 +201,45 @@ impl Runtime {
             _ => return Ok(()),
         }
         live.pump(&self.holder)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::num::NonZeroUsize;
+
+    use ovis_terminal_core::screen::ScreenBounds;
+
+    use super::screen_bounds;
+
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
+    fn size(bytes: usize) -> Result<NonZeroUsize, &'static str> {
+        NonZeroUsize::new(bytes).ok_or("a positive size")
+    }
+
+    #[test]
+    fn production_screens_keep_the_default_eight_mib_ring() -> TestResult {
+        assert_eq!(screen_bounds(None)?, ScreenBounds::DEFAULT);
+        assert_eq!(
+            ScreenBounds::DEFAULT,
+            ScreenBounds::DEFAULT.with_retained_output(size(8 << 20)?)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_qa_ring_scales_checkpoints_and_slices_inside_it() -> TestResult {
+        let expected = ScreenBounds::DEFAULT
+            .with_retained_output(size(65_536)?)
+            .with_checkpoint_interval(size(32_768)?)
+            .with_work_budget(size(16_384)?);
+        assert_eq!(screen_bounds(Some(65_536))?, expected);
+        let large = ScreenBounds::DEFAULT
+            .with_retained_output(size(1 << 20)?)
+            .with_checkpoint_interval(size(1 << 19)?)
+            .with_work_budget(size(64 << 10)?);
+        assert_eq!(screen_bounds(Some(1 << 20))?, large);
+        Ok(())
     }
 }

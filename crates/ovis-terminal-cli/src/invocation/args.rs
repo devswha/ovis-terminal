@@ -88,6 +88,12 @@ pub(super) struct ServeArgs {
     /// through a PTY. Accepted only with a `--root` that holds a `qa-fixture` file.
     #[arg(long)]
     pub(super) qa_graphics_sequence_max_bytes: Option<u64>,
+    /// QA seam: raw output bytes each terminal retains for `terminal.output` and output
+    /// waits (8 MiB without it, at least 4096); the checkpoint interval and parse slice
+    /// shrink with it so the retention bound still holds. Accepted only with a `--root`
+    /// that holds a `qa-fixture` file.
+    #[arg(long, value_parser = clap::value_parser!(u64).range(4096..))]
+    pub(super) qa_output_ring_bytes: Option<u64>,
 }
 
 /// The three published contracts.

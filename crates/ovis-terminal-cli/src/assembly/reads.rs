@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 
 use base64::Engine as _;
 use ovis_terminal_core::restart::ArmedWait;
-use ovis_terminal_core::screen::{Needle, OutputRequest, SearchRequest};
+use ovis_terminal_core::screen::{Needle, OutputRequest, ScreenError, SearchRequest};
 use ovis_terminal_core::waits::{OutputOutcome, OutputWait, Ticket, WaitError};
 use ovis_terminal_protocol::domain::restart::InterruptedWait;
 use ovis_terminal_protocol::errors::{BoundaryError, OpId};
@@ -138,11 +138,15 @@ impl Runtime {
                 )
             })?;
         let request = OutputRequest::new(OutputOffset::new(params.from_offset.get()), limit);
-        let slice = live
-            .hub
-            .screen()
-            .output(&request)
-            .map_err(|error| refusal(error.kind(), error.hint()))?;
+        let screen = live.hub.screen();
+        // An evicted start resumes at the retained floor and reports `gap`.
+        let slice = match screen.output(&request) {
+            Err(ScreenError::HistoryGap { retained, .. }) => {
+                screen.output(&OutputRequest::new(retained.floor, limit))
+            }
+            read => read,
+        }
+        .map_err(|error| refusal(error.kind(), error.hint()))?;
         checked::<TerminalOutputResult>(json!({
             "data_b64": base64::engine::general_purpose::STANDARD.encode(&slice.bytes),
             "from_offset": slice.from.get().to_string(),

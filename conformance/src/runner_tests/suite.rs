@@ -58,11 +58,22 @@ const ASSEMBLED: [&str; 8] = [
     "services/worktrees.json",
 ];
 
+/// Plan todo 30's attach, input and capacity scenarios over the assembled binary.
+const ATTACH_INPUT: [&str; 6] = [
+    "attach-input/adversarial.json",
+    "attach-input/all.json",
+    "attach/resize.json",
+    "capacity/fifty.json",
+    "capacity/sixteen.json",
+    "part-a/task-30.json",
+];
+
 /// Every executable scenario file, sorted as the inventory reports them.
 fn executable() -> Vec<String> {
     let mut files: Vec<String> = EXECUTABLE
         .iter()
         .chain(&ASSEMBLED)
+        .chain(&ATTACH_INPUT)
         .map(|file| (*file).to_owned())
         .collect();
     files.sort();

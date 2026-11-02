@@ -16,4 +16,5 @@ pub mod root;
 pub mod run;
 pub mod session;
 pub mod steps;
+pub mod stream;
 pub mod transport;

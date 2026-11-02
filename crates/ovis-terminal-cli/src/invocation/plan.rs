@@ -159,6 +159,7 @@ pub(super) fn plan(cli: Cli, token: Option<&str>) -> Result<Plan, CliError> {
                 holder_poll_ms: args.qa_holder_poll_ms,
                 actor_hold: args.qa_actor_hold,
                 graphics_sequence_max_bytes: args.qa_graphics_sequence_max_bytes,
+                output_ring_bytes: args.qa_output_ring_bytes,
             },
         }),
         #[cfg(unix)]

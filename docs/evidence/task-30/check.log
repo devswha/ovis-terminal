@@ -1,0 +1,300 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_agent_adapters
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_authz
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_bench
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_cli
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_conformance
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_holder
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_probes
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_protocol
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_remote
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_replay
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_server
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_services
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests ovis_terminal_vt
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests workspace_hygiene
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+==> cargo test --locked -p ovis-terminal-core --test subscriptions
+   Compiling once_cell v1.21.4
+   Compiling alacritty_terminal v0.26.0
+   Compiling ovis-terminal-authz v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t30/crates/ovis-terminal-authz)
+   Compiling tempfile v3.27.0
+   Compiling rusty-fork v0.3.1
+   Compiling proptest v1.12.0
+   Compiling ovis-terminal-vt v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t30/crates/ovis-terminal-vt)
+   Compiling ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t30/crates/ovis-terminal-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 10.80s
+     Running tests/subscriptions.rs (/dev/shm/ovt-target-lane-t30/debug/deps/subscriptions-2118d7585f2c3018)
+
+running 22 tests
+test independence::heartbeat_bounds_never_exceed_fifteen_seconds ... ok
+test health::a_real_stalled_subscription_reports_its_queue_loss_and_resync ... ok
+test durability::close_forced_returns_only_after_its_marker_is_durable ... ok
+test wire::loss_markers_reject_numeric_and_unknown_fields ... ok
+test independence::an_idle_filtered_subscription_heartbeats_its_scan_cursor_and_identity ... ok
+test durability::missed_is_returned_only_after_its_marker_is_durable ... ok
+test wire::subscribe_parameters_decode_to_one_start_and_selector ... ok
+test independence::the_subscription_limit_refuses_without_disturbing_installed_ones ... ok
+test wire::unusable_filters_and_cursors_are_typed_rejections ... ok
+test wire::loss_markers_round_trip_every_sequence_as_a_decimal_string ... ok
+test failure ... ok
+test replay::a_cursor_ahead_of_the_head_installs_nothing ... ok
+test independence::unsubscribing_one_subscription_leaves_the_others_delivering ... ok
+test replay::an_expired_cursor_misses_with_a_fresh_snapshot_and_the_floor_still_resumes ... ok
+test loss::a_forced_close_marker_names_the_first_undelivered_event_and_reconnect_replays_it ... ok
+test happy ... ok
+test loss::a_withheld_consumer_recovers_from_its_durable_marker_and_continues ... ok
+test stall::a_stalled_fanout_worker_loses_every_subscription_and_each_recovers ... ok
+test independence::an_idle_subscription_heartbeats_within_its_interval_whatever_the_caller_waits ... ok
+test loss::the_session_budget_evicts_the_largest_queue_not_the_draining_one ... ok
+test loss::a_dropped_consumer_still_leaves_a_durable_marker ... ok
+test replay::a_snapshot_racing_commits_is_followed_by_exactly_the_later_commits ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+
+==> cargo run --locked --quiet -p workspace-hygiene -- check --root .
+workspace-hygiene: 0 violation(s) in 1565 file(s) checked
+
+==> bash scripts/hygiene/manifests.sh
+manifests.sh: 17 member manifest(s) checked
+
+==> bash scripts/hygiene/json.sh
+json.sh: 312 JSON file(s) checked
+
+==> cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin source-check -- --roots crates packages/client-ts conformance bench probes --max-pure-loc 250 --max-params 3 --violations docs/research/violations.md --checklist docs/quality-checklist.md
+{
+  "argv": [
+    "source-check",
+    "--roots",
+    "crates",
+    "packages/client-ts",
+    "conformance",
+    "bench",
+    "probes",
+    "--max-pure-loc",
+    "250",
+    "--max-params",
+    "3",
+    "--violations",
+    "docs/research/violations.md",
+    "--checklist",
+    "docs/quality-checklist.md"
+  ],
+  "checklist": {
+    "path": "docs/quality-checklist.md",
+    "rule_ids": "64",
+    "sha256": "c742eda2782a1cffcb26f684bb14a37c86c8a728b33775d72cc0b35526d85f0a",
+    "v_rows": "5174",
+    "violations_sha256": "4a45b251393649c7ec30b72cc480908381fede4d3fa2fba201f4ecd75b56e71c"
+  },
+  "exit": 0,
+  "finding_count": "0",
+  "findings": [],
+  "gate": "source-check",
+  "hint": null,
+  "host": {
+    "arch": "x86_64",
+    "os": "linux"
+  },
+  "kind": null,
+  "limits": {
+    "max_params": "3",
+    "max_pure_loc": "250"
+  },
+  "rules": {
+    "cargo": [
+      "workspace-lints",
+      "member-lints",
+      "toolchain-pinned",
+      "cargo-deny-config",
+      "clippy-thresholds"
+    ],
+    "source": [
+      "syntax",
+      "max-pure-loc",
+      "max-parameters",
+      "dropped-result",
+      "allow-attribute",
+      "numeric-cast",
+      "tautological-assert"
+    ]
+  },
+  "sources": {
+    "files_checked": "1553",
+    "roots": [
+      {
+        "root": "crates",
+        "rust_files": "1295"
+      },
+      {
+        "root": "packages/client-ts",
+        "rust_files": "0"
+      },
+      {
+        "root": "conformance",
+        "rust_files": "104"
+      },
+      {
+        "root": "bench",
+        "rust_files": "76"
+      },
+      {
+        "root": "probes",
+        "rust_files": "78"
+      }
+    ]
+  },
+  "verdict": "pass"
+}
+
+==> cargo run --locked --quiet --manifest-path probes/Cargo.toml --bin evidence-audit -- --tree docs/evidence --exemptions probes/quality/evidence-exemptions.json
+{
+  "argv": [
+    "evidence-audit",
+    "--tree",
+    "docs/evidence",
+    "--exemptions",
+    "probes/quality/evidence-exemptions.json"
+  ],
+  "exempted": [
+    "docs/evidence/task-10/task-10-ovis-terminal-v1.json",
+    "docs/evidence/task-12/task-12-ovis-terminal-v1.json",
+    "docs/evidence/task-13/task-13-ovis-terminal-v1.json",
+    "docs/evidence/task-14/round2-evidence.json",
+    "docs/evidence/task-14/task-14-ovis-terminal-v1.json",
+    "docs/evidence/task-15/task-15-ovis-terminal-v1.json",
+    "docs/evidence/task-16/task-16-ovis-terminal-v1.json",
+    "docs/evidence/task-19/task-19-ovis-terminal-v1.json",
+    "docs/evidence/task-7/task-7-ovis-terminal-v1.json",
+    "docs/evidence/task-8/task-8-ovis-terminal-v1.json",
+    "docs/evidence/task-9/task-9-ovis-terminal-v1.json",
+    "docs/evidence/task-56/tuning/overload-16pty-64mibs-4w-after-16kib-turns.json",
+    "docs/evidence/task-56/tuning/overload-16pty-64mibs-4w-before-8mib-turns.json",
+    "docs/evidence/task-56/tuning/parse-budgets.json",
+    "docs/evidence/task-56/tuning/profile-16pty-1mibs-4w.json",
+    "docs/evidence/task-56/tuning/retention-16pty-64mibs-20s-4w.json",
+    "docs/evidence/task-56/tuning/stress-50pty-400viewers-1mibs-4w.json",
+    "docs/evidence/task-56/tuning/stress-50pty-400viewers-1mibs-8w.json",
+    "docs/evidence/task-43/all-all-inventory.json",
+    "docs/evidence/task-59/merge-all-all.json",
+    "docs/evidence/task-59/merge4-all-all.json",
+    "docs/evidence/task-59/merge5-all-all.json",
+    "docs/evidence/task-69/bench/ideal-16pty-linux.json",
+    "docs/evidence/task-69/bench/ideal-16pty-linux.samples.json",
+    "docs/evidence/task-69/bench/capacity-50pty-linux.json",
+    "docs/evidence/task-69/bench/capacity-50pty-linux.samples.json",
+    "docs/evidence/task-69/bench/failure-writer-delay-150ms-linux.json",
+    "docs/evidence/task-69/bench/failure-writer-delay-150ms-linux.samples.json",
+    "docs/evidence/task-69/bench/failure-admission-delay-150ms-linux.json",
+    "docs/evidence/task-69/bench/failure-admission-delay-150ms-linux.samples.json",
+    "docs/evidence/task-69/bench/mutant-M-a-fleet-capped-at-two-linux.json",
+    "docs/evidence/task-61/acceptance-evidence.json",
+    "docs/evidence/task-61/task-61-ovis-terminal-v1.json",
+    "docs/evidence/task-70/runs/soak-1800s-50pty-linux.json",
+    "docs/evidence/task-70/runs/soak-1800s-50pty-linux.checkpoint.json",
+    "docs/evidence/task-70/runs/fixture-holder-tail-gap-and-lost-receipt-linux.json"
+  ],
+  "exit": 0,
+  "finding_count": "0",
+  "findings": [],
+  "gate": "evidence-audit",
+  "hint": null,
+  "host": {
+    "arch": "x86_64",
+    "os": "linux"
+  },
+  "inputs": "127",
+  "kind": null,
+  "runs": "177",
+  "verdict": "pass"
+}
+
+check.sh: all steps passed
+CHECK_EXIT=0

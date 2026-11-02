@@ -1,0 +1,96 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "part-a/task-30",
+  "title": "Attach input and aggregate capacity conformance",
+  "todo": 30,
+  "closes": [
+    "GAP-039",
+    "GAP-042",
+    "GAP-043",
+    "GAP-046",
+    "GAP-052",
+    "GAP-060",
+    "GAP-061",
+    "GAP-063",
+    "GAP-070",
+    "GAP-071",
+    "GAP-074",
+    "GAP-075",
+    "GAP-076",
+    "GAP-077",
+    "GAP-078",
+    "GAP-084",
+    "GAP-148"
+  ],
+  "delivers": [
+    "IDEAL-028",
+    "IDEAL-029",
+    "IDEAL-030",
+    "IDEAL-031",
+    "IDEAL-032",
+    "IDEAL-035",
+    "IDEAL-039",
+    "IDEAL-040",
+    "IDEAL-041",
+    "IDEAL-044",
+    "IDEAL-048",
+    "IDEAL-049",
+    "IDEAL-051",
+    "IDEAL-052",
+    "IDEAL-053",
+    "IDEAL-054",
+    "IDEAL-055",
+    "IDEAL-061",
+    "IDEAL-063"
+  ],
+  "excludes": [
+    "EXCL-007",
+    "EXCL-017",
+    "EXCL-019",
+    "EXCL-024",
+    "EXCL-025",
+    "EXCL-026"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Runs attach-input/all (first-paint parity, admission before delivery, the exact output-wait marker, the operator lease, bounded shared storage with an accounted overflow gap, and client-side checkpoint plus tail reconstruction on a normal and an overflowed terminal against uninterrupted VTs), capacity/sixteen (the exact 16-PTY profile: admissions within 100 ms, exit waits armed before the exits, exact deliveries) and attach/resize (a resize applied while input is queued). The 100 ms event bound, ordered geometry events and the session budget are declared.",
+      "steps": [
+        {
+          "include": {
+            "scenario": "attach-input/all",
+            "case": "happy"
+          }
+        },
+        {
+          "include": {
+            "scenario": "capacity/sixteen",
+            "case": "happy"
+          }
+        },
+        {
+          "include": {
+            "scenario": "attach/resize",
+            "case": "happy"
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "Runs attach-input/adversarial: revoked queued write, impossible credit, stale epoch, fake status text, refused paste, overflow cursor_expired and floor resume, stalled child with an ineffective Escape, the per-terminal input queue refusing input_overflow inside its budget, an over-cap argv, two writers' submissions delivered whole and in admission order, and checkpoint_inexact on a paint inside an open sequence.",
+      "steps": [
+        {
+          "include": {
+            "scenario": "attach-input/adversarial",
+            "case": "failure"
+          }
+        }
+      ]
+    }
+  ]
+}

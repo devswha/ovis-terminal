@@ -1,0 +1,186 @@
+=== M1 credit beyond-sent accepted
+--- crates/ovis-terminal-server/src/streams/credit.rs
+- if at > self.sent {
++ if false && at > self.sent {
+ conformance/src/runner_tests.rs                   | 2 ++
+ conformance/src/runner_tests/suite.rs             | 9 +++++++++
+ crates/ovis-terminal-server/src/streams/credit.rs | 2 +-
+ 3 files changed, 12 insertions(+), 1 deletion(-)
+        FAIL [   0.567s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+    test attach_input::failure ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.56s
+    "part-a/task-30" "failure": {"detail":"expectation reply[credit-max]/error/data/kind did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"18"}
+      {"actual":null,"check":"reply[credit-max]/error/data/kind","expected":"invalid_credit","passed":false}
+      {"actual":{"checkpoint":null,"stream_id":"stream:01a198b9-2429-7619-b0f2-c887d09b3305","stream_offset":"18446744073709551615"},"check":"reply[credit-max]/result","expected":{"$present":false},"passed":false}
+        PASS [  10.115s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+     Summary [  10.115s] 2 tests run: 1 passed, 1 failed, 30 skipped
+        FAIL [   0.567s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+NEXTEST_EXIT=100
+
+=== M2 takeover epoch check removed
+--- crates/ovis-terminal-core/src/leases/table.rs
+- if current.epoch != takeover.expected() {
++ if false && current.epoch != takeover.expected() {
+ conformance/src/runner_tests.rs               | 2 ++
+ conformance/src/runner_tests/suite.rs         | 9 +++++++++
+ crates/ovis-terminal-core/src/leases/table.rs | 2 +-
+ 3 files changed, 12 insertions(+), 1 deletion(-)
+        FAIL [   0.635s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+    test attach_input::failure ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.63s
+    "part-a/task-30" "failure": {"detail":"expectation reply[stale-takeover]/error/data/kind did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"34"}
+      {"actual":null,"check":"reply[stale-takeover]/error/data/kind","expected":"lease_epoch_mismatch","passed":false}
+      {"actual":{"acquired":{"epoch":"2","holder":"operator","lease_id":"lease:4","role":"interact"},"displaced":{"epoch":"1","holder":"writer","lease_id":"lease:1","role":"interact"},"seq":"5"},"check":"reply[stale-takeover]/result","expected":{"$present":false},"passed":false}
+        PASS [  10.231s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+     Summary [  10.231s] 2 tests run: 1 passed, 1 failed, 30 skipped
+        FAIL [   0.635s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+NEXTEST_EXIT=100
+
+=== M3 pending barrier reported reached
+--- crates/ovis-terminal-cli/src/assembly/barrier.rs
+- BarrierState::Pending { pending_bytes } => (false, pending_bytes.get()),
++ BarrierState::Pending { pending_bytes } => (true, pending_bytes.get()),
+ conformance/src/runner_tests.rs                  | 2 ++
+ conformance/src/runner_tests/suite.rs            | 9 +++++++++
+ crates/ovis-terminal-cli/src/assembly/barrier.rs | 2 +-
+ 3 files changed, 12 insertions(+), 1 deletion(-)
+        FAIL [   0.765s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+    test attach_input::failure ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.76s
+    "part-a/task-30" "failure": {"detail":"expectation reply[barrier]/result/reached did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"52"}
+      {"actual":true,"check":"reply[barrier]/result/reached","expected":false,"passed":false}
+        PASS [  10.140s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+     Summary [  10.140s] 2 tests run: 1 passed, 1 failed, 30 skipped
+        FAIL [   0.765s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+NEXTEST_EXIT=100
+
+=== reverted; rebuilt clean binary: exit 0
+
+=== M4 terminal.output no longer resumes an evicted start at the floor (QA output ring)
+--- crates/ovis-terminal-cli/src/assembly/reads.rs
+- Err(ScreenError::HistoryGap { retained, .. }) => {
++ Err(ScreenError::HistoryGap { retained, .. }) if retained.floor.get() == u64::MAX => {
+ crates/ovis-terminal-cli/src/assembly.rs           | 10 +++++++
+ crates/ovis-terminal-cli/src/assembly/actor.rs     |  2 ++
+ crates/ovis-terminal-cli/src/assembly/live.rs      | 31 ++++++++++++++++++++--
+ crates/ovis-terminal-cli/src/assembly/reads.rs     | 16 ++++++-----
+ crates/ovis-terminal-cli/src/assembly/serve.rs     |  5 +++-
+ crates/ovis-terminal-cli/src/invocation/args.rs    |  6 +++++
+ crates/ovis-terminal-cli/src/invocation/plan.rs    |  1 +
+ crates/ovis-terminal-cli/tests/assembly/pending.rs | 26 +++++++++++-------
+ 8 files changed, 78 insertions(+), 19 deletions(-)
+        FAIL [   1.839s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+    test attach_input::failure ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 1.83s
+    "part-a/task-30" "failure": {"detail":"expectation reply[evicted]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"52"}
+      {"actual":{"code":-32000,"data":{"hint":"resume from the retained floor, or start from the checkpoint and accept the gap","kind":"history_gap","retryable":false},"message":"operation failed"},"check":"reply[evicted]/error","expected":{"$present":false},"passed":false}
+      {"actual":null,"check":"reply[evicted]/result/floor_offset","expected":{"$capture":"evicted_floor"},"passed":false}
+      {"actual":null,"check":"reply[evicted]/result/from_offset","expected":{"$capture":"floor"},"passed":false}
+      {"actual":null,"check":"reply[evicted]/result/gap","expected":true,"passed":false}
+        FAIL [   1.852s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+    test attach_input::happy ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 1.84s
+    "part-a/task-30" "happy": {"detail":"expectation reply[evicted]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"43"}
+NEXTEST_EXIT=100
+
+=== reverted; REBUILD=0
+
+# Round 4 mutants (new assertions)
+
+=== M5 checkpoint inexact reasons dropped
+--- crates/ovis-terminal-server/src/streams/records.rs
+- screen.inexact = inexact(&paint.fidelity);
++ screen.inexact = inexact(&ovis_terminal_vt::Fidelity::Exact);
+ crates/ovis-terminal-server/src/streams/records.rs | 33 ++++++++++++++++++++--
+ 1 file changed, 30 insertions(+), 3 deletions(-)
+        FAIL [   5.905s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+    "part-a/task-30" "failure": {"detail":"expectation reply[mid]/result/first_paint/inexact did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"124"}
+      {"actual":[],"check":"reply[mid]/result/first_paint/inexact","expected":["control_inside_open_sequence"],"passed":false}
+        PASS [   7.465s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+        FAIL [   5.905s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+
+=== M6 per-terminal input queue cap raised to 64 MiB
+--- crates/ovis-terminal-core/src/input/sequencer/entry.rs
+- pub const DEFAULT: Self = Self::new(16 << 20, 4096);
++ pub const DEFAULT: Self = Self::new(64 << 20, 4096);
+ crates/ovis-terminal-core/src/input/sequencer/entry.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+        FAIL [   6.095s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+    "part-a/task-30" "failure": {"detail":"expectation reply[fill6]/error/data/kind did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"88"}
+      {"actual":null,"check":"reply[fill6]/error/data/kind","expected":"input_overflow","passed":false}
+      {"actual":{"receipt":{"admitted_bytes":"3145728","mode_revision":"0","op_id":"01a19960-c291-7600-9f8f-e9db97f50126","output_cursor":{"offset":"7"},"queued_seq":"9"},"status_at_send":{"agent_id":null,"finish_generation":"0","last_turn":null,"process_incarnation":null,"records":{},"report_seq":null,"reported":false,"root":null,"session":null,"turn":"0"}},"check":"reply[fill6]/result","expected":{"$present":false},"passed":false}
+        PASS [   7.903s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+        FAIL [   6.095s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+
+=== M7 a terminal query reply is admitted twice
+--- crates/ovis-terminal-cli/src/assembly/live.rs
+- self.sequencer.admit_reply(bytes)?;
++ self.sequencer.admit_reply(bytes.clone())?;
+                self.sequencer.admit_reply(bytes)?;
+ crates/ovis-terminal-cli/src/assembly/live.rs | 41 +++++++++++++++++++++++++++
+ 1 file changed, 41 insertions(+)
+        PASS [  10.953s] (1/2) ovis-terminal-conformance::runner attach_input::failure
+        FAIL [  12.556s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+    "part-a/task-30" "happy": {"detail":"expectation reply[next-seen]/result/outcome did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"69"}
+      {"actual":"timeout","check":"reply[next-seen]/result/outcome","expected":"matched","passed":false}
+        FAIL [  12.556s] (2/2) ovis-terminal-conformance::runner attach_input::happy
+
+=== reverted; REBUILT_CLEAN
+ M crates/ovis-terminal-cli/src/assembly/live.rs
+ M crates/ovis-terminal-server/src/streams/records.rs
+
+# Round 5 mutants (client reconstruction, armed exit waits)
+
+=== M8 the t1 uninterrupted reference ignores the tail
+--- conformance/src/runner_tests/attach_input/oracle.rs
+        FAIL [   8.618s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+    thread 'attach_input::happy' (1667663) panicked at conformance/src/runner_tests/attach_input/oracle.rs:90:5:
+      left: Screen { lines: ["yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "flood-16", "$ echo tail-$((2*3))", "tail-6", "$"], cursor: Object {"col": Number(2), "row": Number(23), "visible": Bool(true)} }
+     right: Screen { lines: ["yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "flood-16", "$"], cursor: Object {"col": Number(2), "row": Number(23), "visible": Bool(true)} }
+        FAIL [   8.618s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+
+=== M8b the t2 client rebuild ignores the tail after the repaint
+--- conformance/src/runner_tests/attach_input/oracle.rs
+        FAIL [   7.647s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+    thread 'attach_input::happy' (1671767) panicked at conformance/src/runner_tests/attach_input/oracle.rs:59:5:
+      left: Screen { lines: ["utf8:€ csi:RED", "REPLY-ONCE", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], cursor: Object {"col": Number(0), "row": Number(2), "visible": Bool(true)} }
+     right: Screen { lines: ["utf8:€ csi:RED", "REPLY-ONCE", "NEXT[x]", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], cursor: Object {"col": Number(0), "row": Number(3), "visible": Bool(true)} }
+        FAIL [   7.647s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+
+=== M9 the exit waits are armed after the deliveries (late)
+--- conformance/scenarios/capacity/sixteen.json
+        FAIL [   5.669s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+    thread 'attach_input::happy' (1674852) panicked at conformance/src/runner_tests/attach_input.rs:32:5:
+    "part-a/task-30" "happy": {"detail":"expectation reply[exit1]/result/outcome did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"130"}
+      left: Some(1)
+     right: Some(0)
+        FAIL [   5.669s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+
+=== reverted; clean re-run:
+ M conformance/scenarios/capacity/sixteen.json
+ M conformance/src/runner_tests/attach_input/oracle.rs
+        PASS [   7.857s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+
+# Round 6 mutants (tail start at a paint fence inside a partial sequence)
+
+=== M10 the tail after a paint starts one byte late (drops the first continuation byte)
+--- crates/ovis-terminal-server/src/streams/viewer.rs
+- self.cursor = live;
++ self.cursor = live.advanced(1);
+        FAIL [  22.053s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+    thread 'attach_input::happy' (731947) panicked at conformance/src/runner_tests/attach_input.rs:32:5:
+    "part-a/task-30" "happy": {"detail":"stream data up to its marker did not happen within 20000 ms","hint":"inspect the byte transcript in the evidence","kind":"timeout","step":"95"}
+        FAIL [  22.053s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+
+=== M11 the tail after a paint starts one byte early (duplicates the byte before the fence)
+--- crates/ovis-terminal-server/src/streams/viewer.rs
+- self.cursor = live;
++ self.cursor = LogOffset::new(live.get().saturating_sub(1));
+        FAIL [   1.960s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+    thread 'attach_input::happy' (741144) panicked at conformance/src/runner_tests/attach_input.rs:32:5:
+    "part-a/task-30" "happy": {"detail":"expectation reply[metrics]/result/consumers/0/losses/0/range/first_offset did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"51"}
+        FAIL [   1.960s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+
+=== reverted; clean re-run:
+VIEWER_RESTORED
+        PASS [   7.716s] (1/1) ovis-terminal-conformance::runner attach_input::happy

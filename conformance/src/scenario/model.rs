@@ -136,6 +136,8 @@ pub(crate) enum Step {
     Gates(super::gates::Gates),
     /// Read one attach stream until a marker and check its bytes and control records.
     GraphicsTranscript(crate::fixture::graphics::GraphicsTranscript),
+    /// Collect one attach stream's bytes from an offset until a marker.
+    StreamData(super::stream::StreamData),
     /// Audit the Ovis consumer fixture set and replay its cases of one kind.
     Replay(Replay),
 }

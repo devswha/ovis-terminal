@@ -1,0 +1,2065 @@
+{
+  "scenario": "capacity/sixteen-latency",
+  "title": "Exact 16-PTY profile: every committed delivery and exit event within 100 ms",
+  "todo": 30,
+  "delivers": [
+    "IDEAL-027"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "The capacity/sixteen steps with the plan's bound on events: each exit wait (armed before any input) must report matched, and each echo delivery must match at its admission cursor, all within 100 ms of being awaited.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "exits",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "exits",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat1",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat1",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat1",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat2",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat2",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat2",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat2"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat3",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat3",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat3",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat3"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat4",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat4",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat4",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat4": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat4"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat5",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat5",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat5",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat5": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat5"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat6",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat6",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat6",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat6": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat6"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat7",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat7",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat7",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat7": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat7"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat8",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat8",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat8",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat8"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat9",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat9",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat9",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat9": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat9"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat10",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat10",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat10",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat10": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat10"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat11",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat11",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat11",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat11": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat11"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat12",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat12",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat12",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat12": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat12"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat13",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat13",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat13",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat13": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat13"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat14",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat14",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat14",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat14": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat14"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat15",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat15",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat15",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat15": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat15"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "cat16",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:cat16",
+                  "program": {
+                    "argv": [
+                      "/usr/bin/head",
+                      "-n",
+                      "1"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "cat16",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "cat16": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/terminal/address": {
+                  "$capture": "addr_cat16"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "exits",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "exit1",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat1"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit2",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat2"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit3",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat3"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit4",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat4"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit5",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat5"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit6",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat6"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit7",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat7"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit8",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat8"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit9",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat9"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit10",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat10"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit11",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat11"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit12",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat12"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit13",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat13"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit14",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat14"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit15",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat15"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "exit16",
+                "method": "events.wait",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat16"
+                  },
+                  "exit": true,
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "armed",
+                "method": "terminal.list",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "exits",
+            "expect": {
+              "armed": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "admit1",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit1",
+                  "target": {
+                    "address": "$value:addr_cat1"
+                  },
+                  "expect": null,
+                  "text": "pty-1-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit2",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit2",
+                  "target": {
+                    "address": "$value:addr_cat2"
+                  },
+                  "expect": null,
+                  "text": "pty-2-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit3",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit3",
+                  "target": {
+                    "address": "$value:addr_cat3"
+                  },
+                  "expect": null,
+                  "text": "pty-3-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit4",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit4",
+                  "target": {
+                    "address": "$value:addr_cat4"
+                  },
+                  "expect": null,
+                  "text": "pty-4-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit5",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit5",
+                  "target": {
+                    "address": "$value:addr_cat5"
+                  },
+                  "expect": null,
+                  "text": "pty-5-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit6",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit6",
+                  "target": {
+                    "address": "$value:addr_cat6"
+                  },
+                  "expect": null,
+                  "text": "pty-6-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit7",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit7",
+                  "target": {
+                    "address": "$value:addr_cat7"
+                  },
+                  "expect": null,
+                  "text": "pty-7-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit8",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit8",
+                  "target": {
+                    "address": "$value:addr_cat8"
+                  },
+                  "expect": null,
+                  "text": "pty-8-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit9",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit9",
+                  "target": {
+                    "address": "$value:addr_cat9"
+                  },
+                  "expect": null,
+                  "text": "pty-9-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit10",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit10",
+                  "target": {
+                    "address": "$value:addr_cat10"
+                  },
+                  "expect": null,
+                  "text": "pty-10-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit11",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit11",
+                  "target": {
+                    "address": "$value:addr_cat11"
+                  },
+                  "expect": null,
+                  "text": "pty-11-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit12",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit12",
+                  "target": {
+                    "address": "$value:addr_cat12"
+                  },
+                  "expect": null,
+                  "text": "pty-12-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit13",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit13",
+                  "target": {
+                    "address": "$value:addr_cat13"
+                  },
+                  "expect": null,
+                  "text": "pty-13-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit14",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit14",
+                  "target": {
+                    "address": "$value:addr_cat14"
+                  },
+                  "expect": null,
+                  "text": "pty-14-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit15",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit15",
+                  "target": {
+                    "address": "$value:addr_cat15"
+                  },
+                  "expect": null,
+                  "text": "pty-15-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "admit16",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:admit16",
+                  "target": {
+                    "address": "$value:addr_cat16"
+                  },
+                  "expect": null,
+                  "text": "pty-16-ok",
+                  "submit": "enter",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "within_ms": 100,
+            "expect": {
+              "admit1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur1"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff1"
+                }
+              },
+              "admit2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur2"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff2"
+                }
+              },
+              "admit3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur3"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff3"
+                }
+              },
+              "admit4": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur4"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff4"
+                }
+              },
+              "admit5": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur5"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff5"
+                }
+              },
+              "admit6": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur6"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff6"
+                }
+              },
+              "admit7": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur7"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff7"
+                }
+              },
+              "admit8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur8"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff8"
+                }
+              },
+              "admit9": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "9",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur9"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff9"
+                }
+              },
+              "admit10": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur10"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff10"
+                }
+              },
+              "admit11": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur11"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff11"
+                }
+              },
+              "admit12": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur12"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff12"
+                }
+              },
+              "admit13": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur13"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff13"
+                }
+              },
+              "admit14": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur14"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff14"
+                }
+              },
+              "admit15": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur15"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff15"
+                }
+              },
+              "admit16": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "10",
+                "/result/receipt/output_cursor": {
+                  "$capture": "cur16"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "curoff16"
+                }
+              }
+            }
+          }
+        },
+        {
+          "replies": {
+            "conn": "exits",
+            "expect": {
+              "exit1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit4": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit5": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit6": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit7": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit9": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit10": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit11": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit12": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit13": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit14": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit15": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              },
+              "exit16": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            },
+            "within_ms": 100
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver1",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat1"
+                  },
+                  "cursor": "$value:cur1",
+                  "pattern": {
+                    "text": "pty-1-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver2",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat2"
+                  },
+                  "cursor": "$value:cur2",
+                  "pattern": {
+                    "text": "pty-2-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver3",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat3"
+                  },
+                  "cursor": "$value:cur3",
+                  "pattern": {
+                    "text": "pty-3-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver4",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat4"
+                  },
+                  "cursor": "$value:cur4",
+                  "pattern": {
+                    "text": "pty-4-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver5",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat5"
+                  },
+                  "cursor": "$value:cur5",
+                  "pattern": {
+                    "text": "pty-5-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver6",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat6"
+                  },
+                  "cursor": "$value:cur6",
+                  "pattern": {
+                    "text": "pty-6-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver7",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat7"
+                  },
+                  "cursor": "$value:cur7",
+                  "pattern": {
+                    "text": "pty-7-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver8",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat8"
+                  },
+                  "cursor": "$value:cur8",
+                  "pattern": {
+                    "text": "pty-8-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver9",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat9"
+                  },
+                  "cursor": "$value:cur9",
+                  "pattern": {
+                    "text": "pty-9-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver10",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat10"
+                  },
+                  "cursor": "$value:cur10",
+                  "pattern": {
+                    "text": "pty-10-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver11",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat11"
+                  },
+                  "cursor": "$value:cur11",
+                  "pattern": {
+                    "text": "pty-11-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver12",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat12"
+                  },
+                  "cursor": "$value:cur12",
+                  "pattern": {
+                    "text": "pty-12-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver13",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat13"
+                  },
+                  "cursor": "$value:cur13",
+                  "pattern": {
+                    "text": "pty-13-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver14",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat14"
+                  },
+                  "cursor": "$value:cur14",
+                  "pattern": {
+                    "text": "pty-14-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver15",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat15"
+                  },
+                  "cursor": "$value:cur15",
+                  "pattern": {
+                    "text": "pty-15-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              },
+              {
+                "jsonrpc": "2.0",
+                "id": "deliver16",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "$value:addr_cat16"
+                  },
+                  "cursor": "$value:cur16",
+                  "pattern": {
+                    "text": "pty-16-ok"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "deliver1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff1"
+              },
+              "deliver2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff2"
+              },
+              "deliver3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff3"
+              },
+              "deliver4": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff4"
+              },
+              "deliver5": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff5"
+              },
+              "deliver6": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff6"
+              },
+              "deliver7": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff7"
+              },
+              "deliver8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff8"
+              },
+              "deliver9": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff9"
+              },
+              "deliver10": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff10"
+              },
+              "deliver11": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff11"
+              },
+              "deliver12": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff12"
+              },
+              "deliver13": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff13"
+              },
+              "deliver14": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff14"
+              },
+              "deliver15": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff15"
+              },
+              "deliver16": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": "$value:curoff16"
+              }
+            },
+            "within_ms": 100
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "hangup": {
+            "conn": "exits"
+          }
+        },
+        {
+          "closed": {
+            "conn": "exits"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
