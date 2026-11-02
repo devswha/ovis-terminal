@@ -1,0 +1,12 @@
+$ conformance --binary <lane ovis-terminal> --scenario cli/manual --isolated --case all --evidence docs/evidence/task-66/task-66-all.json
+{"case":"all","error":null,"evidence":"docs/evidence/task-66/task-66-all.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"cli/manual","totals":{"assertions":"122","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
+exit=0
+$ conformance --binary <lane ovis-terminal> --scenario cli/manual --isolated --case happy --evidence docs/evidence/task-66/task-66-ovis-terminal-v1.json
+{"case":"happy","error":null,"evidence":"docs/evidence/task-66/task-66-ovis-terminal-v1.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"cli/manual","totals":{"assertions":"71","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+exit=0
+$ conformance --binary <lane ovis-terminal> --scenario cli/manual --isolated --case failure --inject 'ovis-terminal agent get --unknown-flag --json' --evidence docs/evidence/task-66/task-66-ovis-terminal-v1.json --append
+{"case":"failure","error":null,"evidence":"docs/evidence/task-66/task-66-ovis-terminal-v1.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"cli/manual","totals":{"assertions":"29","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+exit=0
+$ evidence-audit --tree docs/evidence --exemptions probes/quality/evidence-exemptions.json
+pass 0 187
+exit=0

@@ -153,9 +153,10 @@ status.
   `not_owner` from the status, agent and record lanes, `forbidden` from the prompt bridge
   gate; both exit 12. A restarted program gets a new token; the old one stops working.
 - A registration belongs to the process incarnation that made it. This build serves no
-  explicit release: `agent.release` (like `agent.list`, `agent.note` and
-  `agent.wait_children`) is a catalog method `serve` does not route, and it answers
-  `method_not_found`.
+  explicit release: `agent.release` (like `agent.note` and `agent.wait_children`) is a
+  published method `serve` explicitly excludes. Hello does not advertise it, and a call
+  answers `not_implemented` with a hint naming the follow-up; the binding ends when its
+  program exits. `agent.list` is served and lists every registered binding.
 - A producer withdraws what it reported with `status clear`; the terminal keeps running.
 - An attach client gives up its leases by closing its stream (`attach.close`, or Ctrl-\
   in `ovis-terminal terminal attach`); `attach.leases` shows who holds a terminal now.

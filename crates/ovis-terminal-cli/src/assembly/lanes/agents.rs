@@ -1,6 +1,6 @@
 //! Agent lanes: the production agent assembly (status, prompts recovered from the log,
 //! reported conversation records and session binding, behind the prompt bridge gate),
-//! provider history and the agent tree.
+//! provider history, the agent list and the agent tree.
 
 use std::sync::Arc;
 
@@ -70,6 +70,13 @@ pub(super) fn register(
             machine: hosting.identity.machine_id(),
         })
         .map_err(stage("register session.snapshot"))?;
+    dispatch
+        .register_read(crate::assembly::agent_list::AgentList {
+            actor: hosting.actor.clone(),
+            status: Arc::clone(agents.status()),
+            machine: hosting.identity.machine_id(),
+        })
+        .map_err(stage("register agent.list"))?;
     let tree = Arc::new(TreeService::new(
         hosting.identity,
         (Arc::clone(agents.status()), Arc::clone(agents.prompts())),

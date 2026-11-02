@@ -102,10 +102,13 @@ whose other fields are valid but that names no target exits 7 with `needs_target
 - Templates: `ovis-terminal template list`, `ovis-terminal template get`.
 
 Every verb sends a method this build's `serve` routes; `ovis-terminal --json schema cli`
-names each verb's `method`, and `hello.methods` lists what a server routes. The catalog
-methods `agent.list`, `agent.note`, `agent.release` and `agent.wait_children` are not
-served by this build: they have no verb, and `ovis-terminal call` with them answers
-`method_not_found` (exit 4).
+names each verb's `method`, and `hello.methods` lists what a server routes: every
+published method except an explicit excluded set. `agent.list` is served without a verb;
+reach it with `ovis-terminal call agent.list`. The published methods `agent.note`,
+`agent.release` and `agent.wait_children` (with `doc.list`, `machine.exec`,
+`machine.file`, `machine.login`, `machine.rm`, `service.install` and `service.remove`)
+are excluded from this build: hello does not advertise them, and `ovis-terminal call`
+with one answers `not_implemented` (exit 1) with a hint naming the follow-up.
 
 Examples (the CLI crate's tests execute every line against `serve` of this build and
 require exit 0, unless a line ends with `# exits <code> <kind>`):
@@ -116,6 +119,8 @@ ovis-terminal --json agent register --address t1 --op-id "$(ovis-terminal op new
 ovis-terminal --json status report --address t1 --op-id "$(ovis-terminal op new)" --params '{"seq":"1","record":{"state":"working"}}'
 ovis-terminal --json prompt list --address t1
 ovis-terminal --json turn wait --address t1 --params '{"turn":"1","timeout_ms":"1000"}'
+ovis-terminal --json call agent.list --params '{}'
+ovis-terminal --json call agent.note --params '{}'  # exits 1 not_implemented
 ```
 
 `agent get` answers `{"agent": null, ...}` for a terminal that runs a plain program;

@@ -1,5 +1,6 @@
 //! The assembled binary: `ovis-terminal serve` runs real programs, advertises exactly the
-//! methods it routes and refuses everything else with a typed error.
+//! methods it routes, answers each explicitly excluded published method with the typed
+//! `not_implemented` refusal and refuses everything else with a typed error.
 #![cfg(unix)]
 
 #[path = "assembly/control.rs"]
@@ -26,6 +27,10 @@ mod records;
 pub mod restart;
 #[path = "assembly/routes.rs"]
 mod routes;
+#[path = "assembly/served.rs"]
+mod served;
+#[path = "assembly/served_events.rs"]
+mod served_events;
 #[path = "assembly/session.rs"]
 mod session;
 #[path = "assembly/stdio.rs"]
@@ -51,22 +56,18 @@ use std::process::Command;
 use serde_json::{Value, json};
 use support::{BIN, Served, TestResult};
 
-/// Schema methods no landed crate implements; each must answer `method_not_found`.
-const UNIMPLEMENTED: [&str; 14] = [
-    "agent.list",
+/// Published methods the runtime explicitly excludes; each answers `not_implemented`.
+const EXCLUDED: [&str; 10] = [
     "agent.note",
     "agent.release",
     "agent.wait_children",
     "doc.list",
-    "events.ack",
     "machine.exec",
     "machine.file",
     "machine.login",
     "machine.rm",
-    "server.start",
     "service.install",
     "service.remove",
-    "terminal.history",
 ];
 
 /// Every method name the committed OpenRPC document publishes.
@@ -87,8 +88,8 @@ fn schema_methods() -> TestResult<BTreeSet<String>> {
 }
 
 #[test]
-fn hello_advertises_every_schema_method_but_the_unimplemented_which_are_method_not_found()
--> TestResult {
+fn hello_advertises_every_published_method_but_the_excluded_which_are_not_implemented() -> TestResult
+{
     let served = Served::start()?;
     let advertised = served.advertised()?;
     let schema = schema_methods()?;
@@ -98,16 +99,20 @@ fn hello_advertises_every_schema_method_but_the_unimplemented_which_are_method_n
         "advertised outside the schema: {unpublished:?}"
     );
     let missing: BTreeSet<String> = schema.difference(&advertised).cloned().collect();
-    let unimplemented: BTreeSet<String> = UNIMPLEMENTED.map(str::to_owned).into();
-    assert_eq!(
-        missing, unimplemented,
-        "schema methods hello does not advertise"
-    );
-    for method in UNIMPLEMENTED {
-        let error = served.refused(&["call", method, "--params", "{}"], 4)?;
+    let excluded: BTreeSet<String> = EXCLUDED.map(str::to_owned).into();
+    assert_eq!(missing, excluded, "schema methods hello does not advertise");
+    for method in EXCLUDED {
+        let error = served.refused(&["call", method, "--params", "{}"], 1)?;
         assert_eq!(
             error.get("kind"),
-            Some(&json!("method_not_found")),
+            Some(&json!("not_implemented")),
+            "{method}: {error}"
+        );
+        assert!(
+            error
+                .get("hint")
+                .and_then(Value::as_str)
+                .is_some_and(|hint| hint.starts_with("follow-up: ")),
             "{method}: {error}"
         );
     }

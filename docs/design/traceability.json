@@ -25,13 +25,16 @@
       "todos": [
         "13",
         "43",
-        "54"
+        "54",
+        "66"
       ],
       "scenarios": [
         "part-a/task-13",
         "remote/identity",
-        "platform/windows-service"
-      ]
+        "platform/windows-service",
+        "cli/advertised-methods"
+      ],
+      "note": "Todo 66 named the published-but-unserved methods as a gap (T65's migration guide documented the same 14); product-fix lane P5 closes it under todo 66: hello.methods now equals the published OpenRPC method set minus an explicit excluded set, with agent.list, events.ack, server.start and terminal.history served by the assembled daemon (cli/advertised-methods)."
     },
     "IDEAL-003": {
       "todos": [
@@ -1479,6 +1482,7 @@
         "61",
         "63",
         "65",
+        "66",
         "67"
       ],
       "scenarios": [
@@ -1487,8 +1491,10 @@
         "quality/gates",
         "client/package",
         "client/migration",
-        "release/artifacts"
-      ]
+        "release/artifacts",
+        "cli/advertised-methods"
+      ],
+      "note": "Product-fix lane P5 (under todo 66) keeps every released method published because removing one breaks openrpc compat against the frozen baseline; the explicit exclusions it records are agent.note, agent.release, agent.wait_children, doc.list, machine.exec, machine.file, machine.login, machine.rm, service.install, service.remove: hello does not advertise them and each answers the typed not_implemented kind whose hint names its follow-up (cli/advertised-methods)."
     },
     "IDEAL-114": {
       "todos": [

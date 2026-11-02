@@ -1,0 +1,17 @@
+# P5 TDD red: product changes stashed (crates/*/src, schema, ideal-map, runtime-contract), new tests kept
+# cargo nextest run -p ovis-terminal-cli --test assembly -E 'test(hello_advertises_every_published_method) | test(served::)' -> exit=100
+        FAIL [   0.294s] (1/4) ovis-terminal-cli::assembly hello_advertises_every_published_method_but_the_excluded_which_are_not_implemented
+        FAIL [   0.388s] (2/4) ovis-terminal-cli::assembly served::agent_list_shows_a_registered_agent_and_server_start_is_already_running
+        FAIL [   0.491s] (3/4) ovis-terminal-cli::assembly served::events_ack_records_up_to_the_delivered_sequence_for_its_owner_only
+        FAIL [   0.628s] (4/4) ovis-terminal-cli::assembly served::terminal_history_reads_retained_scrollback_newest_first_page_and_from_a_line
+      left: {"agent.list", "agent.note", "agent.release", "agent.wait_children", "doc.list", "events.ack", "machine.exec", "machine.file", "machine.login", "machine.rm", "server.start", "service.install", "service.remove", "terminal.history"}
+      left: Some(4)
+      left: Some(String("method_not_found"))
+     right: {"agent.note", "agent.release", "agent.wait_children", "doc.list", "machine.exec", "machine.file", "machine.login", "machine.rm", "service.install", "service.remove"}
+     right: Some(0)
+     right: Some(String("seq_ahead"))
+     Summary [   0.629s] 4 tests run: 0 passed, 4 failed, 45 skipped
+    thread 'hello_advertises_every_published_method_but_the_excluded_which_are_not_implemented' (559095) panicked at crates/ovis-terminal-cli/tests/assembly.rs:101:5:
+    thread 'served::agent_list_shows_a_registered_agent_and_server_start_is_already_running' (559094) panicked at crates/ovis-terminal-cli/tests/assembly/support.rs:247:9:
+    thread 'served::events_ack_records_up_to_the_delivered_sequence_for_its_owner_only' (559089) panicked at crates/ovis-terminal-cli/tests/assembly/served.rs:136:5:
+    thread 'served::terminal_history_reads_retained_scrollback_newest_first_page_and_from_a_line' (559092) panicked at crates/ovis-terminal-cli/tests/assembly/support.rs:247:9:

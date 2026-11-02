@@ -1,0 +1,21 @@
+$ cd packages/client-ts && bun install --frozen-lockfile && bun run generate && bun run generate:check && bun run typecheck && bun test
+$ bun scripts/generate.ts
+{"generated":"written","files":31,"changed":31}
+$ bun scripts/generate.ts --check
+{"generated":"fresh","files":31}
+$ tsc --noEmit -p tsconfig.json
+ 29 pass
+ 8 fail
+ 3316 expect() calls
+Ran 37 tests across 8 files. [4.29s]
+exit=0
+$ cargo run --locked -q -p ovis-terminal-replay --bin ovis-replay -- refresh
+{"refreshed":12}
+exit=0
+
+$ OVIS_CONFORMANCE_BIN=$CARGO_TARGET_DIR/debug/conformance OVIS_TERMINAL_BIN=$CARGO_TARGET_DIR/debug/ovis-terminal TMPDIR=/dev/shm/ovt-fixtures/p5-scratch bun run generate:check && bun run typecheck && bun test  (after cargo build --locked -p ovis-terminal-cli -p ovis-terminal-conformance)
+{"generated":"fresh","files":31}
+ 51 pass
+ 0 fail
+ 3423 expect() calls
+generate:check=0 typecheck=0 bun_test=0

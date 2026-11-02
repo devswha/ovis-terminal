@@ -1,0 +1,558 @@
+{
+  "binary": {
+    "bytes": "154266608",
+    "path": "/dev/shm/ovt-target-lane-P5/debug/ovis-terminal",
+    "sha256": "27cbcba322b7ed959b24f4af97e1bc9a0eb45ae89a60f01508c2a3870078b36a"
+  },
+  "case": "failure",
+  "cases": [
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": [
+            "hello",
+            "server.status",
+            "server.start",
+            "server.stop",
+            "server.restart",
+            "server.metrics",
+            "op.get",
+            "op.cancel",
+            "session.snapshot",
+            "terminal.run",
+            "terminal.first_message",
+            "terminal.list",
+            "terminal.get",
+            "terminal.kill",
+            "terminal.rm",
+            "terminal.keep",
+            "terminal.recover",
+            "terminal.label",
+            "terminal.rename",
+            "terminal.process_info",
+            "terminal.screen",
+            "terminal.history",
+            "terminal.search",
+            "terminal.output",
+            "terminal.wait_output",
+            "input.send",
+            "input.keys",
+            "input.raw",
+            "input.paste",
+            "input.interrupt",
+            "input.barrier",
+            "attach.open",
+            "attach.resize",
+            "attach.release_geometry",
+            "attach.focus",
+            "attach.repaint",
+            "attach.credit",
+            "attach.close",
+            "attach.takeover",
+            "attach.leases",
+            "events.subscribe",
+            "events.update",
+            "events.unsubscribe",
+            "events.ack",
+            "events.wait",
+            "status.get",
+            "status.report",
+            "status.clear",
+            "prompt.list",
+            "prompt.get",
+            "prompt.open",
+            "prompt.answer",
+            "prompt.close",
+            "turn.get",
+            "turn.wait",
+            "agent.register",
+            "agent.get",
+            "agent.list",
+            "agent.update_session",
+            "agent.children",
+            "agent.conversation",
+            "agent.append_records",
+            "agent.records",
+            "agent.history",
+            "template.list",
+            "template.get",
+            "layout.get",
+            "layout.edit",
+            "selection.set",
+            "worktree.list",
+            "worktree.create",
+            "worktree.open",
+            "worktree.remove",
+            "plugin.list",
+            "plugin.invoke",
+            "plugin.run_get",
+            "doc.get",
+            "doc.set",
+            "machine.add",
+            "machine.list",
+            "machine.get",
+            "machine.rename",
+            "service.describe",
+            "update.stage",
+            "update.verify",
+            "update.activate",
+            "update.rollback",
+            "update.query",
+            "rpc.discover",
+            "schema.errors",
+            "schema.events",
+            "schema.capabilities",
+            "credential.rotate",
+            "credential.revoke"
+          ],
+          "check": "hello/result/methods",
+          "expected": {
+            "$excludes": [
+              "agent.note",
+              "agent.release",
+              "agent.wait_children",
+              "doc.list",
+              "machine.exec",
+              "machine.file",
+              "machine.login",
+              "machine.rm",
+              "service.install",
+              "service.remove"
+            ]
+          },
+          "passed": true
+        },
+        {
+          "actual": "follow-up: agent notes lane (child-to-parent note store); use prompt.open and agent.children meanwhile",
+          "check": "reply[m:agent.note]/error/data/hint",
+          "expected": {
+            "$present": true
+          },
+          "passed": true
+        },
+        {
+          "actual": "not_implemented",
+          "check": "reply[m:agent.note]/error/data/kind",
+          "expected": "not_implemented",
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[m:agent.note]/error/data/retryable",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": "follow-up: binding release in the agent status service; a binding ends when its program exits",
+          "check": "reply[m:agent.release]/error/data/hint",
+          "expected": {
+            "$present": true
+          },
+          "passed": true
+        },
+        {
+          "actual": "not_implemented",
+          "check": "reply[m:agent.release]/error/data/kind",
+          "expected": "not_implemented",
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[m:agent.release]/error/data/retryable",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": "follow-up: agent notes lane (per-parent news cursor); use agent.children with events.subscribe meanwhile",
+          "check": "reply[m:agent.wait_children]/error/data/hint",
+          "expected": {
+            "$present": true
+          },
+          "passed": true
+        },
+        {
+          "actual": "not_implemented",
+          "check": "reply[m:agent.wait_children]/error/data/kind",
+          "expected": "not_implemented",
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[m:agent.wait_children]/error/data/retryable",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": "follow-up: store listing by resource kind; read known names with doc.get meanwhile",
+          "check": "reply[m:doc.list]/error/data/hint",
+          "expected": {
+            "$present": true
+          },
+          "passed": true
+        },
+        {
+          "actual": "not_implemented",
+          "check": "reply[m:doc.list]/error/data/kind",
+          "expected": "not_implemented",
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[m:doc.list]/error/data/retryable",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": "follow-up: bounded remote exec in the remote lane; launch with terminal.run on the machine meanwhile",
+          "check": "reply[m:machine.exec]/error/data/hint",
+          "expected": {
+            "$present": true
+          },
+          "passed": true
+        },
+        {
+          "actual": "not_implemented",
+          "check": "reply[m:machine.exec]/error/data/kind",
+          "expected": "not_implemented",
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[m:machine.exec]/error/data/retryable",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": "follow-up: scoped remote file transfer in the remote lane",
+          "check": "reply[m:machine.file]/error/data/hint",
+          "expected": {
+            "$present": true
+          },
+          "passed": true
+        },
+        {
+          "actual": "not_implemented",
+          "check": "reply[m:machine.file]/error/data/kind",
+          "expected": "not_implemented",
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[m:machine.file]/error/data/retryable",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": "follow-up: interactive remote login in the remote lane; add a machine with machine.add meanwhile",
+          "check": "reply[m:machine.login]/error/data/hint",
+          "expected": {
+            "$present": true
+          },
+          "passed": true
+        },
+        {
+          "actual": "not_implemented",
+          "check": "reply[m:machine.login]/error/data/kind",
+          "expected": "not_implemented",
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[m:machine.login]/error/data/retryable",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": "follow-up: machine detach with terminal tombstones in the remote lane; machine.list shows attached machines",
+          "check": "reply[m:machine.rm]/error/data/hint",
+          "expected": {
+            "$present": true
+          },
+          "passed": true
+        },
+        {
+          "actual": "not_implemented",
+          "check": "reply[m:machine.rm]/error/data/kind",
+          "expected": "not_implemented",
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[m:machine.rm]/error/data/retryable",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": "follow-up: daemon-side service registration; run `ovis-terminal service install` locally meanwhile",
+          "check": "reply[m:service.install]/error/data/hint",
+          "expected": {
+            "$present": true
+          },
+          "passed": true
+        },
+        {
+          "actual": "not_implemented",
+          "check": "reply[m:service.install]/error/data/kind",
+          "expected": "not_implemented",
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[m:service.install]/error/data/retryable",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": "follow-up: daemon-side service removal; run `ovis-terminal service uninstall` locally meanwhile",
+          "check": "reply[m:service.remove]/error/data/hint",
+          "expected": {
+            "$present": true
+          },
+          "passed": true
+        },
+        {
+          "actual": "not_implemented",
+          "check": "reply[m:service.remove]/error/data/kind",
+          "expected": "not_implemented",
+          "passed": true
+        },
+        {
+          "actual": false,
+          "check": "reply[m:service.remove]/error/data/retryable",
+          "expected": false,
+          "passed": true
+        },
+        {
+          "actual": [
+            "m:agent.note",
+            "m:agent.release",
+            "m:agent.wait_children",
+            "m:doc.list",
+            "m:machine.exec",
+            "m:machine.file",
+            "m:machine.login",
+            "m:machine.rm",
+            "m:service.install",
+            "m:service.remove"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "m:agent.note",
+            "m:agent.release",
+            "m:agent.wait_children",
+            "m:doc.list",
+            "m:machine.exec",
+            "m:machine.file",
+            "m:machine.login",
+            "m:machine.rm",
+            "m:service.install",
+            "m:service.remove"
+          ],
+          "passed": true
+        }
+      ],
+      "case": "failure",
+      "connections": [
+        {
+          "bytes_decoded": "5172",
+          "bytes_received": "5172",
+          "bytes_sent": "1006",
+          "name": "control",
+          "records_received": "11",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "6226b0ad709bdd495653cec55fdc79ff832d8e5cd04a637ddbf932cba8714081",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2682",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "36da34f5fa2ba2d2b4f15fdbac8d5a88836e4c42633e689dba8039c92334b01d",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a19a9c-4789-7480-b0ad-03fa8ac22006\",\"methods\":[\"hello\",\"server.status\",\"server.start\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.history\",\"terminal.search\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.ack\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.list\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793595295775\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "772",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "266d9e758a2d9b2fe83ff452142027a01943739ccf6350ba14490db0835cce6f",
+              "text": "{\"id\":\"m:agent.note\",\"jsonrpc\":\"2.0\",\"method\":\"agent.note\",\"params\":{}}\n{\"id\":\"m:agent.release\",\"jsonrpc\":\"2.0\",\"method\":\"agent.release\",\"params\":{}}\n{\"id\":\"m:agent.wait_children\",\"jsonrpc\":\"2.0\",\"method\":\"agent.wait_children\",\"params\":{}}\n{\"id\":\"m:doc.list\",\"jsonrpc\":\"2.0\",\"method\":\"doc.list\",\"params\":{}}\n{\"id\":\"m:machine.exec\",\"jsonrpc\":\"2.0\",\"method\":\"machine.exec\",\"params\":{}}\n{\"id\":\"m:machine.file\",\"jsonrpc\":\"2.0\",\"method\":\"machine.file\",\"params\":{}}\n{\"id\":\"m:machine.login\",\"jsonrpc\":\"2.0\",\"method\":\"machine.login\",\"params\":{}}\n{\"id\":\"m:machine.rm\",\"jsonrpc\":\"2.0\",\"method\":\"machine.rm\",\"params\":{}}\n{\"id\":\"m:service.install\",\"jsonrpc\":\"2.0\",\"method\":\"service.install\",\"params\":{}}\n{\"id\":\"m:service.remove\",\"jsonrpc\":\"2.0\",\"method\":\"service.remove\",\"params\":{}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1",
+              "bytes": "255",
+              "direction": "received",
+              "offset": "2682",
+              "sha256": "18ccd0ea97b9a4676c9101e6b328d2cb0a27f74e89c3a4701d3634aecec55933",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"m:agent.note\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_implemented\",\"hint\":\"follow-up: agent notes lane (child-to-parent note store); use prompt.open and agent.children meanwhile\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1",
+              "bytes": "249",
+              "direction": "received",
+              "offset": "2937",
+              "sha256": "65470f1c650a78b730633428d874d67f778c4fe9d8961768de45561050112e8c",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"m:agent.release\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_implemented\",\"hint\":\"follow-up: binding release in the agent status service; a binding ends when its program exits\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "266",
+              "direction": "received",
+              "offset": "3186",
+              "sha256": "f266146a212fe73f3ac5f94ab3496f7698045c78e93c7f9e24886ee6e0ce4809",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"m:agent.wait_children\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_implemented\",\"hint\":\"follow-up: agent notes lane (per-parent news cursor); use agent.children with events.subscribe meanwhile\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "233",
+              "direction": "received",
+              "offset": "3452",
+              "sha256": "104e6c9624a23e7e66e79a6b906cecea52ce3ae8ea0a37c8d654b326a4f56303",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"m:doc.list\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_implemented\",\"hint\":\"follow-up: store listing by resource kind; read known names with doc.get meanwhile\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "255",
+              "direction": "received",
+              "offset": "3685",
+              "sha256": "dfd12564a0e47dcbd1bfe40a5a444a199b0043f73b6c3622726e597637ae6a85",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"m:machine.exec\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_implemented\",\"hint\":\"follow-up: bounded remote exec in the remote lane; launch with terminal.run on the machine meanwhile\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "212",
+              "direction": "received",
+              "offset": "3940",
+              "sha256": "f72c0e390d0418351dbfbf2e3c7b55f7c7ee81e357c8efe12a0dc490976b5023",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"m:machine.file\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_implemented\",\"hint\":\"follow-up: scoped remote file transfer in the remote lane\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "252",
+              "direction": "received",
+              "offset": "4152",
+              "sha256": "04b6ef5b8aaf31a4e44960a80dbd41932ec7d536334cf6054c307491100275d8",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"m:machine.login\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_implemented\",\"hint\":\"follow-up: interactive remote login in the remote lane; add a machine with machine.add meanwhile\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "260",
+              "direction": "received",
+              "offset": "4404",
+              "sha256": "0be9a59eaff0297d9a29fab5c9f5ded9e23e1860f1fc55b00aadb95eb6976532",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"m:machine.rm\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_implemented\",\"hint\":\"follow-up: machine detach with terminal tombstones in the remote lane; machine.list shows attached machines\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "256",
+              "direction": "received",
+              "offset": "4664",
+              "sha256": "0228b3ef6e54e8ddcf3323ea9d257f063f881d9e9a9fc5081020476d26323ee0",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"m:service.install\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_implemented\",\"hint\":\"follow-up: daemon-side service registration; run `ovis-terminal service install` locally meanwhile\",\"retryable\":false}}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "2",
+              "bytes": "252",
+              "direction": "received",
+              "offset": "4920",
+              "sha256": "70b3e6507baea20e2ee620490a4fb152e253ff23d59656ef8da8069096a2101e",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"m:service.remove\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_implemented\",\"hint\":\"follow-up: daemon-side service removal; run `ovis-terminal service uninstall` locally meanwhile\",\"retryable\":false}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "2"
+        }
+      ],
+      "declared": {
+        "closes": [],
+        "delivers": [
+          "IDEAL-002",
+          "IDEAL-113"
+        ],
+        "excludes": [],
+        "title": "hello advertises every published method except an explicit excluded set, and each excluded method is a typed not_implemented",
+        "todo": "66"
+      },
+      "descriptors": [],
+      "elapsed_ms": "241",
+      "failure": null,
+      "fixture": {
+        "accepted": "1",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-P5/debug/ovis-terminal",
+            "serve",
+            "--stdin-lifetime",
+            "--root",
+            "/tmp/ovc-1009737-0/srv"
+          ],
+          "exit_code": 0,
+          "pid": "1009976",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "cli/advertised-methods",
+      "summary": "hello does not advertise the ten explicitly excluded published methods (agent.note, agent.release, agent.wait_children, doc.list, machine.exec, machine.file, machine.login, machine.rm, service.install, service.remove), and calling each answers the typed not_implemented kind with a follow-up hint and retryable false, never method_not_found."
+    }
+  ],
+  "elapsed_ms": "480",
+  "error": null,
+  "format": "ovis-conformance-evidence/1",
+  "host": {
+    "arch": "x86_64",
+    "family": "unix",
+    "os": "linux"
+  },
+  "inventory": null,
+  "result": "passed",
+  "runner_version": "0.1.0",
+  "scenario": "cli/advertised-methods",
+  "totals": {
+    "assertions": "33",
+    "cases": "1",
+    "declared_only": "0",
+    "failed": "0",
+    "passed": "1",
+    "skipped": "0"
+  }
+}

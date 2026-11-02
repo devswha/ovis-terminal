@@ -1,4 +1,4 @@
-//! `events.subscribe`, `events.update` and `events.unsubscribe` over T81's subscription
+//! `events.subscribe`, `events.update`, `events.unsubscribe` and `events.ack` over T81's subscription
 //! hub on the boot's dispatch log. Each subscription is pulled by its own blocking task
 //! that writes `event`, `heartbeat` and `missed` notifications on the subscribing
 //! connection; the task ends when the subscription closes, the hub stops or the
@@ -34,6 +34,8 @@ use super::error::{internal, refusal};
 use super::handler::{Served, decode};
 use super::lanes::{DispatchLog, ServedEvent};
 
+mod ack;
+
 type Hub = Subscriptions<ServedEvent, OperationProducer>;
 
 /// Bound on one pull; the hub answers a heartbeat sooner when nothing matched.
@@ -53,7 +55,7 @@ fn checked<T: DeserializeOwned + serde::Serialize>(value: Value) -> Result<Value
 pub(super) struct EventLane {
     identity: RuntimeIdentity,
     hub: RwLock<Option<Hub>>,
-    owners: Mutex<BTreeMap<SubscriptionId, PrincipalId>>,
+    owners: Mutex<BTreeMap<SubscriptionId, ack::Owned>>,
 }
 
 impl EventLane {
@@ -103,7 +105,7 @@ impl EventLane {
     fn owned(&self, id: &SubscriptionId, principal: &PrincipalId) -> Result<(), BoundaryError> {
         let owners = self.owners.lock().unwrap_or_else(PoisonError::into_inner);
         match owners.get(id) {
-            Some(owner) if owner == principal => Ok(()),
+            Some(owned) if owned.principal == *principal => Ok(()),
             _ => Err(refusal(
                 "not_found",
                 "name a subscription this principal opened",
@@ -173,11 +175,10 @@ impl EventLane {
         let id = feed.id().clone();
         let runtime = tokio::runtime::Handle::current();
         while let Some(deadline) = Instant::now().checked_add(PULL) {
-            let Some(notifications) = feed
-                .next(deadline)
-                .ok()
-                .and_then(|pulled| self.notifications(&id, pulled))
-            else {
+            let Some(notifications) = feed.next(deadline).ok().and_then(|pulled| {
+                self.advance(&id, &pulled);
+                self.notifications(&id, pulled)
+            }) else {
                 break;
             };
             let sent = notifications
@@ -201,6 +202,7 @@ impl Served {
         let principal = call.session.principal().clone();
         match call.request.method() {
             "events.subscribe" => self.subscribe(call, principal).await,
+            "events.ack" => self.ack(&call, &principal),
             "events.update" => {
                 let params: EventsUpdateParams = decode(&call)?;
                 self.events.owned(&params.subscription_id, &principal)?;
@@ -249,7 +251,13 @@ impl Served {
             .owners
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
-            .insert(id.clone(), principal);
+            .insert(
+                id.clone(),
+                ack::Owned {
+                    principal,
+                    cursor: ack::Cursor::at(started.snapshot_seq.get()),
+                },
+            );
         let limits = started.limits;
         let result = checked::<EventsSubscribeResult>(json!({
             "subscription_id": id, "snapshot": snapshot,

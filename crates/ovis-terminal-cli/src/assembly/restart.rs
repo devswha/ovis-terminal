@@ -1,17 +1,37 @@
 //! `server.stop` and `server.restart` over the restart control the server booted with, and
 //! the signals the serve loop follows: a committed stop ends serving, and a call that may
 //! have restarted control asks the loop to hand everything over to the successor boot.
+//! `server.start` can only reach a running control server, so it answers `already_running`.
 
 use std::sync::{Arc, Mutex, PoisonError};
 
 use ovis_terminal_core::registry::MachineId;
 use ovis_terminal_core::restart::Control;
 use ovis_terminal_protocol::domain::restart::{BoundaryPhase, RestartBoundary};
+use ovis_terminal_protocol::errors::BoundaryError;
 use ovis_terminal_server::dispatch::lanes::restart::{RestartLane, ServerRestart, ServerStop};
 use tokio::sync::Notify;
 
 use super::AssemblyError;
 use super::lanes::Dispatch;
+
+/// `server.start`: well-formed params are answered `already_running`; malformed ones are
+/// `invalid_params` first.
+pub(super) fn start(
+    call: &ovis_terminal_server::conn::Call,
+) -> Result<serde_json::Value, BoundaryError> {
+    let _: ovis_terminal_protocol::schema::methods::server::ServerStartParams =
+        super::handler::decode(call)?;
+    Err(already_running())
+}
+
+/// The answer to `server.start`: the server that receives the call is running.
+pub(super) fn already_running() -> BoundaryError {
+    super::error::refusal(
+        "already_running",
+        "this control server answered the call, so it is running; use server.restart or server.stop",
+    )
+}
 
 /// Registers `server.stop` and `server.restart` for `machine` over `control`.
 pub(super) fn register(
@@ -129,3 +149,13 @@ pub(super) fn completions(control: &Control) -> Result<Completions, AssemblyErro
 
 /// Boundaries queued for the forwarder; it drains them at once, so a restart never waits.
 const BOUNDARY_QUEUE: usize = 16;
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn server_start_on_a_running_server_is_already_running_and_not_retryable() {
+        let error = super::already_running();
+        assert_eq!(error.kind(), "already_running");
+        assert!(!error.data().retryable);
+    }
+}

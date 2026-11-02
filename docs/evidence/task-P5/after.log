@@ -1,0 +1,31 @@
+# P5 AFTER - lane head (uncommitted tree at record time), Linux x86_64, binary sha256 27cbcba322b7ed959b24f4af97e1bc9a0eb45ae89a60f01508c2a3870078b36a
+$ python3 probe.py <lane ovis-terminal> schema/ovis-terminal.openrpc.json calls  (fresh serve --root, owner hello, every published name called with {})
+exit=0
+{
+ "advertised": 94,
+ "published": 104,
+ "published_not_advertised": [
+  "agent.note",
+  "agent.release",
+  "agent.wait_children",
+  "doc.list",
+  "machine.exec",
+  "machine.file",
+  "machine.login",
+  "machine.rm",
+  "service.install",
+  "service.remove"
+ ],
+ "advertised_not_published": []
+}
+answer kinds: {'invalid_params': 76, 'result': 16, 'not_implemented': 10, 'unavailable': 1}
+method_not_found answers: []
+$ cargo run --locked -q --manifest-path conformance/Cargo.toml --bin conformance -- --binary <lane ovis-terminal> --scenario cli/advertised-methods --isolated --case all --evidence docs/evidence/task-P5/cli-advertised-methods-all.json
+{"case":"all","error":null,"evidence":"docs/evidence/task-P5/cli-advertised-methods-all.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"cli/advertised-methods","totals":{"assertions":"138","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
+exit=0
+$ cargo run --locked -q --manifest-path conformance/Cargo.toml --bin conformance -- --binary <lane ovis-terminal> --scenario cli/advertised-methods --isolated --case happy --evidence docs/evidence/task-P5/cli-advertised-methods-happy.json
+{"case":"happy","error":null,"evidence":"docs/evidence/task-P5/cli-advertised-methods-happy.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"cli/advertised-methods","totals":{"assertions":"105","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+exit=0
+$ cargo run --locked -q --manifest-path conformance/Cargo.toml --bin conformance -- --binary <lane ovis-terminal> --scenario cli/advertised-methods --isolated --case failure --evidence docs/evidence/task-P5/cli-advertised-methods-failure.json
+{"case":"failure","error":null,"evidence":"docs/evidence/task-P5/cli-advertised-methods-failure.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"cli/advertised-methods","totals":{"assertions":"33","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+exit=0
