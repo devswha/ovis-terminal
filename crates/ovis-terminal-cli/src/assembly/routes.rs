@@ -12,7 +12,7 @@ use ovis_terminal_protocol::schema::methods::terminal::{
     TerminalMutateParams, TerminalRenameParams,
 };
 use ovis_terminal_protocol::schema::methods::terminal_read::{
-    TerminalOutputParams, TerminalScreenParams, TerminalWaitOutputParams,
+    TerminalOutputParams, TerminalScreenParams, TerminalSearchParams, TerminalWaitOutputParams,
 };
 use ovis_terminal_server::conn::Call;
 use serde::de::DeserializeOwned;
@@ -58,13 +58,19 @@ impl Served {
         }
     }
 
-    /// Serves a screen, output or output-wait read; a wait blocks off the actor thread.
+    /// Serves a screen, search, output or output-wait read; a wait blocks off the actor thread.
     pub(super) async fn read(&self, call: Call) -> Result<Value, BoundaryError> {
         match call.request.method() {
             "terminal.screen" => {
                 let params: TerminalScreenParams = decode(&call)?;
                 self.actor
                     .call(move |runtime| runtime.screen(&params))
+                    .await
+            }
+            "terminal.search" => {
+                let params: TerminalSearchParams = decode(&call)?;
+                self.actor
+                    .call(move |runtime| runtime.search(&params))
                     .await
             }
             "terminal.output" => {

@@ -1,0 +1,278 @@
+{
+  "format": "ovis-replay/1",
+  "id": "content-revision-guard",
+  "server": "assembled",
+  "kind": "happy",
+  "ideals": [
+    "IDEAL-047"
+  ],
+  "gaps": [
+    "GAP-069"
+  ],
+  "excludes": [],
+  "adversarial": [
+    "stale_state",
+    "flaky_tests"
+  ],
+  "steps": [
+    {
+      "call": {
+        "conn": "desk",
+        "id": "run",
+        "method": "terminal.run",
+        "params": {
+          "op_id": "$op:run",
+          "program": {
+            "argv": [
+              "/bin/sh",
+              "-c",
+              "echo READY; read go; i=0; while [ $i -lt 3000 ]; do echo line-$i; i=$((i+1)); done; echo DONE-MARK; exec cat"
+            ]
+          },
+          "geometry": {
+            "cols": 80,
+            "rows": 24
+          },
+          "name": "guard",
+          "cwd": null
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/spawn": "spawned"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "ready",
+        "method": "terminal.wait_output",
+        "params": {
+          "target": {
+            "name": "guard"
+          },
+          "cursor": {
+            "offset": "0"
+          },
+          "pattern": {
+            "text": "READY"
+          },
+          "timeout_ms": "20000"
+        },
+        "expect": {
+          "/result/outcome": "matched"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "attach",
+        "method": "attach.open",
+        "params": {
+          "op_id": "$op:attach",
+          "target": {
+            "name": "guard"
+          },
+          "client_id": "desk",
+          "role": "interact",
+          "stream_mode": "plain"
+        },
+        "expect": {
+          "/result/outcome": "ready",
+          "/result/lease/lease_id": {
+            "$capture": "lease"
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "pin",
+        "method": "terminal.screen",
+        "params": {
+          "target": {
+            "name": "guard"
+          },
+          "format": "text"
+        },
+        "expect": {
+          "/result/revision": {
+            "$capture": "pinned"
+          },
+          "/result/lines": {
+            "$contains": [
+              "READY"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "go",
+        "method": "input.send",
+        "params": {
+          "op_id": "$op:go",
+          "target": {
+            "name": "guard"
+          },
+          "text": "go",
+          "submit": "enter",
+          "lease_id": "$value:lease"
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "pinned-while-flowing",
+        "method": "terminal.search",
+        "params": {
+          "target": {
+            "name": "guard"
+          },
+          "pattern": {
+            "text": "line-"
+          },
+          "revision": "$value:pinned",
+          "limit": 1
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/revision": "$value:pinned",
+          "/result/complete": true
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "stale",
+        "method": "terminal.search",
+        "params": {
+          "target": {
+            "name": "guard"
+          },
+          "pattern": {
+            "text": "line-"
+          },
+          "revision": "1",
+          "limit": 1
+        },
+        "expect": {
+          "/error/data/kind": "stale_revision",
+          "/error/data/retryable": false,
+          "/result": {
+            "$present": false
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "done",
+        "method": "terminal.wait_output",
+        "params": {
+          "target": {
+            "name": "guard"
+          },
+          "cursor": {
+            "offset": "0"
+          },
+          "pattern": {
+            "text": "DONE-MARK"
+          },
+          "timeout_ms": "20000"
+        },
+        "expect": {
+          "/result/outcome": "matched"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "pinned-after-burst",
+        "method": "terminal.search",
+        "params": {
+          "target": {
+            "name": "guard"
+          },
+          "pattern": {
+            "text": "line-"
+          },
+          "revision": "$value:pinned",
+          "limit": 1
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/revision": "$value:pinned"
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "live",
+        "method": "terminal.screen",
+        "params": {
+          "target": {
+            "name": "guard"
+          },
+          "format": "text"
+        },
+        "expect": {
+          "/result/revision": {
+            "$capture": "live"
+          },
+          "/result/lines": {
+            "$contains": [
+              "DONE-MARK"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "desk",
+        "id": "search-live",
+        "method": "terminal.search",
+        "params": {
+          "target": {
+            "name": "guard"
+          },
+          "pattern": {
+            "text": "line-"
+          },
+          "revision": "$value:live",
+          "limit": 1
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/revision": "$value:live",
+          "/result/matches/0/line": {
+            "$present": true
+          }
+        }
+      }
+    }
+  ]
+}

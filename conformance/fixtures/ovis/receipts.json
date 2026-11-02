@@ -1,0 +1,618 @@
+{
+  "format": "ovis-receipts/1",
+  "cases": {
+    "agent-records": [
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "agent.register",
+        "outcome": "result",
+        "step": "register"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "status.report",
+        "outcome": "result",
+        "step": "working"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "agent.append_records",
+        "outcome": "result",
+        "step": "append"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "agent.records",
+        "outcome": "result",
+        "step": "records"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "prompt.list",
+        "outcome": "result",
+        "step": "no-prompt"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "status.report",
+        "outcome": "result",
+        "step": "idle"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "status.get",
+        "outcome": "result",
+        "step": "finished"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "agent.get",
+        "outcome": "result",
+        "step": "recovered"
+      }
+    ],
+    "attach-held-retry": [
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.run",
+        "outcome": "result",
+        "step": "run"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "attach.open",
+        "outcome": "result",
+        "step": "open-desk"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "events.subscribe",
+        "outcome": "result",
+        "step": "watch-leases"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "attach.open",
+        "outcome": "result",
+        "step": "open-phone"
+      },
+      {
+        "field_path": null,
+        "kind": "no_lease",
+        "method": "input.send",
+        "outcome": "error",
+        "step": "send-without-lease"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "attach.close",
+        "outcome": "result",
+        "step": "close-desk"
+      },
+      {
+        "field_path": null,
+        "kind": "lease.revoked",
+        "method": "event",
+        "outcome": "event",
+        "step": "event:event"
+      },
+      {
+        "field_path": null,
+        "kind": "no_lease",
+        "method": "input.send",
+        "outcome": "error",
+        "step": "send-released-lease"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "attach.close",
+        "outcome": "result",
+        "step": "close-phone"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "attach.open",
+        "outcome": "result",
+        "step": "retry-phone"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "input.send",
+        "outcome": "result",
+        "step": "send-with-lease"
+      }
+    ],
+    "history-store": [
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "agent.register",
+        "outcome": "result",
+        "step": "register"
+      },
+      {
+        "field_path": "params.session.source",
+        "kind": "invalid_session",
+        "method": "agent.update_session",
+        "outcome": "error",
+        "step": "unlisted-store"
+      },
+      {
+        "field_path": null,
+        "kind": "conversation_unavailable",
+        "method": "agent.update_session",
+        "outcome": "error",
+        "step": "climbing"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "agent.update_session",
+        "outcome": "result",
+        "step": "bind-id"
+      },
+      {
+        "field_path": null,
+        "kind": "conversation_unavailable",
+        "method": "agent.conversation",
+        "outcome": "error",
+        "step": "conversation"
+      },
+      {
+        "field_path": "params.store",
+        "kind": "forbidden",
+        "method": "agent.history",
+        "outcome": "error",
+        "step": "history-escape"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "agent.history",
+        "outcome": "result",
+        "step": "history"
+      }
+    ],
+    "layout-explicit-ids": [
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "layout.get",
+        "outcome": "result",
+        "step": "fresh"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "layout.edit",
+        "outcome": "result",
+        "step": "create"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "layout.edit",
+        "outcome": "result",
+        "step": "create-again"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "selection.set",
+        "outcome": "result",
+        "step": "select-desk"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "selection.set",
+        "outcome": "result",
+        "step": "select-phone"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "layout.edit",
+        "outcome": "result",
+        "step": "split"
+      },
+      {
+        "field_path": null,
+        "kind": "revision_mismatch",
+        "method": "layout.edit",
+        "outcome": "error",
+        "step": "split-stale"
+      },
+      {
+        "field_path": null,
+        "kind": "not_found",
+        "method": "layout.edit",
+        "outcome": "error",
+        "step": "split-unknown"
+      },
+      {
+        "field_path": null,
+        "kind": "invalid_geometry",
+        "method": "layout.edit",
+        "outcome": "error",
+        "step": "ratio-out-of-range"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "layout.get",
+        "outcome": "result",
+        "step": "unchanged"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "layout.edit",
+        "outcome": "result",
+        "step": "swap"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "session.snapshot",
+        "outcome": "result",
+        "step": "snapshot"
+      }
+    ],
+    "prompt-cards": [
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "agent.register",
+        "outcome": "result",
+        "step": "register"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "status.report",
+        "outcome": "result",
+        "step": "working"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "prompt.open",
+        "outcome": "result",
+        "step": "open"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "prompt.get",
+        "outcome": "result",
+        "step": "get"
+      },
+      {
+        "field_path": null,
+        "kind": "version_conflict",
+        "method": "prompt.answer",
+        "outcome": "error",
+        "step": "answer-stale"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "prompt.answer",
+        "outcome": "result",
+        "step": "answer"
+      },
+      {
+        "field_path": null,
+        "kind": "version_conflict",
+        "method": "prompt.answer",
+        "outcome": "error",
+        "step": "answer-again"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "prompt.get",
+        "outcome": "result",
+        "step": "answered"
+      }
+    ],
+    "strict-targeting": [
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "layout.edit",
+        "outcome": "result",
+        "step": "create"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "selection.set",
+        "outcome": "result",
+        "step": "select"
+      },
+      {
+        "field_path": "params.pane_id_typo",
+        "kind": "invalid_params",
+        "method": "layout.edit",
+        "outcome": "error",
+        "step": "split-typo"
+      },
+      {
+        "field_path": "params.pane_typo",
+        "kind": "invalid_params",
+        "method": "terminal.process_info",
+        "outcome": "error",
+        "step": "process-typo"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "layout.get",
+        "outcome": "result",
+        "step": "unchanged"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "layout.edit",
+        "outcome": "result",
+        "step": "split-explicit"
+      }
+    ],
+    "subscriptions": [
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "events.subscribe",
+        "outcome": "result",
+        "step": "subscribe"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "events.subscribe",
+        "outcome": "result",
+        "step": "subscribe-again"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "doc.set",
+        "outcome": "result",
+        "step": "set"
+      },
+      {
+        "field_path": null,
+        "kind": "doc.changed",
+        "method": "event",
+        "outcome": "event",
+        "step": "event:event"
+      },
+      {
+        "field_path": null,
+        "kind": "doc.changed",
+        "method": "event",
+        "outcome": "event",
+        "step": "event:event"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "events.update",
+        "outcome": "result",
+        "step": "narrow"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "doc.set",
+        "outcome": "result",
+        "step": "set-again"
+      },
+      {
+        "field_path": null,
+        "kind": "doc.changed",
+        "method": "event",
+        "outcome": "event",
+        "step": "event:event"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "doc.get",
+        "outcome": "result",
+        "step": "get"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "rpc.discover",
+        "outcome": "result",
+        "step": "discover"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "events.unsubscribe",
+        "outcome": "result",
+        "step": "unsubscribe"
+      }
+    ],
+    "terminal-reads": [
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.run",
+        "outcome": "result",
+        "step": "run"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.wait_output",
+        "outcome": "result",
+        "step": "printed"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.wait_output",
+        "outcome": "result",
+        "step": "never"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.screen",
+        "outcome": "result",
+        "step": "screen"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.output",
+        "outcome": "result",
+        "step": "output"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.screen",
+        "outcome": "result",
+        "step": "screen-again"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "prompt.list",
+        "outcome": "result",
+        "step": "prompts"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "status.get",
+        "outcome": "result",
+        "step": "status"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.rename",
+        "outcome": "result",
+        "step": "rename"
+      },
+      {
+        "field_path": null,
+        "kind": "not_found",
+        "method": "terminal.get",
+        "outcome": "error",
+        "step": "old-name"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.get",
+        "outcome": "result",
+        "step": "by-id"
+      }
+    ],
+    "content-revision-guard": [
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.run",
+        "outcome": "result",
+        "step": "run"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.wait_output",
+        "outcome": "result",
+        "step": "ready"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "attach.open",
+        "outcome": "result",
+        "step": "attach"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.screen",
+        "outcome": "result",
+        "step": "pin"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "input.send",
+        "outcome": "result",
+        "step": "go"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.search",
+        "outcome": "result",
+        "step": "pinned-while-flowing"
+      },
+      {
+        "field_path": null,
+        "kind": "stale_revision",
+        "method": "terminal.search",
+        "outcome": "error",
+        "step": "stale"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.wait_output",
+        "outcome": "result",
+        "step": "done"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.search",
+        "outcome": "result",
+        "step": "pinned-after-burst"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.screen",
+        "outcome": "result",
+        "step": "live"
+      },
+      {
+        "field_path": null,
+        "kind": null,
+        "method": "terminal.search",
+        "outcome": "result",
+        "step": "search-live"
+      }
+    ]
+  }
+}

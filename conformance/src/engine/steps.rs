@@ -65,11 +65,12 @@ impl Session<'_> {
                 | Step::PtyExit(_) => self.pty(step).await,
                 Step::Gates(gates) => self.gates(gates).await,
                 Step::GraphicsTranscript(step) => self.graphics_transcript(step).await,
+                Step::Replay(replay) => self.replay(replay).await,
             }
         })
     }
 
-    async fn connect(&mut self, connect: &Connect) -> Result<(), RunnerError> {
+    pub(super) async fn connect(&mut self, connect: &Connect) -> Result<(), RunnerError> {
         let ready = &self
             .fixture
             .as_ref()

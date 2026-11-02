@@ -133,6 +133,15 @@ pub(crate) enum Step {
     Gates(super::gates::Gates),
     /// Read one attach stream until a marker and check its bytes and control records.
     GraphicsTranscript(crate::fixture::graphics::GraphicsTranscript),
+    /// Audit the Ovis consumer fixture set and replay its cases of one kind.
+    Replay(Replay),
+}
+
+/// Replays every fixture case of `kind`, each against a fresh server in a fresh root.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Replay {
+    pub(crate) kind: ovis_terminal_replay::CaseKind,
 }
 
 /// How a connection reaches the endpoint.

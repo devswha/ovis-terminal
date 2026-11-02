@@ -48,7 +48,7 @@ use serde_json::{Value, json};
 use support::{BIN, Served, TestResult};
 
 /// Schema methods no landed crate implements; each must answer `method_not_found`.
-const UNIMPLEMENTED: [&str; 15] = [
+const UNIMPLEMENTED: [&str; 14] = [
     "agent.list",
     "agent.note",
     "agent.release",
@@ -63,7 +63,6 @@ const UNIMPLEMENTED: [&str; 15] = [
     "service.install",
     "service.remove",
     "terminal.history",
-    "terminal.search",
 ];
 
 /// Every method name the committed OpenRPC document publishes.

@@ -44,6 +44,10 @@ pub(crate) struct Cli {
     /// Read scenarios from this directory instead of `conformance/scenarios`.
     #[arg(long)]
     pub(crate) scenario_root: Option<PathBuf>,
+    /// Replay the Ovis consumer fixture set in this directory instead of
+    /// `conformance/fixtures/ovis`.
+    #[arg(long)]
+    pub(crate) fixtures: Option<PathBuf>,
 }
 
 /// The evidence file and whether this run adds to it.
