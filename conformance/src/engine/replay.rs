@@ -33,10 +33,24 @@ fn assertion(check: Check) -> Assertion {
     }
 }
 
-fn replay_failure(error: &ovis_terminal_replay::ReplayError) -> RunnerError {
-    RunnerError::ScenarioInconsistent {
-        scenario: format!("{}: {error}", error.kind()),
-        detail: error.hint(),
+/// A replay failure as the runner reports it: the transport's own error unchanged (a
+/// timeout stays a timeout), anything else as an inconsistent fixture.
+fn replay_failure(error: ovis_terminal_replay::ReplayError) -> RunnerError {
+    let inconsistent =
+        |error: &ovis_terminal_replay::ReplayError| RunnerError::ScenarioInconsistent {
+            scenario: format!("{}: {error}", error.kind()),
+            detail: error.hint(),
+        };
+    match error {
+        ovis_terminal_replay::ReplayError::Transport { source, step } => {
+            match source.downcast::<RunnerError>() {
+                Ok(own) => *own,
+                Err(source) => {
+                    inconsistent(&ovis_terminal_replay::ReplayError::Transport { step, source })
+                }
+            }
+        }
+        other => inconsistent(&other),
     }
 }
 
@@ -65,12 +79,12 @@ impl Session<'_> {
     }
 
     pub(crate) async fn replay(&mut self, replay: &Replay) -> Result<(), RunnerError> {
-        let set = FixtureSet::load(&self.fixture_dir()).map_err(|e| replay_failure(&e))?;
+        let set = FixtureSet::load(&self.fixture_dir()).map_err(replay_failure)?;
         let repo = self.ctx.repo.root().to_path_buf();
         let scenarios = self.ctx.repo.scenarios_dir().to_path_buf();
         let audited = set
             .audit(&repo, &|id| resolve(&scenarios, id))
-            .map_err(|e| replay_failure(&e))?;
+            .map_err(replay_failure)?;
         self.assert(audited.into_iter().map(assertion).collect())?;
         let inject = self.ctx.inject.clone();
         let selected: Vec<&Case> = set
@@ -122,7 +136,7 @@ impl Session<'_> {
         let bindings = set
             .manifest
             .bindings((case.server, self.ctx.repo.root()))
-            .map_err(|e| replay_failure(&e))?;
+            .map_err(replay_failure)?;
         let previous = std::mem::replace(&mut self.root, IsolatedRoot::create()?);
         let ran = async {
             let serve = Serve {
@@ -138,7 +152,7 @@ impl Session<'_> {
                 self.drain_conn(&conn).await?;
                 self.finish_conn(&conn).await?;
             }
-            outcome.map_err(|e| replay_failure(&e))
+            outcome.map_err(replay_failure)
         }
         .await;
         let stopped = if self.fixture.is_some() {

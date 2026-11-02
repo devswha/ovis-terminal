@@ -86,6 +86,30 @@
     {
       "call": {
         "conn": "phone",
+        "id": "watch-leases",
+        "method": "events.subscribe",
+        "params": {
+          "filter": {
+            "types": [
+              "lease.revoked"
+            ]
+          },
+          "snapshot": false,
+          "cursor": null
+        },
+        "expect": {
+          "/error": {
+            "$present": false
+          },
+          "/result/subscription_id": {
+            "$capture": "watch"
+          }
+        }
+      }
+    },
+    {
+      "call": {
+        "conn": "phone",
         "id": "open-phone",
         "method": "attach.open",
         "params": {
@@ -102,7 +126,9 @@
           "/result/holder/lease_id": "$value:lease",
           "/result/holder/holder": "desk",
           "/result/retry/on": "lease_released",
-          "/result/retry/event": "lease.revoked",
+          "/result/retry/event": {
+            "$capture": "retry_event"
+          },
           "/result/retry/lease/lease_id": "$value:lease",
           "/result/lease/role": "observe",
           "/result/stream_id": {
@@ -146,6 +172,20 @@
             "$present": false
           },
           "/result/stream_id": "$value:stream"
+        }
+      }
+    },
+    {
+      "event": {
+        "conn": "phone",
+        "method": "event",
+        "expect": {
+          "/params/type": "$value:retry_event",
+          "/params/subscription_id": "$value:watch",
+          "/params/data/lease/lease_id": "$value:lease",
+          "/params/data/lease/holder": "desk",
+          "/params/data/reason": "disconnected",
+          "/params/target/terminal_id": "$value:terminal"
         }
       }
     },

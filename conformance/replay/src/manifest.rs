@@ -112,3 +112,33 @@ impl Manifest {
         Ok(bindings)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Pin;
+
+    #[test]
+    fn a_pin_holds_only_for_the_digest_of_the_bytes_on_disk()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let dir = std::env::temp_dir().join(format!("ovis-t64-pin-{}", uuid::Uuid::now_v7()));
+        std::fs::create_dir_all(&dir)?;
+        std::fs::write(dir.join("f.json"), b"abc")?;
+        let pinned = Pin::of(&dir, "f.json")?;
+        assert_eq!(
+            pinned.sha256,
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+        assert!(pinned.audit(&dir).passed);
+        std::fs::write(dir.join("f.json"), b"abd")?;
+        let drifted = pinned.audit(&dir);
+        assert!(!drifted.passed, "{drifted:?}");
+        assert_ne!(drifted.actual, drifted.expected);
+        std::fs::remove_file(dir.join("f.json"))?;
+        assert!(
+            !pinned.audit(&dir).passed,
+            "a missing file never matches its pin"
+        );
+        std::fs::remove_dir_all(&dir)?;
+        Ok(())
+    }
+}

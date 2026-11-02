@@ -64,16 +64,15 @@ impl<'s, 'a> Wire<'s, 'a> {
         Ok(name)
     }
 
-    async fn next(
-        &mut self,
-        name: &ConnName,
-        waiting_for: &'static str,
-    ) -> Result<Value, RunnerError> {
+    /// The next record of `name`, within `wait`'s fixed deadline.
+    async fn next(&mut self, name: &ConnName, wait: Wait) -> Result<Value, RunnerError> {
         self.session
             .conn(name)?
-            .next(Wait::within(RECORD_BOUND_MS, waiting_for))
+            .next(wait)
             .await?
-            .ok_or(RunnerError::Closed { waiting_for })
+            .ok_or(RunnerError::Closed {
+                waiting_for: wait.waiting_for,
+            })
     }
 
     fn hold(&mut self, name: &ConnName, record: Value) {
@@ -91,7 +90,9 @@ impl Transport for Wire<'_, '_> {
         let bytes = connection.encode(&request)?;
         connection.write(&bytes, &Split::Whole).await?;
         loop {
-            let record = self.next(&name, "a replay reply").await?;
+            let record = self
+                .next(&name, Wait::within(RECORD_BOUND_MS, "a replay reply"))
+                .await?;
             if record.get("id").is_some() && record.get("id") == id.as_ref() {
                 return Ok(record);
             }
@@ -116,8 +117,10 @@ impl Transport for Wire<'_, '_> {
             });
         }
         self.held.entry(name.clone()).or_default().clear();
+        // One deadline for the whole wait: heartbeats and stream data must not extend it.
+        let wait = Wait::within(RECORD_BOUND_MS, "a replay notification");
         loop {
-            let record = self.next(&name, "a replay notification").await?;
+            let record = self.next(&name, wait).await?;
             if record.get("id").is_none() && named(&record) {
                 return Ok(record);
             }

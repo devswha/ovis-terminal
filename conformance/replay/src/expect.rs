@@ -196,6 +196,30 @@ mod tests {
     }
 
     #[test]
+    fn an_exact_object_matches_only_an_equal_object() -> Result<(), Box<dyn std::error::Error>> {
+        let expect = expect(json!({"/data": {"lease": "lease:1", "reason": "disconnected"}}))?;
+        let check = |value: serde_json::Value| -> Result<bool, crate::ReplayError> {
+            Ok(expect
+                .check(("r", &json!({"data": value})), &mut Bindings::default())?
+                .iter()
+                .all(|c| c.passed))
+        };
+        assert!(check(
+            json!({"reason": "disconnected", "lease": "lease:1"})
+        )?);
+        for other in [
+            json!({"lease": "lease:2", "reason": "disconnected"}),
+            json!({"lease": "lease:1"}),
+            json!({"lease": "lease:1", "reason": "disconnected", "extra": 1}),
+            json!({}),
+            json!(null),
+        ] {
+            assert!(!check(other.clone())?, "{other}");
+        }
+        Ok(())
+    }
+
+    #[test]
     fn unknown_or_mixed_operators_are_refused_instead_of_compared_literally() {
         for refused in [
             json!({"/a": {"$presnt": true}}),
