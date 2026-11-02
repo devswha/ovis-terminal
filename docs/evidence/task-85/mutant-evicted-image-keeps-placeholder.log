@@ -1,0 +1,58 @@
+# mutant-evicted-image-keeps-placeholder: crates/ovis-terminal-core/src/terminals/records.rs
+# - store.pieces(image.key)?
+# + store.pieces(image.key).unwrap_or_default()
+# cargo nextest run --locked -p ovis-terminal-core --no-fail-fast -E 'test(placeholder)'
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 22.11s
+────────────
+ Nextest run ID ff49e9ae-181f-43a1-a445-9cf240c60b1c with nextest profile: default
+    Starting 5 tests across 16 binaries (370 tests skipped)
+        FAIL [   0.016s] (1/5) ovis-terminal-core terminals::records::tests::an_image_whose_bytes_never_reached_the_store_has_no_placeholder
+  stdout ───
+
+    running 1 test
+    test terminals::records::tests::an_image_whose_bytes_never_reached_the_store_has_no_placeholder ... FAILED
+
+    failures:
+
+    failures:
+        terminals::records::tests::an_image_whose_bytes_never_reached_the_store_has_no_placeholder
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 132 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'terminals::records::tests::an_image_whose_bytes_never_reached_the_store_has_no_placeholder' (3804600) panicked at crates/ovis-terminal-core/src/terminals/records/tests.rs:131:5:
+    assertion `left == right` failed
+      left: [GraphicsPlaceholder { image_id: GraphicsImageId(ByteOffset(DecimalU64(0))), format: Known(Kitty), row: 0, col: 0, rows: 1, cols: 3, bytes: ByteCount(DecimalU64(0)) }]
+     right: []
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.016s] (2/5) ovis-terminal-core terminals::records::tests::an_image_scrolled_off_and_synced_out_of_the_store_has_no_placeholder
+        PASS [   0.016s] (3/5) ovis-terminal-core terminals::records::tests::placeholder_ids_are_the_store_keys_with_the_store_entry_sizes
+        PASS [   0.016s] (4/5) ovis-terminal-core terminals::records::tests::a_placeholder_never_carries_the_payload
+        FAIL [   0.017s] (5/5) ovis-terminal-core terminals::records::tests::an_image_the_store_evicted_has_no_placeholder_while_the_screen_still_shows_it
+  stdout ───
+
+    running 1 test
+    test terminals::records::tests::an_image_the_store_evicted_has_no_placeholder_while_the_screen_still_shows_it ... FAILED
+
+    failures:
+
+    failures:
+        terminals::records::tests::an_image_the_store_evicted_has_no_placeholder_while_the_screen_still_shows_it
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 132 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'terminals::records::tests::an_image_the_store_evicted_has_no_placeholder_while_the_screen_still_shows_it' (3804602) panicked at crates/ovis-terminal-core/src/terminals/records/tests.rs:103:5:
+    assertion `left == right` failed
+      left: [(0, 0, 0), (61, 1, 59)]
+     right: [(61, 1, 59)]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.018s] 5 tests run: 3 passed, 2 failed, 370 skipped
+        FAIL [   0.016s] (1/5) ovis-terminal-core terminals::records::tests::an_image_whose_bytes_never_reached_the_store_has_no_placeholder
+        FAIL [   0.017s] (5/5) ovis-terminal-core terminals::records::tests::an_image_the_store_evicted_has_no_placeholder_while_the_screen_still_shows_it
+error: test run failed

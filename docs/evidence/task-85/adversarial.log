@@ -1,0 +1,17 @@
+# Adversarial pass, plan todo 85 (executor-run). Each class and the shipped test that guards it.
+payload inlining: placeholders carry only id/format/cells/size -> core a_placeholder_never_carries_the_payload; protocol a_numeric_image_id_or_an_extra_payload_field_is_refused (deny_unknown_fields refuses data_b64)
+boolean contract: "yes", "true", 1, null, [true] -> invalid_params at params.include_images (protocol a_non_boolean_include_images_is_invalid_params_at_that_field; conformance graphics/read failure: "yes", 1, null over the real socket, and the connection keeps serving)
+default off / additive: absent include_images = false and the result omits images (protocol include_images_defaults_to_false_and_accepts_booleans, a_screen_result_without_images_omits_the_field...; conformance happy "plain" read: /result/images absent); openrpc compat exit 0
+store/VT disagreement: evicted entry -> no placeholder while the VT still shows it (an_image_the_store_evicted_has_no_placeholder_while_the_screen_still_shows_it); bytes never admitted -> none (an_image_whose_bytes_never_reached_the_store_has_no_placeholder); VT release + sync -> none (an_image_scrolled_off_and_synced_out_of_the_store_has_no_placeholder); ids equal store keys and sizes (placeholder_ids_are_the_store_keys_with_the_store_entry_sizes)
+geometry edges: partial scroll-off reports only visible rows; full scroll-off reports none (rows_scrolled_off_the_top...); right/bottom clip (a_footprint_is_clipped_at_the_right_edge_and_the_bottom); overwrite erases (printing_over_an_image_removes_its_placeholder)
+screens: a primary image is never reported on the alternate screen, even under an alternate image on the same cells; it is reported again after leaving (a_primary_screen_image_is_not_reported_on_the_alternate_screen_even_under_an_alternate_image)
+protocol coverage: sixel (1x1), iTerm2 inline width/height, Kitty put reported; bare Kitty a=t transmission not reported (sixel_iterm2_and_kitty_puts_are_reported_but_a_bare_transmission_is_not)
+non-image cells unchanged: lines equal a text-only engine fed the same text (a_kitty_image_is_reported_at_its_cells_and_the_text_stays_what_text_alone_shows); conformance lines[1]=="ab"
+receipt cap: terminal.screen stays an unrecorded Query read (no ledger write); a placeholder is ~110 bytes and at most IMAGE_LIMIT (1024) are retained, so a read stays far below the 16 MiB frame; payloads stay in the image store sized by its own cap.
+race: the screen snapshot and the store are read under separate locks; the join only reports images present in both, so a release between them drops a placeholder (conservative) and never reports one without its store entry.
+
+Mutants (each applied alone, run, restored; logs committed):
+mutant-evicted-image-keeps-placeholder.log  -> 2 failed (core)
+mutant-alternate-screen-not-filtered.log    -> survived round 1 (6/6), test strengthened, then 1 failed
+mutant-declared-rows-not-visible-rows.log   -> 2 failed (vt)
+mutant-include-images-required.log          -> 1 failed (protocol)
