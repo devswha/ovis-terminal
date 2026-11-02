@@ -30,6 +30,7 @@ struct Invocation {
     manual_transcript: bool,
     scenario_root: Option<PathBuf>,
     fixtures: Option<PathBuf>,
+    guide: Option<PathBuf>,
     inject: Option<serde_json::Value>,
     append: bool,
 }
@@ -67,6 +68,7 @@ impl Invocation {
             manual_transcript: cli.manual_transcript,
             scenario_root: cli.scenario_root,
             fixtures: cli.fixtures,
+            guide: cli.guide,
             inject,
             append: cli.output.append,
         })
@@ -215,6 +217,7 @@ async fn prepare(invocation: &Invocation) -> Result<Prepared, RunnerError> {
         runner,
         inject: invocation.inject.clone(),
         fixtures: invocation.fixtures.clone(),
+        guide: invocation.guide.clone(),
     };
     let planned = plan(&ctx.repo, &invocation.scenario, invocation.case)?;
     let mut cases = Vec::with_capacity(planned.cases.len());

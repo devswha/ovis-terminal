@@ -1,0 +1,16 @@
+mutant M5-served-check-dropped: conformance/src/scenarios/client_migration/contract.rs
+- "methods_not_served": unknown(guide, |row| &row.methods, &served),
++ "methods_not_served": unknown(guide, |row| &row.methods, &self.methods),
+$ cargo nextest run --locked -p ovis-terminal-conformance -E 'test(client_migration)'
+        PASS [   0.013s] (1/7) ovis-terminal-conformance scenarios::client_migration::tests::an_unclosed_block_and_an_unknown_row_field_are_refused
+        PASS [   0.013s] (2/7) ovis-terminal-conformance scenarios::client_migration::tests::a_dropped_path_a_wrong_fate_and_a_dangling_example_are_each_reported
+        PASS [   0.013s] (3/7) ovis-terminal-conformance scenarios::client_migration::tests::keys_beside_a_prompt_a_resend_under_a_new_op_and_content_as_params_break_the_policy
+        PASS [   0.013s] (4/7) ovis-terminal-conformance scenarios::client_migration::tests::delivery_is_shown_only_by_an_op_get_of_the_sent_operation
+        PASS [   0.014s] (5/7) ovis-terminal-conformance scenarios::client_migration::tests::a_complete_guide_covers_every_path_with_its_fate_and_cites_every_example
+        FAIL [   0.016s] (6/7) ovis-terminal-conformance scenarios::client_migration::tests::rows_may_list_only_served_methods_and_must_list_unserved_ones_as_gaps
+    test scenarios::client_migration::tests::rows_may_list_only_served_methods_and_must_list_unserved_ones_as_gaps ... FAILED
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 30 filtered out; finished in 0.00s
+        PASS [   0.017s] (7/7) ovis-terminal-conformance scenarios::client_migration::tests::an_injection_rewrites_one_call_and_replaces_what_follows_it
+     Summary [   0.018s] 7 tests run: 6 passed, 1 failed, 35 skipped
+        FAIL [   0.016s] (6/7) ovis-terminal-conformance scenarios::client_migration::tests::rows_may_list_only_served_methods_and_must_list_unserved_ones_as_gaps
+error: test run failed

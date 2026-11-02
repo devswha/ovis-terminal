@@ -1,0 +1,10 @@
+Mutants of plan todo 65; each must fail a shipped test (logs beside this file).
+
+| id | change | shipped test that fails | log |
+|---|---|---|---|
+| M1 | coverage `missing` filter inverted (guide.rs) | client_migration::tests (2 failed) | mutant-M1-coverage-missing-inverted.log |
+| M2 | auto-resend requires equal op ids (policy.rs) | client_migration::tests (1 failed) | mutant-M2-resend-same-op.log |
+| M3 | captured content never tainted (policy.rs) | client_migration::tests (1 failed) | mutant-M3-content-never-tainted.log |
+| M4 | injection keeps the original tail (client_migration.rs) | client_migration::tests (1 failed) | mutant-M4-injection-keeps-tail.log |
+| M5 | served check compares against the schema, not hello (contract.rs) | client_migration::tests (1 failed) | mutant-M5-served-check-dropped.log |
+| M6 | one guide expectation changed (prompt.answer card `/result/state` "open" -> "answered-bogus"), replayed through the packed client | packages/client-ts tests/guide.test.ts "no guide example has a failed expectation through the packed client" (1 fail, bun exit 1) | mutant-M6-bun-guide-expectation.log |

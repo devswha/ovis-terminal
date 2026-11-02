@@ -142,6 +142,8 @@ pub(crate) enum Step {
     StreamData(super::stream::StreamData),
     /// Audit the Ovis consumer fixture set and replay its cases of one kind.
     Replay(Replay),
+    /// Check the Ovis adapter migration guide and replay its examples (plan todo 65).
+    Migration(crate::scenarios::client_migration::Migration),
 }
 
 /// Replays every fixture case of `kind`, each against a fresh server in a fresh root.

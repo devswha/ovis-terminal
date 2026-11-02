@@ -69,11 +69,12 @@ impl Session<'_> {
                 Step::GraphicsTranscript(step) => self.graphics_transcript(step).await,
                 Step::StreamData(step) => self.stream_data(step).await,
                 Step::Replay(replay) => self.replay(replay).await,
+                Step::Migration(migration) => self.migration(migration).await,
             }
         })
     }
 
-    pub(super) async fn connect(&mut self, connect: &Connect) -> Result<(), RunnerError> {
+    pub(crate) async fn connect(&mut self, connect: &Connect) -> Result<(), RunnerError> {
         let ready = &self
             .fixture
             .as_ref()

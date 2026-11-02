@@ -1,0 +1,35 @@
+mutant M6: docs/ovis-adapter.md copy, example prompt.answer step card: "/result/state": "open" -> "answered-bogus"
+$ cd packages/client-ts && OVIS_GUIDE=<mutated copy> bun test ./tests/guide.test.ts
+[exit 0]
++       {
++         "field_path": null,
++         "kind": null,
++         "method": "prompt.open",
++         "outcome": "result",
++         "step": "open",
++       },
++       {
++         "field_path": null,
++         "kind": null,
++         "method": "prompt.get",
++         "outcome": "result",
++         "step": "card",
++       },
++     ],
++   },
++ }
+
+- Expected  - 1
++ Received  + 42
+
+      at <anonymous> (/home/devswha/workspace/ovis-terminal-wt/lane-t65/packages/client-ts/tests/guide.test.ts:110:18)
+(fail) no guide example has a failed expectation through the packed client [0.41ms]
+(pass) the staged examples are the guide's bytes and the schema pin is the published schema [0.02ms]
+(pass) the replay sources typecheck against the packed declarations [674.11ms]
+
+ 3 pass
+ 1 fail
+ 5 expect() calls
+Ran 4 tests across 1 file. [4.37s]
+BUN_EXIT=1
+

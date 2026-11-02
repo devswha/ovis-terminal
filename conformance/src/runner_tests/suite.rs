@@ -20,6 +20,7 @@ const EXECUTABLE: &[&str] = &[
     "cli/interactive-attach.json",
     "cli/manual.json",
     "client/fixtures.json",
+    "client/migration.json",
     "client/package.json",
     "events/layout-selection.json",
     "observability/health.json",

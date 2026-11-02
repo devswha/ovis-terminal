@@ -24,7 +24,7 @@ mod wire;
 
 use wire::Wire;
 
-fn assertion(check: Check) -> Assertion {
+pub(crate) fn assertion(check: Check) -> Assertion {
     Assertion {
         check: format!("replay/{}", check.check),
         expected: check.expected,
@@ -35,7 +35,7 @@ fn assertion(check: Check) -> Assertion {
 
 /// A replay failure as the runner reports it: the transport's own error unchanged (a
 /// timeout stays a timeout), anything else as an inconsistent fixture.
-fn replay_failure(error: ovis_terminal_replay::ReplayError) -> RunnerError {
+pub(crate) fn replay_failure(error: ovis_terminal_replay::ReplayError) -> RunnerError {
     let inconsistent =
         |error: &ovis_terminal_replay::ReplayError| RunnerError::ScenarioInconsistent {
             scenario: format!("{}: {error}", error.kind()),
@@ -71,7 +71,7 @@ fn resolve(scenarios: &Path, id: &str) -> ScenarioState {
 }
 
 impl Session<'_> {
-    fn fixture_dir(&self) -> PathBuf {
+    pub(crate) fn fixture_dir(&self) -> PathBuf {
         self.ctx
             .fixtures
             .clone()
@@ -123,6 +123,30 @@ impl Session<'_> {
         set: &FixtureSet,
         (case, inject): (&Case, Option<&Value>),
     ) -> Result<(), RunnerError> {
+        let run = self.run_replay(set, (case, inject)).await?;
+        let mut checks: Vec<Assertion> = run.checks.into_iter().map(assertion).collect();
+        checks.push(Assertion::equal(
+            format!("replay/{}/sent", case.id.as_str()),
+            json!(true),
+            json!(!run.sent.is_empty()),
+        ));
+        if inject.is_none() {
+            checks.push(Assertion::equal(
+                format!("replay/{}/receipt", case.id.as_str()),
+                json!(set.receipts.get(&case.id)),
+                json!(run.receipt),
+            ));
+        }
+        self.assert(checks)
+    }
+
+    /// Replays `case` against a fresh server in a fresh root with `set`'s legacy map and
+    /// server bindings, then tears both down; the caller turns the run into assertions.
+    pub(crate) async fn run_replay(
+        &mut self,
+        set: &FixtureSet,
+        (case, inject): (&Case, Option<&Value>),
+    ) -> Result<ovis_terminal_replay::CaseRun, RunnerError> {
         let kind = match case.server {
             Server::Assembled => FixtureKind::Assembled,
             Server::Protocol => FixtureKind::Protocol,
@@ -165,20 +189,7 @@ impl Session<'_> {
         drop(std::mem::replace(&mut self.root, previous));
         let run = ran?;
         stopped?;
-        let mut checks: Vec<Assertion> = run.checks.into_iter().map(assertion).collect();
-        checks.push(Assertion::equal(
-            format!("replay/{}/sent", case.id.as_str()),
-            json!(true),
-            json!(!run.sent.is_empty()),
-        ));
-        if inject.is_none() {
-            checks.push(Assertion::equal(
-                format!("replay/{}/receipt", case.id.as_str()),
-                json!(set.receipts.get(&case.id)),
-                json!(run.receipt),
-            ));
-        }
-        self.assert(checks)
+        Ok(run)
     }
 }
 

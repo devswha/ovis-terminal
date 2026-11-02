@@ -27,6 +27,8 @@ pub(crate) struct Context {
     pub(crate) inject: Option<Value>,
     /// The `--fixtures` directory a `replay` step reads instead of `fixtures/ovis`.
     pub(crate) fixtures: Option<PathBuf>,
+    /// The `--guide` a `migration` step reads instead of `docs/ovis-adapter.md`.
+    pub(crate) guide: Option<PathBuf>,
 }
 
 pub(crate) struct Session<'a> {
