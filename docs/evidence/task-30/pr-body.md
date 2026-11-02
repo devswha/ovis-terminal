@@ -17,7 +17,7 @@ Host: Linux 7.0.0-38-generic x86_64 (`{"arch":"x86_64","family":"unix","os":"lin
 
 ```
 $ cargo run -q --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary /dev/shm/ovt-target-lane-t30/debug/ovis-terminal --scenario part-a/task-30 --isolated --case happy --evidence docs/evidence/task-30/task-30-happy.json
-{"case":"happy",...,"result":"passed","scenario":"part-a/task-30","totals":{"assertions":"435","cases":"1","failed":"0","passed":"1","skipped":"0"}}
+{"case":"happy",...,"result":"passed","scenario":"part-a/task-30","totals":{"assertions":"472","cases":"1","failed":"0","passed":"1","skipped":"0"}}
 EXIT=0
 $ ... --case failure --evidence docs/evidence/task-30/task-30-failure.json
 {"case":"failure",...,"result":"passed","scenario":"part-a/task-30","totals":{"assertions":"252","cases":"1","failed":"0","passed":"1","skipped":"0"}}
@@ -106,6 +106,17 @@ Per the orchestrator's policy, these scenarios are written exactly against the c
 
 Also not enforced, so not stressable: `session_retained_bytes` (4 GiB), `session_vt_bytes` (128 MiB) and `session_rss_bytes` are advertised, but no daemon code reads them (grep of `crates/`). The session backlog budget (64 MiB, `SessionBacklog`) resynchronizes over-budget viewers with gap + checkpoint instead of rejecting.
 
+## Gate r5 → round 6 (R5-B1)
+
+The t2 fixture is now read-gated. The two `sleep 0.2` calls are gone; the program blocks on a one-byte `dd` read, and the driver releases each gate with `input.send`.
+- **UTF-8 fence.** The program prints `utf8:\342` and blocks. The raw bytes at 0..6 are checked to be exactly `utf8:\xe2`. Observer `split-utf8` then attaches: its first paint sits at offset 6, inside the split character, and the daemon labels it exact (`inexact: []`).
+- **CSI fence.** After the first release, the program prints `\202\254 csi:\033[3` and blocks. Observer `split-csi` attaches at offset 16, inside the open CSI, again exact.
+- **Rebuild.** After the second release, the rest arrives (`1mRED`, the DSR query, `REPLY-ONCE`, `NEXT[x]`). For each fence, `stream_data` collects the observer's stream from offset 0 to `NEXT[x]`. The Rust test requires a fresh VT fed that paint plus tail to equal a VT fed the raw output from offset 0 (24 lines and cursor).
+- **Runner fix.** `stream_data` now puts the records it reads past back in front of the unread ones, in order (`Connection::unread`); appending them reordered another stream's chunks.
+- **Mutants**, both in `crates/ovis-terminal-server/src/streams/viewer.rs` `paint`:
+  - M10: the tail starts one byte late, dropping the first continuation byte. `happy` fails because the rebuild never reaches its marker.
+  - M11: the tail starts one byte early, duplicating the byte before the fence. `happy` fails.
+
 ## Gate r4 rulings → round 5
 
 - **R4-B1:**
@@ -153,7 +164,7 @@ The VT engine (`ovis-terminal-vt`) already computes checkpoint `Fidelity` and `I
 - `cargo clippy -p ovis-terminal-conformance -p ovis-terminal-cli -p ovis-terminal-protocol -p ovis-terminal-server --all-targets -- -D warnings`: exit 0 (`clippy.log`).
 - `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh`: exit 0, `check.sh: all steps passed` (workspace fmt/clippy/nextest/doc tests, hygiene, source-check, evidence-audit with 0 findings) (`check.log`).
 - Windows: `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` and `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings`: both exit 0 (WINCHECK_EXIT=0, WINCLIPPY_EXIT=0) (`windows.log`).
-- **Mutants (`mutants.log`).** Each was applied, the binary rebuilt, the shipped `attach_input::*` tests run, and the mutant reverted. All ten were killed:
+- **Mutants (`mutants.log`).** Each was applied, the binary rebuilt, the shipped `attach_input::*` tests run, and the mutant reverted. All twelve were killed:
   - M1: credit beyond sent accepted → `failure` fails.
   - M2: takeover epoch check removed → `failure` fails.
   - M3: pending barrier reported reached → `failure` fails.
@@ -164,6 +175,7 @@ The VT engine (`ovis-terminal-vt`) already computes checkpoint `Fidelity` and `I
   - M8: the t1 uninterrupted reference ignores the tail → `happy` fails (screens differ).
   - M8b: the t2 rebuild drops the tail after the repaint → `happy` fails (`NEXT[x]` missing, cursor row 2 vs 3).
   - M9: the exit waits are armed after the deliveries → `happy` fails at `reply[exit1]/result/outcome` (`already_satisfied`).
+  - M10/M11: the tail after a paint starts one byte late or early → `happy` fails (round 6).
 
 ### QA seam (disclosed, T31 precedent)
 
@@ -242,3 +254,4 @@ macOS stress dispatch:
 - Round 4: https://github.com/devswha/ovis-terminal/actions/runs/41363372326 (17415b2, the code head; the next commit changes only this body).
 - Round 5: https://github.com/devswha/ovis-terminal/actions/runs/41369910168 (5749036; superseded before it finished by the cc1ca2c merge).
 - Round 5 after the cc1ca2c merge: https://github.com/devswha/ovis-terminal/actions/runs/41371559410 (747fe9c) completed `success`, all 25 iterations of task-30 happy and failure plus `capacity/fifty`. The 1869b9e merge (44592ca) changes no task-30 code path, and no second macOS dispatch was requested.
+- That 25/25 result ran on 747fe9c, before the 1869b9e and 1c1527d merges. Run https://github.com/devswha/ovis-terminal/actions/runs/41375819378 was dispatched on 13814ef and superseded by round 6. The round-6 final head gets one dispatch: MACOS_R6.

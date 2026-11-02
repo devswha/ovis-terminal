@@ -145,6 +145,13 @@ impl Connection {
         self.stashed.push_back(record);
     }
 
+    /// Puts records a step read past back in front of everything still unread, in order.
+    pub(crate) fn unread(&mut self, records: Vec<Value>) {
+        for record in records.into_iter().rev() {
+            self.stashed.push_front(record);
+        }
+    }
+
     /// Size on the wire of the most recently decoded record.
     pub(crate) const fn last_record_bytes(&self) -> usize {
         self.last_record_bytes

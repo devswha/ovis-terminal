@@ -95,10 +95,7 @@ impl Session<'_> {
                 None => others.push(record),
             }
         }
-        let conn = self.conn(&step.conn)?;
-        for record in others {
-            conn.stash(record);
-        }
+        self.conn(&step.conn)?.unread(others);
         let encoded = base64::engine::general_purpose::STANDARD.encode(&collected.bytes);
         self.assert(vec![
             Assertion::equal(

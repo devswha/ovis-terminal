@@ -1095,7 +1095,7 @@
                     "argv": [
                       "/bin/sh",
                       "-c",
-                      "stty raw -echo; printf 'utf8:\\342'; sleep 0.2; printf '\\202\\254 csi:\\033['; sleep 0.2; printf '31mRED\\033[0m\\r\\n'; printf '\\033[6n'; while c=$(dd bs=1 count=1 2>/dev/null); [ \"$c\" != R ]; do :; done; printf 'REPLY-ONCE\\r\\n'; c=$(dd bs=1 count=1 2>/dev/null); printf 'NEXT[%s]\\r\\n' \"$c\"; exec sleep 600"
+                      "stty raw -echo; printf 'utf8:\\342'; dd bs=1 count=1 >/dev/null 2>&1; printf '\\202\\254 csi:\\033[3'; dd bs=1 count=1 >/dev/null 2>&1; printf '1mRED\\033[0m\\r\\n'; printf '\\033[6n'; while c=$(dd bs=1 count=1 2>/dev/null); [ \"$c\" != R ]; do :; done; printf 'REPLY-ONCE\\r\\n'; c=$(dd bs=1 count=1 2>/dev/null); printf 'NEXT[%s]\\r\\n' \"$c\"; exec sleep 600"
                     ]
                   },
                   "geometry": {
@@ -1125,43 +1125,6 @@
             "expect": {
               "fixture": {
                 "/result/terminal/address": "t2"
-              }
-            }
-          }
-        },
-        {
-          "send": {
-            "conn": "control",
-            "requests": [
-              {
-                "jsonrpc": "2.0",
-                "id": "replied",
-                "method": "terminal.wait_output",
-                "params": {
-                  "target": {
-                    "address": "t2"
-                  },
-                  "cursor": {
-                    "offset": "0"
-                  },
-                  "pattern": {
-                    "text": "REPLY-ONCE\r\n"
-                  },
-                  "timeout_ms": "10000"
-                }
-              }
-            ]
-          }
-        },
-        {
-          "replies": {
-            "conn": "control",
-            "expect": {
-              "replied": {
-                "/error": {
-                  "$present": false
-                },
-                "/result/outcome": "matched"
               }
             }
           }
@@ -1216,6 +1179,340 @@
                 "/result/lease/lease_id": {
                   "$capture": "driver"
                 }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "utf8-fence",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "utf8:"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "utf8-fence": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "utf8-bytes",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "from_offset": "0",
+                  "limit_bytes": "64"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "utf8-bytes": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/data_b64": "dXRmODri",
+                "/result/next_offset": "6"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "split-utf8",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:split-utf8",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "role": "observe",
+                  "client_id": "split-utf8",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "split-utf8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/first_paint/inexact": [],
+                "/result/first_paint/output_offset": {
+                  "$capture": "split_utf8_at"
+                },
+                "/result/stream_id": {
+                  "$capture": "split_utf8"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "driver-conn",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "release-utf8",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:release-utf8",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "expect": null,
+                  "text": "g",
+                  "submit": "none",
+                  "lease_id": "$value:driver"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "driver-conn",
+            "expect": {
+              "release-utf8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "csi-fence",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "cursor": {
+                    "offset": "6"
+                  },
+                  "pattern": {
+                    "text": "csi:\u001b[3"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "csi-fence": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/cursor/offset": "16"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "csi-bytes",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "from_offset": "0",
+                  "limit_bytes": "64"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "csi-bytes": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/data_b64": "dXRmODrigqwgY3NpOhtbMw==",
+                "/result/next_offset": "16"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "split-csi",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:split-csi",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "role": "observe",
+                  "client_id": "split-csi",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "split-csi": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/first_paint/inexact": [],
+                "/result/first_paint/output_offset": {
+                  "$capture": "split_csi_at"
+                },
+                "/result/stream_id": {
+                  "$capture": "split_csi"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "driver-conn",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "release-csi",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:release-csi",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "expect": null,
+                  "text": "g",
+                  "submit": "none",
+                  "lease_id": "$value:driver"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "driver-conn",
+            "expect": {
+              "release-csi": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "replied",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "REPLY-ONCE\r\n"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "replied": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
               }
             }
           }
@@ -1374,6 +1671,24 @@
             "id": "t2",
             "conn": "observer",
             "stream": "$value:late",
+            "from": "0",
+            "until": "NEXT[x]\r\n"
+          }
+        },
+        {
+          "stream_data": {
+            "id": "t2-utf8",
+            "conn": "observer",
+            "stream": "$value:split_utf8",
+            "from": "0",
+            "until": "NEXT[x]\r\n"
+          }
+        },
+        {
+          "stream_data": {
+            "id": "t2-csi",
+            "conn": "observer",
+            "stream": "$value:split_csi",
             "from": "0",
             "until": "NEXT[x]\r\n"
           }

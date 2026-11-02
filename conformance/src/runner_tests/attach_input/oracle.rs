@@ -48,6 +48,8 @@ fn position(ran: &Ran, check: &str) -> TestResult<usize> {
 
 /// t2: the late observer's first paint equals a VT fed the raw output up to the paint's
 /// offset, and its repaint plus the tail after it equals a VT fed the whole raw output.
+/// Two more observers attach inside a split UTF-8 character (offset 6) and an open CSI
+/// (offset 16); each one's paint plus the tail it was sent equals the whole raw output.
 pub(super) fn late_paint_and_tail_rebuild_the_screen(ran: &Ran) -> TestResult {
     let raw = bytes(ran, "reply[fx-raw]/result/data_b64")?;
     let stream = bytes(ran, "stream[t2]/data_b64")?;
@@ -61,6 +63,18 @@ pub(super) fn late_paint_and_tail_rebuild_the_screen(ran: &Ran) -> TestResult {
         screen(&raw)?,
         "repaint plus tail"
     );
+    for (fence, painted_at) in [("utf8", 6), ("csi", 16)] {
+        let at = position(
+            ran,
+            &format!("reply[split-{fence}]/result/first_paint/output_offset"),
+        )?;
+        assert_eq!(
+            at, painted_at,
+            "{fence}: the paint sits inside the partial sequence"
+        );
+        let stream = bytes(ran, &format!("stream[t2-{fence}]/data_b64"))?;
+        assert_eq!(screen(&stream)?, screen(&raw)?, "{fence}: paint plus tail");
+    }
     Ok(())
 }
 

@@ -160,3 +160,27 @@ NEXTEST_EXIT=100
  M conformance/scenarios/capacity/sixteen.json
  M conformance/src/runner_tests/attach_input/oracle.rs
         PASS [   7.857s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+
+# Round 6 mutants (tail start at a paint fence inside a partial sequence)
+
+=== M10 the tail after a paint starts one byte late (drops the first continuation byte)
+--- crates/ovis-terminal-server/src/streams/viewer.rs
+- self.cursor = live;
++ self.cursor = live.advanced(1);
+        FAIL [  22.053s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+    thread 'attach_input::happy' (731947) panicked at conformance/src/runner_tests/attach_input.rs:32:5:
+    "part-a/task-30" "happy": {"detail":"stream data up to its marker did not happen within 20000 ms","hint":"inspect the byte transcript in the evidence","kind":"timeout","step":"95"}
+        FAIL [  22.053s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+
+=== M11 the tail after a paint starts one byte early (duplicates the byte before the fence)
+--- crates/ovis-terminal-server/src/streams/viewer.rs
+- self.cursor = live;
++ self.cursor = LogOffset::new(live.get().saturating_sub(1));
+        FAIL [   1.960s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+    thread 'attach_input::happy' (741144) panicked at conformance/src/runner_tests/attach_input.rs:32:5:
+    "part-a/task-30" "happy": {"detail":"expectation reply[metrics]/result/consumers/0/losses/0/range/first_offset did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"51"}
+        FAIL [   1.960s] (1/1) ovis-terminal-conformance::runner attach_input::happy
+
+=== reverted; clean re-run:
+VIEWER_RESTORED
+        PASS [   7.716s] (1/1) ovis-terminal-conformance::runner attach_input::happy
