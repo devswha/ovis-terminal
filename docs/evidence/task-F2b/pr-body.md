@@ -52,7 +52,11 @@ Backtraces (`backtrace-file-line.log`, a scratch crate with a failing test, `RUS
 line-tables-only prints `panicked at src/lib.rs:2:5` plus 3 `at ./src/lib.rs:N` frames
 (`bt::inner at ./src/lib.rs:2:5`). `debug = none` prints 0 such frames.
 
-CI after: CI_AFTER_PLACEHOLDER
+CI after:
+PR #83 head 44c5585, run 41366190606: all 18 checks pass (CodeRabbit skipped); `gh pr checks 83 --watch` exit 0.
+  - `test (ubuntu-latest)` job 125026737342: success in 5m40s; guard: target 5,350,517,975 B, deps 5,229,183,405 B, largest `target/debug/conformance` 127,415,728 B, disk free 82,473,840 KiB at the end.
+  - `scripts/check.sh (ubuntu)` job 125026737273: success in 9m14s; `check.sh: all steps passed`; guard: target 5,223,511,186 B, largest 127,415,728 B, disk free 82,598,180 KiB.
+  - No regression elsewhere: `test (macos-latest)` passed in 9m41s and `test (windows-latest)` in 7m41s; probe, unix-full, windows-smoke, quality gates, client-ts, msrv, rustdoc and deny all pass.
 
 ## Mutants (each must fail a shipped check)
 
@@ -108,4 +112,38 @@ None: no conformance scenario applies to a CI-workflow change.
 
 ## DoneClaim
 
-DONECLAIM_PLACEHOLDER
+```json
+{
+  "task": "F2b",
+  "pr_url": "https://github.com/devswha/ovis-terminal/pull/83",
+  "head_sha": "44c5585e682270d47ee3805f7cdbb5feaaa22d37",
+  "changed_files": [
+    ".github/workflows/ci.yml",
+    "scripts/ci/target-footprint.sh",
+    "docs/evidence/task-F2b/*"
+  ],
+  "tests": {
+    "check_sh": "exit 0, nextest 1490 passed / 2 skipped, subscriptions 22 passed",
+    "windows_precheck": "cargo check exit 0, clippy exit 0",
+    "actionlint": "exit 0",
+    "ci": "18/18 checks pass on 44c5585 (run 41366190606); ubuntu test target 5.35 GB, largest exe 127.4 MB"
+  },
+  "manual_qa": {
+    "before": "runs 41342888203/124956466669 and 41363408351/125018646412,125018646453: No space left on device",
+    "bench_subset": "1,495,632,179 -> 985,256,213 B; harness 207,796,032 -> 66,120,952 B",
+    "backtrace": "line-tables-only 3 file:line frames; debug=none 0"
+  },
+  "adversarial": "M1 both vars removed -> guard exit 1; M2 DEV var removed -> guard exit 1; M3 debug=none -> 0 file:line frames; survivor: TEST var alone redundant today (test inherits dev), kept as guard against a future [profile.test] debug key",
+  "contract_checklist": "CI-only; no product, Cargo.toml or check.sh change; no #[allow]; evidence-audit pass",
+  "cleanup": "all /dev/shm/ovt-target-lane-tF2b* removed (lane target removed by the orchestrator, measurement targets by their scripts); scratch under /dev/shm/ovt-fixtures/lane-tF2b-scratch keeps only doneclaim.json",
+  "risks": [
+    "ubuntu test/check rebuild deps each run (no target cache)",
+    "200 MB ceiling is a size heuristic",
+    "other workflows still build debug = true"
+  ],
+  "unmet": [
+    "macOS stress dispatch skipped: lane has no probe and probe-stress-macos.yml does not read ci.yml",
+    "docs-only commit mirroring the final pr-body.md lands after the watched head; its CI was not watched"
+  ]
+}
+```
