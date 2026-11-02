@@ -17,6 +17,15 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  # Root Cargo.toml has `[profile.dev] debug = true`; with --all-targets every bench and
+  # probe binary then carries full DWARF (~210 MB each) and the ubuntu jobs ran the
+  # runner out of disk (docs/evidence/task-F2b). line-tables-only keeps file:line in
+  # panic backtraces. Both profiles are set explicitly: test inherits dev in Cargo.toml,
+  # and the explicit test value keeps that true if someone gives test its own debug key.
+  # The development host sets the same pair in its toolchain env, so local check.sh and
+  # CI build identical artifacts. rust-cache hashes CARGO_* vars into its key.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
   test:
@@ -81,7 +90,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.99.1
         with:
           components: clippy, rustfmt
+      # Ubuntu caches only the cargo registry and git checkouts: a restored target/ adds
+      # its unpacked dependency artifacts to the disk this job already runs short of.
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: ${{ runner.os != 'Linux' }}
       - uses: taiki-e/install-action@nextest
       - name: rustfmt (nightly, import grouping)
         run: cargo +nightly fmt --all -- --check
@@ -108,6 +121,10 @@ jobs:
           echo "$out"
           pkgid="$(cargo pkgid -p ovis-terminal-cli)"
           test "$out" = "ovis-terminal ${pkgid##*[#@]}"
+      - name: target footprint (debuginfo guard)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash scripts/ci/target-footprint.sh target
       - name: scope note
         shell: bash
         run: |
@@ -139,8 +156,12 @@ jobs:
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: false
       - uses: taiki-e/install-action@nextest
       - run: bash scripts/check.sh
+      - name: target footprint (debuginfo guard)
+        run: bash scripts/ci/target-footprint.sh target
 
   doc:
     name: rustdoc -D warnings
