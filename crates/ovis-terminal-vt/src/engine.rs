@@ -7,6 +7,7 @@ mod decimal;
 mod error;
 mod fidelity;
 mod history;
+mod images;
 mod listener;
 mod mirror;
 mod modes;
@@ -38,6 +39,7 @@ pub use fidelity::{Fidelity, InexactReason};
 pub use history::{
     HistoryCompleteness, HistoryRead, HistoryUnavailableReason, LineSpan, SearchMatch,
 };
+pub use images::{IMAGE_LIMIT, ImagePlace, ImageRelease, ImageSet, ImageSplice, RetainedImage};
 pub use modes::{
     EditingModes, KeyEncoding, KeyboardModes, ModifyOtherKeys, MouseEncoding, MouseModes,
     MouseTracking, PasteMode, ScreenBuffer, ScreenModes, TerminalModes,
@@ -51,6 +53,7 @@ pub use units::{
     ContentRevision, Geometry, HistoryLimit, MIN_COLUMNS, ModeRevision, OutputOffset, VtConfig,
 };
 
+use self::images::Images;
 use self::listener::{ImmediateUpdates, Listener};
 use self::query::outcome;
 use self::recorder::Recorder;
@@ -93,6 +96,7 @@ pub struct Vt {
     shadow: Shadow,
     inactive: Grid<Cell>,
     tracker: Tracker,
+    images: Images,
     config: VtConfig,
     offset: OutputOffset,
     revision: ContentRevision,
@@ -139,6 +143,7 @@ impl Vt {
             processor: Processor::new(),
             shadow,
             tracker: Tracker::new(),
+            images: Images::default(),
             config,
             offset: OutputOffset::ZERO,
             revision: ContentRevision::default(),
@@ -166,6 +171,7 @@ impl Vt {
         let end = Cut {
             forward_end: forward.len(),
             input_end: bytes.len(),
+            image: None,
         };
         let mut from = 0;
         for cut in cuts.into_iter().chain(std::iter::once(end)) {
@@ -186,7 +192,11 @@ impl Vt {
                 }
             }
             from = cut.forward_end;
+            if let Some(seen) = cut.image {
+                self.receive_image(seen);
+            }
         }
+        self.follow_images();
         self.offset = start.advanced_by(bytes.len());
         self.revision = self.revision.advanced_by(completions);
         result
@@ -237,6 +247,7 @@ impl Vt {
         self.config.geometry = geometry;
         self.revision = self.revision.advanced_by(1);
         self.refresh_modes();
+        self.follow_images();
     }
 
     /// Declares that every query completed at or before `offset` was already

@@ -1,0 +1,742 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "graphics/replay",
+  "title": "Retained graphics are re-sent on reattach while their placement is on screen",
+  "todo": 84,
+  "closes": [
+    "GAP-152"
+  ],
+  "delivers": [
+    "IDEAL-119"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Real ovis-terminal serve runs a shell as t1; an interact viewer types go, the program draws a 3-chunk Kitty f=100 PNG and, one row below, a sixel, and the viewer receives both live; it closes its stream (attach.close), a second viewer attaches interact, and its paint re-sends both sequences byte-identical (SHA-256), Kitty before sixel, followed by one graphics_replayed record naming raw offsets 2 and 142 with nothing released, then input_ready.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "input.raw",
+                  "terminal.run",
+                  "terminal.screen"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "read go; printf '\\033_Ga=T,f=100,i=7,m=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB\\033\\\\\\033_Gm=1;CAYAAAAfFcSJAAAADUlEQVR42mNk+M9Q\\033\\\\\\033_Gm=0;DwADhgGAWjR9awAAAABJRU5ErkJggg==\\033\\\\'; printf '\\r\\n'; printf '\\033P0;1;0q\"1;1;6;6#0;2;100;0;0#0~~~~~~-\\033\\\\'; printf '\\r\\nimages-done'; read again; printf 'after-replay'; read done"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "replay",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "viewer",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "viewer",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "image-viewer",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/role": "interact",
+                "/result/lease/lease_id": {
+                  "$capture": "lease_viewer"
+                },
+                "/result/stream_id": {
+                  "$capture": "stream_viewer"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "go",
+                "method": "input.raw",
+                "params": {
+                  "op_id": "$op:go",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "data_b64": "DQ==",
+                  "lease_id": "$value:lease_viewer"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "go": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "graphics_transcript": {
+            "conn": "viewer",
+            "until": "images-done",
+            "contains_b64": {
+              "1_kitty_png_3_chunks": "G19HYT1ULGY9MTAwLGk9NyxtPTE7aVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUFFQUFBQUIbXBtfR209MTtDQVlBQUFBZkZjU0pBQUFBRFVsRVFWUjQybU5rK005URtcG19HbT0wO0R3QURoZ0dBV2pSOWF3QUFBQUJKUlU1RXJrSmdnZz09G1w=",
+              "2_sixel": "G1AwOzE7MHEiMTsxOzY7NiMwOzI7MTAwOzA7MCMwfn5+fn5+LRtc"
+            },
+            "in_order": [
+              "1_kitty_png_3_chunks",
+              "2_sixel"
+            ],
+            "controls": [
+              "checkpoint",
+              "input_ready"
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "close",
+                "method": "attach.close",
+                "params": {
+                  "stream_id": "$value:stream_viewer"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "close": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "viewer2",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "viewer2",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer2",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "reopen",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:reopen",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "image-viewer",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer2",
+            "expect": {
+              "reopen": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/role": "interact",
+                "/result/lease/lease_id": {
+                  "$capture": "lease_viewer2"
+                },
+                "/result/stream_id": {
+                  "$capture": "stream_viewer2"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer2",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "again",
+                "method": "input.raw",
+                "params": {
+                  "op_id": "$op:again",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "data_b64": "DQ==",
+                  "lease_id": "$value:lease_viewer2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer2",
+            "expect": {
+              "again": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "graphics_transcript": {
+            "conn": "viewer2",
+            "until": "after-replay",
+            "controls": [
+              "checkpoint",
+              "graphics_replayed",
+              "input_ready"
+            ],
+            "contains_b64": {
+              "1_kitty_png_3_chunks": "G19HYT1ULGY9MTAwLGk9NyxtPTE7aVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUFFQUFBQUIbXBtfR209MTtDQVlBQUFBZkZjU0pBQUFBRFVsRVFWUjQybU5rK005URtcG19HbT0wO0R3QURoZ0dBV2pSOWF3QUFBQUJKUlU1RXJrSmdnZz09G1w=",
+              "2_sixel": "G1AwOzE7MHEiMTsxOzY7NiMwOzI7MTAwOzA7MCMwfn5+fn5+LRtc"
+            },
+            "in_order": [
+              "1_kitty_png_3_chunks",
+              "2_sixel"
+            ],
+            "replayed": {
+              "/graphics_replayed/replayed": [
+                "2",
+                "142"
+              ],
+              "/graphics_replayed/released": []
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "--inject {\"graphics\":{\"scroll_rows\":\"200\"}}: after drawing the same two images the program prints 200 lines, scrolling both off the 24-row screen; the first viewer sees both live, closes, and a second viewer's paint re-sends neither sequence, followed by one graphics_replayed record that re-sends nothing and lists both released image offsets (2 and 142) with reason scrolled_out.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "input.raw",
+                  "terminal.run",
+                  "terminal.screen"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "read go; printf '\\033_Ga=T,f=100,i=7,m=1;iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB\\033\\\\\\033_Gm=1;CAYAAAAfFcSJAAAADUlEQVR42mNk+M9Q\\033\\\\\\033_Gm=0;DwADhgGAWjR9awAAAABJRU5ErkJggg==\\033\\\\'; printf '\\r\\n'; printf '\\033P0;1;0q\"1;1;6;6#0;2;100;0;0#0~~~~~~-\\033\\\\'; printf '\\r\\n'; i=0; while [ $i -lt 200 ]; do printf 'line\\r\\n'; i=$((i+1)); done; printf 'scrolled-done'; read again; printf 'after-replay'; read done"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "replay",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "viewer",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "viewer",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "image-viewer",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/role": "interact",
+                "/result/lease/lease_id": {
+                  "$capture": "lease_viewer"
+                },
+                "/result/stream_id": {
+                  "$capture": "stream_viewer"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "go",
+                "method": "input.raw",
+                "params": {
+                  "op_id": "$op:go",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "data_b64": "DQ==",
+                  "lease_id": "$value:lease_viewer"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "go": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "graphics_transcript": {
+            "conn": "viewer",
+            "inject": {
+              "graphics": {
+                "scroll_rows": "200"
+              }
+            },
+            "until": "scrolled-done",
+            "contains_b64": {
+              "1_kitty_png_3_chunks": "G19HYT1ULGY9MTAwLGk9NyxtPTE7aVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUFFQUFBQUIbXBtfR209MTtDQVlBQUFBZkZjU0pBQUFBRFVsRVFWUjQybU5rK005URtcG19HbT0wO0R3QURoZ0dBV2pSOWF3QUFBQUJKUlU1RXJrSmdnZz09G1w=",
+              "2_sixel": "G1AwOzE7MHEiMTsxOzY7NiMwOzI7MTAwOzA7MCMwfn5+fn5+LRtc"
+            },
+            "in_order": [
+              "1_kitty_png_3_chunks",
+              "2_sixel"
+            ],
+            "controls": [
+              "checkpoint",
+              "input_ready"
+            ]
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "close",
+                "method": "attach.close",
+                "params": {
+                  "stream_id": "$value:stream_viewer"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer",
+            "expect": {
+              "close": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "viewer2",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "viewer2",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer2",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "reopen",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:reopen",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "image-viewer",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer2",
+            "expect": {
+              "reopen": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/role": "interact",
+                "/result/lease/lease_id": {
+                  "$capture": "lease_viewer2"
+                },
+                "/result/stream_id": {
+                  "$capture": "stream_viewer2"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "viewer2",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "again",
+                "method": "input.raw",
+                "params": {
+                  "op_id": "$op:again",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "data_b64": "DQ==",
+                  "lease_id": "$value:lease_viewer2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "viewer2",
+            "expect": {
+              "again": {
+                "/error": {
+                  "$present": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "graphics_transcript": {
+            "conn": "viewer2",
+            "until": "after-replay",
+            "controls": [
+              "checkpoint",
+              "graphics_replayed",
+              "input_ready"
+            ],
+            "inject": {
+              "graphics": {
+                "scroll_rows": "200"
+              }
+            },
+            "absent_b64": {
+              "kitty_introducer": "G19H",
+              "sixel": "G1AwOzE7MHEiMTsxOzY7NiMwOzI7MTAwOzA7MCMwfn5+fn5+LRtc"
+            },
+            "replayed": {
+              "/graphics_replayed/replayed": [],
+              "/graphics_replayed/released": [
+                {
+                  "output_offset": "2",
+                  "reason": "scrolled_out"
+                },
+                {
+                  "output_offset": "142",
+                  "reason": "scrolled_out"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

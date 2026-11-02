@@ -1,0 +1,156 @@
+   Compiling ovis-terminal-vt v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-vt)
+   Compiling ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-core)
+   Compiling ovis-terminal-agent v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-agent)
+   Compiling ovis-terminal-services v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-services)
+   Compiling ovis-terminal-remote v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-remote)
+   Compiling ovis-terminal-agent-adapters v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-agent-adapters)
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 19.80s
+────────────
+ Nextest run ID f0db5e35-19af-4fd4-806b-24bfa298a74c with nextest profile: default
+    Starting 31 tests across 20 binaries (288 tests skipped)
+        PASS [   0.009s] ( 1/31) ovis-terminal-vt engine::images::tests::a_kitty_series_is_one_image_keyed_by_its_first_chunk_even_when_interrupted
+        PASS [   0.009s] ( 2/31) ovis-terminal-vt engine::images::tests::an_image_is_placed_on_the_cursor_cell_it_arrived_at_with_its_header_extent
+        PASS [   0.011s] ( 3/31) ovis-terminal-vt engine::images::tests::a_transmission_reusing_an_id_replaces_the_old_image
+        PASS [   0.015s] ( 4/31) ovis-terminal-vt engine::images::tests::a_region_scroll_moves_a_surviving_anchor_and_releases_a_recycled_one
+        PASS [   0.008s] ( 5/31) ovis-terminal-vt engine::images::tests::kitty_deletes_name_ids_numbers_and_placements_or_data_by_case
+        PASS [   0.019s] ( 6/31) ovis-terminal-server streams::graphics::replay::tests::sixel_parameters_are_read_up_to_63_bytes
+        PASS [   0.020s] ( 7/31) ovis-terminal-server streams::graphics::replay::tests::a_paint_shares_the_store_bytes_where_its_images_go
+        PASS [   0.011s] ( 8/31) ovis-terminal-vt engine::images::tests::chunking_never_changes_which_images_are_retained_or_where
+        PASS [   0.022s] ( 9/31) ovis-terminal-server streams::graphics::replay::tests::an_interrupted_kitty_series_is_one_key_measured_against_the_cap_together
+        FAIL [   0.009s] (10/31) ovis-terminal-vt engine::images::tests::erasing_or_printing_over_the_anchor_cell_releases_it_and_neighbours_do_not
+  stdout ───
+
+    running 1 test
+    test engine::images::tests::erasing_or_printing_over_the_anchor_cell_releases_it_and_neighbours_do_not ... FAILED
+
+    failures:
+
+    failures:
+        engine::images::tests::erasing_or_printing_over_the_anchor_cell_releases_it_and_neighbours_do_not
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'engine::images::tests::erasing_or_printing_over_the_anchor_cell_releases_it_and_neighbours_do_not' (2661002) panicked at crates/ovis-terminal-vt/src/engine/images/tests.rs:143:9:
+    assertion `left == right` failed: [27, 91, 50, 74]
+      left: None
+     right: Some(ScrolledOut)
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.022s] (11/31) ovis-terminal-server streams::graphics::replay::tests::kitty_keys_are_read_up_to_256_bytes_for_the_continuation_flag
+        PASS [   0.022s] (12/31) ovis-terminal-server streams::graphics::replay::tests::an_osc_1337_that_is_not_an_inline_file_is_not_graphics
+        PASS [   0.010s] (13/31) ovis-terminal-vt engine::images::tests::leaving_the_alternate_screen_releases_its_images_and_keeps_the_primary_ones
+        PASS [   0.010s] (14/31) ovis-terminal-vt engine::images::tests::only_displayed_graphics_are_retained_never_their_lookalikes
+        PASS [   0.010s] (15/31) ovis-terminal-vt engine::images::tests::paint::a_put_follows_its_transmission_and_a_put_without_one_is_skipped
+        PASS [   0.009s] (16/31) ovis-terminal-vt engine::images::tests::paint::an_erased_image_is_not_spliced
+        PASS [   0.010s] (17/31) ovis-terminal-vt engine::images::tests::paint::a_shown_image_is_spliced_after_the_rows_and_the_replay_rebuilds_it_in_place
+        PASS [   0.009s] (18/31) ovis-terminal-vt engine::images::tests::ris_releases_every_image
+        PASS [   0.033s] (19/31) ovis-terminal-server::streams replay_a_kitty_delete_removes_only_the_named_image
+        FAIL [   0.033s] (20/31) ovis-terminal-server::streams replay_a_scrolled_off_image_is_not_replayed
+  stdout ───
+
+    running 1 test
+    <- {"jsonrpc":"2.0","id":"hello","result":{"boot_proof":null,"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":"10000","graphics_sequence_max_bytes":"8388608","graphics_terminal_store_max_bytes":"33554432","heartbeat_ms":"15000","history_lines":"100000","input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":"64","op_retention_ms":"86400000","output_ring_bytes":"67108864","queued_operations":"32","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["attach.open","attach.repaint","attach.credit","attach.close","attach.takeover"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793570499837","version":"0.1.0"}}
+
+    -> {"id":"open","jsonrpc":"2.0","method":"attach.open","params":{"client_id":"replay-2","geometry":null,"op_id":"replay-2","role":"observe","stream_mode":"plain","takeover":null,"target":{"terminal_id":"terminal:7"}}}
+    <- {"jsonrpc":"2.0","id":"open","result":{"channel":null,"credit_initial":"262144","displaced":null,"final_output_offset":null,"first_paint":{"cursor":{"col":0,"row":7,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"6","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"202","revision":"76","stream_offset":"0"},"holder":null,"lease":{"epoch":"1","holder":"replay-2","lease_id":"lease:1","role":"observe"},"outcome":"ready","reason":null,"retry":null,"stream_id":"stream:01a19921-ecfd-7610-9629-8d694c52de7d","terminal":{"process_incarnation":"1","terminal_id":"terminal:7","terminal_incarnation":"1"}}}
+
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":{"cursor":{"col":0,"row":7,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"6","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"202","revision":"76","stream_offset":"0"},"close":null,"kind":"checkpoint","skipped":null,"stream_id":"stream:01a19921-ecfd-7610-9629-8d694c52de7d","stream_offset":"0"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G2MbWzE7MUgbWzA7Mzk7NDltbGluZRtbMjsxSGxpbmUbWzM7MUhsaW5lG1s0OzFIbGluZRtbNTsxSGxpbmUbWzY7MUhsaW5lG1s3OzFIbGluZRtbODsxSBtbMTsxSBtbMDszOTs0OW0bNxtbPzI1aBtbPzFsG1s/MTAwMGwbWz8xMDAybBtbPzEwMDNsG1s/MTAwNGwbWz8xMDA1bBtbPzEwMDZsG1s/MTAwN2gbWz8xMDQyaBtbPzIwMDRsG1s/NmwbWz0wOzF1G1s+NDswbRtbPzkwMDFsGz4bWzIgcRtbODsxSBtbPzdoG1s0bBtbMjBsG1swOzM5OzQ5bQ==","offset":"0","stream_id":"stream:01a19921-ecfd-7610-9629-8d694c52de7d"}}
+
+    -> {"id":"credit-1","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"253","stream_id":"stream:01a19921-ecfd-7610-9629-8d694c52de7d"}}
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"IGFmdGVy","offset":"253","stream_id":"stream:01a19921-ecfd-7610-9629-8d694c52de7d"}}
+
+    -> {"id":"credit-2","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"259","stream_id":"stream:01a19921-ecfd-7610-9629-8d694c52de7d"}}
+    test replay_a_scrolled_off_image_is_not_replayed ... FAILED
+
+    failures:
+
+    failures:
+        replay_a_scrolled_off_image_is_not_replayed
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.02s
+
+  stderr ───
+    Error: "no graphics_replayed record"
+
+        PASS [   0.034s] (21/31) ovis-terminal-server::streams replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach
+        PASS [   0.012s] (22/31) ovis-terminal-vt engine::images::tests::paint::primary_images_are_spliced_into_the_primary_paint_while_the_alternate_is_active
+        FAIL [   0.012s] (23/31) ovis-terminal-vt engine::images::tests::the_anchor_follows_scrolling_and_leaves_with_the_visible_screen
+  stdout ───
+
+    running 1 test
+    test engine::images::tests::the_anchor_follows_scrolling_and_leaves_with_the_visible_screen ... FAILED
+
+    failures:
+
+    failures:
+        engine::images::tests::the_anchor_follows_scrolling_and_leaves_with_the_visible_screen
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'engine::images::tests::the_anchor_follows_scrolling_and_leaves_with_the_visible_screen' (2661140) panicked at crates/ovis-terminal-vt/src/engine/images/tests.rs:128:5:
+    assertion `left == right` failed
+      left: [6]
+     right: []
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.035s] (24/31) ovis-terminal-server::streams replay_a_cleared_screen_replays_no_image
+  stdout ───
+
+    running 1 test
+    <- {"jsonrpc":"2.0","id":"hello","result":{"boot_proof":null,"capabilities":{"framed":true,"stream_modes":[],"transports":["unix"]},"endpoint_kind":"unix","generation":"1","limits":{"connection_unwritten_bytes":"67108864","credit_initial_bytes":"262144","credit_max_bytes":"1048576","doc_max_bytes":"1048576","event_replay_bytes":"67108864","event_replay_events":"10000","graphics_sequence_max_bytes":"8388608","graphics_terminal_store_max_bytes":"33554432","heartbeat_ms":"15000","history_lines":"100000","input_queue_bytes":"16777216","max_frame_bytes":"16777216","max_in_flight_requests":"64","op_retention_ms":"86400000","output_ring_bytes":"67108864","queued_operations":"32","rpc_default_deadline_ms":"10000","session_backlog_bytes":"67108864","session_event_queue_bytes":"67108864","session_input_bytes":"67108864","session_retained_bytes":"4294967296","session_rss_bytes":"1073741824","session_vt_bytes":"134217728","stream_backlog_bytes":"4194304","stream_chunk_bytes":"16384"},"machine_id":"machine:0191f1a2-0000-7000-8000-000000000014","methods":["attach.open","attach.repaint","attach.credit","attach.close","attach.takeover"],"runtime_lifetime":"runtime:7","server_boot_id":"boot:1","server_time_ms":"1793570499839","version":"0.1.0"}}
+
+    -> {"id":"open","jsonrpc":"2.0","method":"attach.open","params":{"client_id":"replay-3","geometry":null,"op_id":"replay-3","role":"observe","stream_mode":"plain","takeover":null,"target":{"terminal_id":"terminal:7"}}}
+    <- {"jsonrpc":"2.0","id":"open","result":{"channel":null,"credit_initial":"262144","displaced":null,"final_output_offset":null,"first_paint":{"cursor":{"col":0,"row":1,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"1","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"173","revision":"7","stream_offset":"0"},"holder":null,"lease":{"epoch":"1","holder":"replay-3","lease_id":"lease:1","role":"observe"},"outcome":"ready","reason":null,"retry":null,"stream_id":"stream:01a19921-ed00-7459-a7c0-fd650f60a937","terminal":{"process_incarnation":"1","terminal_id":"terminal:7","terminal_incarnation":"1"}}}
+
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":{"cursor":{"col":0,"row":1,"visible":true},"geometry":{"cols":40,"rows":8},"history_lines":"1","modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"173","revision":"7","stream_offset":"0"},"close":null,"kind":"checkpoint","skipped":null,"stream_id":"stream:01a19921-ed00-7459-a7c0-fd650f60a937","stream_offset":"0"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"G2MbWzE7MUgbWzI7MUgbWzM7MUgbWzQ7MUgbWzU7MUgbWzY7MUgbWzc7MUgbWzg7MUgbWzE7MUgbWzA7Mzk7NDltGzcbWz8yNWgbWz8xbBtbPzEwMDBsG1s/MTAwMmwbWz8xMDAzbBtbPzEwMDRsG1s/MTAwNWwbWz8xMDA2bBtbPzEwMDdoG1s/MTA0MmgbWz8yMDA0bBtbPzZsG1s9MDsxdRtbPjQ7MG0bWz85MDAxbBs+G1syIHEbWzI7MUgbWz83aBtbNGwbWzIwbBtbMDszOTs0OW0=","offset":"0","stream_id":"stream:01a19921-ed00-7459-a7c0-fd650f60a937"}}
+
+    -> {"id":"credit-1","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"215","stream_id":"stream:01a19921-ed00-7459-a7c0-fd650f60a937"}}
+    <- {"jsonrpc":"2.0","method":"attach.control","params":{"checkpoint":null,"close":null,"graphics_replayed":{"released":[{"output_offset":"130","reason":"erased"}],"replayed":[]},"kind":"graphics_replayed","skipped":null,"stream_id":"stream:01a19921-ed00-7459-a7c0-fd650f60a937","stream_offset":"215"}}
+
+    <- {"jsonrpc":"2.0","method":"attach.data","params":{"data_b64":"IGFmdGVy","offset":"215","stream_id":"stream:01a19921-ed00-7459-a7c0-fd650f60a937"}}
+
+    -> {"id":"credit-2","jsonrpc":"2.0","method":"attach.credit","params":{"acknowledged":"221","stream_id":"stream:01a19921-ed00-7459-a7c0-fd650f60a937"}}
+    test replay_a_cleared_screen_replays_no_image ... FAILED
+
+    failures:
+
+    failures:
+        replay_a_cleared_screen_replays_no_image
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.02s
+
+  stderr ───
+
+    thread 'replay_a_cleared_screen_replays_no_image' (2661007) panicked at crates/ovis-terminal-server/tests/../src/streams/graphics/replay/qa.rs:160:5:
+    assertion `left == right` failed
+      left: ["erased"]
+     right: ["scrolled_out", "erased"]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.010s] (25/31) ovis-terminal-vt engine::images::tests::the_mark_is_a_flag_bit_alacritty_never_defines
+        PASS [   0.009s] (26/31) ovis-terminal-vt::properties control_inside_an_open_sequence_is_reported_not_replayed
+        PASS [   0.038s] (27/31) ovis-terminal-server::streams replay_a_full_store_evicts_the_oldest_with_typed_counts
+        PASS [   0.009s] (28/31) ovis-terminal-vt::queries replayed_queries_are_not_answered_twice
+        PASS [   0.034s] (29/31) ovis-terminal-vt engine::images::tests::the_engine_retains_at_most_its_image_limit
+        PASS [   0.139s] (30/31) ovis-terminal-server::dispatch conversation_records::a_replayed_append_commits_once_and_publishes_its_receipt_as_the_event
+        PASS [   0.214s] (31/31) ovis-terminal-server::dispatch session_binding::a_replaced_programs_token_is_refused_and_a_replayed_branch_applies_once
+────────────
+     Summary [   0.215s] 31 tests run: 27 passed, 4 failed, 288 skipped
+        FAIL [   0.009s] (10/31) ovis-terminal-vt engine::images::tests::erasing_or_printing_over_the_anchor_cell_releases_it_and_neighbours_do_not
+        FAIL [   0.033s] (20/31) ovis-terminal-server::streams replay_a_scrolled_off_image_is_not_replayed
+        FAIL [   0.012s] (23/31) ovis-terminal-vt engine::images::tests::the_anchor_follows_scrolling_and_leaves_with_the_visible_screen
+        FAIL [   0.035s] (24/31) ovis-terminal-server::streams replay_a_cleared_screen_replays_no_image
+error: test run failed
+
+# mutant mutant-scrolled-out-never-released: crates/ovis-terminal-vt/src/engine/images.rs
+# - Presence::ScrolledOut => gone.push((entry.key, ImageRelease::ScrolledOut)),
+# + Presence::ScrolledOut => {}

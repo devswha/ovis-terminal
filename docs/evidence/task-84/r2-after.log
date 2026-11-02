@@ -1,0 +1,43 @@
+   Compiling ovis-terminal-core v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-core)
+   Compiling ovis-terminal-agent v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-agent)
+   Compiling ovis-terminal-remote v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-remote)
+   Compiling ovis-terminal-services v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-services)
+   Compiling ovis-terminal-agent-adapters v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-agent-adapters)
+   Compiling ovis-terminal-server v0.1.0 (/home/devswha/workspace/ovis-terminal-wt/lane-t84/crates/ovis-terminal-server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 21.71s
+────────────
+ Nextest run ID fd9d4d67-ce9d-4ba2-827e-bebff3a612c3 with nextest profile: default
+    Starting 31 tests across 25 binaries (587 tests skipped)
+        PASS [   0.039s] ( 1/31) ovis-terminal-core terminals::images::tests::a_unit_larger_than_the_cap_is_never_retained
+        PASS [   0.039s] ( 2/31) ovis-terminal-core terminals::images::tests::at_the_cap_the_oldest_is_evicted_first_with_typed_counts
+        PASS [   0.041s] ( 3/31) ovis-terminal-core terminals::images::tests::later_runs_of_a_series_join_their_first_run
+        PASS [   0.041s] ( 4/31) ovis-terminal-core terminals::images::tests::the_released_list_is_bounded
+        PASS [   0.044s] ( 5/31) ovis-terminal-core terminals::images::tests::an_image_released_before_its_bytes_arrive_is_still_reported_once
+        PASS [   0.046s] ( 6/31) ovis-terminal-core terminals::images::tests::a_series_growing_past_the_cap_is_evicted_whole
+        PASS [   0.051s] ( 7/31) ovis-terminal-core terminals::images::tests::a_sync_forgets_what_the_engine_released_with_its_reason
+        PASS [   0.054s] ( 8/31) ovis-terminal-core terminals::images::tests::only_images_the_engine_retains_are_admitted
+        PASS [   0.065s] ( 9/31) ovis-terminal-core::events durable::expired_cursor_gets_fresh_state_instead_of_a_truncated_replay
+        PASS [   0.070s] (10/31) ovis-terminal-core::commit remote::replayed_or_reordered_upstream_positions_are_refused
+        PASS [   0.072s] (11/31) ovis-terminal-core::events durable::disconnect_replays_commits_across_core_restart_without_renumbering_origin
+        PASS [   0.073s] (12/31) ovis-terminal-core recovery::qa::exact::live_output_after_a_replay_is_admitted_once_under_any_overlap
+        PASS [   0.035s] (13/31) ovis-terminal-server streams::graphics::replay::tests::a_paint_shares_the_store_bytes_where_its_images_go
+        PASS [   0.033s] (14/31) ovis-terminal-server streams::graphics::replay::tests::an_osc_1337_that_is_not_an_inline_file_is_not_graphics
+        PASS [   0.052s] (15/31) ovis-terminal-server streams::graphics::replay::tests::an_interrupted_kitty_series_is_one_key_measured_against_the_cap_together
+        PASS [   0.046s] (16/31) ovis-terminal-server streams::graphics::replay::tests::kitty_keys_are_read_up_to_256_bytes_for_the_continuation_flag
+        PASS [   0.049s] (17/31) ovis-terminal-server streams::graphics::replay::tests::sixel_parameters_are_read_up_to_63_bytes
+        PASS [   0.106s] (18/31) ovis-terminal-core docs::qa::cas::a_conflicting_write_leaves_version_one_and_a_retry_replays_the_same_failure
+        PASS [   0.051s] (19/31) ovis-terminal-server::streams replay_a_cleared_screen_replays_no_image
+        PASS [   0.048s] (20/31) ovis-terminal-server::streams replay_a_kitty_delete_removes_only_the_named_image
+        PASS [   0.053s] (21/31) ovis-terminal-server::streams replay_a_full_store_evicts_the_oldest_with_typed_counts
+        PASS [   0.048s] (22/31) ovis-terminal-server::streams replay_a_scrolled_off_image_is_not_replayed
+        PASS [   0.139s] (23/31) ovis-terminal-core::subscriptions loss::a_forced_close_marker_names_the_first_undelivered_event_and_reconnect_replays_it
+        PASS [   0.048s] (24/31) ovis-terminal-server::streams replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach
+        PASS [   0.119s] (25/31) ovis-terminal-core::subscriptions replay::a_cursor_ahead_of_the_head_installs_nothing
+        PASS [   0.160s] (26/31) ovis-terminal-core::layout replay_converges_and_reuse_is_refused
+        PASS [   0.131s] (27/31) ovis-terminal-core::subscriptions replay::an_expired_cursor_misses_with_a_fresh_snapshot_and_the_floor_still_resumes
+        PASS [   0.171s] (28/31) ovis-terminal-core::subscriptions replay::a_snapshot_racing_commits_is_followed_by_exactly_the_later_commits
+        PASS [   0.176s] (29/31) ovis-terminal-server::dispatch conversation_records::a_replayed_append_commits_once_and_publishes_its_receipt_as_the_event
+        PASS [   0.302s] (30/31) ovis-terminal-core::ops atomic::crash_after_unit_commit_replays_all_parts_before_any_publication
+        PASS [   0.245s] (31/31) ovis-terminal-server::dispatch session_binding::a_replaced_programs_token_is_refused_and_a_replayed_branch_applies_once
+────────────
+     Summary [   0.318s] 31 tests run: 31 passed, 587 skipped

@@ -40,6 +40,12 @@ pub(crate) struct GraphicsTranscript {
     /// Checks on the params of the first `graphics_dropped` record.
     #[serde(default)]
     pub(crate) dropped: Expect,
+    /// Names from `contains_b64` that must appear in this order (plan todo 84).
+    #[serde(default)]
+    pub(crate) in_order: Vec<String>,
+    /// Checks on the params of the first `graphics_replayed` record.
+    #[serde(default)]
+    pub(crate) replayed: Expect,
 }
 
 /// What one stream delivered.
@@ -91,12 +97,44 @@ impl Transcript {
         }
     }
 
+    fn first(&self, kind: &str) -> Value {
+        self.controls
+            .iter()
+            .find(|control| control.get("kind") == Some(&json!(kind)))
+            .cloned()
+            .unwrap_or(Value::Null)
+    }
+
     fn kinds(&self) -> Value {
         self.controls
             .iter()
             .map(|control| control.get("kind").cloned().unwrap_or(Value::Null))
             .collect()
     }
+}
+
+/// Where each `in_order` sequence was found; the list must be strictly increasing.
+fn order(step: &GraphicsTranscript, transcript: &Transcript) -> Result<Assertion, RunnerError> {
+    let mut found = Vec::new();
+    for name in &step.in_order {
+        let text = step
+            .contains_b64
+            .get(name)
+            .ok_or(RunnerError::ScenarioInconsistent {
+                scenario: name.clone(),
+                detail: "an in_order name is not in contains_b64",
+            })?;
+        found.push(find(&transcript.bytes, &decoded(name, text)?));
+    }
+    let ordered = found.windows(2).all(|pair| match pair {
+        [Some(before), Some(after)] => before < after,
+        _ => false,
+    }) && found.iter().all(Option::is_some);
+    Ok(Assertion::equal(
+        "graphics/in_order".to_owned(),
+        json!(true),
+        json!(ordered),
+    ))
 }
 
 impl Session<'_> {
@@ -145,19 +183,20 @@ impl Session<'_> {
                 json!(found),
             ));
         }
-        let dropped = transcript
-            .controls
-            .iter()
-            .find(|control| control.get("kind") == Some(&json!("graphics_dropped")))
-            .cloned()
-            .unwrap_or(Value::Null);
-        checked.extend(step.dropped.check(
-            Subject {
-                scope: "graphics/dropped",
-                value: &dropped,
-            },
-            self.ctx.repo.root(),
-        ));
+        checked.push(order(step, &transcript)?);
+        for (kind, scope, expect) in [
+            ("graphics_dropped", "graphics/dropped", &step.dropped),
+            ("graphics_replayed", "graphics/replayed", &step.replayed),
+        ] {
+            let record = transcript.first(kind);
+            checked.extend(expect.check(
+                Subject {
+                    scope,
+                    value: &record,
+                },
+                self.ctx.repo.root(),
+            ));
+        }
         self.assert(checked)
     }
 
