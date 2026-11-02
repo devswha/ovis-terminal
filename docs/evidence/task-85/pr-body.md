@@ -61,7 +61,7 @@ Mutants were each applied alone, run, then restored; the logs are committed. All
 
 Adversarial classes and the test guarding each are listed in `adversarial.log` (executor-run).
 
-macOS stress: lane `graphics-read` (`probes/platform-qa/stress/graphics-read.{json,sh}`). It runs 25 iterations of the placeholder tests plus `graphics/read --case all`. Run URL: STRESS_URL
+macOS stress: lane `graphics-read` (`probes/platform-qa/stress/graphics-read.{json,sh}`). It runs 25 iterations of the placeholder tests plus `graphics/read --case all`. Run on `37c854f` (pre-merge code head): https://github.com/devswha/ovis-terminal/actions/runs/41374308872. The merge touched `crates/` (T66 CLI), so it was dispatched once more on the final head: STRESS2_URL
 
 ### GAP-152 (cursor model): recorded as still open
 
@@ -100,6 +100,21 @@ Files outside the write scope, and why:
 - The screen snapshot and the image store are read under separate locks. A release landing between the two drops that placeholder, which is conservative: a placeholder is never reported without its store entry, but a just-released image can be missing from a read whose lines are one feed older.
 - `rows`/`cols` are the declared footprint clipped to the grid (one cell when undeclared), not decoded pixel geometry.
 - After this lands, other open lanes whose committed evidence pins `schema/ovis-terminal.openrpc.json` via `$equals_file` will need re-recording on the merged ref (schema-landing lesson).
+
+## Round 2: merged origin/integration 1c1527d (T66) at the orchestrator's request
+
+The PR conflicted only in `conformance/fixtures/ovis/manifest.json`, which holds generated fixture pins. I took integration's side and regenerated. The schema did not change in the merge (`openrpc write` reproduced 656804 bytes; `bun run generate` changed 0 files). The steps were `openrpc write` + `compat` (exit 0), `quality-matrix --mode contract` (verdict pass), `bun run generate`, then `ovis-replay refresh` (`{"refreshed":12}`). The merge commit is `0f663a5`.
+
+On the merged tree, check.sh attempt 1 failed in `quality_evidence` (`check-merged-attempt1-t66-evidence-stale.log`). The evidence-audit reported `assertion-forged` at `docs/evidence/task-66/task-66-all.json#0` and `task-66-ovis-terminal-v1.json#0`. T66's committed `cli/manual` happy step pins `{"$equals_file":"schema/ovis-terminal.openrpc.json"}`, and this PR's additive schema change makes that pin stale on the merged tree. This is the schema-landing case. I re-recorded those two files on the merged binary with T66's own invocations (all; happy, then failure `--inject 'ovis-terminal agent get --unknown-flag --json' --append`). All three runs exited 0 (`t66-rerecord-*.log`), and evidence-audit then reported `finding_count 0` (`evidence-audit.log`).
+
+| Command (merged tree) | Exit | Result |
+|---|---|---|
+| `conformance … --scenario graphics/read --case happy` / `failure --inject '{"read":{"include_images":"yes"}}'` / `all` | 0 / 0 / 0 | re-recorded `qa-happy.json`, `qa-failure.json`, `conformance.json` (all: 2 cases, 64 assertions) |
+| `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` | 0 | 1591 tests run, 1591 passed, 2 skipped; hygiene 0 violations in 1564 files; json.sh 300 files (`check.log`); the pre-merge pass is kept as `check-pre-merge.log` |
+| Windows `cargo check` / `cargo clippy` (`x86_64-pc-windows-gnu`, `-D warnings`) | 0 / 0 | `windows-check.log` |
+| client-ts gate | 0 | 51 pass, 0 fail (`sdk.log`) |
+
+Added seam: `docs/evidence/task-66/task-66-all.json` and `task-66-ovis-terminal-v1.json` were re-recorded, not edited by hand, because their schema pin follows this PR's schema.
 
 DEFERRED VERIFICATION: none. The runner executes `graphics/read` today (happy, failure and all exit 0, as above).
 
