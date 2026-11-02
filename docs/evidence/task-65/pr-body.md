@@ -75,7 +75,7 @@ Adversarial (each through the real runner with `--guide <mutated copy>`; exit 1 
 
 Mutants (each fails a shipped test; summary `docs/evidence/task-65/mutants.log`, logs `mutant-*.log`): M1 coverage `missing` filter inverted (2 failed), M2 resend detection requires equal op ids (1 failed), M3 content never tainted (1 failed), M4 injection keeps the original tail (1 failed), M5 served check compares against the schema instead of `hello` (1 failed), M6 one guide expectation changed, replayed through the packed client (bun test 1 fail).
 
-Gates on the round commit:
+Gates on the round-2 commit (51eb28c; check.sh does not run bun, so the client-ts gate above was run separately):
 - `bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh` (foreground gate, memory-scoped) -> `check.sh: all steps passed`, exit 0; nextest `1587 tests run: 1587 passed (3 slow), 2 skipped`; `workspace-hygiene: 0 violation(s)`; source-check and evidence-audit passed (`docs/evidence/task-65/check.log`).
 - `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` -> exit 0; `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` -> exit 0 (`docs/evidence/task-65/windows.log`).
 
