@@ -32,7 +32,7 @@ mod deadline;
 mod lanes;
 
 /// Methods served by the runtime actor and the lease table, besides the attach streams.
-pub(super) const ROUTED: [&str; 32] = [
+pub(super) const ROUTED: [&str; 33] = [
     "terminal.run",
     "terminal.list",
     "terminal.get",
@@ -44,6 +44,7 @@ pub(super) const ROUTED: [&str; 32] = [
     "terminal.recover",
     "terminal.process_info",
     "terminal.screen",
+    "terminal.search",
     "terminal.output",
     "terminal.wait_output",
     "op.get",
@@ -142,7 +143,9 @@ impl Served {
             | "terminal.label"
             | "terminal.recover"
             | "terminal.process_info" => self.mutate(call).await,
-            "terminal.screen" | "terminal.output" | "terminal.wait_output" => self.read(call).await,
+            "terminal.screen" | "terminal.search" | "terminal.output" | "terminal.wait_output" => {
+                self.read(call).await
+            }
             "op.get" => {
                 // The lifecycle ledger first; an operation it does not know is one the
                 // dispatcher ran (such as server.restart), answered from its own ledger.
