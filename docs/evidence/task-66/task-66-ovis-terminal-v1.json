@@ -1,9 +1,9 @@
 [
   {
     "binary": {
-      "bytes": "147385128",
-      "path": "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
-      "sha256": "0e67c343c2ec74cfdda9a01ccda1582572b245dc232b0c25c97e18c18ad145c7"
+      "bytes": "151454736",
+      "path": "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
+      "sha256": "5fb30b8a9afb676dc198f5f8f5babf6920890ed6a1577d1609bc85c418f2f446"
     },
     "case": "happy",
     "cases": [
@@ -1650,6 +1650,15 @@
                         "$ref": "#/components/schemas/Count",
                         "description": "Primary-screen history lines readable behind the paint: the history cursor."
                       },
+                      "inexact": {
+                        "default": [],
+                        "description": "Why the checkpoint plus the bytes after it cannot reproduce an always-live terminal\n(`checkpoint_inexact`); empty when it is exact. Absent from servers that predate it.",
+                        "items": {
+                          "$ref": "#/components/schemas/CheckpointInexact",
+                          "x-ovis-open-enum": true
+                        },
+                        "type": "array"
+                      },
                       "modes": {
                         "$ref": "#/components/schemas/Modes",
                         "description": "Terminal modes."
@@ -1677,6 +1686,31 @@
                       "history_lines"
                     ],
                     "type": "object"
+                  },
+                  "CheckpointInexact": {
+                    "description": "Why a checkpoint is inexact.",
+                    "oneOf": [
+                      {
+                        "const": "control_inside_open_sequence",
+                        "description": "The output stopped inside a sequence after a control byte in it already acted, so\nreplaying the open sequence would repeat that action.",
+                        "type": "string"
+                      },
+                      {
+                        "const": "open_sequence_too_long",
+                        "description": "A string longer than the parser bound was being discarded at the checkpoint.",
+                        "type": "string"
+                      },
+                      {
+                        "const": "primary_saved_cursor_unrepresentable",
+                        "description": "The primary screen's saved cursor cannot be rebuilt while the alternate screen is up.",
+                        "type": "string"
+                      },
+                      {
+                        "const": "saved_cursor_not_paintable",
+                        "description": "The paint spent the saved cursor to place a cursor outside the scroll region.",
+                        "type": "string"
+                      }
+                    ]
                   },
                   "ChildPolicy": {
                     "additionalProperties": false,
@@ -3919,6 +3953,21 @@
                     "$ref": "#/components/schemas/DecimalCounter",
                     "description": "Holder GrantEpoch as a canonical decimal string."
                   },
+                  "GraphicsBuffer": {
+                    "description": "Screen a stored image is placed on.",
+                    "oneOf": [
+                      {
+                        "const": "primary",
+                        "description": "The primary screen.",
+                        "type": "string"
+                      },
+                      {
+                        "const": "alternate",
+                        "description": "The alternate screen.",
+                        "type": "string"
+                      }
+                    ]
+                  },
                   "GraphicsDropReason": {
                     "description": "Why a whole graphics sequence was dropped.",
                     "oneOf": [
@@ -4007,6 +4056,150 @@
                       "evicted_bytes",
                       "retained_bytes",
                       "limit_bytes"
+                    ],
+                    "type": "object"
+                  },
+                  "GraphicsImageId": {
+                    "$ref": "#/components/schemas/ByteOffset",
+                    "description": "Identity of one stored graphics sequence.\n\nIt is the raw output offset where the sequence (or its first Kitty chunk) began: the key of the sequence's entry in the terminal's image store\nand the offset `graphics_replayed` names, so a read and a reattach agree on it."
+                  },
+                  "GraphicsIndexEntry": {
+                    "additionalProperties": false,
+                    "description": "One entry of a read's placement index: an image the store holds, wherever it is placed.",
+                    "properties": {
+                      "bytes": {
+                        "$ref": "#/components/schemas/ByteCount",
+                        "description": "Raw bytes the image store holds for it."
+                      },
+                      "format": {
+                        "$ref": "#/components/schemas/GraphicsProtocol",
+                        "description": "Protocol of its sequence.",
+                        "x-ovis-open-enum": true
+                      },
+                      "image_id": {
+                        "$ref": "#/components/schemas/GraphicsImageId",
+                        "description": "The image store entry."
+                      },
+                      "placement": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/GraphicsIndexPlacement"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Where it is placed; null for a Kitty transmission that displays nothing itself."
+                      }
+                    },
+                    "required": [
+                      "image_id",
+                      "format",
+                      "bytes"
+                    ],
+                    "type": "object"
+                  },
+                  "GraphicsIndexPlacement": {
+                    "additionalProperties": false,
+                    "description": "Where an indexed image was placed, by the extent its header declares.",
+                    "properties": {
+                      "buffer": {
+                        "$ref": "#/components/schemas/GraphicsBuffer",
+                        "description": "Screen it is placed on; it is shown only while that screen is active.",
+                        "x-ovis-open-enum": true
+                      },
+                      "col": {
+                        "description": "Zero-based column of its first covered cell.",
+                        "format": "uint16",
+                        "maximum": 65535,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "cols": {
+                        "description": "Columns its header declares; one when it declares none.",
+                        "format": "uint16",
+                        "maximum": 65535,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "row": {
+                        "description": "Zero-based row of its first covered row still visible.",
+                        "format": "uint16",
+                        "maximum": 65535,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "rows": {
+                        "description": "Rows its header declares; one when it declares none.",
+                        "format": "uint16",
+                        "maximum": 65535,
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "buffer",
+                      "row",
+                      "col",
+                      "rows",
+                      "cols"
+                    ],
+                    "type": "object"
+                  },
+                  "GraphicsPlaceholder": {
+                    "additionalProperties": false,
+                    "description": "One stored image shown on a read screen, in place of the cells it covers.\n\nPlan todo 85. It never carries the payload: the bytes stay in the image\nstore, and `bytes` is the size of the store entry.",
+                    "properties": {
+                      "bytes": {
+                        "$ref": "#/components/schemas/ByteCount",
+                        "description": "Raw bytes the image store holds for the sequence."
+                      },
+                      "col": {
+                        "description": "Zero-based screen column of the first covered cell.",
+                        "format": "uint16",
+                        "maximum": 65535,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "cols": {
+                        "description": "Covered columns, from `col` right, clipped to the grid.",
+                        "format": "uint16",
+                        "maximum": 65535,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "format": {
+                        "$ref": "#/components/schemas/GraphicsProtocol",
+                        "description": "Protocol of that sequence.",
+                        "x-ovis-open-enum": true
+                      },
+                      "image_id": {
+                        "$ref": "#/components/schemas/GraphicsImageId",
+                        "description": "The image store entry of the sequence that displays it."
+                      },
+                      "row": {
+                        "description": "Zero-based screen row of the first covered cell still visible.",
+                        "format": "uint16",
+                        "maximum": 65535,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "rows": {
+                        "description": "Covered rows still visible, from `row` down.",
+                        "format": "uint16",
+                        "maximum": 65535,
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "image_id",
+                      "format",
+                      "row",
+                      "col",
+                      "rows",
+                      "cols",
+                      "bytes"
                     ],
                     "type": "object"
                   },
@@ -11340,6 +11533,11 @@
                         "$ref": "#/components/schemas/TextFormat",
                         "description": "Text shape."
                       },
+                      "include_images": {
+                        "default": false,
+                        "description": "Also return `image_index`, the fuller placement index: every stored image with\nits placement on either screen, never its payload. Absent means false; a present\nvalue must be a JSON boolean.",
+                        "type": "boolean"
+                      },
                       "target": {
                         "$ref": "#/components/schemas/Target",
                         "description": "Terminal to read."
@@ -11357,6 +11555,26 @@
                       "cursor": {
                         "$ref": "#/components/schemas/ScreenCursor",
                         "description": "Cursor state."
+                      },
+                      "image_index": {
+                        "description": "Every stored image in receipt order with its placement; present only when\n`include_images` was requested.",
+                        "items": {
+                          "$ref": "#/components/schemas/GraphicsIndexEntry"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "images": {
+                        "description": "One placeholder per stored image shown on the screen, top row first, carried by\nevery read (empty when none); the cells each covers read as blank text in `lines`.",
+                        "items": {
+                          "$ref": "#/components/schemas/GraphicsPlaceholder"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
                       },
                       "lines": {
                         "description": "Visible lines.",
@@ -14707,6 +14925,15 @@
                       "schema": {
                         "$ref": "#/components/schemas/TextFormat",
                         "description": "Text shape."
+                      }
+                    },
+                    {
+                      "name": "include_images",
+                      "required": false,
+                      "schema": {
+                        "default": false,
+                        "description": "Also return `image_index`, the fuller placement index: every stored image with\nits placement on either screen, never its payload. Absent means false; a present\nvalue must be a JSON boolean.",
+                        "type": "boolean"
                       }
                     },
                     {
@@ -24603,6 +24830,7 @@
               "terminal.rename",
               "terminal.process_info",
               "terminal.screen",
+              "terminal.search",
               "terminal.output",
               "terminal.wait_output",
               "input.send",
@@ -24767,7 +24995,7 @@
             "passed": true
           },
           {
-            "actual": "5fa221a1a5b94cc985de216c5f72a267",
+            "actual": "87e4c6a5b51c4c33b3f2fba193ca6597",
             "check": "reply[screen1]/result/lines/0",
             "expected": {
               "$capture": "token1"
@@ -24781,7 +25009,7 @@
             "passed": true
           },
           {
-            "actual": "6096e138686f4f359fc984821ba8bfe1",
+            "actual": "af30a85be56a4577a72b8e0d21dddd76",
             "check": "reply[screen2]/result/lines/0",
             "expected": {
               "$capture": "token2"
@@ -25048,8 +25276,8 @@
         "case": "happy",
         "connections": [
           {
-            "bytes_decoded": "7721",
-            "bytes_received": "7721",
+            "bytes_decoded": "7763",
+            "bytes_received": "7763",
             "bytes_sent": "2801",
             "name": "control",
             "records_received": "12",
@@ -25059,17 +25287,17 @@
                 "bytes": "234",
                 "direction": "sent",
                 "offset": "0",
-                "sha256": "a55893c40fab32ebe0d76e1b6e4bf96ff9c8a732138666306cde12d739e7afd3",
+                "sha256": "af862cabb7d413c5ed734612988bd69444ce92af93cba931372dec0a5762edc9",
                 "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
                 "unit": "write"
               },
               {
                 "at_ms": "0",
-                "bytes": "2604",
+                "bytes": "2622",
                 "direction": "received",
                 "offset": "0",
-                "sha256": "808a704b553e03367be91f8da799c0f98e4e1a3b4dc2a9211ea073edcd958a32",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a199cb-4d65-74d9-89f7-e05bfaefb557\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793581600252\",\"version\":\"0.1.0\"}}",
+                "sha256": "3029899096af9250d6c45afd68f8249e63bc6ad4be134229903c92fb99916864",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a19a34-e575-7629-bc74-004b2f1b6d9b\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.search\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793588520483\",\"version\":\"0.1.0\"}}",
                 "unit": "line"
               },
               {
@@ -25077,30 +25305,30 @@
                 "bytes": "843",
                 "direction": "sent",
                 "offset": "234",
-                "sha256": "66f0e519ab71aee9847dc0b4683aaed2fec418bf44b3e7b650496871fb9b5da9",
-                "text": "{\"id\":\"run1\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"producer\",\"op_id\":\"01a199cb-4dfd-723e-b8fc-ce396b65d7d9\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"]}}}\n{\"id\":\"run2\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"foreign\",\"op_id\":\"01a199cb-4dfd-723e-b8fc-ce3a0272832f\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"]}}}\n",
+                "sha256": "e19063471fdfcbce65cbb6809c5ee496ce0d16be258f7b9bb90efd755ac0671f",
+                "text": "{\"id\":\"run1\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"producer\",\"op_id\":\"01a19a34-e624-756b-aa68-6069e6ca5be4\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"]}}}\n{\"id\":\"run2\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"foreign\",\"op_id\":\"01a19a34-e624-756b-aa68-606a23be5d2a\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"]}}}\n",
                 "unit": "write"
               },
               {
-                "at_ms": "36",
+                "at_ms": "31",
                 "bytes": "948",
                 "direction": "received",
-                "offset": "2604",
-                "sha256": "8deffa459a28f0b1bcc9f4e45533a4d0f7b6b5b393a7ad368a5bc752959a179e",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run1\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a199cb-4d65-74d9-89f7-e05bfaefb557\",\"name\":\"producer\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2761267,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:8233613\",\"started_ms\":\"1793581600282\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
+                "offset": "2622",
+                "sha256": "3b53c1a7820dc7988df675bd17dafeeac450ec50745c5a71384d734194b98a48",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run1\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a19a34-e575-7629-bc74-004b2f1b6d9b\",\"name\":\"producer\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":1991103,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:8925636\",\"started_ms\":\"1793588520510\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
                 "unit": "line"
               },
               {
-                "at_ms": "79",
+                "at_ms": "74",
                 "bytes": "952",
                 "direction": "received",
-                "offset": "3552",
-                "sha256": "2abef3a37a953492a72b919383a2d61f93d539610b9b8948c8c5183a9f340313",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run2\",\"result\":{\"created_seq\":\"12\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t2\",\"agent\":null,\"created_seq\":\"12\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"15\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a199cb-4d65-74d9-89f7-e05bfaefb557\",\"name\":\"foreign\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2761289,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:8233617\",\"started_ms\":\"1793581600326\"},\"revision\":\"15\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:2\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"15\"}}}",
+                "offset": "3570",
+                "sha256": "229d9ee6f4126d86f955de6f268579c111fa1062f810a23a6bddb0a088ac4828",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run2\",\"result\":{\"created_seq\":\"12\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t2\",\"agent\":null,\"created_seq\":\"12\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"15\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a19a34-e575-7629-bc74-004b2f1b6d9b\",\"name\":\"foreign\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\",\"-c\",\"printf '%s\\\\nREADY\\\\n' \\\"$OVIS_TERMINAL_PROCESS_TOKEN\\\"; exec cat\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":1991113,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:8925639\",\"started_ms\":\"1793588520552\"},\"revision\":\"15\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:2\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"15\"}}}",
                 "unit": "line"
               },
               {
-                "at_ms": "79",
+                "at_ms": "74",
                 "bytes": "346",
                 "direction": "sent",
                 "offset": "1077",
@@ -25109,25 +25337,25 @@
                 "unit": "write"
               },
               {
-                "at_ms": "84",
+                "at_ms": "79",
                 "bytes": "287",
                 "direction": "received",
-                "offset": "4504",
+                "offset": "4522",
                 "sha256": "2ba253d0a6fb6a40fcc32c5bcddd5a81b56227e50034f9984f808302b597ed17",
                 "text": "{\"jsonrpc\":\"2.0\",\"id\":\"ready1\",\"result\":{\"cursor\":{\"offset\":\"39\"},\"matched_at\":\"34\",\"outcome\":\"matched\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
                 "unit": "line"
               },
               {
-                "at_ms": "84",
+                "at_ms": "80",
                 "bytes": "287",
                 "direction": "received",
-                "offset": "4791",
+                "offset": "4809",
                 "sha256": "70d4cf16d80ddd1ed0a9ec1dc35a7b011231bd73ee814670d1f185bdc89509d6",
                 "text": "{\"jsonrpc\":\"2.0\",\"id\":\"ready2\",\"result\":{\"cursor\":{\"offset\":\"39\"},\"matched_at\":\"34\",\"outcome\":\"matched\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"}}}",
                 "unit": "line"
               },
               {
-                "at_ms": "85",
+                "at_ms": "80",
                 "bytes": "226",
                 "direction": "sent",
                 "offset": "1423",
@@ -25136,79 +25364,79 @@
                 "unit": "write"
               },
               {
-                "at_ms": "85",
-                "bytes": "330",
+                "at_ms": "80",
+                "bytes": "342",
                 "direction": "received",
-                "offset": "5078",
-                "sha256": "e097feddd40eb8cfd67ca37cc6af0664bf5fa73e656923046d0f19c4439982be",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"screen1\",\"result\":{\"cursor\":{\"col\":0,\"row\":2,\"visible\":true},\"lines\":[\"5fa221a1a5b94cc985de216c5f72a267\",\"READY\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"],\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"41\",\"revision\":\"41\",\"title\":null,\"truncated\":false}}",
+                "offset": "5096",
+                "sha256": "bf14a858a955b95574a1b527b67a231592dd0e7b1e00c59ff8484cf145bc8758",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"screen1\",\"result\":{\"cursor\":{\"col\":0,\"row\":2,\"visible\":true},\"images\":[],\"lines\":[\"87e4c6a5b51c4c33b3f2fba193ca6597\",\"READY\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"],\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"41\",\"revision\":\"41\",\"title\":null,\"truncated\":false}}",
                 "unit": "line"
               },
               {
-                "at_ms": "86",
-                "bytes": "330",
+                "at_ms": "81",
+                "bytes": "342",
                 "direction": "received",
-                "offset": "5408",
-                "sha256": "df745ca07ea63bdf29aa65b061a6dbc1a75fd1b8aacb0fcd6a6653152ea5192d",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"screen2\",\"result\":{\"cursor\":{\"col\":0,\"row\":2,\"visible\":true},\"lines\":[\"6096e138686f4f359fc984821ba8bfe1\",\"READY\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"],\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"41\",\"revision\":\"41\",\"title\":null,\"truncated\":false}}",
+                "offset": "5438",
+                "sha256": "8fdf5060874970d50bee397c39fb7e8ee235cb97a658a528640d067bcf580804",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"screen2\",\"result\":{\"cursor\":{\"col\":0,\"row\":2,\"visible\":true},\"images\":[],\"lines\":[\"af30a85be56a4577a72b8e0d21dddd76\",\"READY\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"],\"modes\":{\"enabled\":[],\"kitty_keyboard\":0,\"revision\":\"0\"},\"output_offset\":\"41\",\"revision\":\"41\",\"title\":null,\"truncated\":false}}",
                 "unit": "line"
               },
               {
-                "at_ms": "86",
+                "at_ms": "81",
                 "bytes": "239",
                 "direction": "sent",
                 "offset": "1649",
-                "sha256": "84797eabacfe74d39357c73f26ab2258617199d03c18f18f1d4d20f8da552a8a",
-                "text": "{\"id\":\"register\",\"jsonrpc\":\"2.0\",\"method\":\"agent.register\",\"params\":{\"label\":\"synthetic-producer\",\"op_id\":\"01a199cb-4e52-74b3-a92d-d139735e9d07\",\"process_token\":\"5fa221a1a5b94cc985de216c5f72a267\",\"session\":null,\"target\":{\"address\":\"t1\"}}}\n",
+                "sha256": "10a3867a1bb17606577345d2f0c8206e4fc93eb56b4b030398679e72f40f6488",
+                "text": "{\"id\":\"register\",\"jsonrpc\":\"2.0\",\"method\":\"agent.register\",\"params\":{\"label\":\"synthetic-producer\",\"op_id\":\"01a19a34-e674-7392-be72-230ab89dd4cf\",\"process_token\":\"87e4c6a5b51c4c33b3f2fba193ca6597\",\"session\":null,\"target\":{\"address\":\"t1\"}}}\n",
                 "unit": "write"
               },
               {
-                "at_ms": "99",
+                "at_ms": "94",
                 "bytes": "229",
                 "direction": "received",
-                "offset": "5738",
-                "sha256": "887292273fd5676f384def5a7e67930a2831a678cd32247a5119bfb77bd7e904",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"register\",\"result\":{\"agent\":{\"agent_id\":\"agent:01a199cb-4e5e-7617-96e9-62e2c14bfdaf\",\"history_id\":null,\"label\":\"synthetic-producer\",\"process_incarnation\":\"1\",\"revision\":\"4\",\"session\":null},\"revision\":\"4\"}}",
+                "offset": "5780",
+                "sha256": "8137d2af0931f8f272738826411e609f3164492766f4a8bbb5bec3ef23028489",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"register\",\"result\":{\"agent\":{\"agent_id\":\"agent:01a19a34-e680-733a-b263-ff3b6685803f\",\"history_id\":null,\"label\":\"synthetic-producer\",\"process_incarnation\":\"1\",\"revision\":\"4\",\"session\":null},\"revision\":\"4\"}}",
                 "unit": "line"
               },
               {
-                "at_ms": "100",
+                "at_ms": "94",
                 "bytes": "247",
                 "direction": "sent",
                 "offset": "1888",
-                "sha256": "be55c1f8729d7f067e4d88280637eb82f13353819442fd74e89f277327688423",
-                "text": "{\"id\":\"report\",\"jsonrpc\":\"2.0\",\"method\":\"status.report\",\"params\":{\"op_id\":\"01a199cb-4e60-7789-bf04-264cbf84aa7c\",\"process_token\":\"5fa221a1a5b94cc985de216c5f72a267\",\"record\":{\"msg\":\"reading\",\"state\":\"working\"},\"seq\":\"1\",\"target\":{\"address\":\"t1\"}}}\n",
+                "sha256": "0bd10da1f04fe6872cde93205675ebb770d34e45a6abd59b8694456fcbb62934",
+                "text": "{\"id\":\"report\",\"jsonrpc\":\"2.0\",\"method\":\"status.report\",\"params\":{\"op_id\":\"01a19a34-e681-7654-a996-700c3192e3b1\",\"process_token\":\"87e4c6a5b51c4c33b3f2fba193ca6597\",\"record\":{\"msg\":\"reading\",\"state\":\"working\"},\"seq\":\"1\",\"target\":{\"address\":\"t1\"}}}\n",
                 "unit": "write"
               },
               {
-                "at_ms": "114",
+                "at_ms": "106",
                 "bytes": "550",
                 "direction": "received",
-                "offset": "5967",
-                "sha256": "490ee01c5d1344784d2e71a75f686e3b42fa0b8cba085fb307f2cce05d6dfd0c",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"report\",\"result\":{\"ingest\":{\"malformed\":\"0\",\"oversize\":\"0\",\"stale\":\"0\"},\"seq\":\"8\",\"status\":{\"agent_id\":\"agent:01a199cb-4e5e-7617-96e9-62e2c14bfdaf\",\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":\"1\",\"reported\":true,\"root\":{\"decode_errors\":[],\"origin\":\"rpc\",\"osc\":null,\"raw\":null,\"report\":{\"app\":null,\"id\":null,\"kind\":null,\"msg\":\"reading\",\"progress\":null,\"state\":\"working\",\"title\":null},\"report_seq\":\"1\",\"seq\":\"8\",\"since_ms\":\"1793581600357\",\"turn\":\"1\"},\"session\":null,\"turn\":\"1\"}}}",
+                "offset": "6009",
+                "sha256": "a420517e0beeb4c396ddc79113f14d177690e7a0e401f98d463748409ff66dc8",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"report\",\"result\":{\"ingest\":{\"malformed\":\"0\",\"oversize\":\"0\",\"stale\":\"0\"},\"seq\":\"8\",\"status\":{\"agent_id\":\"agent:01a19a34-e680-733a-b263-ff3b6685803f\",\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":\"1\",\"reported\":true,\"root\":{\"decode_errors\":[],\"origin\":\"rpc\",\"osc\":null,\"raw\":null,\"report\":{\"app\":null,\"id\":null,\"kind\":null,\"msg\":\"reading\",\"progress\":null,\"state\":\"working\",\"title\":null},\"report_seq\":\"1\",\"seq\":\"8\",\"since_ms\":\"1793588520581\",\"turn\":\"1\"},\"session\":null,\"turn\":\"1\"}}}",
                 "unit": "line"
               },
               {
-                "at_ms": "115",
+                "at_ms": "107",
                 "bytes": "229",
                 "direction": "sent",
                 "offset": "2135",
-                "sha256": "c14894a3b37322164ec019dad470cc37bc147cb7cfe3f79430fef84a5271aa58",
-                "text": "{\"id\":\"foreign\",\"jsonrpc\":\"2.0\",\"method\":\"status.report\",\"params\":{\"op_id\":\"01a199cb-4e6f-77d7-aa57-03d1fd5e3e63\",\"process_token\":\"6096e138686f4f359fc984821ba8bfe1\",\"record\":{\"state\":\"idle\"},\"seq\":\"2\",\"target\":{\"address\":\"t1\"}}}\n",
+                "sha256": "0fbcd31ae0e49bb13219d0e5acd0becf4ac185c7cb0037e6b199333fb42994b4",
+                "text": "{\"id\":\"foreign\",\"jsonrpc\":\"2.0\",\"method\":\"status.report\",\"params\":{\"op_id\":\"01a19a34-e68d-72b9-b20b-b2e4c3a69c50\",\"process_token\":\"af30a85be56a4577a72b8e0d21dddd76\",\"record\":{\"state\":\"idle\"},\"seq\":\"2\",\"target\":{\"address\":\"t1\"}}}\n",
                 "unit": "write"
               },
               {
-                "at_ms": "133",
+                "at_ms": "122",
                 "bytes": "251",
                 "direction": "received",
-                "offset": "6517",
-                "sha256": "f2f82809b1285c9d3a5a1291a19736608a0e7a42d24fc36905e17aad5410150b",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"foreign\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_owner\",\"hint\":\"report with the token handed to the terminal's current program\",\"retryable\":false,\"op_id\":\"01a199cb-4e6f-77d7-aa57-03d1fd5e3e63\"}}}",
+                "offset": "6559",
+                "sha256": "c3bf15a694217c676a887b7c69712a5de0f71e4ef92c405eacf3c4d3182d06be",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"foreign\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_owner\",\"hint\":\"report with the token handed to the terminal's current program\",\"retryable\":false,\"op_id\":\"01a19a34-e68d-72b9-b20b-b2e4c3a69c50\"}}}",
                 "unit": "line"
               },
               {
-                "at_ms": "133",
+                "at_ms": "122",
                 "bytes": "90",
                 "direction": "sent",
                 "offset": "2364",
@@ -25217,30 +25445,30 @@
                 "unit": "write"
               },
               {
-                "at_ms": "149",
+                "at_ms": "137",
                 "bytes": "549",
                 "direction": "received",
-                "offset": "6768",
-                "sha256": "0a0feb7900d12b75aaefacec073a7f21e22ffb21808f831fbb9d5f96edcf02b0",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"after\",\"result\":{\"ingest\":{\"malformed\":\"0\",\"oversize\":\"0\",\"stale\":\"0\"},\"seq\":\"8\",\"status\":{\"agent_id\":\"agent:01a199cb-4e5e-7617-96e9-62e2c14bfdaf\",\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":\"1\",\"reported\":true,\"root\":{\"decode_errors\":[],\"origin\":\"rpc\",\"osc\":null,\"raw\":null,\"report\":{\"app\":null,\"id\":null,\"kind\":null,\"msg\":\"reading\",\"progress\":null,\"state\":\"working\",\"title\":null},\"report_seq\":\"1\",\"seq\":\"8\",\"since_ms\":\"1793581600357\",\"turn\":\"1\"},\"session\":null,\"turn\":\"1\"}}}",
+                "offset": "6810",
+                "sha256": "f2efaeb6ec9215d3e9e49c792bd16d664477e6b212194317975be1ae0e8ca58f",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"after\",\"result\":{\"ingest\":{\"malformed\":\"0\",\"oversize\":\"0\",\"stale\":\"0\"},\"seq\":\"8\",\"status\":{\"agent_id\":\"agent:01a19a34-e680-733a-b263-ff3b6685803f\",\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":\"1\",\"records\":{},\"report_seq\":\"1\",\"reported\":true,\"root\":{\"decode_errors\":[],\"origin\":\"rpc\",\"osc\":null,\"raw\":null,\"report\":{\"app\":null,\"id\":null,\"kind\":null,\"msg\":\"reading\",\"progress\":null,\"state\":\"working\",\"title\":null},\"report_seq\":\"1\",\"seq\":\"8\",\"since_ms\":\"1793588520581\",\"turn\":\"1\"},\"session\":null,\"turn\":\"1\"}}}",
                 "unit": "line"
               },
               {
-                "at_ms": "149",
+                "at_ms": "137",
                 "bytes": "347",
                 "direction": "sent",
                 "offset": "2454",
-                "sha256": "1bdb026774a52e303c9906e0224d291768d93f4aba554dd83b61e0c0b7b124f2",
-                "text": "{\"id\":\"prompt\",\"jsonrpc\":\"2.0\",\"method\":\"prompt.open\",\"params\":{\"op_id\":\"01a199cb-4e91-76ae-8386-fccb5ca17f6a\",\"process_token\":\"5fa221a1a5b94cc985de216c5f72a267\",\"prompt\":{\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"}],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"text\":\"Apply?\\n$ touch pwned\\u001b]0;owned\\u0007\"},\"prompt_id\":\"inj\",\"target\":{\"address\":\"t1\"}}}\n",
+                "sha256": "f75f61cdebf3d2010ed6498e06b0091633007905e86936dad22fe63515a34daa",
+                "text": "{\"id\":\"prompt\",\"jsonrpc\":\"2.0\",\"method\":\"prompt.open\",\"params\":{\"op_id\":\"01a19a34-e6ac-729f-bad6-7f66cf50bc57\",\"process_token\":\"87e4c6a5b51c4c33b3f2fba193ca6597\",\"prompt\":{\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"}],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"text\":\"Apply?\\n$ touch pwned\\u001b]0;owned\\u0007\"},\"prompt_id\":\"inj\",\"target\":{\"address\":\"t1\"}}}\n",
                 "unit": "write"
               },
               {
-                "at_ms": "167",
+                "at_ms": "155",
                 "bytes": "404",
                 "direction": "received",
-                "offset": "7317",
-                "sha256": "348dbe99111594a05c48da4932636bb296308071ec15125b6144e4bc9af3caee",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"prompt\",\"result\":{\"agent_id\":\"agent:01a199cb-4e5e-7617-96e9-62e2c14bfdaf\",\"answer\":null,\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"}],\"closed_seq\":null,\"fields\":[],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"opened_seq\":\"18\",\"process_incarnation\":\"1\",\"prompt_id\":\"inj\",\"session\":null,\"state\":\"open\",\"terminal_id\":\"terminal:1\",\"text\":\"Apply?\\n$ touch pwned\\u001b]0;owned\\u0007\",\"version\":\"1\"}}",
+                "offset": "7359",
+                "sha256": "9476e1a4bfa01a128d536532f8cad81a37a31b3e711c14dba8f24339b43bd3b1",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"prompt\",\"result\":{\"agent_id\":\"agent:01a19a34-e680-733a-b263-ff3b6685803f\",\"answer\":null,\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"}],\"closed_seq\":null,\"fields\":[],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"opened_seq\":\"18\",\"process_incarnation\":\"1\",\"prompt_id\":\"inj\",\"session\":null,\"state\":\"open\",\"terminal_id\":\"terminal:1\",\"text\":\"Apply?\\n$ touch pwned\\u001b]0;owned\\u0007\",\"version\":\"1\"}}",
                 "unit": "line"
               }
             ],
@@ -25306,7 +25534,7 @@
             "source": "pty_exit"
           }
         ],
-        "elapsed_ms": "843",
+        "elapsed_ms": "856",
         "failure": null,
         "fixture": {
           "accepted": "5",
@@ -25317,12 +25545,12 @@
         "processes": [
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "--json",
               "--skill"
             ],
             "exit_code": 0,
-            "pid": "2761119",
+            "pid": "1990785",
             "role": "binary",
             "stderr": {
               "bytes": "0",
@@ -25337,12 +25565,12 @@
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "--json",
               "schema"
             ],
             "exit_code": 0,
-            "pid": "2761121",
+            "pid": "1990787",
             "role": "binary",
             "stderr": {
               "bytes": "0",
@@ -25350,20 +25578,20 @@
               "text": ""
             },
             "stdout": {
-              "bytes": "653369",
-              "sha256": "410493d98e9a9e36c7d8cda9eff6ab3c31688aaa5f8ee3e7fd77f59d8810f57e",
+              "bytes": "661844",
+              "sha256": "9a82e9158c5601830300b9f5d09266e5c0487fb8bfab69317e9a22fde142de4c",
               "text": null
             }
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "--json",
               "schema",
               "contract"
             ],
             "exit_code": 0,
-            "pid": "2761183",
+            "pid": "1991061",
             "role": "binary",
             "stderr": {
               "bytes": "0",
@@ -25378,13 +25606,13 @@
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "--json",
               "server",
               "status"
             ],
             "exit_code": 0,
-            "pid": "2761202",
+            "pid": "1991072",
             "role": "binary",
             "stderr": {
               "bytes": "0",
@@ -25399,7 +25627,7 @@
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "--json",
               "agent",
               "get",
@@ -25407,7 +25635,7 @@
               "t1"
             ],
             "exit_code": 0,
-            "pid": "2761335",
+            "pid": "1991144",
             "role": "binary",
             "stderr": {
               "bytes": "0",
@@ -25416,13 +25644,13 @@
             },
             "stdout": {
               "bytes": "187",
-              "sha256": "5b6ae0c35d95db70cf8059526c39e80d9c28e83e0aa5f1244955bb38737d46b7",
-              "text": "{\"agent\":{\"agent_id\":\"agent:01a199cb-4e5e-7617-96e9-62e2c14bfdaf\",\"history_id\":null,\"label\":\"synthetic-producer\",\"process_incarnation\":\"1\",\"revision\":\"4\",\"session\":null},\"revision\":\"20\"}\n"
+              "sha256": "1d473066bc2b2d3aadf3b4f3034758782714c90ab85e45af74d76008230cbcd8",
+              "text": "{\"agent\":{\"agent_id\":\"agent:01a19a34-e680-733a-b263-ff3b6685803f\",\"history_id\":null,\"label\":\"synthetic-producer\",\"process_incarnation\":\"1\",\"revision\":\"4\",\"session\":null},\"revision\":\"20\"}\n"
             }
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "--json",
               "agent",
               "get",
@@ -25439,13 +25667,13 @@
             },
             "stdout": {
               "bytes": "188",
-              "sha256": "40b31f0dee69c092d5cd746418ed381ae01a02739a4434fd5b646d9571fd9877",
-              "text": "{\"agent\":{\"agent_id\":\"agent:01a199cb-4e5e-7617-96e9-62e2c14bfdaf\",\"history_id\":null,\"label\":\"synthetic-producer\",\"process_incarnation\":\"1\",\"revision\":\"4\",\"session\":null},\"revision\":\"23\"}\r\n"
+              "sha256": "c75ebe6b2e44e588faa1aa52953459525fd8d964007f0c882f447439a3bf9a0b",
+              "text": "{\"agent\":{\"agent_id\":\"agent:01a19a34-e680-733a-b263-ff3b6685803f\",\"history_id\":null,\"label\":\"synthetic-producer\",\"process_incarnation\":\"1\",\"revision\":\"4\",\"session\":null},\"revision\":\"23\"}\r\n"
             }
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "--json",
               "prompt",
               "get",
@@ -25453,7 +25681,7 @@
               "{\"prompt_id\":\"inj\"}"
             ],
             "exit_code": 0,
-            "pid": "2761414",
+            "pid": "1991157",
             "role": "binary",
             "stderr": {
               "bytes": "0",
@@ -25462,24 +25690,24 @@
             },
             "stdout": {
               "bytes": "363",
-              "sha256": "e8b139b7d833a66a5d986be2d352bc7fc6602ceb616d63baca797956ff741fe4",
-              "text": "{\"agent_id\":\"agent:01a199cb-4e5e-7617-96e9-62e2c14bfdaf\",\"answer\":null,\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"}],\"closed_seq\":null,\"fields\":[],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"opened_seq\":\"18\",\"process_incarnation\":\"1\",\"prompt_id\":\"inj\",\"session\":null,\"state\":\"open\",\"terminal_id\":\"terminal:1\",\"text\":\"Apply?\\n$ touch pwned\\u001b]0;owned\\u0007\",\"version\":\"1\"}\n"
+              "sha256": "904c96d3d6aa4ad41ce4de4238a3467644d1ccfddfbb7003f648804c94aaa07c",
+              "text": "{\"agent_id\":\"agent:01a19a34-e680-733a-b263-ff3b6685803f\",\"answer\":null,\"choices\":[{\"id\":\"yes\",\"label\":\"Yes\"}],\"closed_seq\":null,\"fields\":[],\"kind\":\"permission\",\"mechanism\":\"rpc\",\"opened_seq\":\"18\",\"process_incarnation\":\"1\",\"prompt_id\":\"inj\",\"session\":null,\"state\":\"open\",\"terminal_id\":\"terminal:1\",\"text\":\"Apply?\\n$ touch pwned\\u001b]0;owned\\u0007\",\"version\":\"1\"}\n"
             }
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "--json",
               "agent",
               "get"
             ],
             "exit_code": 7,
-            "pid": "2761417",
+            "pid": "1991164",
             "role": "binary",
             "stderr": {
               "bytes": "469",
-              "sha256": "90bce7e098d9bf7c833b587b1ee309f8b6009dfd4a5766a94d1c7c8c213690ac",
-              "text": "{\"error\":{\"candidates\":[{\"machine_id\":\"machine:01a199cb-4d65-74d9-89f7-e05bfaefb557\",\"runtime_lifetime\":\"runtime:1\",\"terminal_id\":\"terminal:1\"},{\"machine_id\":\"machine:01a199cb-4d65-74d9-89f7-e05bfaefb557\",\"runtime_lifetime\":\"runtime:1\",\"terminal_id\":\"terminal:2\"}],\"candidates_listed\":true,\"exit_code\":7,\"hint\":\"repeat with --terminal-id, --address or --name naming one candidate\",\"kind\":\"needs_target\",\"message\":\"the command needs an explicit target\",\"origin\":\"cli\"}}\n"
+              "sha256": "ae428c4a5df2e5b0deee72e893d66dc01c648c6b499d5ff24ea2727e6e7e17c5",
+              "text": "{\"error\":{\"candidates\":[{\"machine_id\":\"machine:01a19a34-e575-7629-bc74-004b2f1b6d9b\",\"runtime_lifetime\":\"runtime:1\",\"terminal_id\":\"terminal:1\"},{\"machine_id\":\"machine:01a19a34-e575-7629-bc74-004b2f1b6d9b\",\"runtime_lifetime\":\"runtime:1\",\"terminal_id\":\"terminal:2\"}],\"candidates_listed\":true,\"exit_code\":7,\"hint\":\"repeat with --terminal-id, --address or --name naming one candidate\",\"kind\":\"needs_target\",\"message\":\"the command needs an explicit target\",\"origin\":\"cli\"}}\n"
             },
             "stdout": {
               "bytes": "0",
@@ -25489,14 +25717,14 @@
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "serve",
               "--stdin-lifetime",
               "--root",
-              "/tmp/ovc-2760879-0/srv"
+              "/tmp/ovc-1990579-0/srv"
             ],
             "exit_code": 0,
-            "pid": "2761204",
+            "pid": "1991073",
             "role": "fixture",
             "stderr": {
               "bytes": "0",
@@ -25514,7 +25742,7 @@
         "summary": "Offline --skill, schema and schema contract report one embedded version with no endpoint and server status stays stopped; then on the real served binary a synthetic producer (a shell printing its own spawn token) registers and reports with its token, a second terminal's token is refused as not_owner for the first terminal, ovis-terminal agent get --json returns the same JSON channels through a pipe and under a PTY, a prompt whose text carries a newline and an escape sequence comes back as one inert JSON string, and a targetless agent get exits 7 with needs_target and both live candidates."
       }
     ],
-    "elapsed_ms": "1048",
+    "elapsed_ms": "1087",
     "error": null,
     "format": "ovis-conformance-evidence/1",
     "host": {
@@ -25537,9 +25765,9 @@
   },
   {
     "binary": {
-      "bytes": "147385128",
-      "path": "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
-      "sha256": "0e67c343c2ec74cfdda9a01ccda1582572b245dc232b0c25c97e18c18ad145c7"
+      "bytes": "151454736",
+      "path": "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
+      "sha256": "5fb30b8a9afb676dc198f5f8f5babf6920890ed6a1577d1609bc85c418f2f446"
     },
     "case": "failure",
     "cases": [
@@ -25627,6 +25855,7 @@
               "terminal.rename",
               "terminal.process_info",
               "terminal.screen",
+              "terminal.search",
               "terminal.output",
               "terminal.wait_output",
               "input.send",
@@ -25830,8 +26059,8 @@
         "case": "failure",
         "connections": [
           {
-            "bytes_decoded": "3476",
-            "bytes_received": "3476",
+            "bytes_decoded": "3494",
+            "bytes_received": "3494",
             "bytes_sent": "580",
             "name": "control",
             "records_received": "2",
@@ -25841,17 +26070,17 @@
                 "bytes": "234",
                 "direction": "sent",
                 "offset": "0",
-                "sha256": "09fe16cd4cee107b7791aec42190dfef01e8166431883caac1b539e7096ead0b",
+                "sha256": "20004d7493152b3e44753c9145d0ec7d817993cb968e29bbae2e188fdf22d01f",
                 "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
                 "unit": "write"
               },
               {
                 "at_ms": "0",
-                "bytes": "2604",
+                "bytes": "2622",
                 "direction": "received",
                 "offset": "0",
-                "sha256": "00a67ed62617d781807f37cabeee967fc79b6c75269316ac5256a5473fc33289",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a199cb-52f6-7098-81e9-c97617d595e5\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793581601699\",\"version\":\"0.1.0\"}}",
+                "sha256": "d7636e6ac700b75a2545914f53ece983f6baff759f06cfe9be387873aeb6a662",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a19a34-ea10-7241-b3dc-d18f58a82d53\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.search\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793588521646\",\"version\":\"0.1.0\"}}",
                 "unit": "line"
               },
               {
@@ -25859,17 +26088,17 @@
                 "bytes": "346",
                 "direction": "sent",
                 "offset": "234",
-                "sha256": "e3fd3feb33f64a2665c8c80e1b3b4dc37c1be4b3a5f3703a731aefe5b6052f2a",
-                "text": "{\"id\":\"run1\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a199cb-53a3-766c-8251-f496e01446de\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
+                "sha256": "251c6b01c43dbc1d2ab0229c25817387831d6a7891b9f345b6d28030cf3b1552",
+                "text": "{\"id\":\"run1\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"child_policy\":null,\"cwd\":\"/tmp\",\"env\":{\"PATH\":\"/usr/bin:/bin\",\"TERM\":\"xterm\"},\"first_message\":null,\"geometry\":{\"cols\":80,\"rows\":24},\"keep\":null,\"labels\":null,\"machine\":null,\"name\":\"shell\",\"op_id\":\"01a19a34-eaae-7058-98c9-0725ae52c867\",\"parent\":null,\"program\":{\"argv\":[\"/bin/sh\"]}}}\n",
                 "unit": "write"
               },
               {
-                "at_ms": "51",
+                "at_ms": "32",
                 "bytes": "872",
                 "direction": "received",
-                "offset": "2604",
-                "sha256": "441d000675bc05d4dbdbbdf083a38b60ad34b5a3c76c19cd48845abedf2a6d04",
-                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run1\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a199cb-52f6-7098-81e9-c97617d595e5\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":2762750,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:8233760\",\"started_ms\":\"1793581601745\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
+                "offset": "2622",
+                "sha256": "1e85b4d67d3fcfa0158d529e97ce3e402506f09f8714fe7442707802597a899c",
+                "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run1\",\"result\":{\"created_seq\":\"5\",\"spawn\":\"spawned\",\"terminal\":{\"address\":\"t1\",\"agent\":null,\"created_seq\":\"5\",\"die_with_parent\":false,\"finished\":null,\"geometry\":{\"owner_lease\":null,\"revision\":\"7\",\"size\":{\"cols\":80,\"rows\":24}},\"keep\":false,\"labels\":{},\"machine_id\":\"machine:01a19a34-ea10-7241-b3dc-d18f58a82d53\",\"name\":\"shell\",\"notify\":false,\"origin\":\"live\",\"output_offset\":\"0\",\"parent\":null,\"process\":{\"argv\":[\"/bin/sh\"],\"cwd\":\"/tmp\",\"incarnation\":\"1\",\"pid\":1991728,\"start_token\":\"linux:d260380d-1788-45bb-869b-0c308b014812:8925752\",\"started_ms\":\"1793588521674\"},\"revision\":\"7\",\"state\":\"live\",\"status\":{\"agent_id\":null,\"finish_generation\":\"0\",\"last_turn\":null,\"process_incarnation\":null,\"records\":{},\"report_seq\":null,\"reported\":false,\"root\":null,\"session\":null,\"turn\":\"0\"},\"terminal_id\":\"terminal:1\",\"terminal_incarnation\":\"1\",\"updated_seq\":\"7\"}}}",
                 "unit": "line"
               }
             ],
@@ -25911,7 +26140,7 @@
           "todo": "66"
         },
         "descriptors": [],
-        "elapsed_ms": "487",
+        "elapsed_ms": "404",
         "failure": null,
         "fixture": {
           "accepted": "4",
@@ -25922,14 +26151,14 @@
         "processes": [
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "agent",
               "get",
               "--unknown-flag",
               "--json"
             ],
             "exit_code": 2,
-            "pid": "2762680",
+            "pid": "1991423",
             "role": "binary",
             "stderr": {
               "bytes": "218",
@@ -25944,7 +26173,7 @@
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "--json",
               "agent",
               "get",
@@ -25952,12 +26181,12 @@
               "t1"
             ],
             "exit_code": 4,
-            "pid": "2762681",
+            "pid": "1991427",
             "role": "binary",
             "stderr": {
               "bytes": "240",
-              "sha256": "f59f02163cbf412a3bf269305becdc443f9d76076cf6a2c5a9978855d0087aa2",
-              "text": "{\"error\":{\"exit_code\":4,\"hint\":\"start the server explicitly; inspection never starts one\",\"kind\":\"server_not_running\",\"message\":\"no control server answers at /tmp/ovc-2761800-0/ovis-terminal/default.sock\",\"origin\":\"cli\",\"state\":\"stopped\"}}\n"
+              "sha256": "4f3c53b1e88dbc892cb66c99c5695193d2c035087a4137946cc43f53e12f9800",
+              "text": "{\"error\":{\"exit_code\":4,\"hint\":\"start the server explicitly; inspection never starts one\",\"kind\":\"server_not_running\",\"message\":\"no control server answers at /tmp/ovc-1991216-0/ovis-terminal/default.sock\",\"origin\":\"cli\",\"state\":\"stopped\"}}\n"
             },
             "stdout": {
               "bytes": "0",
@@ -25967,18 +26196,18 @@
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "--json",
               "agent",
               "get"
             ],
             "exit_code": 7,
-            "pid": "2762783",
+            "pid": "1991768",
             "role": "binary",
             "stderr": {
               "bytes": "349",
-              "sha256": "bbd8f9d9c584ba179bdf863e8d3620d7a37b120c244dde4e1c9699b5a6069008",
-              "text": "{\"error\":{\"candidates\":[{\"machine_id\":\"machine:01a199cb-52f6-7098-81e9-c97617d595e5\",\"runtime_lifetime\":\"runtime:1\",\"terminal_id\":\"terminal:1\"}],\"candidates_listed\":true,\"exit_code\":7,\"hint\":\"repeat with --terminal-id, --address or --name naming one candidate\",\"kind\":\"needs_target\",\"message\":\"the command needs an explicit target\",\"origin\":\"cli\"}}\n"
+              "sha256": "b223135fa2d9aba6930fc67ba697c31f43821f5515e2ce36be362d0f37b4dd55",
+              "text": "{\"error\":{\"candidates\":[{\"machine_id\":\"machine:01a19a34-ea10-7241-b3dc-d18f58a82d53\",\"runtime_lifetime\":\"runtime:1\",\"terminal_id\":\"terminal:1\"}],\"candidates_listed\":true,\"exit_code\":7,\"hint\":\"repeat with --terminal-id, --address or --name naming one candidate\",\"kind\":\"needs_target\",\"message\":\"the command needs an explicit target\",\"origin\":\"cli\"}}\n"
             },
             "stdout": {
               "bytes": "0",
@@ -25988,7 +26217,7 @@
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "--json",
               "agent",
               "get",
@@ -25996,7 +26225,7 @@
               "t1"
             ],
             "exit_code": 0,
-            "pid": "2762786",
+            "pid": "1991782",
             "role": "binary",
             "stderr": {
               "bytes": "0",
@@ -26011,7 +26240,7 @@
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "--json",
               "agent",
               "get",
@@ -26019,7 +26248,7 @@
               "t9"
             ],
             "exit_code": 3,
-            "pid": "2762791",
+            "pid": "1991790",
             "role": "binary",
             "stderr": {
               "bytes": "189",
@@ -26034,14 +26263,14 @@
           },
           {
             "argv": [
-              "/dev/shm/ovt-target-lane-t66/debug/ovis-terminal",
+              "/dev/shm/ovt-target-w1-land85/debug/ovis-terminal",
               "serve",
               "--stdin-lifetime",
               "--root",
-              "/tmp/ovc-2761800-0/srv"
+              "/tmp/ovc-1991216-0/srv"
             ],
             "exit_code": 0,
-            "pid": "2762683",
+            "pid": "1991433",
             "role": "fixture",
             "stderr": {
               "bytes": "0",
@@ -26059,7 +26288,7 @@
         "summary": "With no server running, malformed invocations exit 2 with a structured usage error before any connection (a well-formed agent get against the same absent endpoint exits 4, so an attempted connection would have shown): an unknown flag, an unknown params field with and without a target, a numeric u64 seq and --skill combined with a command. Against the real served binary a targetless agent get exits 7 with needs_target and the live candidate, a plain shell answers agent null and a missing terminal is not_found."
       }
     ],
-    "elapsed_ms": "762",
+    "elapsed_ms": "639",
     "error": null,
     "format": "ovis-conformance-evidence/1",
     "host": {

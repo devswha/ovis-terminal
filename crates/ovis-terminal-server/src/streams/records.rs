@@ -4,12 +4,13 @@ use ovis_terminal_core::leases::{Lease, LeaseSlot};
 use ovis_terminal_protocol::schema::common::Geometry;
 use ovis_terminal_protocol::schema::ids::{LeaseId, StreamId};
 use ovis_terminal_protocol::schema::records::{
-    AttachControl, Checkpoint, ControlKind, LeaseRecord, LeaseRole, Modes, PaintedScreen,
-    ScreenCursor, TerminalMode,
+    AttachControl, Checkpoint, CheckpointInexact, ControlKind, LeaseRecord, LeaseRole, Modes,
+    PaintedScreen, ScreenCursor, TerminalMode,
 };
 use ovis_terminal_protocol::schema::scalar::{ByteOffset, Count, LeaseEpoch, OpenEnum, Revision};
 use ovis_terminal_vt::{
-    FirstPaint, KeyEncoding, ModifyOtherKeys, MouseTracking, PasteMode, ScreenBuffer, TerminalModes,
+    Fidelity, FirstPaint, InexactReason, KeyEncoding, ModifyOtherKeys, MouseTracking, PasteMode,
+    ScreenBuffer, TerminalModes,
 };
 
 use super::offset::StreamOffset;
@@ -58,6 +59,31 @@ pub(super) fn enabled(modes: &TerminalModes) -> Vec<OpenEnum<TerminalMode>> {
         .collect()
 }
 
+/// The wire reasons a VT paint is inexact; none when it is exact.
+fn inexact(fidelity: &Fidelity) -> Vec<OpenEnum<CheckpointInexact>> {
+    let Fidelity::Inexact { reasons } = fidelity else {
+        return Vec::new();
+    };
+    reasons
+        .iter()
+        .map(|reason| match reason {
+            InexactReason::ControlInsideOpenSequence => {
+                OpenEnum::Known(CheckpointInexact::ControlInsideOpenSequence)
+            }
+            InexactReason::OpenSequenceTooLong => {
+                OpenEnum::Known(CheckpointInexact::OpenSequenceTooLong)
+            }
+            InexactReason::PrimarySavedCursorUnrepresentable => {
+                OpenEnum::Known(CheckpointInexact::PrimarySavedCursorUnrepresentable)
+            }
+            InexactReason::SavedCursorNotPaintable => {
+                OpenEnum::Known(CheckpointInexact::SavedCursorNotPaintable)
+            }
+            other => OpenEnum::Unknown(format!("{other:?}")),
+        })
+        .collect()
+}
+
 /// The checkpoint record announcing `paint` at stream offset `at`.
 pub(super) fn checkpoint(paint: &FirstPaint, at: StreamOffset) -> Checkpoint {
     let mut screen = PaintedScreen::new(
@@ -71,6 +97,7 @@ pub(super) fn checkpoint(paint: &FirstPaint, at: StreamOffset) -> Checkpoint {
     );
     screen.cursor = ScreenCursor::new(paint.cursor.row, paint.cursor.column, paint.cursor.visible);
     screen.history_lines = Count::new(u64::from(paint.history_lines));
+    screen.inexact = inexact(&paint.fidelity);
     Checkpoint::new(ByteOffset::new(paint.offset.get()), at.wire(), screen)
 }
 

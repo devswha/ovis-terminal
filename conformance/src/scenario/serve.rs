@@ -22,6 +22,10 @@ pub(crate) struct Serve {
     /// fixture root. The protocol fixture refuses it.
     #[serde(default)]
     pub(crate) qa_graphics_sequence_max_bytes: Option<crate::ids::Decimal>,
+    /// Assembled only: marks the server root a QA fixture root and passes
+    /// `--qa-output-ring-bytes`, so retention overflows after this many output bytes.
+    #[serde(default)]
+    pub(crate) qa_output_ring_bytes: Option<crate::ids::Decimal>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

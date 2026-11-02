@@ -128,7 +128,8 @@ fn restarted(generation: &Generation) -> Value {
 fn qa_seams_allowed(plan: &ServePlan) -> Result<(), AssemblyError> {
     let seams = plan.qa.holder_poll_ms.is_some()
         || plan.qa.actor_hold.is_some()
-        || plan.qa.graphics_sequence_max_bytes.is_some();
+        || plan.qa.graphics_sequence_max_bytes.is_some()
+        || plan.qa.output_ring_bytes.is_some();
     let qa_root = plan
         .root
         .as_ref()
@@ -210,6 +211,7 @@ pub(super) async fn run(plan: &ServePlan, env: &EndpointEnvironment) -> Result<(
         control: Arc::clone(&booted.control),
         poll: std::time::Duration::from_millis(plan.qa.holder_poll_ms.unwrap_or(5)),
         qa_hold: plan.qa.actor_hold.clone(),
+        screen_bounds: super::live::screen_bounds(plan.qa.output_ring_bytes)?,
         journal: Arc::clone(&journal),
         status_feed: None,
         holder: booted.holder,

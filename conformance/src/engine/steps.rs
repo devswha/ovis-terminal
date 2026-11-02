@@ -67,6 +67,7 @@ impl Session<'_> {
                 Step::Gates(gates) => self.gates(gates).await,
                 Step::Release(release) => self.release(release).await,
                 Step::GraphicsTranscript(step) => self.graphics_transcript(step).await,
+                Step::StreamData(step) => self.stream_data(step).await,
                 Step::Replay(replay) => self.replay(replay).await,
             }
         })

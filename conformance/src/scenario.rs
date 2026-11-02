@@ -10,3 +10,4 @@ pub mod model;
 pub mod pty;
 pub mod release;
 pub mod serve;
+pub mod stream;

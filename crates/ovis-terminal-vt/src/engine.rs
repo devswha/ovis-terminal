@@ -47,7 +47,9 @@ pub use modes::{
 pub use osc::{OSC_FIELD_LIMIT, OSC_RECORD_LIMIT, OscContent, OscFault, OscRecord, OscTerminator};
 pub use paint::FirstPaint;
 pub use query::{ClientFact, QueryOutcome, TerminalQuery};
-pub use read::{CursorShape, CursorState, ReadFormat, ReadSource, ScreenLine, ScreenRead};
+pub use read::{
+    CursorShape, CursorState, ReadFormat, ReadSource, ScreenImage, ScreenLine, ScreenRead,
+};
 use serde::Serialize;
 pub use units::{
     ContentRevision, Geometry, HistoryLimit, MIN_COLUMNS, ModeRevision, OutputOffset, VtConfig,

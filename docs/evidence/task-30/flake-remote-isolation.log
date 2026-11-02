@@ -1,0 +1,978 @@
+# Observed unrelated flake (owner F2; not fixed in lane t30)
+
+## Runner output of the failed attempt
+
+cargo nextest run -p ovis-terminal-conformance (lane-t30, second attempt) -> NEXTEST_EXIT=100
+FAIL [ 121.452s] (32/33) ovis-terminal-conformance::runner suite::every_scenario_file_is_executed_or_a_listed_declaration
+thread 'suite::every_scenario_file_is_executed_or_a_listed_declaration' (2979579) panicked at conformance/src/runner_tests/suite.rs:80:5:
+assertion `left == right` failed: {"case":"all","error":null,"evidence":"/dev/shm/ovt-fixtures/ovc-test-2979571-all-all-all-01a198b3-1c6d-72fc-a881-806aebfb576d/all.json","evidence_error":null,"evidence_written":true,"result":"failed","scenario":"all/all","totals":{"assertions":"5305","cases":"83","declared_only":"33","failed":"1","passed":"82","skipped":"0"}}
+
+"remote/isolation" "happy": {"detail":"expectation reply[child-on-bravo]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"8"}
+  {"actual":{"code":-32603,"data":{"hint":"inspect the fixture's stderr","kind":"internal","retryable":false},"message":"operation failed"},"check":"reply[child-on-bravo]/error","expected":{"$present":false},"passed":false}
+  {"actual":null,"check":"reply[child-on-bravo]/result/linked","expected":true,"passed":false}
+  left: Some(1)
+ right: Some(0)
+Summary [ 122.460s] 33 tests run: 32 passed (1 slow), 1 failed, 0 skipped
+Standalone re-runs of remote/isolation happy on the same tree: exit 0, 0, 0 (3/3).
+
+## all.json summary
+
+{
+ "scenario": "all/all",
+ "case": "all",
+ "result": "failed",
+ "totals": {
+  "assertions": "5305",
+  "cases": "83",
+  "declared_only": "33",
+  "failed": "1",
+  "passed": "82",
+  "skipped": "0"
+ },
+ "host": {
+  "arch": "x86_64",
+  "family": "unix",
+  "os": "linux"
+ },
+ "binary": {
+  "bytes": "144351248",
+  "path": "/dev/shm/ovt-target-lane-t30/debug/ovis-terminal",
+  "sha256": "b7fc28c509fd00778484d2bdc4816682bd561cd441d535722969816442745222"
+ }
+}
+
+## all.json case remote/isolation (verbatim)
+
+[
+ {
+  "assertions": [
+   {
+    "actual": "hello",
+    "check": "hello/id",
+    "expected": "hello",
+    "passed": true
+   },
+   {
+    "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+    "check": "hello/result/machine_id",
+    "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "reply[roster-before]/error",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": "machine:0191f1a2-0000-7000-8000-0000000000a1",
+    "check": "reply[roster-before]/result/machines/0/machine_id",
+    "expected": "machine:0191f1a2-0000-7000-8000-0000000000a1",
+    "passed": true
+   },
+   {
+    "actual": "connected",
+    "check": "reply[roster-before]/result/machines/0/state",
+    "expected": "connected",
+    "passed": true
+   },
+   {
+    "actual": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+    "check": "reply[roster-before]/result/machines/1/machine_id",
+    "expected": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+    "passed": true
+   },
+   {
+    "actual": "connected",
+    "check": "reply[roster-before]/result/machines/1/state",
+    "expected": "connected",
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "reply[roster-before]/result/machines/2",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": [
+     "roster-before"
+    ],
+    "check": "replies/exactly_one_per_id",
+    "expected": [
+     "roster-before"
+    ],
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "reply[run-parent]/error",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": "1",
+    "check": "reply[run-parent]/result/process_incarnation",
+    "expected": "1",
+    "passed": true
+   },
+   {
+    "actual": "terminal:6",
+    "check": "reply[run-parent]/result/terminal_id",
+    "expected": "terminal:6",
+    "passed": true
+   },
+   {
+    "actual": [
+     "run-parent"
+    ],
+    "check": "replies/exactly_one_per_id",
+    "expected": [
+     "run-parent"
+    ],
+    "passed": true
+   },
+   {
+    "actual": {
+     "code": -32603,
+     "data": {
+      "hint": "inspect the fixture's stderr",
+      "kind": "internal",
+      "retryable": false
+     },
+     "message": "operation failed"
+    },
+    "check": "reply[child-on-bravo]/error",
+    "expected": {
+     "$present": false
+    },
+    "passed": false
+   },
+   {
+    "actual": null,
+    "check": "reply[child-on-bravo]/result/linked",
+    "expected": true,
+    "passed": false
+   },
+   {
+    "actual": [
+     "child-on-bravo"
+    ],
+    "check": "replies/exactly_one_per_id",
+    "expected": [
+     "child-on-bravo"
+    ],
+    "passed": true
+   }
+  ],
+  "case": "happy",
+  "connections": [
+   {
+    "bytes_decoded": "2742",
+    "bytes_received": "2742",
+    "bytes_sent": "662",
+    "name": "bridge",
+    "records_received": "4",
+    "transcript": [
+     {
+      "at_ms": "0",
+      "bytes": "234",
+      "direction": "sent",
+      "offset": "0",
+      "sha256": "6d3299a672c8b68c187777bb39c328bd326d0cf33792d7e1648c43dccdb6c0cd",
+      "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "8",
+      "bytes": "1973",
+      "direction": "received",
+      "offset": "0",
+      "sha256": "0d7f6070601daf14320a79bc7d8231ff0c2439fdc905c0b58d870c01ed4f56fc",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"server.status\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.first_message\",\"terminal.keep\",\"terminal.process_info\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793563353328\",\"version\":\"0.1.0\"}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "8",
+      "bytes": "75",
+      "direction": "sent",
+      "offset": "234",
+      "sha256": "b95ff96e111e2843ef869fc4627d504886b0bc2db489c4e9eee2caada9fd82e8",
+      "text": "{\"id\":\"roster-before\",\"jsonrpc\":\"2.0\",\"method\":\"machine.list\",\"params\":{}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "10",
+      "bytes": "493",
+      "direction": "received",
+      "offset": "1973",
+      "sha256": "f3c7b987a938299e770cec42505b5b0795c1f7236bc0a2d8d3f4b1b5f8f36c58",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"roster-before\",\"result\":{\"machines\":[{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000a1\",\"name\":\"alpha\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"1.0.0\"},{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"name\":\"bravo\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"1.0.0\"}]}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "10",
+      "bytes": "196",
+      "direction": "sent",
+      "offset": "309",
+      "sha256": "2fc64fd5293f2033c681745d0f3c1b6581f0731ea548480c7d94f58b1277777c",
+      "text": "{\"id\":\"run-parent\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"geometry\":{\"cols\":80,\"rows\":24},\"name\":\"parent\",\"op_id\":\"01a198b4-e0f3-74f9-b514-4315f0e79ed9\",\"program\":{\"argv\":[\"agent\"]}}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "21",
+      "bytes": "100",
+      "direction": "received",
+      "offset": "2466",
+      "sha256": "e21ee39139dcddff2d42bb5fcde12813f9212844b1ca3b02594808f3b8ed1152",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run-parent\",\"result\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:6\"}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "22",
+      "bytes": "157",
+      "direction": "sent",
+      "offset": "505",
+      "sha256": "5b2a43592f6613c880ddd60c48e88d23fc4c0fc5e818ba18b7ac030e22f1dd53",
+      "text": "{\"id\":\"child-on-bravo\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.remote_child\",\"params\":{\"machine\":\"bravo\",\"parent\":{\"incarnation\":\"1\",\"terminal_id\":\"terminal:6\"}}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "23",
+      "bytes": "176",
+      "direction": "received",
+      "offset": "2566",
+      "sha256": "5ffbb56ce261455cd37120c88581f1d83ef3274cdb09e7fd9f7a1d7883fc2dfc",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"child-on-bravo\",\"error\":{\"code\":-32603,\"message\":\"operation failed\",\"data\":{\"kind\":\"internal\",\"hint\":\"inspect the fixture's stderr\",\"retryable\":false}}}",
+      "unit": "line"
+     }
+    ],
+    "via": "bridge",
+    "writes": "4"
+   }
+  ],
+  "declared": {
+   "closes": [
+    "GAP-108",
+    "GAP-109",
+    "GAP-119",
+    "GAP-120"
+   ],
+   "delivers": [
+    "IDEAL-080",
+    "IDEAL-082",
+    "IDEAL-083",
+    "IDEAL-092"
+   ],
+   "excludes": [
+    "EXCL-015",
+    "EXCL-020",
+    "EXCL-021",
+    "EXCL-026"
+   ],
+   "title": "Each machine has its own actor: a stalled or lost machine blocks no other, stays listed, and gets its orphan notice once it returns",
+   "todo": "44"
+  },
+  "descriptors": [],
+  "elapsed_ms": "426",
+  "failure": {
+   "detail": "expectation reply[child-on-bravo]/error did not hold",
+   "hint": "compare expected and actual values in the evidence",
+   "kind": "assertion_failed",
+   "step": "8"
+  },
+  "fixture": {
+   "accepted": "1",
+   "failures": {},
+   "panicked": "0"
+  },
+  "outcome": "failed",
+  "processes": [
+   {
+    "argv": [
+     "/dev/shm/ovt-target-lane-t30/debug/ovis-terminal",
+     "connect"
+    ],
+    "exit_code": 0,
+    "pid": "3023320",
+    "role": "bridge",
+    "stderr": {
+     "bytes": "0",
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "text": ""
+    },
+    "stdout": {
+     "bytes": "0",
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "text": ""
+    }
+   },
+   {
+    "argv": [
+     "/dev/shm/ovt-target-lane-t30/debug/conformance",
+     "fixture",
+     "--root",
+     "/tmp/ovc-2979580-73",
+     "--binary",
+     "/dev/shm/ovt-target-lane-t30/debug/ovis-terminal"
+    ],
+    "exit_code": 0,
+    "pid": "3023147",
+    "role": "fixture",
+    "stderr": {
+     "bytes": "0",
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "text": ""
+    },
+    "stdout": {
+     "bytes": "82",
+     "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+     "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+    }
+   }
+  ],
+  "scenario": "remote/isolation",
+  "summary": "Through the bridge: alpha and bravo are listed connected. A local parent incarnation 1 has a child on bravo. bravo is frozen: a call to it ends deadline_exceeded while a call to alpha and machine.list answer and both stay listed. The parent exits; delivering its orphan notice to frozen bravo stops at its deadline and the notice stays in the outbox. bravo's line is cut and machine.list keeps it as unreachable; reconnecting replays the notice once (applied 1, outbox empty, line epoch 2) and a repeated $/orphanedAck of it is a duplicate."
+ },
+ {
+  "assertions": [
+   {
+    "actual": "hello",
+    "check": "hello/id",
+    "expected": "hello",
+    "passed": true
+   },
+   {
+    "actual": "machine:0191f1a2-0000-7000-8000-000000000021",
+    "check": "hello/result/machine_id",
+    "expected": "machine:0191f1a2-0000-7000-8000-000000000021",
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "reply[run-parent]/error",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": "1",
+    "check": "reply[run-parent]/result/process_incarnation",
+    "expected": "1",
+    "passed": true
+   },
+   {
+    "actual": "terminal:6",
+    "check": "reply[run-parent]/result/terminal_id",
+    "expected": "terminal:6",
+    "passed": true
+   },
+   {
+    "actual": [
+     "run-parent"
+    ],
+    "check": "replies/exactly_one_per_id",
+    "expected": [
+     "run-parent"
+    ],
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "reply[child-on-bravo]/error",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": true,
+    "check": "reply[child-on-bravo]/result/linked",
+    "expected": true,
+    "passed": true
+   },
+   {
+    "actual": [
+     "child-on-bravo"
+    ],
+    "check": "replies/exactly_one_per_id",
+    "expected": [
+     "child-on-bravo"
+    ],
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "reply[parent-exits]/error",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": "recorded",
+    "check": "reply[parent-exits]/result/finished",
+    "expected": "recorded",
+    "passed": true
+   },
+   {
+    "actual": [
+     "parent-exits"
+    ],
+    "check": "replies/exactly_one_per_id",
+    "expected": [
+     "parent-exits"
+    ],
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "reply[cut-bravo]/error",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": "unreachable",
+    "check": "reply[cut-bravo]/result/health/state",
+    "expected": "unreachable",
+    "passed": true
+   },
+   {
+    "actual": [
+     "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+    ],
+    "check": "reply[cut-bravo]/result/outbox",
+    "expected": [
+     "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+    ],
+    "passed": true
+   },
+   {
+    "actual": [
+     "cut-bravo"
+    ],
+    "check": "replies/exactly_one_per_id",
+    "expected": [
+     "cut-bravo"
+    ],
+    "passed": true
+   },
+   {
+    "actual": "inject-0",
+    "check": "inject[0]/id",
+    "expected": "inject-0",
+    "passed": true
+   },
+   {
+    "actual": "not_found",
+    "check": "inject[0]/error/data/kind",
+    "expected": "not_found",
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "inject[0]/result",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": "inject-1",
+    "check": "inject[1]/id",
+    "expected": "inject-1",
+    "passed": true
+   },
+   {
+    "actual": "stale_target",
+    "check": "inject[1]/error/data/kind",
+    "expected": "stale_target",
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "inject[1]/result",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": "inject-2",
+    "check": "inject[2]/id",
+    "expected": "inject-2",
+    "passed": true
+   },
+   {
+    "actual": "stale_target",
+    "check": "inject[2]/error/data/kind",
+    "expected": "stale_target",
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "inject[2]/result",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": "inject-3",
+    "check": "inject[3]/id",
+    "expected": "inject-3",
+    "passed": true
+   },
+   {
+    "actual": "invalid_params",
+    "check": "inject[3]/error/data/kind",
+    "expected": "invalid_params",
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "inject[3]/result",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "reply[outbox-retained]/error",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": "unreachable",
+    "check": "reply[outbox-retained]/result/health/state",
+    "expected": "unreachable",
+    "passed": true
+   },
+   {
+    "actual": [
+     "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+    ],
+    "check": "reply[outbox-retained]/result/outbox",
+    "expected": [
+     "machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2"
+    ],
+    "passed": true
+   },
+   {
+    "actual": "0",
+    "check": "reply[outbox-retained]/result/remote/applied",
+    "expected": "0",
+    "passed": true
+   },
+   {
+    "actual": [
+     "outbox-retained"
+    ],
+    "check": "replies/exactly_one_per_id",
+    "expected": [
+     "outbox-retained"
+    ],
+    "passed": true
+   },
+   {
+    "actual": "machine_unreachable",
+    "check": "reply[no-local-fallback]/error/data/kind",
+    "expected": "machine_unreachable",
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "reply[no-local-fallback]/result",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "reply[roster-keeps-bravo]/error",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": "machine:0191f1a2-0000-7000-8000-0000000000a1",
+    "check": "reply[roster-keeps-bravo]/result/machines/0/machine_id",
+    "expected": "machine:0191f1a2-0000-7000-8000-0000000000a1",
+    "passed": true
+   },
+   {
+    "actual": "connected",
+    "check": "reply[roster-keeps-bravo]/result/machines/0/state",
+    "expected": "connected",
+    "passed": true
+   },
+   {
+    "actual": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+    "check": "reply[roster-keeps-bravo]/result/machines/1/machine_id",
+    "expected": "machine:0191f1a2-0000-7000-8000-0000000000b2",
+    "passed": true
+   },
+   {
+    "actual": "unreachable",
+    "check": "reply[roster-keeps-bravo]/result/machines/1/state",
+    "expected": "unreachable",
+    "passed": true
+   },
+   {
+    "actual": null,
+    "check": "reply[roster-keeps-bravo]/result/machines/2",
+    "expected": {
+     "$present": false
+    },
+    "passed": true
+   },
+   {
+    "actual": [
+     "no-local-fallback",
+     "roster-keeps-bravo"
+    ],
+    "check": "replies/exactly_one_per_id",
+    "expected": [
+     "no-local-fallback",
+     "roster-keeps-bravo"
+    ],
+    "passed": true
+   },
+   {
+    "actual": "4803",
+    "check": "connection[bridge]/bytes_received=bytes_decoded",
+    "expected": "4803",
+    "passed": true
+   },
+   {
+    "actual": "0",
+    "check": "fixture/panicked",
+    "expected": "0",
+    "passed": true
+   }
+  ],
+  "case": "failure",
+  "connections": [
+   {
+    "bytes_decoded": "4803",
+    "bytes_received": "4803",
+    "bytes_sent": "1982",
+    "name": "bridge",
+    "records_received": "12",
+    "transcript": [
+     {
+      "at_ms": "0",
+      "bytes": "234",
+      "direction": "sent",
+      "offset": "0",
+      "sha256": "cad85f04d140c5f1b97db140837b589acd61b07d4312be7d46fce32a294ee03a",
+      "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "8",
+      "bytes": "1973",
+      "direction": "received",
+      "offset": "0",
+      "sha256": "39fbef4349f1a578c2727a26da1ff5d65cbeb44f57048cb5f0089920fea84c5a",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:0191f1a2-0000-7000-8000-000000000021\",\"methods\":[\"server.status\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"terminal.run\",\"terminal.first_message\",\"terminal.keep\",\"terminal.process_info\",\"terminal.output\",\"input.send\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:21\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793563353764\",\"version\":\"0.1.0\"}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "8",
+      "bytes": "196",
+      "direction": "sent",
+      "offset": "234",
+      "sha256": "8b3afd6d5840574c0021187da871cce8eb5e76ad89420d98fafb7d7f8eafb428",
+      "text": "{\"id\":\"run-parent\",\"jsonrpc\":\"2.0\",\"method\":\"terminal.run\",\"params\":{\"geometry\":{\"cols\":80,\"rows\":24},\"name\":\"parent\",\"op_id\":\"01a198b4-e2a5-708a-969a-fb88f1188b44\",\"program\":{\"argv\":[\"agent\"]}}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "21",
+      "bytes": "100",
+      "direction": "received",
+      "offset": "1973",
+      "sha256": "e21ee39139dcddff2d42bb5fcde12813f9212844b1ca3b02594808f3b8ed1152",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"run-parent\",\"result\":{\"process_incarnation\":\"1\",\"terminal_id\":\"terminal:6\"}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "21",
+      "bytes": "157",
+      "direction": "sent",
+      "offset": "430",
+      "sha256": "5b2a43592f6613c880ddd60c48e88d23fc4c0fc5e818ba18b7ac030e22f1dd53",
+      "text": "{\"id\":\"child-on-bravo\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.remote_child\",\"params\":{\"machine\":\"bravo\",\"parent\":{\"incarnation\":\"1\",\"terminal_id\":\"terminal:6\"}}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "32",
+      "bytes": "65",
+      "direction": "received",
+      "offset": "2073",
+      "sha256": "379c474127f3ee9296d3a0d84ee9e0916febb72b573c8f4e992434ba67efb1af",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"child-on-bravo\",\"result\":{\"linked\":true}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "32",
+      "bytes": "100",
+      "direction": "sent",
+      "offset": "587",
+      "sha256": "86421c9faa19ad651554ae2ca357906744c5a46122e88f2f4294f87c648f4c74",
+      "text": "{\"id\":\"parent-exits\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.exit\",\"params\":{\"target\":{\"name\":\"parent\"}}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "36",
+      "bytes": "98",
+      "direction": "received",
+      "offset": "2138",
+      "sha256": "2a4300f405d4a6c5dc473d01cbf1632cac47d9edb5abc0a7ce8c2d75030ae23e",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"parent-exits\",\"result\":{\"end_orders\":[],\"ended\":[],\"finished\":\"recorded\"}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "36",
+      "bytes": "106",
+      "direction": "sent",
+      "offset": "687",
+      "sha256": "bea4fd3c11b507795ef366ea7ebf366c20f38e6041e41ceae508473693a6c693",
+      "text": "{\"id\":\"cut-bravo\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.machine\",\"params\":{\"action\":\"cut\",\"machine\":\"bravo\"}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "37",
+      "bytes": "491",
+      "direction": "received",
+      "offset": "2236",
+      "sha256": "32f4b8683a011736221e65449e129b4cef2c94cdbf28e06490aba76bd6f5d35d",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"cut-bravo\",\"result\":{\"health\":{\"deadline_exceeded\":\"0\",\"in_flight\":\"0\",\"inbound_dropped\":\"0\",\"last_failure\":{\"at_ms\":\"1793563353793\",\"kind\":\"transport_failed\"},\"last_seen_seq\":null,\"line_epoch\":\"1\",\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"revision\":\"2\",\"state\":\"unreachable\"},\"outbox\":[\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\"],\"remote\":{\"applied\":\"0\",\"cancels\":\"0\",\"frozen\":false}}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "37",
+      "bytes": "132",
+      "direction": "sent",
+      "offset": "793",
+      "sha256": "91090512aeef4f9c3fa0677fecb53826ce4d1f0e0bc50c2df47bf8a0d38e41eb",
+      "text": "{\"id\":\"inject-0\",\"jsonrpc\":\"2.0\",\"method\":\"$/orphanedAck\",\"params\":{\"notification_id\":\"unknown\",\"parent_incarnation\":\"reused-old\"}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "39",
+      "bytes": "192",
+      "direction": "received",
+      "offset": "2727",
+      "sha256": "f863da8ce6cb9117539ffbedf9a7536e90dc68756b669bd642beb4fdd6f050c9",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-0\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"not_found\",\"hint\":\"acknowledge an id a pending orphan notice carried\",\"retryable\":false}}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "39",
+      "bytes": "227",
+      "direction": "sent",
+      "offset": "925",
+      "sha256": "7801aed4280622ec21a96e31ce88650b6a7878408766131e4dcd1642637ee77f",
+      "text": "{\"id\":\"inject-1\",\"jsonrpc\":\"2.0\",\"method\":\"$/orphanedAck\",\"params\":{\"notification_id\":\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\",\"parent_incarnation\":\"reused-old\"}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "41",
+      "bytes": "225",
+      "direction": "received",
+      "offset": "2919",
+      "sha256": "667fe6f29f893f9cfaf0d38e03125699ecd7f5df08cd9715f9724a8920ab2e6d",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-1\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"stale_target\",\"hint\":\"echo the notice's parent incarnation; a reused parent address is another parent\",\"retryable\":false}}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "41",
+      "bytes": "274",
+      "direction": "sent",
+      "offset": "1152",
+      "sha256": "b1f491e1e56916211ef932535dcb9eb2cdafb125d82d05db228eb3675829f346",
+      "text": "{\"id\":\"inject-2\",\"jsonrpc\":\"2.0\",\"method\":\"$/orphanedAck\",\"params\":{\"notification_id\":\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\",\"parent_incarnation\":\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/2\"}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "43",
+      "bytes": "225",
+      "direction": "received",
+      "offset": "3144",
+      "sha256": "72e6faf5aa3de5ef29f087aab2cd3573c06c9f681ecf24f711a5a7761686bbc0",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-2\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"stale_target\",\"hint\":\"echo the notice's parent incarnation; a reused parent address is another parent\",\"retryable\":false}}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "43",
+      "bytes": "216",
+      "direction": "sent",
+      "offset": "1426",
+      "sha256": "a792b48f922be1017c37316c8184b0bee3096a54a9db6a73fbc1bc43ec516ac1",
+      "text": "{\"id\":\"inject-3\",\"jsonrpc\":\"2.0\",\"method\":\"$/orphanedAck\",\"params\":{\"notification_id\":\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\",\"parent_incarnation\":1}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "43",
+      "bytes": "226",
+      "direction": "received",
+      "offset": "3369",
+      "sha256": "81f6262b483f519f5fdf8566fd528c61cc4cea1c99d8df9b617279195bd9679c",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-3\",\"error\":{\"code\":-32602,\"message\":\"method parameters violate the closed schema\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"correct the method parameters\",\"retryable\":false,\"field_path\":\"params\"}}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "43",
+      "bytes": "116",
+      "direction": "sent",
+      "offset": "1642",
+      "sha256": "85c186928c58a4f77540a19e584c88170a58ba7d69281e9aa81dbd7aed310672",
+      "text": "{\"id\":\"outbox-retained\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.machine\",\"params\":{\"action\":\"inspect\",\"machine\":\"bravo\"}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "44",
+      "bytes": "497",
+      "direction": "received",
+      "offset": "3595",
+      "sha256": "27b8a587862a1e7f14857bd015f4f94299bccafd11ffa0ec399df25744edee65",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"outbox-retained\",\"result\":{\"health\":{\"deadline_exceeded\":\"0\",\"in_flight\":\"0\",\"inbound_dropped\":\"0\",\"last_failure\":{\"at_ms\":\"1793563353793\",\"kind\":\"transport_failed\"},\"last_seen_seq\":null,\"line_epoch\":\"1\",\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"revision\":\"2\",\"state\":\"unreachable\"},\"outbox\":[\"machine:0191f1a2-0000-7000-8000-000000000021/terminal:6/1>machine:0191f1a2-0000-7000-8000-0000000000b2\"],\"remote\":{\"applied\":\"0\",\"cancels\":\"0\",\"frozen\":false}}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "44",
+      "bytes": "224",
+      "direction": "sent",
+      "offset": "1758",
+      "sha256": "e73834f8a4cb98ae8c744ae48227159960332fc78ec768e1f64d82400b1dd45f",
+      "text": "{\"id\":\"no-local-fallback\",\"jsonrpc\":\"2.0\",\"method\":\"fixture.remote\",\"params\":{\"deadline_ms\":\"5000\",\"machine\":\"bravo\",\"method\":\"server.status\"}}\n{\"id\":\"roster-keeps-bravo\",\"jsonrpc\":\"2.0\",\"method\":\"machine.list\",\"params\":{}}\n",
+      "unit": "write"
+     },
+     {
+      "at_ms": "45",
+      "bytes": "211",
+      "direction": "received",
+      "offset": "4092",
+      "sha256": "7581919583a0efcd314a3b86c5113dda1ca496d53853aaec0be9b7c6f0edb0e9",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"no-local-fallback\",\"error\":{\"code\":-32000,\"message\":\"operation failed\",\"data\":{\"kind\":\"machine_unreachable\",\"hint\":\"reconnect the machine; nothing ran locally instead\",\"retryable\":true}}}",
+      "unit": "line"
+     },
+     {
+      "at_ms": "45",
+      "bytes": "500",
+      "direction": "received",
+      "offset": "4303",
+      "sha256": "1646feb267323fb1fcbdb0629bb546405bf5c4f94aff995f2fbd41989d3d4b8c",
+      "text": "{\"jsonrpc\":\"2.0\",\"id\":\"roster-keeps-bravo\",\"result\":{\"machines\":[{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000a1\",\"name\":\"alpha\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"2\",\"state\":\"connected\",\"version\":\"1.0.0\"},{\"aliases\":[],\"last_seen_seq\":null,\"machine_id\":\"machine:0191f1a2-0000-7000-8000-0000000000b2\",\"name\":\"bravo\",\"remote_boot_id\":\"1\",\"remote_lifetime\":\"runtime:7\",\"revision\":\"3\",\"state\":\"unreachable\",\"version\":\"1.0.0\"}]}}",
+      "unit": "line"
+     }
+    ],
+    "via": "bridge",
+    "writes": "11"
+   }
+  ],
+  "declared": {
+   "closes": [
+    "GAP-108",
+    "GAP-109",
+    "GAP-119",
+    "GAP-120"
+   ],
+   "delivers": [
+    "IDEAL-080",
+    "IDEAL-082",
+    "IDEAL-083",
+    "IDEAL-092"
+   ],
+   "excludes": [
+    "EXCL-015",
+    "EXCL-020",
+    "EXCL-021",
+    "EXCL-026"
+   ],
+   "title": "Each machine has its own actor: a stalled or lost machine blocks no other, stays listed, and gets its orphan notice once it returns",
+   "todo": "44"
+  },
+  "descriptors": [],
+  "elapsed_ms": "450",
+  "failure": null,
+  "fixture": {
+   "accepted": "1",
+   "failures": {},
+   "panicked": "0"
+  },
+  "outcome": "passed",
+  "processes": [
+   {
+    "argv": [
+     "/dev/shm/ovt-target-lane-t30/debug/ovis-terminal",
+     "connect"
+    ],
+    "exit_code": 0,
+    "pid": "3023667",
+    "role": "bridge",
+    "stderr": {
+     "bytes": "0",
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "text": ""
+    },
+    "stdout": {
+     "bytes": "0",
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "text": ""
+    }
+   },
+   {
+    "argv": [
+     "/dev/shm/ovt-target-lane-t30/debug/conformance",
+     "fixture",
+     "--root",
+     "/tmp/ovc-2979580-74",
+     "--binary",
+     "/dev/shm/ovt-target-lane-t30/debug/ovis-terminal"
+    ],
+    "exit_code": 0,
+    "pid": "3023490",
+    "role": "fixture",
+    "stderr": {
+     "bytes": "0",
+     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "text": ""
+    },
+    "stdout": {
+     "bytes": "82",
+     "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+     "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+    }
+   }
+  ],
+  "scenario": "remote/isolation",
+  "summary": "After the parent with a child on bravo exits and bravo's line is cut, the plan's injected $/orphanedAck {notification_id: unknown, parent_incarnation: reused-old} is not_found; the real notice id under a reused-old or later parent incarnation is stale_target and a numeric incarnation invalid_params. The notice stays in the outbox, bravo never applied it, a call to bravo is machine_unreachable with no local fallback, and machine.list keeps bravo listed as unreachable."
+ }
+]
+
+## CI occurrence: PR #78 head cec6151, workflow ci run 41349272942, job 124976014124 (scripts/check.sh, ubuntu)
+
+https://github.com/devswha/ovis-terminal/actions/runs/41349272942/job/124976014124 - suite::every_scenario_file_is_executed_or_a_listed_declaration failed on remote/isolation happy step 8 (reply[child-on-bravo]/error did not hold), the same signature as the local attempt above. Matching job log lines:
+
+2026-11-01T21:03:15.6466190Z     [0m[31;1mthread 'suite::every_scenario_file_is_executed_or_a_listed_declaration' (21769) panicked at conformance/src/runner_tests/suite.rs:80:5:[0m
+2026-11-01T21:03:15.6468625Z     [31;1massertion `left == right` failed: {"case":"all","error":null,"evidence":"/tmp/ovc-test-21768-all-all-all-01a198ea-4146-77cb-b546-6a82cd50df5c/all.json","evidence_error":null,"evidence_written":true,"result":"failed","scenario":"all/all","totals":{"assertions":"5435","cases":"83","declared_only":"33","failed":"1","passed":"82","skipped":"0"}}[0m
+2026-11-01T21:03:15.6471042Z     "remote/isolation" "happy": {"detail":"expectation reply[child-on-bravo]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"8"}
+2026-11-01T21:03:15.6472737Z       {"actual":{"code":-32603,"data":{"hint":"inspect the fixture's stderr","kind":"internal","retryable":false},"message":"operation failed"},"check":"reply[child-on-bravo]/error","expected":{"$present":false},"passed":false}
+2026-11-01T21:03:15.6474256Z       {"actual":null,"check":"reply[child-on-bravo]/result/linked","expected":true,"passed":false}
+

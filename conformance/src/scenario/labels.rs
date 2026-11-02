@@ -1,5 +1,8 @@
 //! `$op:<label>` placeholders: one fresh `UUIDv7` per label per case run; `$value:<name>`
 //! placeholders: the reply value an earlier `$capture` matcher recorded under that name.
+//!
+//! `$repeat:<count>:<text>` placeholders expand to `text` repeated `count` times, so a
+//! scenario can send megabytes of input without storing them.
 
 use std::collections::BTreeMap;
 
@@ -7,6 +10,19 @@ use serde_json::Value;
 
 const PREFIX: &str = "$op:";
 const VALUE: &str = "$value:";
+const REPEAT: &str = "$repeat:";
+
+/// Largest text one `$repeat:` placeholder expands to.
+const REPEAT_MAX_BYTES: usize = 128 << 20;
+
+/// `text` repeated `count` times for a `<count>:<text>` spec; none for a malformed or
+/// oversized spec, which then stays as written.
+fn repeated(spec: &str) -> Option<String> {
+    let (count, text) = spec.split_once(':')?;
+    let count: usize = count.parse().ok()?;
+    let bytes = text.len().checked_mul(count)?;
+    (!text.is_empty() && bytes <= REPEAT_MAX_BYTES).then(|| text.repeat(count))
+}
 
 /// Operation identities minted, and reply values captured, for one case.
 #[derive(Debug, Default)]
@@ -33,6 +49,9 @@ impl Labels {
                             .or_insert_with(|| uuid::Uuid::now_v7().to_string())
                             .clone(),
                     );
+                }
+                if let Some(expanded) = text.strip_prefix(REPEAT).and_then(repeated) {
+                    return Value::String(expanded);
                 }
                 text.strip_prefix(VALUE)
                     .and_then(|name| self.values.get(name))
@@ -81,5 +100,22 @@ mod tests {
         labels.capture("id".to_owned(), json!({"n": "1"}));
         let resolved = labels.resolve(&json!(["$value:id", "$value:other"]));
         assert_eq!(resolved, json!([{"n": "1"}, "$value:other"]));
+    }
+
+    #[test]
+    fn repeat_placeholders_expand_and_malformed_ones_stay_as_written() {
+        let mut labels = Labels::default();
+        let resolved = labels.resolve(&json!({"text": "$repeat:3:ab", "one": "$repeat:1:q"}));
+        assert_eq!(resolved, json!({"text": "ababab", "one": "q"}));
+        let big = labels.resolve(&json!("$repeat:3145728:y"));
+        assert_eq!(big.as_str().map(str::len), Some(3_145_728));
+        for kept in [
+            "$repeat:x:q",
+            "$repeat:4:",
+            "$repeat:4",
+            "$repeat:999999999999:q",
+        ] {
+            assert_eq!(labels.resolve(&json!(kept)), json!(kept), "{kept}");
+        }
     }
 }

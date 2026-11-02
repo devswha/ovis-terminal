@@ -5,6 +5,7 @@ use alacritty_terminal::grid::{Dimensions, Grid};
 use alacritty_terminal::index::{Column, Line};
 use alacritty_terminal::term::TermMode;
 use alacritty_terminal::term::cell::{Cell, Flags};
+use ovis_terminal_protocol::domain::graphics::GraphicsProtocol;
 use serde::{Deserialize, Serialize};
 
 use crate::engine::Vt;
@@ -81,6 +82,26 @@ pub struct CursorState {
     pub blinking: bool,
 }
 
+/// One retained image shown on the active screen, by the cells it covers there. Its
+/// cells read as blank text in [`ScreenRead::lines`]; this is what covers them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct ScreenImage {
+    /// Raw output offset where its sequence, or its first Kitty chunk, began: the key
+    /// the terminal's image store holds its bytes under.
+    pub key: OutputOffset,
+    /// Its protocol.
+    pub protocol: GraphicsProtocol,
+    /// Zero-based row of the first covered row still visible.
+    pub row: u16,
+    /// Zero-based column of the first covered cell.
+    pub column: u16,
+    /// Covered rows still visible.
+    pub rows: u16,
+    /// Covered columns, clipped at the right edge of the grid.
+    pub columns: u16,
+}
+
 /// The visible screen with every fact a client needs to trust it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -109,6 +130,9 @@ pub struct ScreenRead {
     pub title: Option<String>,
     /// Exactness of the underlying state.
     pub fidelity: Fidelity,
+    /// Retained images shown on the active screen, top row first.
+    #[serde(default)]
+    pub images: Vec<ScreenImage>,
 }
 
 pub(super) fn row_text(grid: &Grid<Cell>, line: Line) -> ScreenLine {
@@ -179,6 +203,10 @@ impl Vt {
             modes: self.modes,
             title: self.shadow.title.clone(),
             fidelity: self.fidelity.clone(),
+            images: self.images.on_screen(
+                self.term.grid(),
+                self.term.mode().contains(TermMode::ALT_SCREEN),
+            ),
         }
     }
 }

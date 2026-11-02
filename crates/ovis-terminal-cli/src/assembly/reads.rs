@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 
 use base64::Engine as _;
 use ovis_terminal_core::restart::ArmedWait;
-use ovis_terminal_core::screen::{Needle, OutputRequest, SearchRequest};
+use ovis_terminal_core::screen::{Needle, OutputRequest, ScreenError, SearchRequest};
 use ovis_terminal_core::waits::{OutputOutcome, OutputWait, Ticket, WaitError};
 use ovis_terminal_protocol::domain::restart::InterruptedWait;
 use ovis_terminal_protocol::errors::{BoundaryError, OpId};
@@ -77,7 +77,20 @@ impl Runtime {
             .screen()
             .map_err(|error| refusal(error.kind(), error.hint()))?;
         let lines: Vec<&str> = view.lines.iter().map(|line| line.text.as_str()).collect();
-        checked::<TerminalScreenResult>(json!({
+        let shown =
+            |error: ovis_terminal_server::streams::StreamError| refusal(error.kind(), error.hint());
+        let images = live.hub.image_placeholders(&view.images).map_err(shown)?;
+        let index = if params.include_images {
+            let retained = live
+                .hub
+                .screen()
+                .images()
+                .map_err(|error| refusal(error.kind(), error.hint()))?;
+            Some(live.hub.image_index(&retained).map_err(shown)?)
+        } else {
+            None
+        };
+        let mut result = json!({
             "revision": view.meta.revision.get().to_string(),
             "output_offset": view.meta.offset.get().to_string(),
             "lines": lines,
@@ -85,7 +98,17 @@ impl Runtime {
             "modes": wire_modes(&view.modes, view.mode_revision),
             "title": view.title,
             "truncated": false,
-        }))
+        });
+        if let Some(fields) = result.as_object_mut() {
+            let images = serde_json::to_value(images).map_err(internal("encode placeholders"))?;
+            fields.insert("images".to_owned(), images);
+            if let Some(index) = index {
+                let index =
+                    serde_json::to_value(index).map_err(internal("encode the image index"))?;
+                fields.insert("image_index".to_owned(), index);
+            }
+        }
+        checked::<TerminalScreenResult>(result)
     }
 
     pub(super) fn search(&mut self, params: &TerminalSearchParams) -> Result<Value, BoundaryError> {
@@ -138,11 +161,15 @@ impl Runtime {
                 )
             })?;
         let request = OutputRequest::new(OutputOffset::new(params.from_offset.get()), limit);
-        let slice = live
-            .hub
-            .screen()
-            .output(&request)
-            .map_err(|error| refusal(error.kind(), error.hint()))?;
+        let screen = live.hub.screen();
+        // An evicted start resumes at the retained floor and reports `gap`.
+        let slice = match screen.output(&request) {
+            Err(ScreenError::HistoryGap { retained, .. }) => {
+                screen.output(&OutputRequest::new(retained.floor, limit))
+            }
+            read => read,
+        }
+        .map_err(|error| refusal(error.kind(), error.hint()))?;
         checked::<TerminalOutputResult>(json!({
             "data_b64": base64::engine::general_purpose::STANDARD.encode(&slice.bytes),
             "from_offset": slice.from.get().to_string(),

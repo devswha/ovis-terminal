@@ -7,7 +7,7 @@ use crate::schema::common::Geometry;
 use crate::schema::ids::{ClientId, LeaseId, StreamId, TerminalId};
 use crate::schema::methods::attach::{AttachOpenResult, AttachOutcome, AttachStreamResult};
 use crate::schema::records::{
-    Checkpoint, LeaseRecord, LeaseRole, Modes, ScreenCursor, TerminalMode,
+    Checkpoint, CheckpointInexact, LeaseRecord, LeaseRole, Modes, ScreenCursor, TerminalMode,
 };
 use crate::schema::scalar::{
     ByteCount, ByteOffset, Count, Incarnation, LeaseEpoch, OpenEnum, Revision,
@@ -123,6 +123,7 @@ impl Checkpoint {
             modes: screen.modes,
             cursor: screen.cursor,
             history_lines: screen.history_lines,
+            inexact: screen.inexact,
         }
     }
 }
@@ -141,6 +142,8 @@ pub struct PaintedScreen {
     pub cursor: ScreenCursor,
     /// Primary-screen history lines readable behind the paint.
     pub history_lines: Count,
+    /// Why the paint is inexact; empty when exact.
+    pub inexact: Vec<OpenEnum<CheckpointInexact>>,
 }
 
 impl PaintedScreen {
@@ -161,6 +164,7 @@ impl PaintedScreen {
                 visible: true,
             },
             history_lines: Count::new(0),
+            inexact: Vec::new(),
         }
     }
 }

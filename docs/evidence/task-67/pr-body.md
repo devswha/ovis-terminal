@@ -44,6 +44,7 @@ Exclusions enforced, not copied:
 - **M2, wrong `.sha256` sidecar.** `verify_archive` requires the sidecar to equal `<sha256 of the archive bytes>  <file>`, and the matrix fixtures create sidecars through `seal`. The `wrong-sidecar` fixture is refused, and the native artifact asserts that the sidecar matches the archive bytes. Mutants M5 (unit tests) and C1 (conformance on the built binary) are caught.
 - **macOS CI (round 1):** `test` and `unix-full` on macos-latest failed because the scenario asserted `release_target: false`. On macOS the native host triple `aarch64-apple-darwin` is a release target, so that assertion is now platform-neutral.
 - **Round 3, dry-run step assertion:** the round-2 check `tar -tzf … | grep -q …` failed under `bash -e -o pipefail`. `grep -q` exits at the first match, tar then dies writing to the closed pipe (`tar: stdout: write error`), and pipefail fails the step even though the SDK is in the archive. The listing now goes to a file first. Every other pipeline in release.yml and build.sh reads its input to EOF.
+- **Authorized merge of origin/integration 6de1d0e** (t85). The conflicts were only the generated replay pins `conformance/fixtures/ovis/{manifest,predicates}.json`: I took integration's copies, then ran `ovis-replay refresh` and committed the result. The engine, step, scenario-model and CLI args/plan files merged automatically, and the union keeps both sides. `plan.rs` reached 251 pure LOC, so its tests moved to the child module `invocation/plan/tests.rs` with no behaviour change. After the merge: `schema contract` equals docs/runtime-contract.md, `schema openrpc` equals the source schema, the client-ts `generate:check` is fresh, and the release/artifacts evidence was re-recorded on the merged binary (94 / 46 / 13 assertions, 0 failed).
 - **M3, failed QA check with `passed: true`.** The new `failed-native-qa` and `forged-qa-pass` fixtures are refused with `native_qa_failed` naming the check. Mutants M6 and C2 are caught.
 - **Mutants:** `mutants.log` records round 1 (M1-M4) and round 2 (M5-M8 unit level, C1-C2 conformance on the release-built binary). Every one fails a shipped test or the shipped dry-run.
 
@@ -53,7 +54,7 @@ Exclusions enforced, not copied:
 
 ## After
 
-Host: Linux x86_64. `$ATTEMPT_DIR=/dev/shm/ovt-fixtures/t67-scratch/attempt`. Per host rules, `target/` is `CARGO_TARGET_DIR=/dev/shm/ovt-target-lane-t67`, so `--binary target/debug/ovis-terminal` materializes as `/dev/shm/ovt-target-lane-t67/debug/ovis-terminal` (sha256 `cf43e7af2b50c39d0ae93b97fcd01aa444ea3229634d674807f09fd449fe0d4e`, 151442776 bytes).
+Host: Linux x86_64. `$ATTEMPT_DIR=/dev/shm/ovt-fixtures/t67-scratch/attempt`. Per host rules, `target/` is `CARGO_TARGET_DIR=/dev/shm/ovt-target-lane-t67`, so `--binary target/debug/ovis-terminal` materializes as `/dev/shm/ovt-target-lane-t67/debug/ovis-terminal` (sha256 `f4a734a589ddd865e6a5de6a5be846e76976bfcdd8223852db94c928630aeb49`, 152050000 bytes).
 
 | Command | Exit | Result |
 |---|---|---|
@@ -89,7 +90,7 @@ Adversarial (`adversarial.log`, `mutants.log`):
 - Repeated interruptions: an identical rerun after publication is `already_published` with `publish: false`; a rerun with rebuilt artifacts is `release_conflict`.
 - Mutants, each caught by a shipped test (test exit 100): M1 promotion ignores a missing target, M2 republishing over a different published manifest, M3 accepting a cross-built receipt, M4 the CLI treating a break as compatible.
 
-Gates: `bash with-slot.sh bash scripts/check.sh` -> exit 0, nextest 1593 passed / 2 skipped, every step passed (`check.log`). Windows pre-check: `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` -> exit 0; `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` -> exit 0 (`windows-precheck.log`).
+Gates: `bash with-slot.sh bash scripts/check.sh` -> exit 0, nextest 1618 passed / 2 skipped (merged tree), every step passed (`check.log`). Windows pre-check: `RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked` -> exit 0; `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings` -> exit 0 (`windows-precheck.log`).
 
 ## Seams
 

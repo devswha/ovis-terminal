@@ -1,0 +1,1252 @@
+{
+  "scenario": "capacity/session-budget",
+  "title": "Session-wide input budget refuses with typed backpressure before it is exceeded",
+  "todo": 30,
+  "delivers": [],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "failure",
+      "summary": "Five programs that never read their PTYs each take 3 MiB writes in turn, every terminal staying under its 16 MiB input queue. hello advertises session_input_bytes 67108864: the first 21 writes (63 MiB) are admitted and the 22nd, which would take the session to 66 MiB, must be refused with typed backpressure before the budget is exceeded.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/limits/session_input_bytes": "67108864",
+              "/result/limits/input_queue_bytes": "16777216"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stall1",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:stall1",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "stty -echo -icanon; printf STALLED; exec sleep 600"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "stall1",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "stall1": {
+                "/result/terminal/address": "t1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stalled1",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "STALLED"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "stalled1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stall2",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:stall2",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "stty -echo -icanon; printf STALLED; exec sleep 600"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "stall2",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "stall2": {
+                "/result/terminal/address": "t2"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stalled2",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "STALLED"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "stalled2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stall3",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:stall3",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "stty -echo -icanon; printf STALLED; exec sleep 600"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "stall3",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "stall3": {
+                "/result/terminal/address": "t3"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stalled3",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t3"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "STALLED"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "stalled3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stall4",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:stall4",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "stty -echo -icanon; printf STALLED; exec sleep 600"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "stall4",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "stall4": {
+                "/result/terminal/address": "t4"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stalled4",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t4"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "STALLED"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "stalled4": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stall5",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:stall5",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "stty -echo -icanon; printf STALLED; exec sleep 600"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "stall5",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "stall5": {
+                "/result/terminal/address": "t5"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "stalled5",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t5"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "STALLED"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "stalled5": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w1",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w1",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w1": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w2",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w2",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w2": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w3",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w3",
+                  "target": {
+                    "address": "t3"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w3": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w4",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w4",
+                  "target": {
+                    "address": "t4"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w4": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w5",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w5",
+                  "target": {
+                    "address": "t5"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w5": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w6",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w6",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w6": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w7",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w7",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w7": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w8",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w8",
+                  "target": {
+                    "address": "t3"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w9",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w9",
+                  "target": {
+                    "address": "t4"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w9": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w10",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w10",
+                  "target": {
+                    "address": "t5"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w10": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w11",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w11",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w11": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w12",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w12",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w12": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w13",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w13",
+                  "target": {
+                    "address": "t3"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w13": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w14",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w14",
+                  "target": {
+                    "address": "t4"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w14": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w15",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w15",
+                  "target": {
+                    "address": "t5"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w15": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w16",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w16",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w16": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w17",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w17",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w17": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w18",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w18",
+                  "target": {
+                    "address": "t3"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w18": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w19",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w19",
+                  "target": {
+                    "address": "t4"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w19": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w20",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w20",
+                  "target": {
+                    "address": "t5"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w20": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w21",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w21",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w21": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "3145728"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "w22",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:w22",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "expect": null,
+                  "text": "$repeat:3145728:q",
+                  "submit": "none",
+                  "lease_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "w22": {
+                "/result": {
+                  "$present": false
+                },
+                "/error/data/kind": "backpressure"
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

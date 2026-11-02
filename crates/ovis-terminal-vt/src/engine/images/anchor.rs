@@ -92,6 +92,19 @@ impl Anchor {
         self.rows.first().map_or(0, |row| row.line)
     }
 
+    /// Covered rows still on screen.
+    pub(super) const fn shown_rows(&self) -> usize {
+        self.rows.len()
+    }
+
+    /// Covered columns on `grid`, clipped at its right edge.
+    pub(super) fn shown_columns(&self, grid: &Grid<Cell>) -> usize {
+        self.column
+            .saturating_add(self.width)
+            .min(grid.columns())
+            .saturating_sub(self.column)
+    }
+
     fn intact(&self, grid: &Grid<Cell>, index: usize) -> bool {
         let right = self.column.saturating_add(self.width).min(grid.columns());
         index < grid.screen_lines()

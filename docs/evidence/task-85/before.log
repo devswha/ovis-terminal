@@ -1,0 +1,13 @@
+# Before (plan todo 85): base origin/integration 1869b9e, binary built from that tree
+# Host: Linux 7.0.0-38-generic x86_64
+$ conformance --binary $CARGO_TARGET_DIR/debug/ovis-terminal --scenario graphics/read --isolated --case happy --evidence before-happy.json
+exit=1 (result failed, step 13: expectation reply[with-images]/error did not hold)
+
+The program printed `ab`, then a 3-chunk Kitty f=100 PNG declaring c=4,r=2 at raw offset 4 (145 bytes),
+then three line feeds and `images-done`. The viewer received the image byte-identical, but the screen read
+reports the 2x4 image region (row 1 cols 2-5, row 2 cols 2-5) only as blank cells, with no image fact,
+and the base schema has no way to ask for one (include_images is an unknown field):
+
+{"jsonrpc":"2.0","id":"plain","result":{"cursor":{"col":11,"row":4,"visible":true},"lines":["","ab","","","images-done","","","","","","","","","","","","","","","","","","",""],"modes":{"enabled":[],"kitty_keyboard":0,"revision":"0"},"output_offset":"169","revision":"27","title":null,"truncated":false}}
+
+{"jsonrpc":"2.0","id":"with-images","error":{"code":-32602,"message":"method parameters violate the closed schema","data":{"kind":"invalid_params","hint":"correct the method parameters","retryable":false,"field_path":"params.include_images"}}}

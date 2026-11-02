@@ -1,0 +1,17 @@
+# T66 cli/manual evidence re-recorded on lane-t30's merged binary (this lane's schema adds Checkpoint.inexact, so the committed $equals_file schema assertions no longer held)
+
+host: Linux 7.0.0-38-generic x86_64; head: ad1ebf147b0f64be6f764606beb4cc4ead070c8e; binary: /dev/shm/ovt-target-lane-t30/debug/ovis-terminal
+{"case":"all","error":null,"evidence":"docs/evidence/task-66/task-66-all.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"cli/manual","totals":{"assertions":"122","cases":"2","declared_only":"0","failed":"0","passed":"2","skipped":"0"}}
+EXIT=0
+{"case":"happy","error":null,"evidence":"docs/evidence/task-66/task-66-ovis-terminal-v1.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"cli/manual","totals":{"assertions":"71","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+EXIT=0
+{"case":"failure","error":null,"evidence":"docs/evidence/task-66/task-66-ovis-terminal-v1.json","evidence_error":null,"evidence_written":true,"result":"passed","scenario":"cli/manual","totals":{"assertions":"29","cases":"1","declared_only":"0","failed":"0","passed":"1","skipped":"0"}}
+EXIT=0
+AUDIT pass 0
++ cargo run -q --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary /dev/shm/ovt-target-lane-t30/debug/ovis-terminal --scenario cli/manual --isolated --case all --evidence docs/evidence/task-66/task-66-all.json
++ echo EXIT=0
++ cargo run -q --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary /dev/shm/ovt-target-lane-t30/debug/ovis-terminal --scenario cli/manual --isolated --case happy --evidence docs/evidence/task-66/task-66-ovis-terminal-v1.json
++ echo EXIT=0
++ cargo run -q --locked --manifest-path conformance/Cargo.toml --bin conformance -- --binary /dev/shm/ovt-target-lane-t30/debug/ovis-terminal --scenario cli/manual --isolated --case failure --inject 'ovis-terminal agent get --unknown-flag --json' --evidence docs/evidence/task-66/task-66-ovis-terminal-v1.json --append
++ echo EXIT=0
++ set +x

@@ -3,7 +3,8 @@
 
 use ovis_terminal_vt::{
     ContentRevision, CursorState, Fidelity, Geometry, HistoryCompleteness, LineSpan, ModeRevision,
-    OscRecord, OutputOffset, ReadFormat, ReadSource, ScreenBuffer, ScreenLine, TerminalModes,
+    OscRecord, OutputOffset, ReadFormat, ReadSource, ScreenBuffer, ScreenImage, ScreenLine,
+    TerminalModes,
 };
 use serde::Serialize;
 
@@ -144,6 +145,8 @@ pub struct ScreenView {
     pub modes: TerminalModes,
     /// Window title.
     pub title: Option<String>,
+    /// Retained images shown on the active screen, top row first; their cells read blank.
+    pub images: Vec<ScreenImage>,
 }
 
 /// One page of scrollback.

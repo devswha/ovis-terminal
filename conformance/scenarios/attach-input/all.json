@@ -1,0 +1,1789 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "attach-input/all",
+  "title": "Attach first paint, admission-before-delivery, exact output waits, operator lease and bounded shared storage",
+  "todo": 30,
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "Real ovis-terminal serve with the QA output ring seam (--qa-output-ring-bytes 65536 on a qa-fixture root): hello advertises the session-wide and per-object budgets (64 MiB output ring, 256 KiB/1 MiB credit, 16 MiB input queue, 4 GiB retained, 64 MiB input/backlog, 128 MiB VT). /bin/sh's prompt is matched and the raw bytes at its matched_at read back as \"$ \" (offsets are relative to that run's prompt: a program may emit invisible bytes first, e.g. Darwin bash's 8-byte ESC[?1034h); an interact writer and an observe-only viewer attach and get the identical first paint. The writer's input.send is admitted with the output cursor captured at the prompt's end (before delivery), the evaluated marker mark-42 is matched exactly 20 bytes (the echoed command line) later and the raw bytes at matched_at read back as mark-42, and the barrier on its queued sequence is reached with 0 pending bytes. An operator is held behind the writer with a lease_released retry boundary naming the writer's lease, takes over by the observed epoch, and the writer's stream is told checkpoint, input_ready, input_revoked, close taken_over by the operator. 300 000 bytes then overflow the 64 KiB ring while the observer never credits: the operator's marker still matches, the observer's stream never passes its 262 144-byte credit, and its repaint answers (at the repaint's own stream offset, which the gap and checkpoint records repeat) a gap record (skipped raw range ending at terminal.screen's output offset) followed by a checkpoint equal to terminal.screen's offset and revision. terminal.output from 0 resumes at the retained floor with gap true (floor = head - 65 536), a read from the floor has no gap and ends at the head, and server.metrics accounts exactly one resynced byte loss to the observer and none to the operator. A second program (t2) writes a UTF-8 character and a CSI sequence split across separate writes and sends a DSR query (ESC[6n) the server answers: it sees the reply exactly once (REPLY-ONCE), a late observer's first paint and its repaint are exact (inexact: []), and the next byte the program reads is the operator's 'x', not a second reply. The raw bytes from offset 0 and terminal.screen are kept for an independent VT oracle (the Rust test feeds the raw bytes in one piece to ovis-terminal-vt and compares lines and cursor). The exact 16-PTY latency profile is capacity/sixteen.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled",
+            "qa_output_ring_bytes": "65536"
+          }
+        },
+        {
+          "connect": {
+            "conn": "control",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "control",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "attach.open",
+                  "attach.credit",
+                  "attach.repaint",
+                  "attach.takeover",
+                  "attach.leases",
+                  "input.send",
+                  "input.barrier",
+                  "terminal.wait_output",
+                  "terminal.output",
+                  "terminal.screen"
+                ]
+              },
+              "/result/limits/output_ring_bytes": "67108864",
+              "/result/limits/credit_initial_bytes": "262144",
+              "/result/limits/credit_max_bytes": "1048576",
+              "/result/limits/input_queue_bytes": "16777216",
+              "/result/limits/session_retained_bytes": "4294967296",
+              "/result/limits/session_input_bytes": "67108864",
+              "/result/limits/session_backlog_bytes": "67108864",
+              "/result/limits/session_vt_bytes": "134217728",
+              "/result/limits/stream_backlog_bytes": {
+                "$present": true
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "run",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:run",
+                  "program": {
+                    "argv": [
+                      "/bin/sh"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "PS1": "$ ",
+                    "TERM": "xterm"
+                  },
+                  "name": "shell",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "run": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/spawn": "spawned",
+                "/result/terminal/address": "t1",
+                "/result/terminal/state": "live"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "prompt",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "$ "
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "prompt": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": {
+                  "$capture": "prompt_at"
+                },
+                "/result/cursor/offset": {
+                  "$capture": "prompt_end"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "prompt-bytes",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "from_offset": "$value:prompt_at",
+                  "limit_bytes": "2"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "prompt-bytes": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/from_offset": "$value:prompt_at",
+                "/result/gap": false,
+                "/result/data_b64": "JCA="
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "writer",
+            "via": "socket",
+            "principal": "writer"
+          }
+        },
+        {
+          "hello": {
+            "conn": "writer",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "writer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "writer-open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:writer-open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "writer",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "writer",
+            "expect": {
+              "writer-open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/role": "interact",
+                "/result/lease/lease_id": {
+                  "$capture": "writer_lease"
+                },
+                "/result/lease/epoch": {
+                  "$capture": "writer_epoch"
+                },
+                "/result/stream_id": {
+                  "$capture": "writer_stream"
+                },
+                "/result/first_paint": {
+                  "$capture": "paint"
+                },
+                "/result/credit_initial": "262144"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "observer",
+            "via": "socket",
+            "principal": "observe"
+          }
+        },
+        {
+          "hello": {
+            "conn": "observer",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "observer-open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:observer-open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "observe",
+                  "client_id": "observer",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "observer-open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/role": "observe",
+                "/result/first_paint": "$value:paint",
+                "/result/stream_id": {
+                  "$capture": "observer_stream"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "writer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "mark",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:mark",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "echo mark-$((6*7))",
+                  "submit": "enter",
+                  "lease_id": "$value:writer_lease"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "writer",
+            "expect": {
+              "mark": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/op_id": "$op:mark",
+                "/result/receipt/admitted_bytes": "19",
+                "/result/receipt/queued_seq": {
+                  "$capture": "mark_seq"
+                },
+                "/result/receipt/output_cursor/offset": "$value:prompt_end"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "mark-wait",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "cursor": {
+                    "offset": "$value:prompt_end"
+                  },
+                  "pattern": {
+                    "text": "mark-42"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "mark-wait": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/matched_at": {
+                  "$capture": "mark_at"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "mark-bytes",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "from_offset": "$value:mark_at",
+                  "limit_bytes": "7"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "mark-bytes": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/from_offset": "$value:mark_at",
+                "/result/gap": false,
+                "/result/data_b64": "bWFyay00Mg=="
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "mark-barrier",
+                "method": "input.barrier",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "queued_seq": "$value:mark_seq"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "mark-barrier": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/reached": true,
+                "/result/pending_bytes": "0"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "operator",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "operator",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "operator-open",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:operator-open",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "role": "interact",
+                  "client_id": "operator",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "operator-open": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "held",
+                "/result/holder/holder": "writer",
+                "/result/holder/epoch": "$value:writer_epoch",
+                "/result/retry/on": "lease_released",
+                "/result/retry/lease/holder": "writer",
+                "/result/retry/event": {
+                  "$present": true
+                },
+                "/result/stream_id": {
+                  "$capture": "operator_stream"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "takeover",
+                "method": "attach.takeover",
+                "params": {
+                  "op_id": "$op:takeover",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "stream_id": "$value:operator_stream",
+                  "takeover": {
+                    "lease_epoch": "$value:writer_epoch",
+                    "reason": "operator takes the terminal"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "takeover": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/acquired/holder": "operator",
+                "/result/acquired/role": "interact",
+                "/result/acquired/lease_id": {
+                  "$capture": "operator_lease"
+                },
+                "/result/displaced/holder": "writer",
+                "/result/seq": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "writer",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "checkpoint"
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "writer",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "input_ready"
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "writer",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "input_revoked"
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "writer",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "close",
+              "/params/close/reason": "taken_over",
+              "/params/close/by/holder": "operator"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "flood",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:flood",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "head -c 300000 /dev/zero | tr '\\000' y; echo; echo flood-$((4*4))",
+                  "submit": "enter",
+                  "lease_id": "$value:operator_lease"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "flood": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/output_cursor": {
+                  "$capture": "flood_cursor"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "flood-wait",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "cursor": "$value:flood_cursor",
+                  "pattern": {
+                    "text": "flood-16\r\n$ "
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "flood-wait": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "screen",
+                "method": "terminal.screen",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "format": "text"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "screen": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/output_offset": {
+                  "$capture": "screen_offset"
+                },
+                "/result/revision": {
+                  "$capture": "screen_revision"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "repaint",
+                "method": "attach.repaint",
+                "params": {
+                  "stream_id": "$value:observer_stream"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "repaint": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/checkpoint/output_offset": "$value:screen_offset",
+                "/result/checkpoint/revision": "$value:screen_revision",
+                "/result/checkpoint/stream_offset": {
+                  "$capture": "repaint_cp_so"
+                },
+                "/result/stream_offset": {
+                  "$capture": "repaint_so"
+                }
+              }
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "observer",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "checkpoint",
+              "/params/checkpoint/output_offset": "$value:prompt_end"
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "observer",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "gap",
+              "/params/stream_offset": "$value:repaint_so",
+              "/params/skipped/from_output_offset": {
+                "$present": true
+              },
+              "/params/skipped/to_output_offset": "$value:screen_offset"
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "observer",
+            "method": "attach.control",
+            "expect": {
+              "/params/kind": "checkpoint",
+              "/params/checkpoint/output_offset": "$value:screen_offset",
+              "/params/checkpoint/revision": "$value:screen_revision",
+              "/params/checkpoint/stream_offset": "$value:repaint_so"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "evicted",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "from_offset": "0",
+                  "limit_bytes": "64"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "evicted": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/gap": true,
+                "/result/floor_offset": {
+                  "$capture": "floor"
+                },
+                "/result/from_offset": {
+                  "$capture": "resumed_from"
+                },
+                "/result/next_offset": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "floor-read",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "from_offset": "$value:floor",
+                  "limit_bytes": "65536"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "floor-read": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/gap": false,
+                "/result/from_offset": "$value:floor",
+                "/result/floor_offset": "$value:floor",
+                "/result/next_offset": "$value:screen_offset",
+                "/result/data_b64": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "metrics",
+                "method": "server.metrics",
+                "params": {}
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "metrics": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/consumers/0/client_id": "observer",
+                "/result/consumers/0/losses/0/range/unit": "bytes",
+                "/result/consumers/0/losses/0/range/first_offset": {
+                  "$present": true
+                },
+                "/result/consumers/0/losses/0/resynced": true,
+                "/result/consumers/0/losses/1": {
+                  "$present": false
+                },
+                "/result/consumers/1/client_id": "operator",
+                "/result/consumers/1/losses": [],
+                "/result/consumers_untracked": "0",
+                "/result/consumers/0/losses/0/range/last_offset": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "resume",
+                "method": "attach.credit",
+                "params": {
+                  "stream_id": "$value:observer_stream",
+                  "acknowledged": "$value:repaint_so"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "resume": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/stream_id": "$value:observer_stream"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "operator",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "tail",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:tail",
+                  "target": {
+                    "address": "t1"
+                  },
+                  "expect": null,
+                  "text": "echo tail-$((2*3))",
+                  "submit": "enter",
+                  "lease_id": "$value:operator_lease"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "operator",
+            "expect": {
+              "tail": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/output_cursor": {
+                  "$capture": "tail_cursor"
+                },
+                "/result/receipt/output_cursor/offset": {
+                  "$capture": "tail_from"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "tail-seen",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "cursor": "$value:tail_cursor",
+                  "pattern": {
+                    "text": "tail-6\r\n$ "
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "tail-seen": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/cursor/offset": {
+                  "$capture": "tail_end"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "tail-raw",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  },
+                  "from_offset": "$value:tail_from",
+                  "limit_bytes": "4096"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "tail-raw": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/gap": false,
+                "/result/from_offset": "$value:tail_from",
+                "/result/next_offset": "$value:tail_end",
+                "/result/data_b64": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "stream_data": {
+            "id": "t1",
+            "conn": "observer",
+            "stream": "$value:observer_stream",
+            "from": "$value:repaint_so",
+            "until": "tail-6\r\n$ "
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "leases",
+                "method": "attach.leases",
+                "params": {
+                  "target": {
+                    "address": "t1"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "leases": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/interact/holder": "operator",
+                "/result/observers/0/holder": "observer"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "fixture",
+                "method": "terminal.run",
+                "params": {
+                  "op_id": "$op:fixture",
+                  "program": {
+                    "argv": [
+                      "/bin/sh",
+                      "-c",
+                      "stty raw -echo; printf 'utf8:\\342'; dd bs=1 count=1 >/dev/null 2>&1; printf '\\202\\254 csi:\\033[3'; dd bs=1 count=1 >/dev/null 2>&1; printf '1mRED\\033[0m\\r\\n'; printf '\\033[6n'; while c=$(dd bs=1 count=1 2>/dev/null); [ \"$c\" != R ]; do :; done; printf 'REPLY-ONCE\\r\\n'; c=$(dd bs=1 count=1 2>/dev/null); printf 'NEXT[%s]\\r\\n' \"$c\"; exec sleep 600"
+                    ]
+                  },
+                  "geometry": {
+                    "cols": 80,
+                    "rows": 24
+                  },
+                  "cwd": "/tmp",
+                  "env": {
+                    "PATH": "/usr/bin:/bin",
+                    "TERM": "xterm"
+                  },
+                  "name": "fixture",
+                  "labels": null,
+                  "parent": null,
+                  "child_policy": null,
+                  "keep": null,
+                  "first_message": null,
+                  "machine": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "fixture": {
+                "/result/terminal/address": "t2"
+              }
+            }
+          }
+        },
+        {
+          "connect": {
+            "conn": "driver-conn",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "driver-conn",
+            "framed": false,
+            "expect": {
+              "/id": "hello"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "driver-conn",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "driver",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:driver",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "role": "interact",
+                  "client_id": "driver",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "driver-conn",
+            "expect": {
+              "driver": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/lease/lease_id": {
+                  "$capture": "driver"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "utf8-fence",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "utf8:"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "utf8-fence": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "utf8-bytes",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "from_offset": "0",
+                  "limit_bytes": "64"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "utf8-bytes": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/data_b64": "dXRmODri",
+                "/result/next_offset": "6"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "split-utf8",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:split-utf8",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "role": "observe",
+                  "client_id": "split-utf8",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "split-utf8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/first_paint/inexact": [],
+                "/result/first_paint/output_offset": {
+                  "$capture": "split_utf8_at"
+                },
+                "/result/stream_id": {
+                  "$capture": "split_utf8"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "driver-conn",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "release-utf8",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:release-utf8",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "expect": null,
+                  "text": "g",
+                  "submit": "none",
+                  "lease_id": "$value:driver"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "driver-conn",
+            "expect": {
+              "release-utf8": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "csi-fence",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "cursor": {
+                    "offset": "6"
+                  },
+                  "pattern": {
+                    "text": "csi:\u001b[3"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "csi-fence": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/cursor/offset": "16"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "csi-bytes",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "from_offset": "0",
+                  "limit_bytes": "64"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "csi-bytes": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/data_b64": "dXRmODrigqwgY3NpOhtbMw==",
+                "/result/next_offset": "16"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "split-csi",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:split-csi",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "role": "observe",
+                  "client_id": "split-csi",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "split-csi": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/first_paint/inexact": [],
+                "/result/first_paint/output_offset": {
+                  "$capture": "split_csi_at"
+                },
+                "/result/stream_id": {
+                  "$capture": "split_csi"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "driver-conn",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "release-csi",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:release-csi",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "expect": null,
+                  "text": "g",
+                  "submit": "none",
+                  "lease_id": "$value:driver"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "driver-conn",
+            "expect": {
+              "release-csi": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "replied",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "REPLY-ONCE\r\n"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "replied": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "late",
+                "method": "attach.open",
+                "params": {
+                  "op_id": "$op:late",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "role": "observe",
+                  "client_id": "late",
+                  "geometry": null,
+                  "stream_mode": "plain",
+                  "takeover": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "late": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "ready",
+                "/result/first_paint/inexact": [],
+                "/result/stream_id": {
+                  "$capture": "late"
+                },
+                "/result/first_paint/output_offset": {
+                  "$capture": "late_paint_at"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "observer",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "late-repaint",
+                "method": "attach.repaint",
+                "params": {
+                  "stream_id": "$value:late"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "observer",
+            "expect": {
+              "late-repaint": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/checkpoint/inexact": [],
+                "/result/stream_offset": {
+                  "$capture": "late_so"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "driver-conn",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "next",
+                "method": "input.send",
+                "params": {
+                  "op_id": "$op:next",
+                  "target": {
+                    "address": "t2"
+                  },
+                  "expect": null,
+                  "text": "x",
+                  "submit": "none",
+                  "lease_id": "$value:driver"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "driver-conn",
+            "expect": {
+              "next": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/receipt/admitted_bytes": "1"
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "next-seen",
+                "method": "terminal.wait_output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "cursor": {
+                    "offset": "0"
+                  },
+                  "pattern": {
+                    "text": "NEXT[x]\r\n"
+                  },
+                  "timeout_ms": "10000"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "next-seen": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/outcome": "matched",
+                "/result/cursor/offset": {
+                  "$capture": "fx_end"
+                }
+              }
+            }
+          }
+        },
+        {
+          "stream_data": {
+            "id": "t2",
+            "conn": "observer",
+            "stream": "$value:late",
+            "from": "0",
+            "until": "NEXT[x]\r\n"
+          }
+        },
+        {
+          "stream_data": {
+            "id": "t2-utf8",
+            "conn": "observer",
+            "stream": "$value:split_utf8",
+            "from": "0",
+            "until": "NEXT[x]\r\n"
+          }
+        },
+        {
+          "stream_data": {
+            "id": "t2-csi",
+            "conn": "observer",
+            "stream": "$value:split_csi",
+            "from": "0",
+            "until": "NEXT[x]\r\n"
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "fx-screen",
+                "method": "terminal.screen",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "format": "text"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "fx-screen": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/output_offset": "$value:fx_end",
+                "/result/lines": {
+                  "$present": true
+                },
+                "/result/cursor": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "control",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "fx-raw",
+                "method": "terminal.output",
+                "params": {
+                  "target": {
+                    "address": "t2"
+                  },
+                  "from_offset": "0",
+                  "limit_bytes": "4096"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "control",
+            "expect": {
+              "fx-raw": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/gap": false,
+                "/result/next_offset": "$value:fx_end",
+                "/result/data_b64": {
+                  "$present": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "hangup": {
+            "conn": "control"
+          }
+        },
+        {
+          "closed": {
+            "conn": "control"
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

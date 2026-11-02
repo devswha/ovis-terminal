@@ -30,6 +30,12 @@ impl Session<'_> {
                     detail: "only the assembled binary takes a QA graphics cap",
                 });
             }
+            FixtureKind::Protocol if serve.qa_output_ring_bytes.is_some() => {
+                return Err(RunnerError::ScenarioInconsistent {
+                    scenario: "serve".to_owned(),
+                    detail: "only the assembled binary takes a QA output ring",
+                });
+            }
             FixtureKind::Protocol => {
                 let args = [
                     "fixture".into(),
@@ -52,6 +58,11 @@ impl Session<'_> {
                     mark_qa_root(&srv)?;
                     args.push("--qa-graphics-sequence-max-bytes".into());
                     args.push(cap.0.to_string().into());
+                }
+                if let Some(ring) = serve.qa_output_ring_bytes {
+                    mark_qa_root(&srv)?;
+                    args.push("--qa-output-ring-bytes".into());
+                    args.push(ring.0.to_string().into());
                 }
                 launch::start(&binary, &args, root).await?
             }

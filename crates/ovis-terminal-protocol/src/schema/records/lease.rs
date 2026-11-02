@@ -93,4 +93,24 @@ pub struct Checkpoint {
     pub cursor: ScreenCursor,
     /// Primary-screen history lines readable behind the paint: the history cursor.
     pub history_lines: Count,
+    /// Why the checkpoint plus the bytes after it cannot reproduce an always-live terminal
+    /// (`checkpoint_inexact`); empty when it is exact. Absent from servers that predate it.
+    #[serde(default)]
+    pub inexact: Vec<OpenEnum<CheckpointInexact>>,
+}
+
+/// Why a checkpoint is inexact.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum CheckpointInexact {
+    /// The output stopped inside a sequence after a control byte in it already acted, so
+    /// replaying the open sequence would repeat that action.
+    ControlInsideOpenSequence,
+    /// A string longer than the parser bound was being discarded at the checkpoint.
+    OpenSequenceTooLong,
+    /// The primary screen's saved cursor cannot be rebuilt while the alternate screen is up.
+    PrimarySavedCursorUnrepresentable,
+    /// The paint spent the saved cursor to place a cursor outside the scroll region.
+    SavedCursorNotPaintable,
 }
