@@ -3,7 +3,7 @@
 //! that committed it.
 
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use ovis_terminal_core::events::{Coordinator, EventError};
 use ovis_terminal_core::leases::Transition;
@@ -14,12 +14,15 @@ use ovis_terminal_store::OpId;
 
 use super::AssemblyError;
 use super::boot::{LeaseLog, NoSections, store};
+use super::lanes::DispatchLog;
 
 /// The lease log of the current boot, absent once the lifetime stopped.
 #[derive(Debug)]
 pub(super) struct BootJournal {
     state: PathBuf,
     log: Mutex<Option<LeaseLog>>,
+    /// The serving boot's dispatch log, where committed lease events reach subscribers.
+    feed: Mutex<Option<Arc<DispatchLog>>>,
 }
 
 impl BootJournal {
@@ -28,7 +31,13 @@ impl BootJournal {
         Self {
             state: state.to_path_buf(),
             log: Mutex::new(Some(log)),
+            feed: Mutex::new(None),
         }
+    }
+
+    /// Publishes later lease events to `feed`, or to no subscriber once the boot ends.
+    pub(super) fn publish_to(&self, feed: Option<Arc<DispatchLog>>) {
+        *self.feed.lock().unwrap_or_else(PoisonError::into_inner) = feed;
     }
 
     /// Each update replaces the whole slot, so a poisoned lock still holds a usable value.
@@ -73,10 +82,20 @@ impl BootJournal {
 }
 
 impl LeaseJournal for BootJournal {
+    /// Commits to the lease log first; only a committed transition is then published.
     fn record(&self, op: OpId, transition: Transition) -> Result<Option<EventSeq>, StreamError> {
-        self.slot().as_ref().map_or_else(
+        let committed = self.slot().as_ref().map_or_else(
             || Err(StreamError::Journal(EventError::AdmissionWithdrawn)),
-            |log| log.record(op, transition),
-        )
+            |log| log.record(op.clone(), transition.clone()),
+        )?;
+        let feed = self
+            .feed
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        if let Some(feed) = feed {
+            feed.record(op, transition)?;
+        }
+        Ok(committed)
     }
 }
