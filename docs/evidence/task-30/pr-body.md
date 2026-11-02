@@ -201,7 +201,12 @@ The block's acceptance commands name `-p conformance`, but the package is `ovis-
 - `crates/ovis-terminal-protocol/src/schema/records{.rs,/lease.rs,/attach.rs}`, `crates/ovis-terminal-server/src/streams/records.rs`, `schema/ovis-terminal.openrpc.json`, `packages/client-ts/src/generated/`, `conformance/ideal-map.json`: the `checkpoint_inexact` contract change.
 - `probes/platform-qa/stress/attach-input.{json,sh}`: this lane's macOS stress lane, which keeps evidence as `*.evidence.log`.
 - `docs/evidence/task-30/`.
-- Merges of `origin/integration`: 1abcced (T70) and 60076f7 (F2a), authorized.
+- Merges of `origin/integration`: 1abcced (T70), 60076f7 (F2a) and cc1ca2c (F2b, T84), each authorized. The cc1ca2c merge conflicted only in generated files: `packages/client-ts/src/generated/*` and `conformance/ideal-map.json`. They were taken from integration, then regenerated:
+  - The schema from the merged binary equals the merged `schema/ovis-terminal.openrpc.json` byte for byte, with `Checkpoint.inexact` and T84's release field.
+  - `quality-matrix --mode contract` exits 0.
+  - `bun run generate` is fresh; typecheck passes and `bun test` passes 47/47.
+  - F2a's one-clock `stamped()` in `conformance/src/fixture/machines/remote.rs` is kept.
+  - `ovis-replay refresh` does not apply: neither the `ovis-terminal-replay` package nor `conformance/fixtures/ovis/` is on integration at cc1ca2c.
 
 ## Landing
 

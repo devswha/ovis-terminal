@@ -1,7 +1,5 @@
 //! Readiness revocation and gap-plus-checkpoint resynchronization of one viewer.
 
-use std::sync::Arc;
-
 use ovis_terminal_core::health::Health;
 use ovis_terminal_core::leases::Owner;
 use ovis_terminal_protocol::domain::health::{ConsumerRef, LossRange};
@@ -10,7 +8,7 @@ use ovis_terminal_protocol::schema::records::{
 };
 use ovis_terminal_protocol::schema::scalar::ByteOffset;
 
-use super::hub::Painted;
+use super::graphics::Painted;
 use super::log::OutputLog;
 use super::records;
 use super::viewer::Viewer;
@@ -45,7 +43,8 @@ pub(super) fn resync(log: &OutputLog, viewer: &mut Viewer, painted: &Painted) ->
     });
     let checkpoint = records::checkpoint(&painted.paint, at);
     let record = records::checkpoint_control(&viewer.id, checkpoint.clone());
-    viewer.paint(record, (Arc::clone(&painted.bytes), log.end()));
+    viewer.paint(record, (&painted.pieces, log.end()));
+    painted.announce(viewer);
     viewer.skip_notices(log.notice_seq());
     viewer.report_resync(unsent, lost);
     viewer.report_queued(viewer.backlog(log));

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::engine::Vt;
 use crate::engine::fidelity::{Fidelity, InexactReason};
+use crate::engine::images::ImageSplice;
 use crate::engine::modes::{ScreenBuffer, TerminalModes};
 use crate::engine::read::CursorState;
 use crate::engine::sgr::Pen;
@@ -35,6 +36,11 @@ pub struct FirstPaint {
     pub history_lines: u32,
     /// Exactness of the painted state.
     pub fidelity: Fidelity,
+    /// Where retained images still shown are re-sent, in receipt order: each goes into
+    /// `bytes` after its screen's rows and before the cursor and modes are restored.
+    /// The paint carries positions only; the terminal's image store holds the bytes.
+    #[serde(skip)]
+    pub images: Vec<ImageSplice>,
 }
 
 #[derive(Default)]
@@ -139,8 +145,12 @@ impl Vt {
         painter.out.push_str("\x1bc");
         painter.palette(self);
         let active = self.term.grid();
+        let mut images = Vec::new();
         if self.modes.screen.buffer == ScreenBuffer::Alternate {
             painter.screen(&self.inactive);
+            images = self
+                .images
+                .splices(painter.out.len(), (&self.inactive, ScreenBuffer::Primary));
             // Entering the alternate screen overwrites the primary saved
             // cursor anyway, so parking it there costs nothing.
             painter.park(&self.inactive, &self.inactive.cursor);
@@ -152,6 +162,10 @@ impl Vt {
             painter.out.push_str("\x1b[2J");
         }
         painter.screen(active);
+        images.extend(
+            self.images
+                .splices(painter.out.len(), (active, self.modes.screen.buffer)),
+        );
         painter.terminal_state(self);
         let mut fidelity = painter.lossy.map_or_else(
             || self.fidelity.clone(),
@@ -177,6 +191,7 @@ impl Vt {
             cursor: self.cursor(),
             history_lines: u32::try_from(active.history_size()).unwrap_or(u32::MAX),
             fidelity,
+            images,
         }
     }
 }

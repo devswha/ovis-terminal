@@ -1,0 +1,19 @@
+Round 2, check.sh attempt 1 (bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh), tree = fe06883 + the suite-path fix. Exit 100.
+Excerpt quoted verbatim from that run's r2-check.log (the log was overwritten by attempt 2):
+
+     Summary [ 121.059s] 1525 tests run: 1524 passed (2 slow), 1 failed, 2 skipped
+        FAIL [  98.917s] (1523/1525) ovis-terminal-conformance::runner suite::every_scenario_file_is_executed_or_a_listed_declaration
+    thread 'suite::every_scenario_file_is_executed_or_a_listed_declaration' (852343) panicked at conformance/src/runner_tests/suite.rs:74:5:
+    assertion `left == right` failed: {"case":"all",...,"result":"failed","scenario":"all/all","totals":{"assertions":"3888","cases":"84","declared_only":"34","failed":"1","passed":"83","skipped":"0"}}
+
+    "recovery/e2e" "happy": {"detail":"expectation reply[child-on-peer]/error did not hold","hint":"compare expected and actual values in the evidence","kind":"assertion_failed","step":"36"}
+      {"actual":{"code":-32603,"data":{"hint":"inspect the fixture's stderr","kind":"internal","retryable":false},"message":"operation failed"},"check":"reply[child-on-peer]/error","expected":{"$present":false},"passed":false}
+      {"actual":null,"check":"reply[child-on-peer]/result/linked","expected":true,"passed":false}
+
+graphics/replay (both cases) passed inside that same all/all run (83 of 84 cases passed).
+Step 36 is the runner fixture's `fixture.remote_child` (conformance/scenarios/recovery/e2e.json),
+which links a child on a peer machine and touches no attach stream. A standalone repeat on this
+tree failed 1 of 10 runs. Per the orchestrator, this is the fixture.remote_child two-clock-read
+race root-caused and fixed by F2a in PR #80 (conformance/src/fixture/machines/remote.rs
+stamped(), merge pending). It is not a task-84 defect. The base-tree comparison was stopped at the
+orchestrator's instruction.

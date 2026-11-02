@@ -131,7 +131,8 @@ impl TerminalStreams {
         let painted = self.fence(state)?;
         let first = checkpoint(&painted.paint, StreamOffset::ZERO);
         let control = checkpoint_control(request.stream, first.clone());
-        viewer.paint(control, (Arc::clone(&painted.bytes), state.log.end()));
+        viewer.paint(control, (&painted.pieces, state.log.end()));
+        painted.announce(&mut viewer);
         viewer.skip_notices(state.log.notice_seq());
         if interact {
             viewer.interact = true;
@@ -145,7 +146,7 @@ impl TerminalStreams {
         viewer.report_queued(viewer.backlog(&state.log));
         self.setup
             .backlog
-            .set(request.stream, viewer.backlog(&state.log))?;
+            .set(request.stream, viewer.charged_backlog(&state.log))?;
         let wake = Arc::clone(&viewer.wake);
         state.viewers.insert(request.stream.clone(), viewer);
         Ok((wake, first))

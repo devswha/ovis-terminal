@@ -39,6 +39,9 @@ pub mod takeover;
 #[path = "../src/streams/graphics/qa.rs"]
 pub mod graphics;
 
+#[path = "../src/streams/graphics/replay/qa.rs"]
+pub mod replay;
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn graphics_three_protocols_reach_a_live_viewer_byte_identical() -> TestResult {
     graphics::three_protocols_reach_a_live_viewer_byte_identical().await
@@ -52,6 +55,31 @@ async fn graphics_a_sequence_at_the_cap_arrives_whole_past_the_stream_backlog() 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn graphics_an_over_cap_series_is_replaced_by_one_typed_notice() -> TestResult {
     graphics::an_over_cap_series_is_replaced_by_one_typed_notice().await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn replay_an_on_screen_image_is_replayed_byte_identical_after_a_reattach() -> TestResult {
+    replay::an_on_screen_image_is_replayed_byte_identical_after_a_reattach().await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn replay_a_scrolled_off_image_is_not_replayed() -> TestResult {
+    replay::a_scrolled_off_image_is_not_replayed().await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn replay_a_cleared_screen_replays_no_image() -> TestResult {
+    replay::a_cleared_screen_replays_no_image().await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn replay_a_kitty_delete_removes_only_the_named_image() -> TestResult {
+    replay::a_kitty_delete_removes_only_the_named_image().await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn replay_a_full_store_evicts_the_oldest_with_typed_counts() -> TestResult {
+    replay::a_full_store_evicts_the_oldest_with_typed_counts().await
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
