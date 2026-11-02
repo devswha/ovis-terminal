@@ -1,3 +1,18 @@
+# after merging origin/integration 1869b9e (union conflict in suite.rs, model.rs split, replay re-pin)
+$ bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh
+     Summary [ 118.536s] 1575 tests run: 1575 passed (3 slow), 2 skipped
+check.sh: all steps passed
+exit=0
+
+$ RUSTFLAGS=-Dwarnings cargo check --workspace --all-targets --target x86_64-pc-windows-gnu --locked
+exit=0
+
+$ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings
+exit=0
+
+$ evidence-audit --tree docs/evidence: exit=0 (pass, 0 findings)
+$ quality-matrix --mode verify: exit=0 (pass)
+
 # after merging origin/integration cc1ca2c (evidence re-recorded on the merged binary)
 $ bash /home/devswha/.ovis-toolchain/with-slot.sh bash scripts/check.sh
      Summary [ 111.753s] 1557 tests run: 1557 passed (4 slow), 2 skipped
