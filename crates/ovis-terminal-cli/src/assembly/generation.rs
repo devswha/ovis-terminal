@@ -139,6 +139,8 @@ impl Generation {
             .actor
             .call(move |runtime| {
                 runtime.status_feed = Some(feed);
+                // Layout records committed while no boot served reach this boot's subscribers.
+                runtime.publish_layout();
                 Ok(())
             })
             .await

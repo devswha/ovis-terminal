@@ -5060,6 +5060,64 @@
         ],
         "type": "object"
       },
+      "LayoutChangedData": {
+        "description": "Data of `layout.changed`: the layout after one operation and what that operation changed.",
+        "properties": {
+          "changed": {
+            "description": "Surviving resources whose placement or shape changed.",
+            "items": {
+              "$ref": "#/components/schemas/LayoutResource"
+            },
+            "type": "array"
+          },
+          "created": {
+            "description": "Workspaces, tabs, panes and nodes the operation created.",
+            "items": {
+              "$ref": "#/components/schemas/LayoutResource"
+            },
+            "type": "array"
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that committed the change."
+          },
+          "removed": {
+            "description": "Resources the operation removed.",
+            "items": {
+              "$ref": "#/components/schemas/LayoutResource"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/Revision",
+            "description": "Layout revision the published layout is at."
+          },
+          "selections": {
+            "description": "Per-client selections, after the change.",
+            "items": {
+              "$ref": "#/components/schemas/Selection"
+            },
+            "type": "array"
+          },
+          "workspaces": {
+            "description": "Workspaces in order, after the change.",
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceRecord"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "revision",
+          "workspaces",
+          "selections",
+          "op_id",
+          "created",
+          "removed",
+          "changed"
+        ],
+        "type": "object"
+      },
       "LayoutEdit": {
         "description": "A layout mutation; every variant names its resources by stable ID.",
         "oneOf": [
@@ -8961,6 +9019,94 @@
         },
         "required": [
           "client_id"
+        ],
+        "type": "object"
+      },
+      "SelectionChangeCause": {
+        "description": "Why a client's selection changed.",
+        "oneOf": [
+          {
+            "const": "requested",
+            "description": "The client asked for this selection.",
+            "type": "string"
+          },
+          {
+            "const": "target_removed",
+            "description": "A selected resource was removed; the reference was cleared, not retargeted.",
+            "type": "string"
+          }
+        ]
+      },
+      "SelectionChangedData": {
+        "description": "Data of `selection.changed`: one client's new selection and the operation behind it.",
+        "properties": {
+          "cause": {
+            "$ref": "#/components/schemas/SelectionChangeCause",
+            "description": "Why it changed.",
+            "x-ovis-open-enum": true
+          },
+          "client_id": {
+            "$ref": "#/components/schemas/ClientId",
+            "description": "Client the selection belongs to."
+          },
+          "op_id": {
+            "$ref": "#/components/schemas/OpId",
+            "description": "Operation that changed the selection."
+          },
+          "pane_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaneId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Selected pane."
+          },
+          "revision": {
+            "$ref": "#/components/schemas/Revision",
+            "description": "Layout revision after the change."
+          },
+          "tab_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TabId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Selected tab."
+          },
+          "terminal_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TerminalId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Terminal the selected pane shows, if any."
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkspaceId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Selected workspace."
+          }
+        },
+        "required": [
+          "client_id",
+          "op_id",
+          "revision",
+          "cause"
         ],
         "type": "object"
       },
@@ -24516,14 +24662,14 @@
     {
       "name": "layout.changed",
       "schema": {
-        "$ref": "#/components/schemas/LayoutTree"
+        "$ref": "#/components/schemas/LayoutChangedData"
       },
       "summary": "The layout changed."
     },
     {
       "name": "selection.changed",
       "schema": {
-        "$ref": "#/components/schemas/Selection"
+        "$ref": "#/components/schemas/SelectionChangedData"
       },
       "summary": "One client's selection changed."
     },

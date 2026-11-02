@@ -1,0 +1,386 @@
+{
+  "format": "ovis-conformance/1",
+  "scenario": "events/layout-selection",
+  "title": "layout.changed and selection.changed reach a subscriber that subscribed before the mutation",
+  "todo": 64,
+  "closes": [
+    "GAP-043"
+  ],
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "cases": [
+    {
+      "case": "happy",
+      "summary": "A subscription filtered to layout.changed and selection.changed is open before any mutation. Creating a workspace, creating a tab in it, selecting both for client:desk and closing the workspace with group scope each deliver their event within the 20 000 ms record bound: layout.changed names the op_id that caused it, the revision layout.edit returned and the created or removed ids; selection.changed names the client, the selected ids and the op_id; the close first clears client:desk's selection (selection.changed, cause target_removed) and then removes the workspace (layout.changed), both under the close's op_id, in commit order.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "desk",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "desk",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "events.subscribe",
+                  "layout.edit",
+                  "selection.set"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "desk",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "sub",
+                "method": "events.subscribe",
+                "params": {
+                  "filter": {
+                    "terminals": null,
+                    "children_of": null,
+                    "labels": null,
+                    "types": [
+                      "layout.changed",
+                      "selection.changed"
+                    ],
+                    "machines": null
+                  },
+                  "cursor": null,
+                  "snapshot": false
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "desk",
+            "expect": {
+              "sub": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/subscription_id": {
+                  "$capture": "sub"
+                }
+              }
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "desk",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "ws",
+                "method": "layout.edit",
+                "params": {
+                  "op_id": "$op:ws",
+                  "expect_revision": null,
+                  "edit": {
+                    "op": "create_workspace",
+                    "name": "p4",
+                    "program": null
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "desk",
+            "expect": {
+              "ws": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/created/0/workspace_id": {
+                  "$capture": "ws"
+                },
+                "/result/layout/revision": {
+                  "$capture": "rev_ws"
+                }
+              }
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "desk",
+            "method": "event",
+            "expect": {
+              "/params/type": "layout.changed",
+              "/params/data/op_id": "$op:ws",
+              "/params/data/revision": "$value:rev_ws",
+              "/params/data/created/0/workspace_id": "$value:ws",
+              "/params/data/removed": [],
+              "/params/data/workspaces/0/workspace_id": "$value:ws"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "desk",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "tab",
+                "method": "layout.edit",
+                "params": {
+                  "op_id": "$op:tab",
+                  "expect_revision": "$value:rev_ws",
+                  "edit": {
+                    "op": "create_tab",
+                    "workspace_id": "$value:ws",
+                    "program": null
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "desk",
+            "expect": {
+              "tab": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/created/0/tab_id": {
+                  "$capture": "tab"
+                },
+                "/result/layout/revision": {
+                  "$capture": "rev_tab"
+                }
+              }
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "desk",
+            "method": "event",
+            "expect": {
+              "/params/type": "layout.changed",
+              "/params/data/op_id": "$op:tab",
+              "/params/data/revision": "$value:rev_tab",
+              "/params/data/created/0/tab_id": "$value:tab"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "desk",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "pick",
+                "method": "selection.set",
+                "params": {
+                  "op_id": "$op:pick",
+                  "client_id": "client:desk",
+                  "workspace_id": "$value:ws",
+                  "tab_id": "$value:tab",
+                  "pane_id": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "desk",
+            "expect": {
+              "pick": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/layout/revision": {
+                  "$capture": "rev_pick"
+                }
+              }
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "desk",
+            "method": "event",
+            "expect": {
+              "/params/type": "selection.changed",
+              "/params/data/op_id": "$op:pick",
+              "/params/data/revision": "$value:rev_pick",
+              "/params/data/client_id": "client:desk",
+              "/params/data/workspace_id": "$value:ws",
+              "/params/data/tab_id": "$value:tab",
+              "/params/data/cause": "requested"
+            }
+          }
+        },
+        {
+          "send": {
+            "conn": "desk",
+            "requests": [
+              {
+                "jsonrpc": "2.0",
+                "id": "close",
+                "method": "layout.edit",
+                "params": {
+                  "op_id": "$op:close",
+                  "expect_revision": null,
+                  "edit": {
+                    "op": "close",
+                    "resource": {
+                      "workspace_id": "$value:ws"
+                    },
+                    "scope": "group"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "replies": {
+            "conn": "desk",
+            "expect": {
+              "close": {
+                "/error": {
+                  "$present": false
+                },
+                "/result/removed/0/workspace_id": "$value:ws",
+                "/result/layout/revision": {
+                  "$capture": "rev_close"
+                }
+              }
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "desk",
+            "method": "event",
+            "expect": {
+              "/params/type": "selection.changed",
+              "/params/data/op_id": "$op:close",
+              "/params/data/client_id": "client:desk",
+              "/params/data/workspace_id": null,
+              "/params/data/cause": "target_removed"
+            }
+          }
+        },
+        {
+          "notification": {
+            "conn": "desk",
+            "method": "event",
+            "expect": {
+              "/params/type": "layout.changed",
+              "/params/data/op_id": "$op:close",
+              "/params/data/revision": "$value:rev_close",
+              "/params/data/removed/0/workspace_id": "$value:ws",
+              "/params/data/workspaces": []
+            }
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "failure",
+      "summary": "An events.subscribe whose filter.types is a string instead of an array is invalid_params at params.filter.types and opens no subscription.",
+      "steps": [
+        {
+          "serve": {
+            "fixture": "assembled"
+          }
+        },
+        {
+          "connect": {
+            "conn": "desk",
+            "via": "socket"
+          }
+        },
+        {
+          "hello": {
+            "conn": "desk",
+            "framed": false,
+            "expect": {
+              "/id": "hello",
+              "/result/methods": {
+                "$contains": [
+                  "events.subscribe",
+                  "layout.edit",
+                  "selection.set"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "inject": {
+            "conn": "desk",
+            "base": {
+              "cursor": null,
+              "snapshot": false
+            },
+            "planned": [
+              {
+                "request": {
+                  "method": "events.subscribe",
+                  "params": {
+                    "filter": {
+                      "terminals": null,
+                      "children_of": null,
+                      "labels": null,
+                      "types": "layout.changed",
+                      "machines": null
+                    }
+                  }
+                },
+                "expect": {
+                  "/error/data/kind": "invalid_params",
+                  "/error/data/field_path": "params.filter.types",
+                  "/result": {
+                    "$present": false
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "stop": {
+            "expect": {
+              "/panicked": "0"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

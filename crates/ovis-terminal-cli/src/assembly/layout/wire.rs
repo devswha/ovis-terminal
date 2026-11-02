@@ -90,7 +90,7 @@ pub(super) fn tree(layout: &Layout) -> Value {
     json!({"revision": layout.revision, "workspaces": workspaces, "selections": selections})
 }
 
-fn resource(id: &ResourceId) -> Option<Value> {
+pub(super) fn resource(id: &ResourceId) -> Option<Value> {
     match id {
         ResourceId::Workspace(id) => Some(json!({"workspace_id": id.to_string()})),
         ResourceId::Tab(id) => Some(json!({"tab_id": id.to_string()})),
