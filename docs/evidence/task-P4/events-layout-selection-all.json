@@ -1,0 +1,913 @@
+{
+  "binary": {
+    "bytes": "152987704",
+    "path": "/dev/shm/ovt-target-lane-P4/debug/ovis-terminal",
+    "sha256": "6371d87c129146879ad8d3e75f54c451bd1192ac25e4e74378bea91ffab0c864"
+  },
+  "case": "all",
+  "cases": [
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": [
+            "hello",
+            "server.status",
+            "server.stop",
+            "server.restart",
+            "server.metrics",
+            "op.get",
+            "op.cancel",
+            "session.snapshot",
+            "terminal.run",
+            "terminal.first_message",
+            "terminal.list",
+            "terminal.get",
+            "terminal.kill",
+            "terminal.rm",
+            "terminal.keep",
+            "terminal.recover",
+            "terminal.label",
+            "terminal.rename",
+            "terminal.process_info",
+            "terminal.screen",
+            "terminal.search",
+            "terminal.output",
+            "terminal.wait_output",
+            "input.send",
+            "input.keys",
+            "input.raw",
+            "input.paste",
+            "input.interrupt",
+            "input.barrier",
+            "attach.open",
+            "attach.resize",
+            "attach.release_geometry",
+            "attach.focus",
+            "attach.repaint",
+            "attach.credit",
+            "attach.close",
+            "attach.takeover",
+            "attach.leases",
+            "events.subscribe",
+            "events.update",
+            "events.unsubscribe",
+            "events.wait",
+            "status.get",
+            "status.report",
+            "status.clear",
+            "prompt.list",
+            "prompt.get",
+            "prompt.open",
+            "prompt.answer",
+            "prompt.close",
+            "turn.get",
+            "turn.wait",
+            "agent.register",
+            "agent.get",
+            "agent.update_session",
+            "agent.children",
+            "agent.conversation",
+            "agent.append_records",
+            "agent.records",
+            "agent.history",
+            "template.list",
+            "template.get",
+            "layout.get",
+            "layout.edit",
+            "selection.set",
+            "worktree.list",
+            "worktree.create",
+            "worktree.open",
+            "worktree.remove",
+            "plugin.list",
+            "plugin.invoke",
+            "plugin.run_get",
+            "doc.get",
+            "doc.set",
+            "machine.add",
+            "machine.list",
+            "machine.get",
+            "machine.rename",
+            "service.describe",
+            "update.stage",
+            "update.verify",
+            "update.activate",
+            "update.rollback",
+            "update.query",
+            "rpc.discover",
+            "schema.errors",
+            "schema.events",
+            "schema.capabilities",
+            "credential.rotate",
+            "credential.revoke"
+          ],
+          "check": "hello/result/methods",
+          "expected": {
+            "$contains": [
+              "events.subscribe",
+              "layout.edit",
+              "selection.set"
+            ]
+          },
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[sub]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "01a19a52-8b6c-73bb-a21e-6edb3e82351e",
+          "check": "reply[sub]/result/subscription_id",
+          "expected": {
+            "$capture": "sub"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "sub"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "sub"
+          ],
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[ws]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "workspace:1",
+          "check": "reply[ws]/result/created/0/workspace_id",
+          "expected": {
+            "$capture": "ws"
+          },
+          "passed": true
+        },
+        {
+          "actual": "4",
+          "check": "reply[ws]/result/layout/revision",
+          "expected": {
+            "$capture": "rev_ws"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "ws"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "ws"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "workspace:1",
+          "check": "notification[event]/params/data/created/0/workspace_id",
+          "expected": "workspace:1",
+          "passed": true
+        },
+        {
+          "actual": "01a19a52-8b6c-759a-aa80-00e307098109",
+          "check": "notification[event]/params/data/op_id",
+          "expected": "01a19a52-8b6c-759a-aa80-00e307098109",
+          "passed": true
+        },
+        {
+          "actual": [],
+          "check": "notification[event]/params/data/removed",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": "4",
+          "check": "notification[event]/params/data/revision",
+          "expected": "4",
+          "passed": true
+        },
+        {
+          "actual": "workspace:1",
+          "check": "notification[event]/params/data/workspaces/0/workspace_id",
+          "expected": "workspace:1",
+          "passed": true
+        },
+        {
+          "actual": "layout.changed",
+          "check": "notification[event]/params/type",
+          "expected": "layout.changed",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[tab]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "tab:2",
+          "check": "reply[tab]/result/created/0/tab_id",
+          "expected": {
+            "$capture": "tab"
+          },
+          "passed": true
+        },
+        {
+          "actual": "8",
+          "check": "reply[tab]/result/layout/revision",
+          "expected": {
+            "$capture": "rev_tab"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "tab"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "tab"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "tab:2",
+          "check": "notification[event]/params/data/created/0/tab_id",
+          "expected": "tab:2",
+          "passed": true
+        },
+        {
+          "actual": "01a19a52-8b85-725b-96de-98a74e74394d",
+          "check": "notification[event]/params/data/op_id",
+          "expected": "01a19a52-8b85-725b-96de-98a74e74394d",
+          "passed": true
+        },
+        {
+          "actual": "8",
+          "check": "notification[event]/params/data/revision",
+          "expected": "8",
+          "passed": true
+        },
+        {
+          "actual": "layout.changed",
+          "check": "notification[event]/params/type",
+          "expected": "layout.changed",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[pick]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "12",
+          "check": "reply[pick]/result/layout/revision",
+          "expected": {
+            "$capture": "rev_pick"
+          },
+          "passed": true
+        },
+        {
+          "actual": [
+            "pick"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "pick"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "requested",
+          "check": "notification[event]/params/data/cause",
+          "expected": "requested",
+          "passed": true
+        },
+        {
+          "actual": "client:desk",
+          "check": "notification[event]/params/data/client_id",
+          "expected": "client:desk",
+          "passed": true
+        },
+        {
+          "actual": "01a19a52-8b9e-7374-9967-59ce14cafc66",
+          "check": "notification[event]/params/data/op_id",
+          "expected": "01a19a52-8b9e-7374-9967-59ce14cafc66",
+          "passed": true
+        },
+        {
+          "actual": "12",
+          "check": "notification[event]/params/data/revision",
+          "expected": "12",
+          "passed": true
+        },
+        {
+          "actual": "tab:2",
+          "check": "notification[event]/params/data/tab_id",
+          "expected": "tab:2",
+          "passed": true
+        },
+        {
+          "actual": "workspace:1",
+          "check": "notification[event]/params/data/workspace_id",
+          "expected": "workspace:1",
+          "passed": true
+        },
+        {
+          "actual": "selection.changed",
+          "check": "notification[event]/params/type",
+          "expected": "selection.changed",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "reply[close]/error",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "17",
+          "check": "reply[close]/result/layout/revision",
+          "expected": {
+            "$capture": "rev_close"
+          },
+          "passed": true
+        },
+        {
+          "actual": "workspace:1",
+          "check": "reply[close]/result/removed/0/workspace_id",
+          "expected": "workspace:1",
+          "passed": true
+        },
+        {
+          "actual": [
+            "close"
+          ],
+          "check": "replies/exactly_one_per_id",
+          "expected": [
+            "close"
+          ],
+          "passed": true
+        },
+        {
+          "actual": "target_removed",
+          "check": "notification[event]/params/data/cause",
+          "expected": "target_removed",
+          "passed": true
+        },
+        {
+          "actual": "client:desk",
+          "check": "notification[event]/params/data/client_id",
+          "expected": "client:desk",
+          "passed": true
+        },
+        {
+          "actual": "01a19a52-8bb9-7594-92d6-0cc12513d13c",
+          "check": "notification[event]/params/data/op_id",
+          "expected": "01a19a52-8bb9-7594-92d6-0cc12513d13c",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "notification[event]/params/data/workspace_id",
+          "expected": null,
+          "passed": true
+        },
+        {
+          "actual": "selection.changed",
+          "check": "notification[event]/params/type",
+          "expected": "selection.changed",
+          "passed": true
+        },
+        {
+          "actual": "01a19a52-8bb9-7594-92d6-0cc12513d13c",
+          "check": "notification[event]/params/data/op_id",
+          "expected": "01a19a52-8bb9-7594-92d6-0cc12513d13c",
+          "passed": true
+        },
+        {
+          "actual": "workspace:1",
+          "check": "notification[event]/params/data/removed/0/workspace_id",
+          "expected": "workspace:1",
+          "passed": true
+        },
+        {
+          "actual": "17",
+          "check": "notification[event]/params/data/revision",
+          "expected": "17",
+          "passed": true
+        },
+        {
+          "actual": [],
+          "check": "notification[event]/params/data/workspaces",
+          "expected": [],
+          "passed": true
+        },
+        {
+          "actual": "layout.changed",
+          "check": "notification[event]/params/type",
+          "expected": "layout.changed",
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "happy",
+      "connections": [
+        {
+          "bytes_decoded": "9127",
+          "bytes_received": "9127",
+          "bytes_sent": "1267",
+          "name": "desk",
+          "records_received": "11",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "6d1e5a991f26584a4b76fa83511c6d46aa7aba3713be5a0bc420944791006671",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2622",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "ba90be9930df6f762d0d194eea866593e8a158b693aa43a5e0f718ace002de3b",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a19a52-8ac9-7546-8a1a-28ef17de5be6\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.search\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793590463337\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "223",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "6388fb8d8890f53903927e4f1472015d23879b36728fac245e5fe6c37c3cc81c",
+              "text": "{\"id\":\"sub\",\"jsonrpc\":\"2.0\",\"method\":\"events.subscribe\",\"params\":{\"cursor\":null,\"filter\":{\"children_of\":null,\"labels\":null,\"machines\":null,\"terminals\":null,\"types\":[\"layout.changed\",\"selection.changed\"]},\"snapshot\":false}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "234",
+              "direction": "received",
+              "offset": "2622",
+              "sha256": "c7b796182fd074c55034d209f3098ba59115a0155f553b73ef9659fde7eeac01",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"sub\",\"result\":{\"heartbeat_ms\":\"15000\",\"missed\":null,\"queue_bytes\":\"67108864\",\"queue_events\":10000,\"replay_floor\":\"0\",\"snapshot\":null,\"snapshot_seq\":\"0\",\"subscription_id\":\"01a19a52-8b6c-73bb-a21e-6edb3e82351e\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "3",
+              "bytes": "192",
+              "direction": "sent",
+              "offset": "457",
+              "sha256": "4b80cee67558aeaa2f8a2d68529ae2944d7ce3b7225b4042990630bcf8461747",
+              "text": "{\"id\":\"ws\",\"jsonrpc\":\"2.0\",\"method\":\"layout.edit\",\"params\":{\"edit\":{\"name\":\"p4\",\"op\":\"create_workspace\",\"program\":null},\"expect_revision\":null,\"op_id\":\"01a19a52-8b6c-759a-aa80-00e307098109\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "24",
+              "bytes": "905",
+              "direction": "received",
+              "offset": "2856",
+              "sha256": "c17be3d03e14617d6a022c73ca006f15fe29dedba4cc87b4bdc140a7b53fc9ac",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"event\",\"params\":{\"boot_id\":\"boot:1\",\"data\":{\"changed\":[],\"created\":[{\"workspace_id\":\"workspace:1\"},{\"tab_id\":\"tab:1\"},{\"pane_id\":\"pane:1\"}],\"op_id\":\"01a19a52-8b6c-759a-aa80-00e307098109\",\"removed\":[],\"revision\":\"4\",\"selections\":[],\"workspaces\":[{\"name\":\"p4\",\"tabs\":[{\"name\":null,\"nodes\":[{\"axis\":null,\"children\":[],\"node_id\":\"pane:1\",\"pane_id\":\"pane:1\",\"ratio_permille\":null}],\"panes\":[{\"pane_id\":\"pane:1\",\"terminal_id\":null,\"zoomed\":false}],\"root\":\"pane:1\",\"tab_id\":\"tab:1\"}],\"workspace_id\":\"workspace:1\"}]},\"lifetime\":\"runtime:1\",\"machine_id\":\"machine:01a19a52-8ac9-7546-8a1a-28ef17de5be6\",\"seq\":\"1\",\"subscription_id\":\"01a19a52-8b6c-73bb-a21e-6edb3e82351e\",\"target\":{\"agent_id\":null,\"lease_id\":null,\"machine_id\":null,\"process_incarnation\":null,\"prompt_id\":null,\"stream_id\":null,\"terminal_id\":null,\"terminal_incarnation\":null},\"ts_ms\":\"1793590463360\",\"type\":\"layout.changed\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "27",
+              "bytes": "490",
+              "direction": "received",
+              "offset": "3761",
+              "sha256": "7aa10d37b211c3639588a0d6c2f25f470ee76e3231c64374134cfc54c62e507d",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"ws\",\"result\":{\"created\":[{\"workspace_id\":\"workspace:1\"},{\"tab_id\":\"tab:1\"},{\"pane_id\":\"pane:1\"}],\"layout\":{\"revision\":\"4\",\"selections\":[],\"workspaces\":[{\"name\":\"p4\",\"tabs\":[{\"name\":null,\"nodes\":[{\"axis\":null,\"children\":[],\"node_id\":\"pane:1\",\"pane_id\":\"pane:1\",\"ratio_permille\":null}],\"panes\":[{\"pane_id\":\"pane:1\",\"terminal_id\":null,\"zoomed\":false}],\"root\":\"pane:1\",\"tab_id\":\"tab:1\"}],\"workspace_id\":\"workspace:1\"}]},\"no_op\":null,\"removed\":[],\"seq\":\"4\",\"spawn\":null}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "28",
+              "bytes": "203",
+              "direction": "sent",
+              "offset": "649",
+              "sha256": "bebc82e4abac67efb0db1698109e271d507f9e68046a49b8881642bff8b874b2",
+              "text": "{\"id\":\"tab\",\"jsonrpc\":\"2.0\",\"method\":\"layout.edit\",\"params\":{\"edit\":{\"op\":\"create_tab\",\"program\":null,\"workspace_id\":\"workspace:1\"},\"expect_revision\":\"4\",\"op_id\":\"01a19a52-8b85-725b-96de-98a74e74394d\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "48",
+              "bytes": "1114",
+              "direction": "received",
+              "offset": "4251",
+              "sha256": "b05d74a2d5228dcf418fe1dccb4e48c150cb9bcba4914e7a3d6d0cdf1911c977",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"event\",\"params\":{\"boot_id\":\"boot:1\",\"data\":{\"changed\":[{\"workspace_id\":\"workspace:1\"}],\"created\":[{\"tab_id\":\"tab:2\"},{\"pane_id\":\"pane:2\"}],\"op_id\":\"01a19a52-8b85-725b-96de-98a74e74394d\",\"removed\":[],\"revision\":\"8\",\"selections\":[],\"workspaces\":[{\"name\":\"p4\",\"tabs\":[{\"name\":null,\"nodes\":[{\"axis\":null,\"children\":[],\"node_id\":\"pane:1\",\"pane_id\":\"pane:1\",\"ratio_permille\":null}],\"panes\":[{\"pane_id\":\"pane:1\",\"terminal_id\":null,\"zoomed\":false}],\"root\":\"pane:1\",\"tab_id\":\"tab:1\"},{\"name\":null,\"nodes\":[{\"axis\":null,\"children\":[],\"node_id\":\"pane:2\",\"pane_id\":\"pane:2\",\"ratio_permille\":null}],\"panes\":[{\"pane_id\":\"pane:2\",\"terminal_id\":null,\"zoomed\":false}],\"root\":\"pane:2\",\"tab_id\":\"tab:2\"}],\"workspace_id\":\"workspace:1\"}]},\"lifetime\":\"runtime:1\",\"machine_id\":\"machine:01a19a52-8ac9-7546-8a1a-28ef17de5be6\",\"seq\":\"2\",\"subscription_id\":\"01a19a52-8b6c-73bb-a21e-6edb3e82351e\",\"target\":{\"agent_id\":null,\"lease_id\":null,\"machine_id\":null,\"process_incarnation\":null,\"prompt_id\":null,\"stream_id\":null,\"terminal_id\":null,\"terminal_incarnation\":null},\"ts_ms\":\"1793590463385\",\"type\":\"layout.changed\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "53",
+              "bytes": "670",
+              "direction": "received",
+              "offset": "5365",
+              "sha256": "2b8af51fdee18c5c649bef1f882a8b4ed970b3a0f532b54a4f57e07688b3d604",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"tab\",\"result\":{\"created\":[{\"tab_id\":\"tab:2\"},{\"pane_id\":\"pane:2\"}],\"layout\":{\"revision\":\"8\",\"selections\":[],\"workspaces\":[{\"name\":\"p4\",\"tabs\":[{\"name\":null,\"nodes\":[{\"axis\":null,\"children\":[],\"node_id\":\"pane:1\",\"pane_id\":\"pane:1\",\"ratio_permille\":null}],\"panes\":[{\"pane_id\":\"pane:1\",\"terminal_id\":null,\"zoomed\":false}],\"root\":\"pane:1\",\"tab_id\":\"tab:1\"},{\"name\":null,\"nodes\":[{\"axis\":null,\"children\":[],\"node_id\":\"pane:2\",\"pane_id\":\"pane:2\",\"ratio_permille\":null}],\"panes\":[{\"pane_id\":\"pane:2\",\"terminal_id\":null,\"zoomed\":false}],\"root\":\"pane:2\",\"tab_id\":\"tab:2\"}],\"workspace_id\":\"workspace:1\"}]},\"no_op\":null,\"removed\":[],\"seq\":\"8\",\"spawn\":null}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "53",
+              "bytes": "200",
+              "direction": "sent",
+              "offset": "852",
+              "sha256": "e6ee30ce51f8fff73fc8a97681fd62959ac5daae6716ff27d558402d30cf5cd4",
+              "text": "{\"id\":\"pick\",\"jsonrpc\":\"2.0\",\"method\":\"selection.set\",\"params\":{\"client_id\":\"client:desk\",\"op_id\":\"01a19a52-8b9e-7374-9967-59ce14cafc66\",\"pane_id\":null,\"tab_id\":\"tab:2\",\"workspace_id\":\"workspace:1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "73",
+              "bytes": "633",
+              "direction": "received",
+              "offset": "6035",
+              "sha256": "0ee4e4fbcee016c63bcca9adf7ca71e7c16e9221140a003ab7fa1948f8e8258b",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"event\",\"params\":{\"boot_id\":\"boot:1\",\"data\":{\"cause\":\"requested\",\"client_id\":\"client:desk\",\"op_id\":\"01a19a52-8b9e-7374-9967-59ce14cafc66\",\"pane_id\":null,\"revision\":\"12\",\"tab_id\":\"tab:2\",\"terminal_id\":null,\"workspace_id\":\"workspace:1\"},\"lifetime\":\"runtime:1\",\"machine_id\":\"machine:01a19a52-8ac9-7546-8a1a-28ef17de5be6\",\"seq\":\"3\",\"subscription_id\":\"01a19a52-8b6c-73bb-a21e-6edb3e82351e\",\"target\":{\"agent_id\":null,\"lease_id\":null,\"machine_id\":null,\"process_incarnation\":null,\"prompt_id\":null,\"stream_id\":null,\"terminal_id\":null,\"terminal_incarnation\":null},\"ts_ms\":\"1793590463410\",\"type\":\"selection.changed\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "80",
+              "bytes": "722",
+              "direction": "received",
+              "offset": "6668",
+              "sha256": "671872710e86cba6b63430a6a7d72dfd0d833710c49604140fa6e134aea34076",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"pick\",\"result\":{\"created\":[],\"layout\":{\"revision\":\"12\",\"selections\":[{\"client_id\":\"client:desk\",\"pane_id\":null,\"tab_id\":\"tab:2\",\"workspace_id\":\"workspace:1\"}],\"workspaces\":[{\"name\":\"p4\",\"tabs\":[{\"name\":null,\"nodes\":[{\"axis\":null,\"children\":[],\"node_id\":\"pane:1\",\"pane_id\":\"pane:1\",\"ratio_permille\":null}],\"panes\":[{\"pane_id\":\"pane:1\",\"terminal_id\":null,\"zoomed\":false}],\"root\":\"pane:1\",\"tab_id\":\"tab:1\"},{\"name\":null,\"nodes\":[{\"axis\":null,\"children\":[],\"node_id\":\"pane:2\",\"pane_id\":\"pane:2\",\"ratio_permille\":null}],\"panes\":[{\"pane_id\":\"pane:2\",\"terminal_id\":null,\"zoomed\":false}],\"root\":\"pane:2\",\"tab_id\":\"tab:2\"}],\"workspace_id\":\"workspace:1\"}]},\"no_op\":null,\"removed\":[],\"seq\":\"12\",\"spawn\":null}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "80",
+              "bytes": "215",
+              "direction": "sent",
+              "offset": "1052",
+              "sha256": "cba95d2952c0b8a7969f53edc81fd9881165b5c1b96302d9468ceac70977af70",
+              "text": "{\"id\":\"close\",\"jsonrpc\":\"2.0\",\"method\":\"layout.edit\",\"params\":{\"edit\":{\"op\":\"close\",\"resource\":{\"workspace_id\":\"workspace:1\"},\"scope\":\"group\"},\"expect_revision\":null,\"op_id\":\"01a19a52-8bb9-7594-92d6-0cc12513d13c\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "105",
+              "bytes": "626",
+              "direction": "received",
+              "offset": "7390",
+              "sha256": "60cdf5d9b3cce448b491ff0c8b48096177cc4935e4493abe2802966583026042",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"event\",\"params\":{\"boot_id\":\"boot:1\",\"data\":{\"cause\":\"target_removed\",\"client_id\":\"client:desk\",\"op_id\":\"01a19a52-8bb9-7594-92d6-0cc12513d13c\",\"pane_id\":null,\"revision\":\"17\",\"tab_id\":null,\"terminal_id\":null,\"workspace_id\":null},\"lifetime\":\"runtime:1\",\"machine_id\":\"machine:01a19a52-8ac9-7546-8a1a-28ef17de5be6\",\"seq\":\"4\",\"subscription_id\":\"01a19a52-8b6c-73bb-a21e-6edb3e82351e\",\"target\":{\"agent_id\":null,\"lease_id\":null,\"machine_id\":null,\"process_incarnation\":null,\"prompt_id\":null,\"stream_id\":null,\"terminal_id\":null,\"terminal_incarnation\":null},\"ts_ms\":\"1793590463442\",\"type\":\"selection.changed\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "105",
+              "bytes": "761",
+              "direction": "received",
+              "offset": "8016",
+              "sha256": "cbdfedb903b0c896591c9a435f10d8d12e77ed1027491626c5243222315bb3d1",
+              "text": "{\"jsonrpc\":\"2.0\",\"method\":\"event\",\"params\":{\"boot_id\":\"boot:1\",\"data\":{\"changed\":[],\"created\":[],\"op_id\":\"01a19a52-8bb9-7594-92d6-0cc12513d13c\",\"removed\":[{\"workspace_id\":\"workspace:1\"},{\"tab_id\":\"tab:1\"},{\"pane_id\":\"pane:1\"},{\"tab_id\":\"tab:2\"},{\"pane_id\":\"pane:2\"}],\"revision\":\"17\",\"selections\":[{\"client_id\":\"client:desk\",\"pane_id\":null,\"tab_id\":null,\"workspace_id\":null}],\"workspaces\":[]},\"lifetime\":\"runtime:1\",\"machine_id\":\"machine:01a19a52-8ac9-7546-8a1a-28ef17de5be6\",\"seq\":\"5\",\"subscription_id\":\"01a19a52-8b6c-73bb-a21e-6edb3e82351e\",\"target\":{\"agent_id\":null,\"lease_id\":null,\"machine_id\":null,\"process_incarnation\":null,\"prompt_id\":null,\"stream_id\":null,\"terminal_id\":null,\"terminal_incarnation\":null},\"ts_ms\":\"1793590463442\",\"type\":\"layout.changed\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "111",
+              "bytes": "350",
+              "direction": "received",
+              "offset": "8777",
+              "sha256": "bbe425bf355f586682f831090c2f6a0ce8fdafeb8f690508c8ae3585a2b8ed70",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"close\",\"result\":{\"created\":[],\"layout\":{\"revision\":\"17\",\"selections\":[{\"client_id\":\"client:desk\",\"pane_id\":null,\"tab_id\":null,\"workspace_id\":null}],\"workspaces\":[]},\"no_op\":null,\"removed\":[{\"workspace_id\":\"workspace:1\"},{\"tab_id\":\"tab:1\"},{\"pane_id\":\"pane:1\"},{\"tab_id\":\"tab:2\"},{\"pane_id\":\"pane:2\"}],\"seq\":\"17\",\"spawn\":null}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "6"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-043"
+        ],
+        "delivers": [],
+        "excludes": [],
+        "title": "layout.changed and selection.changed reach a subscriber that subscribed before the mutation",
+        "todo": "64"
+      },
+      "descriptors": [],
+      "elapsed_ms": "360",
+      "failure": null,
+      "fixture": {
+        "accepted": "1",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-P4/debug/ovis-terminal",
+            "serve",
+            "--stdin-lifetime",
+            "--root",
+            "/tmp/ovc-2685250-0/srv"
+          ],
+          "exit_code": 0,
+          "pid": "2685622",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "events/layout-selection",
+      "summary": "A subscription filtered to layout.changed and selection.changed is open before any mutation. Creating a workspace, creating a tab in it, selecting both for client:desk and closing the workspace with group scope each deliver their event within the 20 000 ms record bound: layout.changed names the op_id that caused it, the revision layout.edit returned and the created or removed ids; selection.changed names the client, the selected ids and the op_id; the close first clears client:desk's selection (selection.changed, cause target_removed) and then removes the workspace (layout.changed), both under the close's op_id, in commit order."
+    },
+    {
+      "assertions": [
+        {
+          "actual": "hello",
+          "check": "hello/id",
+          "expected": "hello",
+          "passed": true
+        },
+        {
+          "actual": [
+            "hello",
+            "server.status",
+            "server.stop",
+            "server.restart",
+            "server.metrics",
+            "op.get",
+            "op.cancel",
+            "session.snapshot",
+            "terminal.run",
+            "terminal.first_message",
+            "terminal.list",
+            "terminal.get",
+            "terminal.kill",
+            "terminal.rm",
+            "terminal.keep",
+            "terminal.recover",
+            "terminal.label",
+            "terminal.rename",
+            "terminal.process_info",
+            "terminal.screen",
+            "terminal.search",
+            "terminal.output",
+            "terminal.wait_output",
+            "input.send",
+            "input.keys",
+            "input.raw",
+            "input.paste",
+            "input.interrupt",
+            "input.barrier",
+            "attach.open",
+            "attach.resize",
+            "attach.release_geometry",
+            "attach.focus",
+            "attach.repaint",
+            "attach.credit",
+            "attach.close",
+            "attach.takeover",
+            "attach.leases",
+            "events.subscribe",
+            "events.update",
+            "events.unsubscribe",
+            "events.wait",
+            "status.get",
+            "status.report",
+            "status.clear",
+            "prompt.list",
+            "prompt.get",
+            "prompt.open",
+            "prompt.answer",
+            "prompt.close",
+            "turn.get",
+            "turn.wait",
+            "agent.register",
+            "agent.get",
+            "agent.update_session",
+            "agent.children",
+            "agent.conversation",
+            "agent.append_records",
+            "agent.records",
+            "agent.history",
+            "template.list",
+            "template.get",
+            "layout.get",
+            "layout.edit",
+            "selection.set",
+            "worktree.list",
+            "worktree.create",
+            "worktree.open",
+            "worktree.remove",
+            "plugin.list",
+            "plugin.invoke",
+            "plugin.run_get",
+            "doc.get",
+            "doc.set",
+            "machine.add",
+            "machine.list",
+            "machine.get",
+            "machine.rename",
+            "service.describe",
+            "update.stage",
+            "update.verify",
+            "update.activate",
+            "update.rollback",
+            "update.query",
+            "rpc.discover",
+            "schema.errors",
+            "schema.events",
+            "schema.capabilities",
+            "credential.rotate",
+            "credential.revoke"
+          ],
+          "check": "hello/result/methods",
+          "expected": {
+            "$contains": [
+              "events.subscribe",
+              "layout.edit",
+              "selection.set"
+            ]
+          },
+          "passed": true
+        },
+        {
+          "actual": "inject-0",
+          "check": "inject[0]/id",
+          "expected": "inject-0",
+          "passed": true
+        },
+        {
+          "actual": "params.filter.types",
+          "check": "inject[0]/error/data/field_path",
+          "expected": "params.filter.types",
+          "passed": true
+        },
+        {
+          "actual": "invalid_params",
+          "check": "inject[0]/error/data/kind",
+          "expected": "invalid_params",
+          "passed": true
+        },
+        {
+          "actual": null,
+          "check": "inject[0]/result",
+          "expected": {
+            "$present": false
+          },
+          "passed": true
+        },
+        {
+          "actual": "0",
+          "check": "fixture/panicked",
+          "expected": "0",
+          "passed": true
+        }
+      ],
+      "case": "failure",
+      "connections": [
+        {
+          "bytes_decoded": "2861",
+          "bytes_received": "2861",
+          "bytes_sent": "440",
+          "name": "desk",
+          "records_received": "2",
+          "transcript": [
+            {
+              "at_ms": "0",
+              "bytes": "234",
+              "direction": "sent",
+              "offset": "0",
+              "sha256": "6464ddc16dab0a639cee0bdb24376afca80f797aff4c465130dfdcd3b2ab8f89",
+              "text": "{\"id\":\"hello\",\"jsonrpc\":\"2.0\",\"method\":\"hello\",\"params\":{\"client\":{\"name\":\"ovis-conformance\",\"version\":\"0.1.0\"},\"credential\":\"<redacted-credential>\",\"framed\":false,\"generation\":\"1\"}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "0",
+              "bytes": "2622",
+              "direction": "received",
+              "offset": "0",
+              "sha256": "7972aa3a377e8a60e75305ccdabf4febfcfca132a0a99ed609184b49bb0adbb7",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"hello\",\"result\":{\"boot_proof\":null,\"capabilities\":{\"framed\":true,\"stream_modes\":[],\"transports\":[\"unix\"]},\"endpoint_kind\":\"unix\",\"generation\":\"1\",\"limits\":{\"connection_unwritten_bytes\":\"67108864\",\"credit_initial_bytes\":\"262144\",\"credit_max_bytes\":\"1048576\",\"doc_max_bytes\":\"1048576\",\"event_replay_bytes\":\"67108864\",\"event_replay_events\":\"10000\",\"graphics_sequence_max_bytes\":\"8388608\",\"graphics_terminal_store_max_bytes\":\"33554432\",\"heartbeat_ms\":\"15000\",\"history_lines\":\"100000\",\"input_queue_bytes\":\"16777216\",\"max_frame_bytes\":\"16777216\",\"max_in_flight_requests\":\"64\",\"op_retention_ms\":\"86400000\",\"output_ring_bytes\":\"67108864\",\"queued_operations\":\"32\",\"rpc_default_deadline_ms\":\"10000\",\"session_backlog_bytes\":\"67108864\",\"session_event_queue_bytes\":\"67108864\",\"session_input_bytes\":\"67108864\",\"session_retained_bytes\":\"4294967296\",\"session_rss_bytes\":\"1073741824\",\"session_vt_bytes\":\"134217728\",\"stream_backlog_bytes\":\"4194304\",\"stream_chunk_bytes\":\"16384\"},\"machine_id\":\"machine:01a19a52-8c33-7792-8985-436e4277cfb5\",\"methods\":[\"hello\",\"server.status\",\"server.stop\",\"server.restart\",\"server.metrics\",\"op.get\",\"op.cancel\",\"session.snapshot\",\"terminal.run\",\"terminal.first_message\",\"terminal.list\",\"terminal.get\",\"terminal.kill\",\"terminal.rm\",\"terminal.keep\",\"terminal.recover\",\"terminal.label\",\"terminal.rename\",\"terminal.process_info\",\"terminal.screen\",\"terminal.search\",\"terminal.output\",\"terminal.wait_output\",\"input.send\",\"input.keys\",\"input.raw\",\"input.paste\",\"input.interrupt\",\"input.barrier\",\"attach.open\",\"attach.resize\",\"attach.release_geometry\",\"attach.focus\",\"attach.repaint\",\"attach.credit\",\"attach.close\",\"attach.takeover\",\"attach.leases\",\"events.subscribe\",\"events.update\",\"events.unsubscribe\",\"events.wait\",\"status.get\",\"status.report\",\"status.clear\",\"prompt.list\",\"prompt.get\",\"prompt.open\",\"prompt.answer\",\"prompt.close\",\"turn.get\",\"turn.wait\",\"agent.register\",\"agent.get\",\"agent.update_session\",\"agent.children\",\"agent.conversation\",\"agent.append_records\",\"agent.records\",\"agent.history\",\"template.list\",\"template.get\",\"layout.get\",\"layout.edit\",\"selection.set\",\"worktree.list\",\"worktree.create\",\"worktree.open\",\"worktree.remove\",\"plugin.list\",\"plugin.invoke\",\"plugin.run_get\",\"doc.get\",\"doc.set\",\"machine.add\",\"machine.list\",\"machine.get\",\"machine.rename\",\"service.describe\",\"update.stage\",\"update.verify\",\"update.activate\",\"update.rollback\",\"update.query\",\"rpc.discover\",\"schema.errors\",\"schema.events\",\"schema.capabilities\",\"credential.rotate\",\"credential.revoke\"],\"runtime_lifetime\":\"runtime:1\",\"server_boot_id\":\"boot:1\",\"server_time_ms\":\"1793590463701\",\"version\":\"0.1.0\"}}",
+              "unit": "line"
+            },
+            {
+              "at_ms": "1",
+              "bytes": "206",
+              "direction": "sent",
+              "offset": "234",
+              "sha256": "e657cf09717ff95f3ba81413b46de6dec65e1dd31b32be41d6499e88348dbc69",
+              "text": "{\"id\":\"inject-0\",\"jsonrpc\":\"2.0\",\"method\":\"events.subscribe\",\"params\":{\"cursor\":null,\"filter\":{\"children_of\":null,\"labels\":null,\"machines\":null,\"terminals\":null,\"types\":\"layout.changed\"},\"snapshot\":false}}\n",
+              "unit": "write"
+            },
+            {
+              "at_ms": "1",
+              "bytes": "239",
+              "direction": "received",
+              "offset": "2622",
+              "sha256": "15fa72881d28bd82176dd27214c0bdc61fbf7611e2c9e73d5a8c47800f2770e4",
+              "text": "{\"jsonrpc\":\"2.0\",\"id\":\"inject-0\",\"error\":{\"code\":-32602,\"message\":\"method parameters violate the closed schema\",\"data\":{\"kind\":\"invalid_params\",\"hint\":\"correct the method parameters\",\"retryable\":false,\"field_path\":\"params.filter.types\"}}}",
+              "unit": "line"
+            }
+          ],
+          "via": "socket",
+          "writes": "2"
+        }
+      ],
+      "declared": {
+        "closes": [
+          "GAP-043"
+        ],
+        "delivers": [],
+        "excludes": [],
+        "title": "layout.changed and selection.changed reach a subscriber that subscribed before the mutation",
+        "todo": "64"
+      },
+      "descriptors": [],
+      "elapsed_ms": "255",
+      "failure": null,
+      "fixture": {
+        "accepted": "1",
+        "failures": {},
+        "panicked": "0"
+      },
+      "outcome": "passed",
+      "processes": [
+        {
+          "argv": [
+            "/dev/shm/ovt-target-lane-P4/debug/ovis-terminal",
+            "serve",
+            "--stdin-lifetime",
+            "--root",
+            "/tmp/ovc-2685250-1/srv"
+          ],
+          "exit_code": 0,
+          "pid": "2685817",
+          "role": "fixture",
+          "stderr": {
+            "bytes": "0",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "text": ""
+          },
+          "stdout": {
+            "bytes": "82",
+            "sha256": "6186aba0878624d3dc9294dd4c62e3c057ee0d45b6b1aa4ba72e60bbe17d2750",
+            "text": "<ready and report lines are parsed, not stored: the ready line carries the bearer>"
+          }
+        }
+      ],
+      "scenario": "events/layout-selection",
+      "summary": "An events.subscribe whose filter.types is a string instead of an array is invalid_params at params.filter.types and opens no subscription."
+    }
+  ],
+  "elapsed_ms": "842",
+  "error": null,
+  "format": "ovis-conformance-evidence/1",
+  "host": {
+    "arch": "x86_64",
+    "family": "unix",
+    "os": "linux"
+  },
+  "inventory": null,
+  "result": "passed",
+  "runner_version": "0.1.0",
+  "scenario": "events/layout-selection",
+  "totals": {
+    "assertions": "55",
+    "cases": "2",
+    "declared_only": "0",
+    "failed": "0",
+    "passed": "2",
+    "skipped": "0"
+  }
+}

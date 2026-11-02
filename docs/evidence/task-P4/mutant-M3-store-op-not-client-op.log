@@ -1,0 +1,16 @@
+# mutant M3-store-op-not-client-op (re-run on the shipped test file)
+# patch: 'op_id.get_or_insert_with(|| event.operation.op_id.as_str().to_owned());' -> 'op_id.get_or_insert_with(|| record.op.as_str().to_owned());'
+$ cargo test -p ovis-terminal-cli --lib --locked -- layout::feed
+exit=0
+test assembly::layout::feed::tests::a_layout_edit_and_a_selection_reach_a_subscriber_with_their_op_ids ... FAILED
+test assembly::layout::feed::tests::a_record_is_published_once_and_a_later_boot_forwards_what_no_boot_served ... FAILED
+thread 'assembly::layout::feed::tests::a_layout_edit_and_a_selection_reach_a_subscriber_with_their_op_ids' (2915739) panicked at crates/ovis-terminal-cli/src/assembly/layout/feed/tests.rs:167:5:
+  left: Some(String("01a19a58-5ea0-71b4-9dda-c21bb0bccbf3"))
+ right: Some(String("01a19a58-5e94-763d-a907-9b835638bd25"))
+thread 'assembly::layout::feed::tests::a_record_is_published_once_and_a_later_boot_forwards_what_no_boot_served' (2915740) panicked at crates/ovis-terminal-cli/src/assembly/layout/feed/tests.rs:204:5:
+  left: Some(String("01a19a58-5ea4-7700-b372-0c2330410f8f"))
+ right: Some(String("01a19a58-5e96-70ab-8411-4653d16f12c6"))
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 51 filtered out; finished in 0.04s
+error: test failed, to rerun pass `-p ovis-terminal-cli --lib`
+
+# wall 10.7s
